@@ -1,4 +1,4 @@
-package github.hua0512.data;
+package github.hua0512.data
 
 enum class VideoFormat(val extension: String) {
   mp4("mp4"),

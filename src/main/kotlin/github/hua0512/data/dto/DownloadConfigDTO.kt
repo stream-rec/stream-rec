@@ -10,17 +10,17 @@ import kotlinx.serialization.Transient
  */
 interface DownloadConfigDTO {
 
-  abstract val cookies: String?
-  abstract val danmu: Boolean
-  abstract val maxBitRate: Int?
-  abstract val outputFolder: String?
-  abstract val outputFileName: String?
-  abstract val outputFileExtension: VideoFormat?
+  val cookies: String?
+  val danmu: Boolean
+  val maxBitRate: Int?
+  val outputFolder: String?
+  val outputFileName: String?
+  val outputFileExtension: VideoFormat?
 
   @Transient
-  abstract val onPartedDownload: (StreamData) -> Unit
+  val onPartedDownload: (StreamData) -> Unit
 
   @Transient
-  abstract val onStreamingFinished: (List<StreamData>) -> Unit
+  val onStreamingFinished: (List<StreamData>) -> Unit
 
 }

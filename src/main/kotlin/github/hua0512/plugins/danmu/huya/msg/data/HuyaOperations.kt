@@ -1,4 +1,4 @@
-package github.hua0512.plugins.danmu.huya.msg.data;
+package github.hua0512.plugins.danmu.huya.msg.data
 
 enum class HuyaOperations(val code: Int) {
   EWSCmd_NULL(0),

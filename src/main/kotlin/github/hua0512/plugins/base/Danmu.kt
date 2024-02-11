@@ -79,11 +79,24 @@ abstract class Danmu(val app: App) {
    */
   private val writeToFileFlow = MutableSharedFlow<DanmuData?>(replay = 1)
 
+  /**
+   * Initialize danmu
+   *
+   * @param streamer streamer
+   * @param startTime start time
+   * @return true if initialized successfully
+   */
   abstract suspend fun init(streamer: Streamer, startTime: Long): Boolean
+
+  /**
+   * Send one hello
+   *
+   * @return bytearray hello pack
+   */
   abstract fun oneHello(): ByteArray
 
   /**
-   * Fetch danmu from websocket.
+   * Fetch danmu from server using websocket
    *
    */
   suspend fun fetchDanmu() {
