@@ -122,9 +122,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
             content = content,
             fontSize = msgNotice.tBulletFormat.iFontSize,
             time = huyaSocketCommand.lTime.toDouble()
-          ).also {
-            logger.debug(it.toString())
-          }
+          )
         }
       }
 

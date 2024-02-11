@@ -163,7 +163,7 @@ abstract class Danmu(val app: App) {
         .onEach {
           // if it is null, finish writing to file
           if (it == null) {
-            logger.info("Finish writing danmu to file")
+            logger.info("Finish writing danmu to : ${danmuFile.absolutePath}")
             danmuFile.appendText("</root>")
             return@onEach
           }
@@ -189,7 +189,7 @@ abstract class Danmu(val app: App) {
       attribute("p", "$time,1,25,$color,0,0,0,0")
       text(data.content)
     }
-    logger.debug("Writing danmu to file: ${xml.toString(prettyFormat = false)}")
+//    logger.debug("Writing danmu to file: ${xml.toString(prettyFormat = false)}")
     danmuFile.appendText("  ${xml.toString(false)}\n")
   }
 
