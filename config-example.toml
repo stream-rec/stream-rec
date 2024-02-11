@@ -1,0 +1,34 @@
+engine = "ffmpeg"
+danmu = false
+outputFolder = "path to your output folder"
+outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
+outputFileFormat = "mp4"
+# minimum size to be considered as a streaming data (default to 50 MB)
+minPartSize = 52428800
+maxPartSize = 2621440000
+# maximum number of download coroutines
+maxConcurrentDownloads = 5
+maxConcurrentUploads = 3
+# maximum number of download retries
+maxDownloadRetries = 3
+# delay between download retries
+downloadRetryDelay = 10
+
+[huyaConfig]
+primaryCdn = "HW"
+maxBitRate = 10000
+
+[douyinConfig]
+cookies = "your cookies"
+quality = "origin"
+
+# streamers to record
+[[streamers]]
+name = "TheShy"
+url = "https://www.huya.com/991111"
+
+[streamers.downloadConfig]
+type = "huya"
+primaryCdn = "HW"
+danmu = true
+outputFileExtension = "mp4"

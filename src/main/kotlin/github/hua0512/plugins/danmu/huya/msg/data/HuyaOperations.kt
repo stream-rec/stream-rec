@@ -1,0 +1,60 @@
+package github.hua0512.plugins.danmu.huya.msg.data;
+
+enum class HuyaOperations(val code: Int) {
+  EWSCmd_NULL(0),
+  EWSCmd_RegisterReq(1),
+  EWSCmd_RegisterRsp(2),
+  EWSCmd_WupReq(3),
+  EWSCmd_WupRsp(4),
+  EWSCmdC2S_HeartBeat(5),
+  EWSCmdS2C_HeartBeatAck(6),
+  EWSCmdS2C_MsgPushReq(7),
+  EWSCmdC2S_DeregisterReq(8),
+  EWSCmdS2C_DeRegisterRsp(9),
+  EWSCmdC2S_VerifyCookieReq(10),
+  EWSCmdS2C_VerifyCookieRsp(11),
+  EWSCmdC2S_VerifyHuyaTokenReq(12),
+  EWSCmdS2C_VerifyHuyaTokenRsp(13),
+  EWSCmdC2S_UNVerifyReq(14),
+  EWSCmdS2C_UNVerifyRsp(15),
+  EWSCmdC2S_RegisterGroupReq(16),
+  EWSCmdS2C_RegisterGroupRsp(17),
+  EWSCmdC2S_UnRegisterGroupReq(18),
+  EWSCmdS2C_UnRegisterGroupRsp(19),
+  EWSCmdC2S_HeartBeatReq(20),
+  EWSCmdS2C_HeartBeatRsp(21),
+  EWSCmdS2C_MsgPushReq_V2(22),
+  EWSCmdC2S_UpdateUserExpsReq(23),
+  EWSCmdS2C_UpdateUserExpsRsp(24),
+  EWSCmdC2S_WSHistoryMsgReq(25),
+  EWSCmdS2C_WSHistoryMsgRsp(26),
+  EWSCmdS2C_EnterP2P(27),
+  EWSCmdS2C_EnterP2PAck(28),
+  EWSCmdS2C_ExitP2P(29),
+  EWSCmdS2C_ExitP2PAck(30),
+  EWSCmdC2S_SyncGroupReq(31),
+  EWSCmdS2C_SyncGroupRsp(32),
+  EWSCmdC2S_UpdateUserInfoReq(33),
+  EWSCmdS2C_UpdateUserInfoRsp(34),
+  EWSCmdC2S_MsgAckReq(35),
+  EWSCmdS2C_MsgAckRsp(36),
+  EWSCmdC2S_CloudGameReq(37),
+  EWSCmdS2C_CloudGamePush(38),
+  EWSCmdS2C_CloudGameRsp(39),
+  EWSCmdS2C_RpcReq(40),
+  EWSCmdC2S_RpcRsp(41),
+  EWSCmdS2C_RpcRspRsp(42),
+  EWSCmdC2S_GetStunPortReq(101),
+  EWSCmdS2C_GetStunPortRsp(102),
+  EWSCmdC2S_WebRTCOfferReq(103),
+  EWSCmdS2C_WebRTCOfferRsp(104),
+  EWSCmdC2S_SignalUpgradeReq(105),
+  EWSCmdS2C_SignalUpgradeRsp(106),
+  ;
+
+  companion object {
+    fun fromCode(code: Int): HuyaOperations? {
+      return entries.firstOrNull { it.code == code }
+    }
+  }
+}
