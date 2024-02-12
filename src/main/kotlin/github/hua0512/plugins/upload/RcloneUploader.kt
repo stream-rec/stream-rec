@@ -2,121 +2,82 @@ package github.hua0512.plugins.upload
 
 import github.hua0512.UploadResult
 import github.hua0512.app.App
-import github.hua0512.data.UploadData
+import github.hua0512.data.upload.RcloneConfig
+import github.hua0512.data.upload.UploadData
 import github.hua0512.plugins.base.Upload
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import kotlin.coroutines.resume
 
-class RcloneUploader(app: App) : Upload(app) {
+class RcloneUploader(app: App, override val uploadConfig: RcloneConfig) : Upload(app, uploadConfig) {
 
   companion object {
     @JvmStatic
     private val logger: Logger = LoggerFactory.getLogger(RcloneUploader::class.java)
   }
 
-  private val uploadJobs = mutableListOf<Deferred<UploadResult>>()
-
-  override suspend fun upload(data: List<UploadData>): List<UploadResult> = coroutineScope {
-    app.uploadSemaphore.withPermit {
-      println("Uploading data: $data")
-
-      if (data.isEmpty()) return@coroutineScope emptyList()
-
-      // rclone copy <local file> <remote folder>
-      val cmds = arrayOf(
-        "rclone",
-        "copy",
-      )
-
-
-      emptyList()
-      /**
-      val streamingStartDate = data.first().dateStart?.run {
-      // convert timestamp and format to yyyy-MM-dd
-      LocalDateTime.ofInstant(Instant.ofEpochMilli(this), TimeZone.getDefault().toZoneId()).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-      } ?: throw Exception("No start date found")
-
-      val remoteFolder = "onedrive:records/${streamer.name}/$streamingStartDate"
-
-      data.forEach { streamData ->
-
-      if (streamData.outputFilePath.isEmpty()) {
-      logger.error("invalid file: ${streamData.outputFilePath}")
-      return@forEach
+  override suspend fun uploadAction(uploadData: UploadData): Deferred<UploadResult?> = coroutineScope {
+    val remotePath = uploadConfig.remotePath.also {
+      if (it.isEmpty()) {
+        logger.error("invalid remote path: $it, skipping...")
+        return@coroutineScope async { null }
       }
-      File(streamData.outputFilePath).run {
-      if (length() == 0L || !exists()) {
-      logger.error("invalid file: ${streamData.outputFilePath}")
-      return@forEach
-      }
-      this
-      }
+    }
+    // rclone copy <local file> <remote folder>
+    val cmds = arrayOf(
+      "rclone",
+      "copy",
+    )
+    val extraCmds = uploadConfig.args.toTypedArray()
 
-      val job = async(Dispatchers.IO) {
-      // rclone copy <local file> <remote folder> --onedrive-chunk-size 100M -P
+    val streamData = uploadData.streamData
+
+    async(Dispatchers.IO) {
+      // rclone copy <local file> <remote folder> --args
       val finalCmds = cmds + arrayOf(
-      streamData.outputFilePath,
-      remoteFolder,
-      "--onedrive-chunk-size",
-      "100M",
-      "-P",
-      )
-
+        streamData.outputFilePath,
+        remotePath
+      ) + extraCmds
       val status = suspendCancellableCoroutine<Boolean> {
-      val builder = ProcessBuilder(*finalCmds)
-      .redirectErrorStream(true)
-      .start()
+        val builder = ProcessBuilder(*finalCmds)
+          .redirectErrorStream(true)
+          .start()
 
-      it.invokeOnCancellation {
-      builder.destroy()
-      }
-      launch {
-      builder.inputStream.bufferedReader().readText().let { line ->
-      logger.debug("rclone: $line")
-      }
-      }
+        it.invokeOnCancellation {
+          builder.destroy()
+        }
+        launch {
+          builder.inputStream.bufferedReader().readText().let { line ->
+            logger.debug("rclone: $line")
+          }
+        }
 
-      val code = builder.waitFor()
-      if (code != 0) {
-      logger.error("rclone: failed, exit code: $code")
-      it.resume(false)
-      } else {
-      it.resume(true)
+        val code = builder.waitFor()
+        if (code != 0) {
+          logger.error("rclone: failed, exit code: $code")
+          it.resume(false)
+        } else {
+          it.resume(true)
+        }
       }
-      }
-
-      val uploadData: UploadData
+      val uploadResult: UploadResult
       if (!status) {
-      logger.error("rclone: ${streamData.outputFilePath} failed")
-      uploadData = UploadResult(
-      streamerId = streamer.id,
-      streamDataId = streamData.id?.toLong() ?: 0,
-      isSuccess = false,
-      )
+        logger.error("rclone: ${streamData.outputFilePath} failed")
+        uploadResult = UploadResult(
+          isSuccess = false,
+          time = System.currentTimeMillis(),
+          uploadData = listOf(uploadData),
+        )
       } else {
-      logger.info("rclone: ${streamData.outputFilePath} finished")
-      uploadData = UploadData(
-      streamerId = streamer.id,
-      streamDataId = streamData.id?.toLong() ?: 0,
-      isSuccess = true,
-      )
+        logger.info("rclone: ${streamData.outputFilePath} finished")
+        uploadResult = UploadResult(
+          isSuccess = true,
+          time = System.currentTimeMillis(),
+          uploadData = listOf(uploadData),
+        )
       }
-      uploadData
-      }
-      uploadJobs.add(job)
-      }
-
-      return@coroutineScope withContext(Dispatchers.IO) {
-      uploadJobs.run {
-      awaitAll().also {
-      clear()
-      }
-      }
-      }
-       **/
+      uploadResult
     }
   }
 }

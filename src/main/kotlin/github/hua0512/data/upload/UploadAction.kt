@@ -1,4 +1,4 @@
-package github.hua0512.data
+package github.hua0512.data.upload
 
 import kotlinx.serialization.Serializable
 
@@ -11,4 +11,5 @@ data class UploadAction(
   val id: Long,
   val time: Long,
   val uploadDataList: List<UploadData> = emptyList(),
+  val uploadConfig : UploadConfig,
 )
