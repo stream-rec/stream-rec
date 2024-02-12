@@ -5,6 +5,7 @@ import github.hua0512.data.Streamer
 import github.hua0512.data.config.HuyaDownloadConfig
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -190,37 +191,28 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
           downloadUrl = "$downloadUrl&ratio=$maxSupportedBitrate"
         }
 
+        // The live status update on Huya experiences considerable delay (>1minute)
+        // so we need to check if the streamer is still live
+        if (streamer.isLive)
+        // this request should timeout if the streamer is not live
+          withContext(Dispatchers.IO) {
+            app.client.prepareGet(downloadUrl) {
+              headers {
+                append(HttpHeaders.Accept, "*/*")
+                append(HttpHeaders.AcceptEncoding, "gzip, deflate, br")
+                append(HttpHeaders.Connection, "keep-alive")
+                platformHeaders.forEach { append(it.first, it.second) }
+              }
+              timeout {
+                requestTimeoutMillis = 5000
+              }
+            }.execute()
+          }
         true
-        // check if the stream is live by making a request to the download url
-        // if the response status is not OK, then the stream is not live
-//        withContext(Dispatchers.IO) {
-//          appConfig.client.prepareGet(downloadUrl) {
-//            headers {
-//              append(HttpHeaders.Accept, "*/*")
-//              append(HttpHeaders.AcceptEncoding, "gzip, deflate, br")
-//              append(HttpHeaders.Connection, "keep-alive")
-//              platformHeaders.forEach { append(it.first, it.second) }
-//            }
-//            timeout {
-//              requestTimeoutMillis = 10000
-//              connectTimeoutMillis = 10000
-//              socketTimeoutMillis = 10000
-//            }
-//          }.execute { httpResponse ->
-//            val channel: ByteReadChannel = httpResponse.body()
-//            while (!channel.isClosedForRead) {
-//              val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-//              if (packet.isNotEmpty) {
-//                logger.debug("Download URL : $downloadUrl response: not empty")
-//                return@execute true
-//              }
-//            }
-//            logger.error("Download URL : $downloadUrl response status is not OK")
-//            return@execute false
-//          }
-//        }
+      } catch (e: HttpRequestTimeoutException) {
+        false
       } catch (e: Exception) {
-        logger.error("Error : $e")
+        logger.error("(${streamer.name}) checking is live with error : ${e.message}")
         false
       }
     }

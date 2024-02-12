@@ -1,4 +1,4 @@
-package github.hua0512.data
+package github.hua0512.data.upload
 
 /**
  * @author hua0512

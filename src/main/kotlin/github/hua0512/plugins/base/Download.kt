@@ -20,6 +20,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.ofPattern
 import kotlin.coroutines.resume
 import kotlin.io.path.Path
+import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -103,6 +104,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
     // ffmpeg running commands
     val cmds = buildFFMpegRunningCmd(defaultFFmpegInputArgs, defaultFFmpegOutputArgs, fileExtension)
 
+    logger.debug("(${streamer.name}) downloadUrl: $downloadUrl")
     // download the stream in parts
     // semaphore is used to limit the number of concurrent downloads
     app.downloadSemaphore.withPermit {
@@ -184,10 +186,9 @@ abstract class Download(val app: App, val danmu: Danmu) {
           } else false
 
           val process = suspendCancellableCoroutine<StreamData?> {
-            val builder = ProcessBuilder(*(cmds + arrayOf(outputPath.toString())))
+            val builder = ProcessBuilder(*(cmds + outputPath.toString()))
             logger.info("(${streamer.name}) Starting parted download...")
             val process = builder
-              .directory(File(app.ffmepgPath).parentFile)
               .redirectErrorStream(true)
               .start()
 
@@ -195,7 +196,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
               process.destroy()
             }
 
-            val danmakuProcess: Job? = if (isDanmuInitialized) launch {
+            val danmuProcess: Job? = if (isDanmuInitialized) launch {
               var danmuRetry = 0
               while (true) {
                 logger.info("(${streamer.name}) Starting danmu download...")
@@ -225,7 +226,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
               }
               logger.info("${streamer.name} - ffmpeg process is finished")
               // finish danmu download
-              danmu.finish()
+              if (isDanmuInitialized) danmu.finish()
             }
 
             // show download progress info
@@ -238,17 +239,18 @@ abstract class Download(val app: App, val danmu: Danmu) {
             // wait for the download process to finish
             val exitCode = process.waitFor()
             val endTime = System.currentTimeMillis()
-            danmakuProcess?.cancel("Danmu download process finished because the main download process finished")
+            danmuProcess?.cancel("Danmu download process finished because the main download process finished")
             logger.debug("(${streamer.name}) download process finished, exit code: $exitCode")
             if (exitCode != 0) {
               logger.error("(${streamer.name}) download failed, exit code: $exitCode")
               it.resume(null)
             } else {
+              // case when download is successful (exit code is 0)
               streamData = streamData.copy(
                 dateStart = startTime,
                 dateEnd = endTime,
                 outputFilePath = outputPath.toString().removeSuffix(".part"),
-                danmuFilePath = danmu.danmuFile.absolutePath
+                danmuFilePath = if (isDanmuInitialized) danmu.danmuFile.absolutePath else null
               )
               it.resume(streamData)
             }
@@ -258,7 +260,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
             logger.error("(${streamer.name}) could not download stream")
             // delete files if download failed
             outputPath.deleteFile()
-            danmu.danmuFile.deleteFile()
+            if (isDanmuInitialized) danmu.danmuFile.deleteFile()
             break
           } else {
             logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
@@ -271,7 +273,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
                 break
               }
             }
-            outputPath.rename(Path(outputPath.fileName.toString().removeSuffix(".part")))
+            outputPath.rename(Path(outputPath.pathString.removeSuffix(".part")))
 
             // on parted downloaded successfully
             downloadConfig.onPartedDownload(streamData)

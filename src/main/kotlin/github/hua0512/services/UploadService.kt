@@ -1,8 +1,9 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
-import github.hua0512.data.UploadAction
-import github.hua0512.data.UploadPlatform
+import github.hua0512.data.upload.RcloneConfig
+import github.hua0512.data.upload.UploadAction
+import github.hua0512.data.upload.UploadConfig
 import github.hua0512.plugins.upload.RcloneUploader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -22,11 +23,8 @@ class UploadService(val app: App) {
     uploadFlow
       .onEach { uploadAction ->
         logger.info("Received upload action: $uploadAction")
-        uploadAction.uploadDataList.forEach {
-          logger.info("Uploading: $it")
-          val uploader = provideUploader(it.platform)
-          uploader.upload(listOf(it))
-        }
+        val uploader = provideUploader(uploadAction.uploadConfig)
+        uploader.upload(uploadAction.uploadDataList)
       }
       .flowOn(Dispatchers.IO)
       .catch {
@@ -39,9 +37,8 @@ class UploadService(val app: App) {
     uploadFlow.tryEmit(uploadAction)
   }
 
-
-  private fun provideUploader(platform: UploadPlatform) = when (platform) {
-    UploadPlatform.RCLONE -> RcloneUploader(app)
-    else -> throw IllegalArgumentException("Invalid uploader: $platform")
+  private fun provideUploader(config: UploadConfig) = when (config) {
+    is RcloneConfig -> RcloneUploader(app, config)
+    else -> throw IllegalArgumentException("Invalid config: $config")
   }
 }
