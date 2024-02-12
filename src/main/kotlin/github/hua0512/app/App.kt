@@ -119,6 +119,9 @@ class App {
   }
 
 
+  /**
+   * TODO : Use custom serializer to handle the platform and downloadConfig
+   */
   private fun correctStreamers(appConfig: AppConfig): List<Streamer> {
     return appConfig.streamers.map { streamer ->
       val patterns = mapOf(

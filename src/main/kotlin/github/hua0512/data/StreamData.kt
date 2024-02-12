@@ -8,7 +8,7 @@ data class StreamData(
   val title: String,
   val dateStart: Long? = null,
   val dateEnd: Long? = null,
-  val streamerId: Long,
   val outputFilePath: String,
   val danmuFilePath: String? = null,
+  val streamer: Streamer,
 )

@@ -11,6 +11,8 @@ import org.redundent.kotlin.xml.xml
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -51,18 +53,12 @@ abstract class Danmu(val app: App) {
   /**
    * Danmu file name
    */
-  var fileName: String = System.currentTimeMillis().toString()
+  var filePath: String = "${System.currentTimeMillis()}.xml"
     set(value) {
       field = value
-      danmuFile = File("$fileFolder/$value")
+      danmuFile = Path.of(filePath).toFile()
     }
 
-  /**
-   * The fileFolder variable represents the folder path where the danmu file will be written.
-   *
-   * @property fileFolder The folder path where the danmu file will be written.
-   */
-  var fileFolder: String = "danmu"
 
   /**
    * Danmu file
@@ -159,20 +155,16 @@ abstract class Danmu(val app: App) {
       writeToFileFlow
         .onStart {
           // check if danmuFile is initialized
-          if (!::danmuFile.isInitialized) {
-            // create danmu file
-            danmuFile = File("$fileFolder/$fileName")
-          }
-
           logger.info("Start writing danmu to : ${danmuFile.absolutePath}")
-          if (!danmuFile.exists())
+          // create file if not exists
+          if (!Files.exists(danmuFile.toPath())) {
             danmuFile.createNewFile()
-          else
-          // write xml header
             danmuFile.writeText("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n")
+          } else {
+            logger.info("${danmuFile.absolutePath} file exists, appending to it.")
+          }
         }
         .buffer(5)
-        .flowOn(Dispatchers.IO)
         .onEach {
           // if it is null, finish writing to file
           if (it == null) {
@@ -183,6 +175,7 @@ abstract class Danmu(val app: App) {
           // write danmu to file
           writeToDanmu(it)
         }
+        .flowOn(Dispatchers.IO)
         .catch {
           logger.error("Error writing to file: $it")
         }
@@ -232,8 +225,12 @@ abstract class Danmu(val app: App) {
    * Finish writting danmu to file
    */
   suspend fun finish() {
+    logger.info("$filePath danmu file finished")
+    isInitialized.set(false)
+    // send null to write channel to finish writing
     withContext(Dispatchers.IO) {
-      writeToFileFlow.tryEmit(null)
+      writeToFileFlow.emit(null)
+      writeToFileFlow.resetReplayCache()
     }
   }
 

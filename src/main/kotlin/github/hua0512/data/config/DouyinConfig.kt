@@ -7,6 +7,7 @@ import github.hua0512.data.platform.DouyinQuality
 import kotlinx.serialization.Serializable
 
 /**
+ * Douyin config data class
  * @author hua0512
  * @date : 2024/2/11 13:29
  */

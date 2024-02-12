@@ -1,34 +1,62 @@
+# Engine used to download the video (default to "ffmpeg")
 engine = "ffmpeg"
+# global flag to enable/disable danmu download
 danmu = false
-outputFolder = "path to your output folder"
+# output folder path
+# Windows users should use double backslashes or single forward slashes to avoid escape characters,
+# for example, "C:\\Users\\yourname\\Downloads" or "C:/Users/yourname/Downloads"
+outputFolder = "path/to/your/output/folder"
+# output file name format
 outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
+# output file format
 outputFileFormat = "mp4"
-# minimum size to be considered as a streaming data (default to 50 MB)
-minPartSize = 52428800
+# minimum size to be considered as a streaming data (default to 20 MB)
+# if the size is less than this value, the file will be deleted
+minPartSize = 20000000
+# maximum size of a download part file (default to 2.5 GB)
 maxPartSize = 2621440000
-# maximum number of download coroutines
+# maximum number of concurrent downloads
 maxConcurrentDownloads = 5
+# maximum number of concurrent uploads
 maxConcurrentUploads = 3
-# maximum number of download retries
+# the maximum number of download retries after a failure
 maxDownloadRetries = 3
 # delay between download retries
 downloadRetryDelay = 10
 
+# Huya platform config
 [huyaConfig]
-primaryCdn = "HW"
+# primary CDN to use (default to "AL")
+# possible values: "AL", HW", "TX", "BD", ...
+primaryCdn = "AL"
+# maximum bitrate
 maxBitRate = 10000
-
-[douyinConfig]
+# cookies to use (optional)
 cookies = "your cookies"
+
+# Douyin platform config
+[douyinConfig]
+# recording douyin stream requires cookies
+cookies = "your cookies"
+# maximum quality supported
+# possible values: "origin", "uhd", "hd", "sd", "ld", "md", "audio"
 quality = "origin"
 
 # streamers to record
+# below is an example of a streamer configuration
 [[streamers]]
+# streamer name (obligatory)
 name = "TheShy"
+# streamer url (obligatory)
 url = "https://www.huya.com/991111"
-
+# streamer config
+# if not specified, it will use the default platform config
 [streamers.downloadConfig]
+# download config, possible values: "huya", "douyin"
 type = "huya"
+# Huya primary CDN to use (default to huyaConfig.primaryCdn)
 primaryCdn = "HW"
+# enable danmu download (default to global danmu flag)
 danmu = true
+# output file extension (default to global outputFileFormat)
 outputFileExtension = "mp4"

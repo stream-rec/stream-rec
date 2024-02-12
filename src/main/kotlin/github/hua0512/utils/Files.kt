@@ -2,9 +2,9 @@ package github.hua0512.utils
 
 import github.hua0512.logger
 import java.io.File
+import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 
 /**
  * @author hua0512
@@ -12,7 +12,10 @@ import java.nio.file.StandardCopyOption
  */
 
 fun Path.deleteFile(): Boolean = try {
-  Files.deleteIfExists(this)
+  Files.deleteIfExists(this).also {
+    if (it) logger.debug("File deleted: {}", this)
+    else logger.debug("File not found: {}", this)
+  }
 } catch (e: Exception) {
   logger.error("Could not delete file: $this")
   false
@@ -20,9 +23,12 @@ fun Path.deleteFile(): Boolean = try {
 
 fun File.deleteFile(): Boolean = toPath().deleteFile()
 
-fun Path.rename(newPath: Path): Boolean = try {
-  Files.move(this, newPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.COPY_ATTRIBUTES)
-  newPath.toFile().exists()
+fun Path.rename(newPath: Path, vararg options: CopyOption): Boolean = try {
+  Files.move(this, newPath, *options)
+  newPath.toFile().exists().also {
+    if (it) logger.debug("File renamed: {} to {}", this, newPath)
+    else logger.debug("File not renamed: {} to {}", this, newPath)
+  }
 } catch (e: Exception) {
   logger.error("Could not rename file: $this to $newPath")
   false

@@ -14,7 +14,7 @@ import kotlinx.serialization.Serializable
 @SerialName("douyin")
 data class DouyinDownloadConfig(
   override var cookies: String? = null,
-  override val danmu: Boolean = false,
+  override val danmu: Boolean? = null,
   val quality: DouyinQuality? = null,
 ) : DownloadConfig() {
 

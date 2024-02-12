@@ -18,7 +18,7 @@ enum class DouyinQuality(val value: String) {
   ld("ld"),
 
   // 流畅
-  low("md"),
+  md("md"),
 
   // only audio
   audio("ao"),

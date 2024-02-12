@@ -102,7 +102,7 @@ class DownloadService(val app: App, val uploadService: UploadService) {
             logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
             emptyList()
           }
-
+          retryCount = 0
           logger.info("Final stream data : $streamsData")
           if (streamsData.isEmpty()) {
             logger.error("No data found for ${streamer.name}")

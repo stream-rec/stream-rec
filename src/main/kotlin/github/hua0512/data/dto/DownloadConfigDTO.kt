@@ -11,7 +11,7 @@ import kotlinx.serialization.Transient
 interface DownloadConfigDTO {
 
   val cookies: String?
-  val danmu: Boolean
+  val danmu: Boolean?
   val maxBitRate: Int?
   val outputFolder: String?
   val outputFileName: String?

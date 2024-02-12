@@ -6,6 +6,7 @@ import github.hua0512.data.dto.HuyaConfigDTO
 import kotlinx.serialization.Serializable
 
 /**
+ * Huya configuration data class
  * @author hua0512
  * @date : 2024/2/11 13:28
  */

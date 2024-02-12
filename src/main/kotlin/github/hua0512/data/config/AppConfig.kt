@@ -5,6 +5,7 @@ import github.hua0512.data.VideoFormat
 import kotlinx.serialization.Serializable
 
 /**
+ * Application configuration data class
  * @author hua0512
  * @date : 2024/2/11 13:19
  */
@@ -15,7 +16,7 @@ data class AppConfig(
   val outputFolder: String = "",
   val outputFileName: String = "\${stremerName}-\${title}-%yyyy-%MM-%dd %HH:%mm:%ss",
   val outputFileFormat: VideoFormat = VideoFormat.flv,
-  val minPartSize: Long = 52428800,
+  val minPartSize: Long = 20000000,
   val maxPartSize: Long = 2621440000,
   val maxDownloadRetries: Int = 3,
   val downloadRetryDelay: Long = 10,

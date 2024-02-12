@@ -5,11 +5,13 @@ import github.hua0512.data.Streamer
 import github.hua0512.data.config.HuyaDownloadConfig
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
+import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.util.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -195,20 +197,19 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
         // so we need to check if the streamer is still live
         if (streamer.isLive)
         // this request should timeout if the streamer is not live
-          withContext(Dispatchers.IO) {
+          return@withContext withContext(Dispatchers.IO) {
             app.client.prepareGet(downloadUrl) {
               headers {
                 append(HttpHeaders.Accept, "*/*")
                 append(HttpHeaders.AcceptEncoding, "gzip, deflate, br")
-                append(HttpHeaders.Connection, "keep-alive")
                 platformHeaders.forEach { append(it.first, it.second) }
               }
-              timeout {
-                requestTimeoutMillis = 5000
-              }
-            }.execute()
+            }.execute {
+              val channel: ByteReadChannel = it.body()
+              channel.availableForRead > 0
+            }
           }
-        true
+        else true
       } catch (e: HttpRequestTimeoutException) {
         false
       } catch (e: Exception) {

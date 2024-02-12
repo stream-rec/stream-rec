@@ -11,7 +11,7 @@ import kotlinx.serialization.Transient
 @SerialName("huya")
 data class HuyaDownloadConfig(
   override val primaryCdn: String? = null,
-  override val danmu: Boolean = false,
+  override val danmu: Boolean? = null,
   override val maxBitRate: Int? = null,
   override val outputFolder: String? = null,
   override val outputFileName: String? = null,

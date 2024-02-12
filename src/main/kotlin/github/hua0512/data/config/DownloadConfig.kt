@@ -9,7 +9,7 @@ import kotlinx.serialization.Transient
 @Serializable
 sealed class DownloadConfig : DownloadConfigDTO {
   abstract override val cookies: String?
-  abstract override val danmu: Boolean
+  abstract override val danmu: Boolean?
   abstract override val maxBitRate: Int?
   abstract override val outputFolder: String?
   abstract override val outputFileName: String?
