@@ -22,8 +22,8 @@ data class DouyinDownloadConfig(
   override var outputFolder: String? = null
   override val outputFileName: String? = null
   override var outputFileExtension: VideoFormat? = null
-  override var onPartedDownload: (StreamData) -> Unit = {}
-  override var onStreamingFinished: (List<StreamData>) -> Unit = {}
+  override var onPartedDownload: List<Action>? = null
+  override var onStreamingFinished: List<Action>? = null
 
   companion object {
     val default = DouyinDownloadConfig(

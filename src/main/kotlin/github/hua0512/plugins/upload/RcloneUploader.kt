@@ -8,6 +8,10 @@ import github.hua0512.plugins.base.Upload
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlin.coroutines.resume
 
 class RcloneUploader(app: App, override val uploadConfig: RcloneConfig) : Upload(app, uploadConfig) {
@@ -35,9 +39,36 @@ class RcloneUploader(app: App, override val uploadConfig: RcloneConfig) : Upload
 
     async(Dispatchers.IO) {
       // rclone copy <local file> <remote folder> --args
+
+      // format dateStart to local time
+      val startTimeString = LocalDateTime.ofInstant(
+        Instant.ofEpochMilli(streamData.dateStart!!),
+        ZoneId.systemDefault()
+      )
+      val streamer = streamData.streamer
+
+      val toReplace = mapOf(
+        "{streamer}" to streamer.name,
+        "{title}" to streamData.title,
+        "%yyyy" to startTimeString.format(DateTimeFormatter.ofPattern("yyyy")),
+        "%MM" to startTimeString.format(DateTimeFormatter.ofPattern("MM")),
+        "%dd" to startTimeString.format(DateTimeFormatter.ofPattern("dd")),
+        "%HH" to startTimeString.format(DateTimeFormatter.ofPattern("HH")),
+        "%mm" to startTimeString.format(DateTimeFormatter.ofPattern("mm")),
+        "%ss" to startTimeString.format(DateTimeFormatter.ofPattern("ss")),
+      )
+
+      val replacedRemote = remotePath.run {
+        var result = this
+        toReplace.forEach { (k, v) ->
+          result = result.replace(k, v)
+        }
+        result
+      }
+
       val finalCmds = cmds + arrayOf(
         streamData.outputFilePath,
-        remotePath
+        replacedRemote
       ) + extraCmds
       val status = suspendCancellableCoroutine<Boolean> {
         val builder = ProcessBuilder(*finalCmds)

@@ -25,7 +25,7 @@ import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-abstract class Download(val app: App, val danmu: Danmu) {
+abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: suspend (StreamData) -> Unit = {}) {
 
   companion object {
     @JvmStatic
@@ -171,8 +171,10 @@ abstract class Download(val app: App, val danmu: Danmu) {
             }
             outputPath.rename(Path(outputPath.pathString.removeSuffix(".part")))
 
-            // on parted downloaded successfully
-            downloadConfig.onPartedDownload(streamData)
+            // launch onPartedDownload callback
+            launch {
+              onPartedDownload(streamData)
+            }
           }
         }
         logger.debug("(${streamer.name}) finished download")

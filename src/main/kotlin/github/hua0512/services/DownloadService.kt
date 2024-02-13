@@ -4,6 +4,12 @@ import github.hua0512.app.App
 import github.hua0512.data.StreamData
 import github.hua0512.data.Streamer
 import github.hua0512.data.StreamingPlatform
+import github.hua0512.data.config.Action
+import github.hua0512.data.config.CommandAction
+import github.hua0512.data.config.RcloneAction
+import github.hua0512.data.upload.RcloneConfig
+import github.hua0512.data.upload.UploadAction
+import github.hua0512.data.upload.UploadData
 import github.hua0512.plugins.base.Download
 import github.hua0512.plugins.danmu.douyin.DouyinDanmu
 import github.hua0512.plugins.danmu.huya.HuyaDanmu
@@ -13,6 +19,7 @@ import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.coroutineContext
+import kotlin.coroutines.resume
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -62,6 +69,9 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         return@launch
       }
       val plugin = getPlaformDownloader(streamer.platform)
+
+      bindOnPartedDownloadActions(streamer, plugin)
+
       val streamDataList = mutableListOf<StreamData>()
       var retryCount = 0
       val retryDelay = app.config.downloadRetryDelay
@@ -78,7 +88,7 @@ class DownloadService(val app: App, val uploadService: UploadService) {
           // stream finished with data
           logger.error("Max retry reached for ${streamer.name}")
           // call onStreamingFinished callback with the copy of the list
-          streamer.downloadConfig?.onStreamingFinished?.let { it(streamDataList.toList()) }
+          bindOnStreamingEndActions(streamer, streamDataList.toList())
           retryCount = 0
           streamer.isLive = false
           streamDataList.clear()
@@ -126,4 +136,75 @@ class DownloadService(val app: App, val uploadService: UploadService) {
       }
     }
   }
+
+  private suspend fun bindOnStreamingEndActions(streamer: Streamer, streamDataList: List<StreamData>) {
+    val downloadConfig = streamer.downloadConfig
+    val onStreamFinishedActions = downloadConfig?.onStreamingFinished
+    if (!onStreamFinishedActions.isNullOrEmpty()) {
+      onStreamFinishedActions
+        .filter { it.enabled }
+        .forEach {
+          it.mapToAction(streamDataList)
+        }
+    }
+  }
+
+  private fun bindOnPartedDownloadActions(streamer: Streamer, plugin: Download) {
+    val partedActions = streamer.downloadConfig?.onPartedDownload
+    if (!partedActions.isNullOrEmpty()) {
+      plugin.onPartedDownload = {
+        partedActions
+          .filter { it.enabled }
+          .forEach { action: Action ->
+            action.mapToAction(listOf(it))
+          }
+      }
+    }
+  }
+
+  private suspend fun Action.mapToAction(streamDataList: List<StreamData>) {
+    return when (this) {
+      is RcloneAction -> {
+        this.run {
+          UploadAction(
+            id = 0,
+            time = System.currentTimeMillis(),
+            uploadDataList = streamDataList.map {
+              UploadData(
+                0,
+                it
+              )
+            },
+            uploadConfig = RcloneConfig(
+              remotePath = this.remotePath,
+              args = this.args
+            )
+          ).let { uploadService.upload(it) }
+        }
+      }
+
+      is CommandAction -> {
+        this.run {
+          logger.info("Running command action : $this")
+          val exitCode = suspendCancellableCoroutine<Int> {
+            val process = ProcessBuilder(this.program.split(" ")).start()
+            val job = Job()
+            val scope = CoroutineScope(Dispatchers.IO + job)
+            scope.launch {
+              process.waitFor()
+              it.resume(process.exitValue())
+            }
+            job.invokeOnCompletion {
+              process.destroy()
+            }
+          }
+          logger.info("Command action $this finished with exit code $exitCode")
+        }
+      }
+
+      else -> throw UnsupportedOperationException("Invalid action: $this")
+    }
+
+  }
+
 }

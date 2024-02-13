@@ -7,6 +7,7 @@ danmu = false
 # for example, "C:\\Users\\yourname\\Downloads" or "C:/Users/yourname/Downloads"
 outputFolder = "path/to/your/output/folder"
 # output file name format
+# possible placeholder values: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
 outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
 # output file format
 outputFileFormat = "mp4"
@@ -60,3 +61,21 @@ primaryCdn = "HW"
 danmu = true
 # output file extension (default to global outputFileFormat)
 outputFileExtension = "mp4"
+
+# callback to execute when a parted download is finished
+[[streamers.downloadConfig.onPartedDownload]]
+# callback type, possible values: "rclone", "command"
+type = "rclone"
+# whether to enable the callback (default to false)
+enabled = true
+# rclone remote name
+# possible placeholder values: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
+remotePath = "onedrive:your/remote/path"
+# rclone args
+args = [
+    "--config",
+    "/path/to/your/rclone.conf",
+    "-P",
+    "--onedrive-chunk-size",
+    "100M"
+]

@@ -6,7 +6,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class UploadData(
   val id: Long? = null,
-  val streamerId: Long,
-  val isSuccess: Boolean,
-  val streamData: StreamData
+  val streamData: StreamData,
+  val isSuccess: Boolean = false,
 )

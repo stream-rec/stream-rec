@@ -1,7 +1,7 @@
 package github.hua0512.data.dto
 
-import github.hua0512.data.StreamData
 import github.hua0512.data.VideoFormat
+import github.hua0512.data.config.Action
 import kotlinx.serialization.Transient
 
 /**
@@ -18,9 +18,9 @@ interface DownloadConfigDTO {
   val outputFileExtension: VideoFormat?
 
   @Transient
-  val onPartedDownload: (StreamData) -> Unit
+  val onPartedDownload: List<Action>?
 
   @Transient
-  val onStreamingFinished: (List<StreamData>) -> Unit
+  val onStreamingFinished: List<Action>?
 
 }

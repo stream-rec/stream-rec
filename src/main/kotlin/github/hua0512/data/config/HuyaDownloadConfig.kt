@@ -1,11 +1,9 @@
 package github.hua0512.data.config
 
-import github.hua0512.data.StreamData
 import github.hua0512.data.VideoFormat
 import github.hua0512.data.dto.HuyaConfigDTO
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 
 @Serializable
 @SerialName("huya")
@@ -16,10 +14,8 @@ data class HuyaDownloadConfig(
   override val outputFolder: String? = null,
   override val outputFileName: String? = null,
   override val outputFileExtension: VideoFormat? = null,
-  @Transient
-  override val onPartedDownload: (StreamData) -> Unit = {},
-  @Transient
-  override val onStreamingFinished: (List<StreamData>) -> Unit = {},
+  override val onPartedDownload: List<Action>? = null,
+  override val onStreamingFinished: List<Action>? = null,
 ) : DownloadConfig(), HuyaConfigDTO {
 
   companion object {

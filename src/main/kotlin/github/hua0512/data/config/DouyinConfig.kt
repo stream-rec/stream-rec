@@ -26,8 +26,8 @@ data class DouyinConfig(
     get() = TODO("Not yet implemented")
   override val outputFileExtension: VideoFormat?
     get() = TODO("Not yet implemented")
-  override val onPartedDownload: (StreamData) -> Unit
+  override val onPartedDownload: List<Action>?
     get() = TODO("Not yet implemented")
-  override val onStreamingFinished: (List<StreamData>) -> Unit
+  override val onStreamingFinished: List<Action>?
     get() = TODO("Not yet implemented")
 }

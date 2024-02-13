@@ -17,5 +17,6 @@ class AppModule {
   fun provideDownloadService(app: App, uploadService: UploadService): DownloadService = DownloadService(app, uploadService)
 
   @Provides
+  @Singleton
   fun provideUploadService(app: App): UploadService = UploadService(app)
 }
