@@ -1,11 +1,20 @@
 plugins {
-  kotlin("jvm") version "1.9.22"
+  alias(libs.plugins.kotlin.jvm)
   kotlin("plugin.serialization") version "1.9.22"
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
+  alias(libs.plugins.ktor)
 }
 
-group = "hua0512.me"
+group = "github.hua0512"
 version = "0.0.1"
+
+application.mainClass.set("github.hua0512.Application")
+
+ktor {
+  fatJar {
+    archiveFileName.set("stream-rec.jar")
+  }
+}
 
 repositories {
   mavenCentral()
@@ -23,11 +32,6 @@ dependencies {
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.4.0")
-  implementation("org.jetbrains.exposed:exposed-core:0.47.0")
-  implementation("org.jetbrains.exposed:exposed-crypt:0.47.0")
-  implementation("org.jetbrains.exposed:exposed-dao:0.47.0")
-  implementation("org.jetbrains.exposed:exposed-json:0.47.0")
-  implementation("org.jetbrains.exposed:exposed-kotlin-datetime:0.47.0")
   implementation("org.redundent:kotlin-xml-builder:1.9.1")
   implementation("com.tencent.tars:tars-core:1.7.3")
   implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")

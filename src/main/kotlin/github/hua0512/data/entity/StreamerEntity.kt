@@ -4,7 +4,6 @@ import github.hua0512.data.StreamingPlatform
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.StreamerDTO
 import kotlinx.serialization.ExperimentalSerializationApi
-import org.jetbrains.exposed.dao.id.LongIdTable
 
 /**
  * @author hua0512
@@ -18,5 +17,5 @@ data class StreamerEntity(
   override var isLive: Boolean = false,
   override var isActivated: Boolean = true,
   override val downloadConfig: DownloadConfig? = null,
-) : LongIdTable(), StreamerDTO
+) : StreamerDTO
 

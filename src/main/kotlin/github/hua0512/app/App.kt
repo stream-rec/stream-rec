@@ -83,7 +83,14 @@ class App {
 
   suspend fun initConfig(): Boolean {
     logger.info("Initializing app config...")
-    val configPath = "config.toml"
+
+    if (isInitialized) {
+      logger.info("App config already initialized")
+      return true
+    }
+
+    val configPath = System.getenv("CONFIG_PATH") ?: "config.toml"
+
     val content = try {
       withContext(Dispatchers.IO) {
         Files.readString(Path.of(configPath))
