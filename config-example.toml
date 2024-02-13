@@ -65,17 +65,46 @@ outputFileExtension = "mp4"
 # callback to execute when a parted download is finished
 [[streamers.downloadConfig.onPartedDownload]]
 # callback type, possible values: "rclone", "command"
+# if "command" is used, the command will be executed in the shell and,
+# the downloaded files path is passed as the first argument
 type = "rclone"
 # whether to enable the callback (default to false)
 enabled = true
 # rclone remote name
+# only used when type is "rclone"
 # possible placeholder values: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
-remotePath = "onedrive:your/remote/path"
-# rclone args
+remotePath = "drive:your/remote/path"
+# program name
+# only used when type is "command"
+# remove this line if you're using rclone
+# program = "ls"
+
+# program args
 args = [
     "--config",
     "/path/to/your/rclone.conf",
     "-P",
     "--onedrive-chunk-size",
     "100M"
+]
+
+# callback to execute when a streaming is finished
+[[streamers.downloadConfig.onStreamingFinished]]
+# callback type, possible values: "rclone", "command"
+# if "command" is used, the command will be executed in the shell and,
+# a string of downloaded files path (separated by \n) is passed as the first argument
+type = "command"
+# whether to enable the callback (default to false)
+enabled = true
+# rclone remote name
+# possible placeholder values: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
+# remotePath = "drive:your/remote/path"
+
+# program name
+# only used when type is "command"
+# remove this line if you're using rclone
+program = "ls"
+# program args
+args = [
+    "-l"
 ]
