@@ -187,7 +187,16 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         this.run {
           logger.info("Running command action : $this")
           val exitCode = suspendCancellableCoroutine<Int> {
-            val process = ProcessBuilder(this.program.split(" ")).start()
+            val streamDataList = streamDataList.joinToString("\n") { it.outputFilePath }
+
+            val process = ProcessBuilder(this.program, *this.args.toTypedArray())
+              .redirectError(ProcessBuilder.Redirect.PIPE)
+              .start()
+            val writter = process.outputStream.bufferedWriter()
+            // write the list of files to the process input
+            writter.use {
+              it.write(streamDataList)
+            }
             val job = Job()
             val scope = CoroutineScope(Dispatchers.IO + job)
             scope.launch {
