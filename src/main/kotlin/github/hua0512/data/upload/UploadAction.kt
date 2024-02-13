@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class UploadAction(
-  val id: Long,
+  val id: Long = 0,
   val time: Long,
   val uploadDataList: List<UploadData> = emptyList(),
   val uploadConfig : UploadConfig,

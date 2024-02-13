@@ -51,7 +51,12 @@ abstract class Upload(protected val app: App, open val uploadConfig: UploadConfi
         uploadResults.add(it)
       }
     }
-    return uploadResults.awaitAll().filterNotNull()
+    val results = uploadResults.awaitAll()
+    logger.info("Upload results: $results")
+    if (results.any { it == null } || results.any { !it!!.isSuccess }) {
+      logger.error("Some uploads failed, check logs for details")
+    }
+    return results.filterNotNull()
   }
 
   abstract suspend fun uploadAction(uploadData: UploadData): Deferred<UploadResult?>

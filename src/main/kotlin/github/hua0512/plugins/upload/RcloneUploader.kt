@@ -70,7 +70,7 @@ class RcloneUploader(app: App, override val uploadConfig: RcloneConfig) : Upload
         streamData.outputFilePath,
         replacedRemote
       ) + extraCmds
-      val status = suspendCancellableCoroutine<Boolean> {
+      val resultCode = suspendCancellableCoroutine<Int> {
         val builder = ProcessBuilder(*finalCmds)
           .redirectErrorStream(true)
           .start()
@@ -85,27 +85,21 @@ class RcloneUploader(app: App, override val uploadConfig: RcloneConfig) : Upload
         }
 
         val code = builder.waitFor()
-        if (code != 0) {
-          logger.error("rclone: failed, exit code: $code")
-          it.resume(false)
-        } else {
-          it.resume(true)
-        }
+        it.resume(code)
       }
       val uploadResult: UploadResult
-      if (!status) {
-        logger.error("rclone: ${streamData.outputFilePath} failed")
-        uploadResult = UploadResult(
-          isSuccess = false,
-          time = System.currentTimeMillis(),
-          uploadData = listOf(uploadData),
-        )
+      if (resultCode != 0) {
+        throw UploadFailedException(streamData.outputFilePath, "rclone failed with code: $resultCode")
       } else {
         logger.info("rclone: ${streamData.outputFilePath} finished")
         uploadResult = UploadResult(
           isSuccess = true,
           time = System.currentTimeMillis(),
-          uploadData = listOf(uploadData),
+          uploadData = listOf(
+            uploadData.copy(
+              isSuccess = true
+            )
+          ),
         )
       }
       uploadResult
