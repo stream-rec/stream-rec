@@ -63,7 +63,12 @@ val commonDouyinParams = mapOf(
 /**
  * The `ttwid` parameter from the Douyin cookies.
  */
-lateinit var douyinTTwid: String
+private lateinit var douyinTTwid: String
+
+/**
+ * The `msToken` parameter to be used in Douyin requests.
+ */
+private lateinit var douyinMsToken: String
 
 /**
  * Extracts the Douyin room ID from the specified URL.
@@ -119,6 +124,9 @@ suspend fun populateDouyinCookieMissedParams(cookies: String, client: HttpClient
  * @return A random string to be used as the `msToken` parameter in Douyin requests
  */
 private fun generateDouyinMsToken(length: Int = 107): String {
+  // return the token if it has already been generated
+  if (::douyinMsToken.isInitialized) return douyinMsToken
+
   // generate a random string, with length 107
   val source = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=_"
   val random = Random()
@@ -126,7 +134,7 @@ private fun generateDouyinMsToken(length: Int = 107): String {
   for (i in 0 until length) {
     sb.append(source[random.nextInt(source.length)])
   }
-  return sb.toString()
+  return sb.toString().also { douyinMsToken = it }
 }
 
 
