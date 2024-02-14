@@ -138,6 +138,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
       sendAck(session, logId, internalExt)
     }
     val msgList = payloadPackage.messagesListList
+    // TODO : investigate the possibility of multiple messages in one frame
     msgList.map { msg ->
       when (msg.method) {
         "WebcastChatMessage" -> {

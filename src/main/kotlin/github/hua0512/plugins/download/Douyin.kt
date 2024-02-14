@@ -124,7 +124,7 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
     }
 
     if (status != 2) {
-      logger.info("Streamer : ${streamer.name} is not live")
+      logger.debug("Streamer : ${streamer.name} is not live")
       return false
     }
 
