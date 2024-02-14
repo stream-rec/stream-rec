@@ -46,7 +46,7 @@ cookies = "your cookies"
 # Douyin platform config
 [douyinConfig]
 # recording douyin stream requires cookies
-# ttwid, msToken, __ac_nonce, __ac_signature is needed
+# ttwid, msToken, __ac_nonce, __ac_signature are needed
 # ttwid=aaaa; msToken=bbbb; __ac_nonce=cccc; __ac_signature=dddd;
 cookies = "your cookies"
 # maximum quality supported
