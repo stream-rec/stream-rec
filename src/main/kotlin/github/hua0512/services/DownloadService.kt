@@ -17,6 +17,7 @@ import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
 import github.hua0512.utils.deleteFile
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.withPermit
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.coroutineContext
@@ -110,11 +111,13 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         if (isLive) {
           streamer.isLive = true
           // stream is live, start downloading
-          val streamsData = try {
-            plugin.download()
-          } catch (e: Exception) {
-            logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
-            emptyList()
+          val streamsData = app.downloadSemaphore.withPermit {
+            try {
+              plugin.download()
+            } catch (e: Exception) {
+              logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
+              emptyList()
+            }
           }
           retryCount = 0
           logger.info("Final stream data : $streamsData")
