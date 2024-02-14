@@ -99,6 +99,11 @@ abstract class Danmu(val app: App) {
   var enableWrite: Boolean = false
 
   /**
+   * Whether the end of file is written
+   */
+  var isEndOfFileWritten = AtomicBoolean(false)
+
+  /**
    * Represents the start time of the danmu download.
    */
   var startTime: Long = System.currentTimeMillis()
@@ -221,9 +226,10 @@ abstract class Danmu(val app: App) {
         .buffer(5)
         .onEach {
           // if it is null, finish writing to file
-          if (it == null) {
+          if (it == null || !isEndOfFileWritten.get()) {
             logger.info("Finish writing danmu to : ${danmuFile.absolutePath}")
-            danmuFile.appendText("</root>")
+            writeEndOfFile()
+            isEndOfFileWritten.set(true)
             return@onEach
           }
           // write danmu to file
@@ -287,7 +293,6 @@ abstract class Danmu(val app: App) {
    */
   suspend fun finish() {
     logger.info("$filePath danmu file finished")
-    isInitialized.set(false)
     // send null to write channel to finish writing
     withContext(Dispatchers.IO) {
       writeToFileFlow.emit(null)
@@ -295,6 +300,17 @@ abstract class Danmu(val app: App) {
     }
     headersMap.clear()
     requestParams.clear()
+    if (!isEndOfFileWritten.getAndSet(true)) {
+      withContext(Dispatchers.IO) {
+        writeEndOfFile()
+      }
+    }
+    enableWrite = false
+    isInitialized.set(false)
+  }
+
+  private fun writeEndOfFile() {
+    danmuFile.appendText("</root>")
   }
 
 }
