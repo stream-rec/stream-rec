@@ -13,6 +13,7 @@ import github.hua0512.plugins.danmu.huya.msg.HuyaUserInfo
 import github.hua0512.plugins.danmu.huya.msg.data.HuyaCmds
 import github.hua0512.plugins.danmu.huya.msg.data.HuyaOperations
 import github.hua0512.plugins.download.Huya
+import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +29,7 @@ import kotlin.time.toDuration
  */
 class HuyaDanmu(app: App) : Danmu(app) {
 
-  override val websocketUrl: String = "wss://cdnws.api.huya.com:443"
+  override var websocketUrl: String = "wss://cdnws.api.huya.com:443"
   override val heartBeatDelay: Long = 60.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
 
   // @formatter:off
@@ -95,7 +96,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
     }
   }
 
-  override fun decodeDanmu(data: ByteArray): DanmuData? {
+  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData? {
     val huyaSocketCommand = HuyaSocketCommand().apply {
       readFrom(TarsInputStream(data))
     }
@@ -116,12 +117,15 @@ class HuyaDanmu(app: App) : Danmu(app) {
             }
           }
           val content = msgNotice.sContent
+          // FUCK, huya danmu has no time attribute!
+          // this is inaccurate
+          val time = if (huyaSocketCommand.lTime == 0L) System.currentTimeMillis() else huyaSocketCommand.lTime
           return DanmuData(
             msgNotice.senderInfo.sNickName,
             color = msgNotice.tBulletFormat.iFontColor,
             content = content,
             fontSize = msgNotice.tBulletFormat.iFontSize,
-            time = huyaSocketCommand.lTime.toDouble()
+            serverTime = time
           )
         }
       }

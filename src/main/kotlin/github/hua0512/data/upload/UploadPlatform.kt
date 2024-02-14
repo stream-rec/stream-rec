@@ -5,5 +5,6 @@ package github.hua0512.data.upload
  * @date : 2024/2/9 19:06
  */
 enum class UploadPlatform {
-  RCLONE
+  RCLONE,
+  NONE
 }

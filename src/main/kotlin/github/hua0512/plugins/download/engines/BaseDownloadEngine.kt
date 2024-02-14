@@ -9,7 +9,11 @@ import kotlinx.coroutines.withContext
  * @author hua0512
  * @date : 2024/2/12 18:22
  */
-abstract class BaseDownloadEngine(open val app: App) {
+abstract class BaseDownloadEngine(
+  open val app: App,
+  open var onDownloadStarted: () -> Unit = {},
+  open var onDownloadProgress: (diff: Long, bitrate: String) -> Unit = { _, _ -> },
+) {
 
   protected var cookies: String? = ""
   protected var downloadUrl: String? = null

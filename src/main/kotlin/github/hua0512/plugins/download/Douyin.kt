@@ -6,6 +6,9 @@ import github.hua0512.data.config.DouyinDownloadConfig
 import github.hua0512.data.platform.DouyinQuality
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
+import github.hua0512.utils.commonDouyinParams
+import github.hua0512.utils.extractDouyinRoomId
+import github.hua0512.utils.getDouyinTTwid
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -30,33 +33,26 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
   override suspend fun shouldDownload(streamer: Streamer): Boolean {
     this.streamer = streamer
 
-    val roomId = try {
-      streamer.url.split("douyin.com/")[1].split('/')[0].split('?')[0].run {
-        if (this.isEmpty()) {
-          logger.error("Empty room id from url: ${streamer.url}")
-          return false
-        }
-        this
-      }
-    } catch (e: Exception) {
-      logger.error("Failed to get room id from url: ${streamer.url}")
-      return false
-    }
+    val roomId = extractDouyinRoomId(streamer.url) ?: false
 
-//    logger.debug("Room id: {}", roomId)
     val config = streamer.downloadConfig as? DouyinDownloadConfig ?: DouyinDownloadConfig()
 
-
-    val cookies = (config.cookies ?: app.config.douyinConfig.cookies).also {
+    val cookies = (config.cookies ?: app.config.douyinConfig.cookies).let {
       if (it.isNullOrEmpty()) {
         logger.error("Please provide douyin cookies!")
         return false
       }
-      if ("ttwid" !in it) {
-        // TODO : Add a way to get ttwid
-        logger.error("Invalid douyin cookies, ttwid not found!")
-        return false
-      }
+      return@let if ("ttwid" !in it) {
+        val randomTTwid = app.client.getDouyinTTwid().run {
+          if (isNotEmpty()) {
+            "$it; ttwid=$this"
+          } else {
+            logger.error("Failed to get ttwid from cookies")
+            return false
+          }
+        }
+        return@let randomTTwid
+      } else it
     }
 
     val response = withContext(Dispatchers.IO) {
@@ -64,10 +60,11 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
         headers {
           commonHeaders.forEach { append(it.first, it.second) }
           append(HttpHeaders.Referrer, "https://live.douyin.com")
-          append(HttpHeaders.Cookie, cookies!!)
+          append(HttpHeaders.Cookie, cookies)
         }
-        parameter("aid", "6383")
-        parameter("web_rid", roomId)
+        commonDouyinParams.forEach { (key, value) ->
+          parameter(key, value)
+        }
       }
     }
 

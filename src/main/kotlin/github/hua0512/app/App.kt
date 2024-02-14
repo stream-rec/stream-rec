@@ -78,9 +78,6 @@ class App {
   // semaphore to limit the number of concurrent downloads
   lateinit var downloadSemaphore: Semaphore
 
-  // semaphore to limit the number of concurrent uploads
-  lateinit var uploadSemaphore: Semaphore
-
   suspend fun initConfig(): Boolean {
     logger.info("Initializing app config...")
 
@@ -118,7 +115,6 @@ class App {
     }
     config = parsedConfig
     downloadSemaphore = Semaphore(config.maxConcurrentDownloads)
-    uploadSemaphore = Semaphore(config.maxConcurrentUploads)
     isInitialized = true
     logger.info("App config initialized")
     logger.info("Config: {}", config)

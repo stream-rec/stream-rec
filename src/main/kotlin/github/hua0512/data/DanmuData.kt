@@ -12,5 +12,6 @@ data class DanmuData(
   val color: Int,
   val content: String,
   val fontSize: Int,
-  val time: Double,
+  val serverTime: Long,
+  val clientTime: Double? = null,
 )

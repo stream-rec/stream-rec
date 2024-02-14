@@ -4,6 +4,7 @@ import github.hua0512.app.App
 import github.hua0512.data.DanmuData
 import github.hua0512.data.Streamer
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -30,6 +31,8 @@ abstract class Danmu(val app: App) {
     protected val logger: Logger = LoggerFactory.getLogger(Danmu::class.java)
   }
 
+  var enableWrite: Boolean = false
+
   /**
    * Whether the danmu is initialized
    */
@@ -38,7 +41,7 @@ abstract class Danmu(val app: App) {
   /**
    * Danmu websocket url
    */
-  abstract val websocketUrl: String
+  abstract var websocketUrl: String
 
   /**
    * Heart beat delay
@@ -68,12 +71,22 @@ abstract class Danmu(val app: App) {
   /**
    * Represents the start time of the danmu download.
    */
-  protected var startTime: Long = System.currentTimeMillis()
+  var startTime: Long = System.currentTimeMillis()
 
   /**
    * A shared flow to write danmu data to file
    */
   private val writeToFileFlow = MutableSharedFlow<DanmuData?>(replay = 1)
+
+  /**
+   * Request headers
+   */
+  protected val headersMap = mutableMapOf<String, String>()
+
+  /**
+   * Request parameters
+   */
+  protected val requestParams = mutableMapOf<String, String>()
 
   /**
    * Initialize danmu
@@ -104,13 +117,20 @@ abstract class Danmu(val app: App) {
 
     // fetch danmu
     withContext(Dispatchers.IO) {
-      app.client.webSocket(websocketUrl) {
+      app.client.webSocket(websocketUrl, request = {
+        requestParams.forEach { (k, v) ->
+          parameter(k, v)
+        }
+        headersMap.forEach { (k, v) ->
+          header(k, v)
+        }
+      }) {
         // launch a coroutine to write danmu to file
         launchIOTask()
         // make an initial hello
-        send(oneHello())
+        sendHello(this)
         // launch a coroutine to send heart beat
-        launchHeartBeatJob()
+        launchHeartBeatJob(this)
         while (true) {
           // received socket frame
           when (val frame = incoming.receive()) {
@@ -118,14 +138,18 @@ abstract class Danmu(val app: App) {
               val data = frame.readBytes()
               // decode danmu
               try {
-                decodeDanmu(data)?.also {
-                  // emit danmu to write to file
-                  val danmuTime = (System.currentTimeMillis() - startTime).run {
-                    // format to 3 decimal places
-                    String.format("%.3f", this / 1000.0).toDouble()
+                decodeDanmu(this, data)?.also {
+                  // danmu server time
+                  val serverTime = it.serverTime
+                  // danmu process start time
+                  val danmuStartTime = startTime
+                  // danmu in video time
+                  val danmuInVideoTime = (serverTime - danmuStartTime).run {
+                    val time = if (this < 0) 0 else this
+                    String.format("%.3f", time / 1000.0).toDouble()
                   }
-
-                  writeToFileFlow.tryEmit(it.copy(time = danmuTime))
+                  // emit danmu to write to file
+                  writeToFileFlow.tryEmit(it.copy(clientTime = danmuInVideoTime))
                 }
               } catch (e: Exception) {
                 logger.error("Error decoding danmu: $e")
@@ -183,14 +207,19 @@ abstract class Danmu(val app: App) {
     }
   }
 
+  protected suspend fun sendHello(session: DefaultClientWebSocketSession) {
+    session.send(oneHello())
+  }
+
   /**
    * Writes the given [DanmuData] object to the danmu file.
    *
    * @param data The [DanmuData] object to be written.
    */
   private fun writeToDanmu(data: DanmuData) {
+    if (!enableWrite) return
     val xml = xml("d") {
-      val time = data.time
+      val time = data.clientTime
       val color = if (data.color == -1) "16777215" else data.color
       attribute("p", "$time,1,25,$color,0,0,0,0")
       text(data.content)
@@ -202,12 +231,14 @@ abstract class Danmu(val app: App) {
   /**
    * Launches a coroutine to send heartbeats on the given WebSocket session.
    */
-  private fun DefaultClientWebSocketSession.launchHeartBeatJob() {
-    launch {
-      while (true) {
-        // send heart beat with delay
-        send(heartBeatPack)
-        delay(heartBeatDelay)
+  protected open fun launchHeartBeatJob(session: DefaultClientWebSocketSession) {
+    with(session) {
+      launch {
+        while (true) {
+          // send heart beat with delay
+          send(heartBeatPack)
+          delay(heartBeatDelay)
+        }
       }
     }
   }
@@ -219,7 +250,7 @@ abstract class Danmu(val app: App) {
    * @param data The byte array to be decoded.
    * @return The decoded DanmuData object, or null if decoding fails.
    */
-  abstract fun decodeDanmu(data: ByteArray): DanmuData?
+  abstract suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData?
 
   /**
    * Finish writting danmu to file
@@ -232,6 +263,8 @@ abstract class Danmu(val app: App) {
       writeToFileFlow.emit(null)
       writeToFileFlow.resetReplayCache()
     }
+    headersMap.clear()
+    requestParams.clear()
   }
 
 }

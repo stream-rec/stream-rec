@@ -19,6 +19,7 @@ com-google-dagger-dagger = { module = "com.google.dagger:dagger", version.ref = 
 com-google-dagger-dagger-compiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }
 
 org-jetbrains-kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2"
+org-jetbrains-kotlinx-serialization-protobuf = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.6.2"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

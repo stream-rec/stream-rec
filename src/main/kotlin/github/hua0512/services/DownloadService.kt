@@ -15,11 +15,14 @@ import github.hua0512.plugins.danmu.douyin.DouyinDanmu
 import github.hua0512.plugins.danmu.huya.HuyaDanmu
 import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
+import github.hua0512.utils.deleteFile
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.withPermit
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.coroutineContext
 import kotlin.coroutines.resume
+import kotlin.io.path.Path
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -88,7 +91,9 @@ class DownloadService(val app: App, val uploadService: UploadService) {
           // stream finished with data
           logger.error("Max retry reached for ${streamer.name}")
           // call onStreamingFinished callback with the copy of the list
-          bindOnStreamingEndActions(streamer, streamDataList.toList())
+          launch {
+            bindOnStreamingEndActions(streamer, streamDataList.toList())
+          }
           retryCount = 0
           streamer.isLive = false
           streamDataList.clear()
@@ -106,11 +111,13 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         if (isLive) {
           streamer.isLive = true
           // stream is live, start downloading
-          val streamsData = try {
-            plugin.download()
-          } catch (e: Exception) {
-            logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
-            emptyList()
+          val streamsData = app.downloadSemaphore.withPermit {
+            try {
+              plugin.download()
+            } catch (e: Exception) {
+              logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
+              emptyList()
+            }
           }
           retryCount = 0
           logger.info("Final stream data : $streamsData")
@@ -146,6 +153,13 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         .forEach {
           it.mapToAction(streamDataList)
         }
+    } else {
+      // delete files if both onStreamFinished and onPartedDownload are empty
+      if (downloadConfig?.onPartedDownload.isNullOrEmpty() && app.config.deleteFilesAfterUpload) {
+        streamDataList.forEach {
+          Path(it.outputFilePath).deleteFile()
+        }
+      }
     }
   }
 
@@ -166,15 +180,16 @@ class DownloadService(val app: App, val uploadService: UploadService) {
     return when (this) {
       is RcloneAction -> {
         this.run {
+          val finalList = streamDataList.flatMap { streamData ->
+            listOfNotNull(
+              UploadData(0, streamData.title, streamData.streamer.name, streamData.dateStart!!, streamData.outputFilePath),
+              streamData.danmuFilePath?.let { UploadData(0, streamData.title, streamData.streamer.name, streamData.dateStart, it) }
+            )
+          }
           UploadAction(
             id = 0,
             time = System.currentTimeMillis(),
-            uploadDataList = streamDataList.map {
-              UploadData(
-                0,
-                it
-              )
-            },
+            uploadDataList = finalList,
             uploadConfig = RcloneConfig(
               remotePath = this.remotePath,
               args = this.args
@@ -187,7 +202,16 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         this.run {
           logger.info("Running command action : $this")
           val exitCode = suspendCancellableCoroutine<Int> {
-            val process = ProcessBuilder(this.program.split(" ")).start()
+            val streamDataList = streamDataList.joinToString("\n") { it.outputFilePath }
+
+            val process = ProcessBuilder(this.program, *this.args.toTypedArray())
+              .redirectError(ProcessBuilder.Redirect.PIPE)
+              .start()
+            val writter = process.outputStream.bufferedWriter()
+            // write the list of files to the process input
+            writter.use {
+              it.write(streamDataList)
+            }
             val job = Job()
             val scope = CoroutineScope(Dispatchers.IO + job)
             scope.launch {
