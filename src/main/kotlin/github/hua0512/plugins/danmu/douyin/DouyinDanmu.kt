@@ -38,7 +38,7 @@ import github.hua0512.plugins.base.Download
 import github.hua0512.utils.commonDouyinParams
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.extractDouyinRoomId
-import github.hua0512.utils.getDouyinTTwid
+import github.hua0512.utils.populateDouyinCookieMissedParams
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -71,15 +71,12 @@ class DouyinDanmu(app: App) : Danmu(app) {
         logger.error("Empty douyin cookies")
         return false
       }
-      if ("ttwid" !in it) {
-        val ttwid = app.client.getDouyinTTwid()
-        if (ttwid.isEmpty()) {
-          logger.error("Failed to get ttwid from cookies")
-          return false
-        }
-        return@let "$it; ttwid=$ttwid"
+      try {
+        populateDouyinCookieMissedParams(it, app.client)
+      } catch (e: Exception) {
+        logger.error("Failed to populate douyin cookie missed params", e)
+        return false
       }
-      it
     }
 
     val response = withContext(Dispatchers.IO) {

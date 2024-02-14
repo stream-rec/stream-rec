@@ -31,8 +31,23 @@ import github.hua0512.plugins.base.Download
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import java.util.*
 
 
+/**
+ * A map of common parameters used for making requests to the Douyin API.
+ *
+ * The map contains the following key-value pairs:
+ * - "aid" - The Douyin application ID
+ * - "device_platform" - The platform of the device making the request (e.g., "web")
+ * - "browser_language" - The language of the browser making the request (e.g., "zh-CN")
+ * - "browser_platform" - The platform of the browser making the request (e.g., "Win32")
+ * - "browser_name" - The name of the browser making the request (e.g., "Chrome")
+ * - "browser_version" - The version of the browser making the request (e.g., "98.0.4758.102")
+ * - "compress" - The compression method used for the response (e.g., "gzip")
+ * - "signature" - The signature for the request
+ * - "heartbeatDuration" - The duration of the heartbeat in milliseconds
+ */
 val commonDouyinParams = mapOf(
   "aid" to "6383",
   "device_platform" to "web",
@@ -45,8 +60,17 @@ val commonDouyinParams = mapOf(
   "heartbeatDuration" to "0"
 )
 
+/**
+ * The `ttwid` parameter from the Douyin cookies.
+ */
 lateinit var douyinTTwid: String
 
+/**
+ * Extracts the Douyin room ID from the specified URL.
+ *
+ * @param url The URL from which to extract the Douyin room ID
+ * @return The Douyin room ID, or `null` if the room ID could not be extracted
+ */
 internal fun extractDouyinRoomId(url: String): String? {
   if (url.isEmpty()) return null
   return try {
@@ -61,10 +85,60 @@ internal fun extractDouyinRoomId(url: String): String? {
   }
 }
 
-suspend fun HttpClient.getDouyinTTwid(): String {
-  if (::douyinTTwid.isInitialized) {
-    return douyinTTwid
+/**
+ * Populates the missing parameters (ttwid or msToken) in the specified Douyin cookies.
+ *
+ *
+ * @param cookies The Douyin cookies to populate
+ * @param client The HTTP client to use for making requests
+ * @return The Douyin cookies with the missing parameters populated
+ */
+suspend fun populateDouyinCookieMissedParams(cookies: String, client: HttpClient): String {
+  if (cookies.isEmpty()) {
+    throw Exception("Empty cookies")
   }
+  var finalCookies = cookies
+  if ("ttwid" !in cookies) {
+    logger.info("ttwid not found in cookies, trying to get it from server...")
+    val ttwid = client.getDouyinTTwid()
+    finalCookies += "; ttwid=$ttwid"
+    logger.info("ttwid not found in cookies, got it from server: $ttwid")
+  }
+  if ("msToken" !in cookies) {
+    val msToken = generateDouyinMsToken()
+    finalCookies += "; msToken=$msToken"
+    logger.info("msToken not found in cookies, generated a new one: $msToken")
+  }
+  return finalCookies
+}
+
+/**
+ * Generates a random string to be used as the `msToken` parameter in Douyin requests.
+ *
+ * @param length The length of the random string to generate
+ * @return A random string to be used as the `msToken` parameter in Douyin requests
+ */
+private fun generateDouyinMsToken(length: Int = 107): String {
+  // generate a random string, with length 107
+  val source = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=_"
+  val random = Random()
+  val sb = StringBuilder()
+  for (i in 0 until length) {
+    sb.append(source[random.nextInt(source.length)])
+  }
+  return sb.toString()
+}
+
+
+/**
+ * Makes a request to the Douyin API to get the `ttwid` parameter from the cookies.
+ *
+ * @param client The HTTP client to use for making requests
+ * @return The `ttwid` parameter from the Douyin cookies
+ */
+private suspend fun HttpClient.getDouyinTTwid(): String {
+  if (::douyinTTwid.isInitialized) return douyinTTwid
+
   val response = this.get("https://live.douyin.com/1-2-3-4-5-6-7-8-9-0") {
     commonDouyinParams.forEach { (key, value) ->
       parameter(key, value)
