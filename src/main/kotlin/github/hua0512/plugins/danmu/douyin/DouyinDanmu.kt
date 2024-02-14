@@ -154,9 +154,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
             chatMessage.contentBytes.toStringUtf8(),
             chatMessage.rtfContent.defaultFormat.fontSize,
             chatMessage.eventTime * 1000,
-          ).also {
-            logger.info("DouyinDanmu: $it, time : ${chatMessage.eventTime}")
-          }
+          )
         }
 
         // TODO :support other types of messages
