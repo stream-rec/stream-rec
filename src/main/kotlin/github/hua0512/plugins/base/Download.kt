@@ -11,6 +11,10 @@ import github.hua0512.utils.deleteFile
 import github.hua0512.utils.rename
 import io.ktor.http.*
 import kotlinx.coroutines.*
+import me.tongfei.progressbar.DelegatingProgressBarConsumer
+import me.tongfei.progressbar.ProgressBar
+import me.tongfei.progressbar.ProgressBarBuilder
+import me.tongfei.progressbar.ProgressBarStyle
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -137,9 +141,28 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
           throw Exception("NativeEngine does not support mp4 format")
         }
 
+        var pb: ProgressBar? = null
         engine.onDownloadStarted = {
           danmu.startTime = System.currentTimeMillis()
           danmu.enableWrite = true
+          // bytes to kB
+          val max = app.config.maxPartSize / 1024
+
+          pb = ProgressBarBuilder()
+            .setTaskName(streamer.name)
+            .setConsumer(DelegatingProgressBarConsumer(logger::info))
+            .setInitialMax(max)
+            .setUpdateIntervalMillis(2.toDuration(DurationUnit.MINUTES).inWholeMilliseconds.toInt())
+            .continuousUpdate()
+            .hideEta()
+            .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
+            .build()
+        }
+        engine.onDownloadProgress = { size, bitrate ->
+          pb?.let {
+            it.stepBy(size)
+            it.extraMessage = if (bitrate.isEmpty()) "Downloading..." else "bitrate: $bitrate"
+          }
         }
 
         streamData = try {
@@ -149,6 +172,7 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
           null
         }
         logger.debug("({}) streamData: {}", streamer.name, streamData)
+        pb?.close()
 
         // finish danmu download
         if (isDanmuInitialized) danmu.finish()

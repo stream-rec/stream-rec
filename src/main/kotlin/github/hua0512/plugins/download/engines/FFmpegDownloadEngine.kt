@@ -7,19 +7,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import me.tongfei.progressbar.DelegatingProgressBarConsumer
-import me.tongfei.progressbar.ProgressBarBuilder
-import me.tongfei.progressbar.ProgressBarStyle
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.resume
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 /**
  * @author hua0512
  * @date : 2024/2/12 18:22
  */
-class FFmpegDownloadEngine(override val app: App, override var onDownloadStarted: () -> Unit = {}) : BaseDownloadEngine(app = app) {
+class FFmpegDownloadEngine(
+  override val app: App,
+  override var onDownloadStarted: () -> Unit = {},
+  override var onDownloadProgress: (size: Long, bitrate: String) -> Unit = { _, _ -> },
+) : BaseDownloadEngine(app = app) {
 
   companion object {
     @JvmStatic
@@ -60,22 +59,9 @@ class FFmpegDownloadEngine(override val app: App, override var onDownloadStarted
         // handle process cancellation
         continuation.invokeOnCancellation {
           process.destroy()
-          logger.info("(${streamer.name}) download process is cancelled")
+          logger.info("(${streamer.name}) download process is cancelled : $it")
         }
         launch {
-          // bytes to kB
-          val max = segmentPart / 1024
-
-          val pb = ProgressBarBuilder()
-            .setTaskName(streamer.name)
-            .setConsumer(DelegatingProgressBarConsumer(logger::info))
-            .setInitialMax(max)
-            .setUpdateIntervalMillis(2.toDuration(DurationUnit.MINUTES).inWholeMilliseconds.toInt())
-            .continuousUpdate()
-            .hideEta()
-            .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
-            .build()
-
           var lastSize = 0L
           while (process.isAlive) {
             process.inputStream.bufferedReader().readLine()?.let { line ->
@@ -88,13 +74,11 @@ class FFmpegDownloadEngine(override val app: App, override var onDownloadStarted
                 val size = sizeString.replace(Regex("[^0-9]"), "").toLong()
                 val diff = size - lastSize
                 lastSize = size
-                pb.stepBy(diff)
                 val bitrate = line.substringAfter("bitrate=").substringBefore("speed").trim()
-                pb.extraMessage = "bitrate: $bitrate"
+                onDownloadProgress(diff, bitrate)
               }
             }
           }
-          pb.close()
           logger.info("(${streamer.name}) - ffmpeg process is finished")
         }
 
