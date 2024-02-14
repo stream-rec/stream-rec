@@ -3,6 +3,7 @@ plugins {
   kotlin("plugin.serialization") version "1.9.22"
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
   alias(libs.plugins.ktor)
+  id("com.google.protobuf") version "0.9.4"
 }
 
 group = "github.hua0512"
@@ -13,6 +14,24 @@ application.mainClass.set("github.hua0512.Application")
 ktor {
   fatJar {
     archiveFileName.set("stream-rec.jar")
+  }
+}
+
+// disable protobuf plugin because we have generated code
+protobuf {
+  // Configure the protoc executable
+  protoc {
+    // Download from repositories
+    artifact = "com.google.protobuf:protoc:3.25.2"
+  }
+  generateProtoTasks {
+    ofSourceSet("main").forEach { task ->
+      task.builtins {
+        getByName("java") {
+          option("lite")
+        }
+      }
+    }
   }
 }
 
@@ -36,7 +55,9 @@ dependencies {
   implementation("com.tencent.tars:tars-core:1.7.3")
   implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
   implementation("me.tongfei:progressbar:0.10.0")
-
+  implementation("com.google.protobuf:protobuf-java-util:3.25.2")
+  implementation("com.google.protobuf:protobuf-javalite:3.25.2")
+  implementation("com.google.protobuf:protobuf-kotlin-lite:3.25.2")
   ksp(libs.com.google.dagger.dagger.compiler)
 
   testImplementation(libs.org.jetbrains.kotlin.test.junit)

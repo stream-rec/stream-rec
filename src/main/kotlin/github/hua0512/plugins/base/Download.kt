@@ -35,7 +35,7 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
     protected val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @JvmStatic
-    protected val commonHeaders = arrayOf(
+    val commonHeaders = arrayOf(
       HttpHeaders.Accept to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       HttpHeaders.AcceptLanguage to "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
       HttpHeaders.UserAgent to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.3029.110 Safari/537.36"
