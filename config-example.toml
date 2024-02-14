@@ -1,14 +1,12 @@
+###### START OF GLOBAL CONFIG SECTION ########
 # Engine used to download the video (default to "ffmpeg")
 engine = "ffmpeg"
 # global flag to enable/disable danmu download
-danmu = false
+danmu = true
 # global flag to enable/disable delete files after upload
-# READ CAREFULLY!!!
-# rclone command (using callback) is considered as an upload operation
-# READ CAREFULLY!!!
-# rclone command (using callback) is considered as an upload operation
-# READ CAREFULLY!!!
-# rclone command (using callback) is considered as an upload operation
+# only used when streamers.downloadConfig.onPartedDownload or streamers.downloadConfig.onStreamingFinished is enabled
+# streamers.downloadConfig.onPartedDownload has higher priority than streamers.downloadConfig.onStreamingFinished
+# DANGER!!! : rclone (using callback) is considered as an upload operation!!!
 deleteFilesAfterUpload = true
 # output folder path
 # Windows users should use double backslashes or single forward slashes to avoid escape characters,
@@ -18,11 +16,12 @@ outputFolder = "path/to/your/output/folder"
 # possible placeholder values: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
 outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
 # output file format
+# values: mp4, flv ... (formats supported by ffmpeg)
 outputFileFormat = "mp4"
-# minimum size to be considered as valid download file (default to 20 MB)
-# if the size is less than this value, the file will be deleted
+# minimum size (bytes) to be considered as valid download file (default to 20 MB)
+# files smaller than this size will be deleted
 minPartSize = 20000000
-# maximum size of a download part file (default to 2.5 GB)
+# maximum size (bytes) of a download part file (default to 2.5 GB)
 maxPartSize = 2621440000
 # maximum number of concurrent downloads
 maxConcurrentDownloads = 5
@@ -33,6 +32,11 @@ maxDownloadRetries = 3
 # delay between download retries
 downloadRetryDelay = 10
 
+###### END OF GLOBAL CONFIG SECTION ########
+
+############################################################################################
+
+###### START OF PLATFORM CONFIG SECTION ########
 # Huya platform config
 [huyaConfig]
 # primary CDN to use (default to "AL")
@@ -47,46 +51,85 @@ cookies = "your cookies"
 [douyinConfig]
 # recording douyin stream requires cookies
 # ttwid, msToken, __ac_nonce, __ac_signature are needed
-# ttwid=aaaa; msToken=bbbb; __ac_nonce=cccc; __ac_signature=dddd;
+# example: ttwid=aaaa; msToken=bbbb; __ac_nonce=cccc; __ac_signature=dddd;
 cookies = "your cookies"
 # maximum quality supported
 # possible values: "origin", "uhd", "hd", "sd", "ld", "md", "audio"
 quality = "origin"
 
+###### END OF PLATFORM CONFIG SECTION ########
+
+############################################################################################
+
+###### START OF STREAMERS CONFIG SECTION ########
 # streamers to record
 # below is an example of a streamer configuration
+# you can add more streamers by copying the block and changing the values
+
+##############START OF STREAMER CONFIG SECTION##############
+
+# BELOW IS AN EXAMPLE OF A SIMPLE STREAMER CONFIGURATION
 [[streamers]]
 # streamer name (obligatory)
 name = "TheShy"
 # streamer url (obligatory)
 url = "https://www.huya.com/991111"
-# streamer config
+# whether to enable recording (default to true)
+isActivated = false
+############################################################
+
+# BELOW IS AN EXAMPLE OF A STREAMER FULL CONFIGURATION
+[[streamers]]
+# streamer name (obligatory)
+name = "TheShy"
+# streamer url (obligatory)
+url = "https://www.huya.com/991111"
+# whether to enable recording (default to true)
+isActivated = true
+
+# streamer downloadconfig
 # if not specified, it will use the default platform config
 [streamers.downloadConfig]
 # download config, possible values: "huya", "douyin"
 type = "huya"
-# Huya primary CDN to use (default to huyaConfig.primaryCdn)
+# cookies to use (optional)
+# if not specified, it will use the default platform cookies
+cookies = "your cookies"
+# Huya primary CDN to use (optional, default to huyaConfig.primaryCdn)
 primaryCdn = "HW"
-# enable danmu download (default to global danmu flag)
+# enable danmu download (optional, default to global danmu flag)
 danmu = true
-# output file extension (default to global outputFileFormat)
+# Maximum bitrate (optional, default to huyaConfig.maxBitRate)
+maxBitRate = 10000
+# output folder path (optional, default to global outputFolder)
+# Read the global outputFolder comment for more information
+outputFolder = "path/to/your/output/folder/{streamer}/%yyyy-%MM-%dd}"
+# output file name format (optional, default to global outputFileName)
+# Read the global outputFileName comment for more information
+outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
+# output file extension (optional, default to global outputFileFormat)
 outputFileExtension = "mp4"
 
-# callback to execute when a parted download is finished
+# ASYNCHRONOUS callback to execute when a parted download is finished
+# DANGER!!! : streamers.downloadConfig must be specified
 [[streamers.downloadConfig.onPartedDownload]]
 # callback type, possible values: "rclone", "command"
-# DANGER!!!: "rclone" is considered as an upload operation
+# DANGER!!!: "rclone" is considered as an upload operation.
+# if global flag deleteFilesAfterUpload is enabled, the downloaded files will be deleted after the upload
+#
 # if "command" is used, the command will be executed in the shell and,
 # the downloaded files path is passed as the first argument.
 type = "rclone"
 # whether to enable the callback (default to false)
 enabled = true
+# rclone operation type
+# remove this line if you're using command
+rcloneOperation = "copy"
 # rclone remote name
 # only used when type is "rclone"
 # possible placeholder values: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
 remotePath = "drive:your/remote/path"
-# program name
-# only used when type is "command"
+# program name, only used when type is "command"
 # remove this line if you're using rclone
 # program = "ls"
 
@@ -99,10 +142,12 @@ args = [
     "100M"
 ]
 
-# callback to execute when a streaming is finished
+# ASYNCHRONOUS callback to execute when a streaming is finished
 # DANGER!: if streamers.downloadConfig.onPartedDownload is enabled, there is no guarantee that at the time of the callback execution, onPartedDownload is finished
 # DANGER!: if streamers.downloadConfig.onPartedDownload is enabled, there is no guarantee that at the time of the callback execution, onPartedDownload is finished
 # DANGER!: if streamers.downloadConfig.onPartedDownload is enabled, there is no guarantee that at the time of the callback execution, onPartedDownload is finished
+# SO BE CAREFUL WHEN USING BOTH CALLBACKS
+# IF YOU'RE USING BOTH CALLBACKS, MAKE SURE TO CHECK IF THE FILES ARE UPLOADED BEFORE DELETING THEM (by checking the remote folder or if deleteFilesAfterUpload is enabled, check if the files are deleted)
 [[streamers.downloadConfig.onStreamingFinished]]
 # callback type, possible values: "rclone", "command"
 # if "command" is used, the command will be executed in the shell and,
@@ -110,15 +155,16 @@ args = [
 type = "command"
 # whether to enable the callback (default to false)
 enabled = true
-# rclone remote name
-# possible placeholder values: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
-# remotePath = "drive:your/remote/path"
-
-# program name
-# only used when type is "command"
+# program name, only used when type is "command"
 # remove this line if you're using rclone
 program = "ls"
 # program args
 args = [
     "-l"
 ]
+
+##############END OF STREAMER CONFIG SECTION##############
+
+############################################################################################
+
+###### END OF STREAMERS CONFIG SECTION ########

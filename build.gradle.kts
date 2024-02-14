@@ -17,7 +17,6 @@ ktor {
   }
 }
 
-// disable protobuf plugin because we have generated code
 protobuf {
   // Configure the protoc executable
   protoc {
@@ -50,7 +49,6 @@ dependencies {
   implementation(libs.io.ktor.client.okhttp)
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.4.0")
   implementation("org.redundent:kotlin-xml-builder:1.9.1")
   implementation("com.tencent.tars:tars-core:1.7.3")
   implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
@@ -61,6 +59,7 @@ dependencies {
   ksp(libs.com.google.dagger.dagger.compiler)
 
   testImplementation(libs.org.jetbrains.kotlin.test.junit)
+  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.4.0")
   testImplementation("org.mockito:mockito-core:3.12.4")
   testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
   testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0")
