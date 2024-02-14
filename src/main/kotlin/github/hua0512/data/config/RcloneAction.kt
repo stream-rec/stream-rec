@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 @SerialName("rclone")
 data class RcloneAction(
+  override val rcloneOperation: String,
   override val remotePath: String,
   override val args: List<String>,
 ) : Action(), RcloneConfigDTO

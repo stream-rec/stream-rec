@@ -30,6 +30,8 @@ abstract class Danmu(val app: App) {
     protected val logger: Logger = LoggerFactory.getLogger(Danmu::class.java)
   }
 
+  var enableWrite: Boolean = false
+
   /**
    * Whether the danmu is initialized
    */
@@ -68,7 +70,7 @@ abstract class Danmu(val app: App) {
   /**
    * Represents the start time of the danmu download.
    */
-  protected var startTime: Long = System.currentTimeMillis()
+  var startTime: Long = System.currentTimeMillis()
 
   /**
    * A shared flow to write danmu data to file
@@ -121,8 +123,9 @@ abstract class Danmu(val app: App) {
                 decodeDanmu(data)?.also {
                   // emit danmu to write to file
                   val danmuTime = (System.currentTimeMillis() - startTime).run {
+                    val time = if (this < 0) 0L else this
                     // format to 3 decimal places
-                    String.format("%.3f", this / 1000.0).toDouble()
+                    String.format("%.3f", time / 1000.0).toDouble()
                   }
 
                   writeToFileFlow.tryEmit(it.copy(time = danmuTime))
@@ -189,6 +192,7 @@ abstract class Danmu(val app: App) {
    * @param data The [DanmuData] object to be written.
    */
   private fun writeToDanmu(data: DanmuData) {
+    if (!enableWrite) return
     val xml = xml("d") {
       val time = data.time
       val color = if (data.color == -1) "16777215" else data.color

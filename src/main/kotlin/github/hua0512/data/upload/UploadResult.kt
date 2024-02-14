@@ -1,6 +1,4 @@
-package github.hua0512
-
-import github.hua0512.data.upload.UploadData
+package github.hua0512.data.upload
 
 /**
  * @author hua0512
@@ -10,5 +8,5 @@ data class UploadResult(
   val time: Long,
   val isSuccess: Boolean = false,
   val message: String = "",
-  val uploadData: List<UploadData> = emptyList(),
+  val filePath: String = "",
 )

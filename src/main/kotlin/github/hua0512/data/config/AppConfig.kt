@@ -22,6 +22,7 @@ data class AppConfig(
   val downloadRetryDelay: Long = 10,
   val maxConcurrentDownloads: Int = 5,
   val maxConcurrentUploads: Int = 3,
+  val deleteFilesAfterUpload: Boolean = true,
 
   val huyaConfig: HuyaConfig = HuyaConfig(),
   val douyinConfig: DouyinConfig = DouyinConfig(),

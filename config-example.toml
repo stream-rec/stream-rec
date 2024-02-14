@@ -2,6 +2,14 @@
 engine = "ffmpeg"
 # global flag to enable/disable danmu download
 danmu = false
+# global flag to enable/disable delete files after upload
+# READ CAREFULLY!!!
+# rclone command (using callback) is considered as an upload operation
+# READ CAREFULLY!!!
+# rclone command (using callback) is considered as an upload operation
+# READ CAREFULLY!!!
+# rclone command (using callback) is considered as an upload operation
+deleteFilesAfterUpload = true
 # output folder path
 # Windows users should use double backslashes or single forward slashes to avoid escape characters,
 # for example, "C:\\Users\\yourname\\Downloads" or "C:/Users/yourname/Downloads"
@@ -11,7 +19,7 @@ outputFolder = "path/to/your/output/folder"
 outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
 # output file format
 outputFileFormat = "mp4"
-# minimum size to be considered as a streaming data (default to 20 MB)
+# minimum size to be considered as valid download file (default to 20 MB)
 # if the size is less than this value, the file will be deleted
 minPartSize = 20000000
 # maximum size of a download part file (default to 2.5 GB)
@@ -65,8 +73,9 @@ outputFileExtension = "mp4"
 # callback to execute when a parted download is finished
 [[streamers.downloadConfig.onPartedDownload]]
 # callback type, possible values: "rclone", "command"
+# DANGER!!!: "rclone" is considered as an upload operation
 # if "command" is used, the command will be executed in the shell and,
-# the downloaded files path is passed as the first argument
+# the downloaded files path is passed as the first argument.
 type = "rclone"
 # whether to enable the callback (default to false)
 enabled = true
@@ -89,6 +98,9 @@ args = [
 ]
 
 # callback to execute when a streaming is finished
+# DANGER!: if streamers.downloadConfig.onPartedDownload is enabled, there is no guarantee that at the time of the callback execution, onPartedDownload is finished
+# DANGER!: if streamers.downloadConfig.onPartedDownload is enabled, there is no guarantee that at the time of the callback execution, onPartedDownload is finished
+# DANGER!: if streamers.downloadConfig.onPartedDownload is enabled, there is no guarantee that at the time of the callback execution, onPartedDownload is finished
 [[streamers.downloadConfig.onStreamingFinished]]
 # callback type, possible values: "rclone", "command"
 # if "command" is used, the command will be executed in the shell and,

@@ -1,4 +1,3 @@
 package github.hua0512.plugins.upload
 
-class UploadFailedException(val filePath: String, override val message: String) : Exception() {
-}
+class UploadFailedException(override val message: String, val filePath: String) : Exception()

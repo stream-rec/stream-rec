@@ -19,7 +19,7 @@ import kotlin.time.toDuration
  * @author hua0512
  * @date : 2024/2/12 18:22
  */
-class FFmpegDownloadEngine(override val app: App) : BaseDownloadEngine(app = app) {
+class FFmpegDownloadEngine(override val app: App, override var onDownloadStarted: () -> Unit = {}) : BaseDownloadEngine(app = app) {
 
   companion object {
     @JvmStatic
@@ -56,7 +56,7 @@ class FFmpegDownloadEngine(override val app: App) : BaseDownloadEngine(app = app
         val process = builder
           .redirectErrorStream(true)
           .start()
-
+        onDownloadStarted()
         // handle process cancellation
         continuation.invokeOnCancellation {
           process.destroy()

@@ -139,6 +139,11 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
             throw Exception("NativeEngine does not support mp4 format")
           }
 
+          engine.onDownloadStarted = {
+            danmu.startTime = System.currentTimeMillis()
+            danmu.enableWrite = true
+          }
+
           streamData = try {
             engine.run()
           } catch (e: Exception) {

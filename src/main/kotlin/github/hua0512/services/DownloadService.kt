@@ -15,11 +15,13 @@ import github.hua0512.plugins.danmu.douyin.DouyinDanmu
 import github.hua0512.plugins.danmu.huya.HuyaDanmu
 import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
+import github.hua0512.utils.deleteFile
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.coroutineContext
 import kotlin.coroutines.resume
+import kotlin.io.path.Path
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -88,7 +90,9 @@ class DownloadService(val app: App, val uploadService: UploadService) {
           // stream finished with data
           logger.error("Max retry reached for ${streamer.name}")
           // call onStreamingFinished callback with the copy of the list
-          bindOnStreamingEndActions(streamer, streamDataList.toList())
+          launch {
+            bindOnStreamingEndActions(streamer, streamDataList.toList())
+          }
           retryCount = 0
           streamer.isLive = false
           streamDataList.clear()
@@ -146,6 +150,13 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         .forEach {
           it.mapToAction(streamDataList)
         }
+    } else {
+      // delete files if both onStreamFinished and onPartedDownload are empty
+      if (downloadConfig?.onPartedDownload.isNullOrEmpty() && app.config.deleteFilesAfterUpload) {
+        streamDataList.forEach {
+          Path(it.outputFilePath).deleteFile()
+        }
+      }
     }
   }
 
@@ -166,15 +177,16 @@ class DownloadService(val app: App, val uploadService: UploadService) {
     return when (this) {
       is RcloneAction -> {
         this.run {
+          val finalList = streamDataList.flatMap { streamData ->
+            listOfNotNull(
+              UploadData(0, streamData.title, streamData.streamer.name, streamData.dateStart!!, streamData.outputFilePath),
+              streamData.danmuFilePath?.let { UploadData(0, streamData.title, streamData.streamer.name, streamData.dateStart, it) }
+            )
+          }
           UploadAction(
             id = 0,
             time = System.currentTimeMillis(),
-            uploadDataList = streamDataList.map {
-              UploadData(
-                0,
-                it
-              )
-            },
+            uploadDataList = finalList,
             uploadConfig = RcloneConfig(
               remotePath = this.remotePath,
               args = this.args
