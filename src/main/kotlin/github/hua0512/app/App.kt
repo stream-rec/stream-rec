@@ -73,7 +73,14 @@ class App {
 
   var config: AppConfig = AppConfig()
   var isInitialized = false
-  val ffmepgPath = System.getenv("FFMPEG_PATH") ?: "ffmpeg"
+  val ffmepgPath = (System.getenv("FFMPEG_PATH") ?: "ffmpeg").run {
+    // check if is windows
+    if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
+      "$this.exe"
+    } else {
+      this
+    }
+  }
 
   // semaphore to limit the number of concurrent downloads
   lateinit var downloadSemaphore: Semaphore

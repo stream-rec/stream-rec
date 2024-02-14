@@ -31,8 +31,6 @@ abstract class Danmu(val app: App) {
     protected val logger: Logger = LoggerFactory.getLogger(Danmu::class.java)
   }
 
-  var enableWrite: Boolean = false
-
   /**
    * Whether the danmu is initialized
    */
@@ -64,9 +62,15 @@ abstract class Danmu(val app: App) {
 
 
   /**
-   * Danmu file
+   * Danmu file, danmu will be written to this file in xml format
    */
   lateinit var danmuFile: File
+
+  /**
+   * Whether to enable writing danmu to file
+   * @see [danmuFile]
+   */
+  var enableWrite: Boolean = false
 
   /**
    * Represents the start time of the danmu download.
