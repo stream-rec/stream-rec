@@ -101,6 +101,7 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
         commonDouyinParams.forEach { (key, value) ->
           parameter(key, value)
         }
+        parameter("web_rid", roomId)
       }
     }
 
