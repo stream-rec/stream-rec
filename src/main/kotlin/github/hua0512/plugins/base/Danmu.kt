@@ -38,7 +38,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.*
-import org.redundent.kotlin.xml.xml
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -257,14 +256,14 @@ abstract class Danmu(val app: App) {
    */
   private fun writeToDanmu(data: DanmuData) {
     if (!enableWrite) return
-    val xml = xml("d") {
-      val time = data.clientTime
-      val color = if (data.color == -1) "16777215" else data.color
-      attribute("p", "$time,1,25,$color,0,0,0,0")
-      text(data.content)
-    }
-//    logger.debug("Writing danmu to file: ${xml.toString(prettyFormat = false)}")
-    danmuFile.appendText("  ${xml.toString(false)}\n")
+    val time = data.clientTime
+    val color = if (data.color == -1) "16777215" else data.color
+    // ignore font size
+    val fontSize = data.fontSize
+    val xmlContent = """
+      <d p="${time},1,25,$color,0,0,0,0">${data.content}</d>
+    """.trimIndent()
+    danmuFile.appendText("  ${xmlContent}\n")
   }
 
   /**

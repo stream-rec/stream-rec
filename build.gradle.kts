@@ -48,7 +48,6 @@ dependencies {
 
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)
-  implementation("org.redundent:kotlin-xml-builder:1.9.1")
   implementation("com.tencent.tars:tars-core:1.7.3")
   implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
   implementation("me.tongfei:progressbar:0.10.0")
