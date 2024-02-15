@@ -173,7 +173,7 @@ abstract class Danmu(val app: App) {
               val data = frame.readBytes()
               // decode danmu
               try {
-                decodeDanmu(this, data)?.also {
+                decodeDanmu(this, data).filterNotNull().forEach {
                   // danmu server time
                   val serverTime = it.serverTime
                   // danmu process start time
@@ -284,9 +284,9 @@ abstract class Danmu(val app: App) {
    * Decodes the given byte array into a DanmuData object.
    *
    * @param data The byte array to be decoded.
-   * @return The decoded DanmuData object, or null if decoding fails.
+   * @return A list of [DanmuData] objects decoded from the given byte array.
    */
-  abstract suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData?
+  abstract suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuData?>
 
   /**
    * Finish writting danmu to file

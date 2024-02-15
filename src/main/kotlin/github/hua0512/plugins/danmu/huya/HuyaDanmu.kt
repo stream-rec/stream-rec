@@ -122,7 +122,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
     }
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData? {
+  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuData?> {
     val huyaSocketCommand = HuyaSocketCommand().apply {
       readFrom(TarsInputStream(data))
     }
@@ -146,12 +146,15 @@ class HuyaDanmu(app: App) : Danmu(app) {
           // FUCK, huya danmu has no time attribute!
           // this is inaccurate
           val time = if (huyaSocketCommand.lTime == 0L) System.currentTimeMillis() else huyaSocketCommand.lTime
-          return DanmuData(
-            msgNotice.senderInfo.sNickName,
-            color = msgNotice.tBulletFormat.iFontColor,
-            content = content,
-            fontSize = msgNotice.tBulletFormat.iFontSize,
-            serverTime = time
+          // huya danmu contains only one danmu
+          return listOf(
+            DanmuData(
+              msgNotice.senderInfo.sNickName,
+              color = msgNotice.tBulletFormat.iFontColor,
+              content = content,
+              fontSize = msgNotice.tBulletFormat.iFontSize,
+              serverTime = time
+            )
           )
         }
       }
@@ -160,7 +163,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
         HuyaOperations.fromCode(commandType) ?: logger.debug("Received unknown huya command: $commandType")
       }
     }
-    return null
+    return emptyList()
   }
 
 

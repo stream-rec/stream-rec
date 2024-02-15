@@ -125,7 +125,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
     return byteArrayOf()
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData? {
+  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuData?> {
     val pushFrame = PushFrame.parseFrom(data)
     val logId = pushFrame.logId
     val payload = pushFrame.payload.toByteArray()
@@ -138,15 +138,15 @@ class DouyinDanmu(app: App) : Danmu(app) {
       sendAck(session, logId, internalExt)
     }
     val msgList = payloadPackage.messagesListList
-    // TODO : investigate the possibility of multiple messages in one frame
-    msgList.map { msg ->
+    // each frame may contain multiple messages
+    return msgList.map { msg ->
       when (msg.method) {
         "WebcastChatMessage" -> {
           val chatMessage = Dy.ChatMessage.parseFrom(msg.payload)
           val textColor = chatMessage.rtfContent.defaultFormat.color.run {
             if (this.isNullOrEmpty()) -1 else this.toInt(16)
           }
-          return DanmuData(
+          DanmuData(
             chatMessage.user.nickNameBytes.toStringUtf8(),
             textColor,
             chatMessage.contentBytes.toStringUtf8(),
@@ -158,10 +158,10 @@ class DouyinDanmu(app: App) : Danmu(app) {
         // TODO :support other types of messages
         else -> {
 //          logger.info("DouyinDanmu: ${msg.method}")
+          null
         }
       }
     }
-    return null
   }
 
 
