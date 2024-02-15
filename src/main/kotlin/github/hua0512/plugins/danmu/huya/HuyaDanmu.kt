@@ -95,9 +95,12 @@ class HuyaDanmu(app: App) : Danmu(app) {
     }
 
     logger.info("(${streamer.name}) Huya room info: ayyuid=$ayyuid, topsid=$topsid, subid=$subid")
-    return (ayyuid == 0L || topsid == 0L || subid == 0L).not().also {
-      isInitialized.set(it)
+    if (ayyuid == 0L || topsid == 0L || subid == 0L) {
+      logger.error("Failed to get huya room info: ayyuid=$ayyuid, topsid=$topsid, subid=$subid")
+      return false
     }
+    isInitialized.set(true)
+    return true
   }
 
   override fun oneHello(): ByteArray {

@@ -34,12 +34,14 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.*
 import org.redundent.kotlin.xml.xml
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -112,7 +114,7 @@ abstract class Danmu(val app: App) {
   /**
    * A shared flow to write danmu data to file
    */
-  private val writeToFileFlow = MutableSharedFlow<DanmuDataWrapper>(replay = 1)
+  private val writeChannel = Channel<DanmuDataWrapper>(BUFFERED, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
   /**
    * Request headers
@@ -185,7 +187,7 @@ abstract class Danmu(val app: App) {
                     String.format("%.3f", time / 1000.0).toDouble()
                   }
                   // emit danmu to write to file
-                  writeToFileFlow.tryEmit(it.copy(clientTime = danmuInVideoTime))
+                  writeChannel.send(it.copy(clientTime = danmuInVideoTime))
                 }
               } catch (e: Exception) {
                 logger.error("Error decoding danmu: $e")
@@ -209,38 +211,36 @@ abstract class Danmu(val app: App) {
    *
    * @receiver The [CoroutineScope] on which the coroutine will be launched.
    */
-  private fun CoroutineScope.launchIOTask() {
-    writeToFileFlow.resetReplayCache()
-    launch(Dispatchers.IO) {
-      // buffer 5 danmus
-      writeToFileFlow
+  private fun CoroutineScope.launchIOTask(): Job {
+    writeChannel.invokeOnClose {
+      logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
+      if (!isEndOfFileWritten.get()) {
+        writeEndOfFile()
+        isEndOfFileWritten.set(true)
+      }
+    }
+    return launch {
+      writeChannel.consumeAsFlow()
         .onStart {
-          // check if danmuFile is initialized
-          logger.info("Start writing danmu to : ${danmuFile.absolutePath}")
-          // create file if not exists
-          if (!Files.exists(danmuFile.toPath())) {
+          if (!danmuFile.exists()) {
             danmuFile.createNewFile()
-            danmuFile.writeText("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n")
+            danmuFile.appendText("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n")
           } else {
-            logger.info("${danmuFile.absolutePath} file exists, appending to it.")
+            logger.info("Danmu {} already exists", danmuFile.absolutePath)
           }
         }
-        .buffer(5)
         .onEach {
-          // write end of file if it is End and not written
-          if (it is DanmuDataWrapper.End && !isEndOfFileWritten.get()) {
-            logger.info("Finish writing danmu to : ${danmuFile.absolutePath}")
-            writeEndOfFile()
-            isEndOfFileWritten.set(true)
-            return@onEach
+          when (it) {
+            is DanmuData -> writeToDanmu(it)
+            else -> logger.error("Invalid danmu data {}", it)
           }
-          if (it is DanmuDataWrapper.End) return@onEach
-          // write danmu to file
-          writeToDanmu(it as DanmuData)
+        }
+        .catch { e ->
+          logger.error("Error writing danmu to file {}", danmuFile.absolutePath, e)
         }
         .flowOn(Dispatchers.IO)
-        .catch {
-          logger.error("Error writing to file: $it")
+        .onCompletion {
+          logger.info("Danmu {} flow completed, ", danmuFile.absolutePath, it)
         }
         .collect()
     }
@@ -294,27 +294,18 @@ abstract class Danmu(val app: App) {
   /**
    * Finish writting danmu to file
    */
-  @OptIn(ExperimentalCoroutinesApi::class)
-  suspend fun finish() {
-    logger.info("$filePath danmu file finished")
-    // send null to write channel to finish writing
-    writeToFileFlow.emit(DanmuDataWrapper.End)
-    // in case of replay, reset replay cache
-    writeToFileFlow.resetReplayCache()
+  fun finish() {
+    logger.info("Danmu $filePath finish triggered")
+    writeChannel.close()
+    enableWrite = false
+    // reset replay cache
     headersMap.clear()
     requestParams.clear()
-    if (!isEndOfFileWritten.get()) {
-      withContext(Dispatchers.IO) {
-        writeEndOfFile()
-      }
-      isEndOfFileWritten.set(true)
-    }
-    enableWrite = false
-    isInitialized.set(false)
   }
 
   private fun writeEndOfFile() {
     danmuFile.appendText("</root>")
+    logger.info("Finish writing danmu to : ${danmuFile.absolutePath}")
   }
 
 }
