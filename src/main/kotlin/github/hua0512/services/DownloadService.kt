@@ -229,15 +229,23 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         this.run {
           logger.info("Running command action : $this")
           val exitCode = suspendCancellableCoroutine<Int> {
-            val streamDataList = streamDataList.joinToString("\n") { it.outputFilePath }
-
+            val inputString = streamDataList.joinToString("\n") { it.outputFilePath }
+            val processDirectory = app.config.outputFolder.ifEmpty { null }
             val process = ProcessBuilder(this.program, *this.args.toTypedArray())
               .redirectError(ProcessBuilder.Redirect.PIPE)
+              .run {
+                if (processDirectory != null) {
+                  directory(Path(processDirectory).toFile())
+                } else {
+                  this
+                }
+              }
               .start()
+
             val writter = process.outputStream.bufferedWriter()
             // write the list of files to the process input
             writter.use {
-              it.write(streamDataList)
+              it.write(inputString)
             }
             val job = Job()
             val scope = CoroutineScope(Dispatchers.IO + job)

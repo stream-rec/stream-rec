@@ -29,7 +29,7 @@ package github.hua0512.plugins.danmu.huya
 import com.qq.tars.protocol.tars.TarsInputStream
 import com.qq.tars.protocol.tars.TarsOutputStream
 import github.hua0512.app.App
-import github.hua0512.data.DanmuData
+import github.hua0512.data.DanmuDataWrapper
 import github.hua0512.data.Streamer
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.danmu.huya.msg.HuyaMessageNotice
@@ -95,9 +95,12 @@ class HuyaDanmu(app: App) : Danmu(app) {
     }
 
     logger.info("(${streamer.name}) Huya room info: ayyuid=$ayyuid, topsid=$topsid, subid=$subid")
-    return (ayyuid == 0L || topsid == 0L || subid == 0L).not().also {
-      isInitialized.set(it)
+    if (ayyuid == 0L || topsid == 0L || subid == 0L) {
+      logger.error("Failed to get huya room info: ayyuid=$ayyuid, topsid=$topsid, subid=$subid")
+      return false
     }
+    isInitialized.set(true)
+    return true
   }
 
   override fun oneHello(): ByteArray {
@@ -122,7 +125,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
     }
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData? {
+  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper> {
     val huyaSocketCommand = HuyaSocketCommand().apply {
       readFrom(TarsInputStream(data))
     }
@@ -146,12 +149,15 @@ class HuyaDanmu(app: App) : Danmu(app) {
           // FUCK, huya danmu has no time attribute!
           // this is inaccurate
           val time = if (huyaSocketCommand.lTime == 0L) System.currentTimeMillis() else huyaSocketCommand.lTime
-          return DanmuData(
-            msgNotice.senderInfo.sNickName,
-            color = msgNotice.tBulletFormat.iFontColor,
-            content = content,
-            fontSize = msgNotice.tBulletFormat.iFontSize,
-            serverTime = time
+          // huya danmu contains only one danmu
+          return listOf(
+            DanmuDataWrapper.DanmuData(
+              msgNotice.senderInfo.sNickName,
+              color = msgNotice.tBulletFormat.iFontColor,
+              content = content,
+              fontSize = msgNotice.tBulletFormat.iFontSize,
+              serverTime = time
+            )
           )
         }
       }
@@ -160,7 +166,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
         HuyaOperations.fromCode(commandType) ?: logger.debug("Received unknown huya command: $commandType")
       }
     }
-    return null
+    return emptyList()
   }
 
 

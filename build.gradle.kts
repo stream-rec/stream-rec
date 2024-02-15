@@ -42,14 +42,12 @@ dependencies {
   implementation(libs.ch.qos.logback.classic)
   implementation(libs.io.ktor.client.core)
   implementation(libs.io.ktor.client.cio)
-  implementation(libs.io.ktor.client.java)
-  implementation(libs.io.ktor.client.content.negotiation)
   implementation(libs.io.ktor.serialization.kotlinx.json)
   implementation(libs.io.ktor.client.logging)
-  implementation(libs.io.ktor.client.okhttp)
+  implementation(libs.org.jetbrains.kotlinx.coroutines.core)
+
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)
-  implementation("org.redundent:kotlin-xml-builder:1.9.1")
   implementation("com.tencent.tars:tars-core:1.7.3")
   implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
   implementation("me.tongfei:progressbar:0.10.0")
@@ -59,10 +57,10 @@ dependencies {
   ksp(libs.com.google.dagger.dagger.compiler)
 
   testImplementation(libs.org.jetbrains.kotlin.test.junit)
-  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.4.0")
+  testImplementation(libs.org.jetbrains.kotlinx.coroutines.debug)
+  testImplementation(libs.org.jetbrains.kotlinx.coroutines.test)
   testImplementation("org.mockito:mockito-core:3.12.4")
   testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
-  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0")
 
 }
 

@@ -24,23 +24,19 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data
+package github.hua0512.utils
+
+import java.security.MessageDigest
+
 
 /**
- * Danmu data wrapper
- * @author hua0512
- * @date : 2024/2/11 1:21
+ * Calculates the MD5 hash of a ByteArray and returns it as a hexadecimal string.
+ *
+ * @return The MD5 hash of the ByteArray as a hexadecimal string.
  */
-sealed class DanmuDataWrapper {
-
-  data class DanmuData(
-    val sender: String,
-    val color: Int,
-    val content: String,
-    val fontSize: Int,
-    val serverTime: Long,
-    val clientTime: Double? = null,
-  ) : DanmuDataWrapper()
-
-  data object End : DanmuDataWrapper()
+fun ByteArray.toMD5Hex(): String {
+  return MessageDigest
+    .getInstance("MD5")
+    .digest(this)
+    .joinToString("") { "%02x".format(it) }
 }

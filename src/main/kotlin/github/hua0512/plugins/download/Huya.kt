@@ -31,6 +31,7 @@ import github.hua0512.data.Streamer
 import github.hua0512.data.config.HuyaDownloadConfig
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
+import github.hua0512.utils.toMD5Hex
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -42,7 +43,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
-import okio.ByteString.Companion.encodeUtf8
 import java.util.*
 import kotlin.coroutines.coroutineContext
 
@@ -190,8 +190,8 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
         val wsTime = query["wsTime"] ?: ""
         val seqId = uid + (System.currentTimeMillis() / 1000).toInt()
         val wsSecretPrefix = query["fm"]?.decodeBase64String()?.split("_")?.get(0) ?: ""
-        val wsSecretHash = "$seqId|${query["ctype"]}|${platformId}".encodeUtf8().md5().hex()
-        val wsSecret = "${wsSecretPrefix}_${convertUid}_${sStreamName}_${wsSecretHash}_${wsTime}".encodeUtf8().md5().hex()
+        val wsSecretHash = "$seqId|${query["ctype"]}|${platformId}".toByteArray().toMD5Hex()
+        val wsSecret = "${wsSecretPrefix}_${convertUid}_${sStreamName}_${wsSecretHash}_${wsTime}".toByteArray().toMD5Hex()
         val streamTitle = gameLiveInfo["introduction"]?.jsonPrimitive?.content ?: ""
 //            println("gameLiveInfo : $gameLiveInfo")
 //            println("gameStreamInfoList : $gameStreamInfoList")

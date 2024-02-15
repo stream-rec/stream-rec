@@ -201,8 +201,10 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
         pb?.close()
 
         // finish danmu download
-        if (isDanmuInitialized) danmu.finish()
-        danmuJob?.cancel("Download process is finished")
+        if (isDanmuInitialized) {
+          danmu.finish()
+          danmuJob?.cancel("Download process is finished")
+        }
 
         if (streamData == null) {
           logger.error("(${streamer.name}) could not download stream")
@@ -242,14 +244,12 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
   }
 
   private fun CoroutineScope.launchDanmuDownload(): Job {
-    return launch {
+    return launch(Dispatchers.IO) {
       var danmuRetry = 0
       while (true) {
         logger.info("(${streamer.name}) Starting danmu download...")
         try {
-          withContext(Dispatchers.IO) {
-            danmu.fetchDanmu()
-          }
+          danmu.fetchDanmu()
         } catch (e: CancellationException) {
           // ignore cancellation exception because download process is finished
           break

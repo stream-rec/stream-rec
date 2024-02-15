@@ -34,7 +34,7 @@ import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
 import github.hua0512.utils.commonDouyinParams
 import github.hua0512.utils.extractDouyinRoomId
-import github.hua0512.utils.getDouyinTTwid
+import github.hua0512.utils.populateDouyinCookieMissedParams
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -78,17 +78,12 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
         logger.error("Please provide douyin cookies!")
         return false
       }
-      return@let if ("ttwid" !in it) {
-        val randomTTwid = app.client.getDouyinTTwid().run {
-          if (isNotEmpty()) {
-            "$it; ttwid=$this"
-          } else {
-            logger.error("Failed to get ttwid from cookies")
-            return false
-          }
-        }
-        return@let randomTTwid
-      } else it
+      try {
+        populateDouyinCookieMissedParams(it, app.client)
+      } catch (e: Exception) {
+        logger.error("Failed to populate douyin cookie missed params", e)
+        return false
+      }
     }
 
     val response = withContext(Dispatchers.IO) {
@@ -129,7 +124,7 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
     }
 
     if (status != 2) {
-      logger.info("Streamer : ${streamer.name} is not live")
+      logger.debug("Streamer : ${streamer.name} is not live")
       return false
     }
 

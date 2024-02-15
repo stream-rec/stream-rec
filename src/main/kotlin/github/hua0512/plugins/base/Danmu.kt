@@ -27,18 +27,20 @@
 package github.hua0512.plugins.base
 
 import github.hua0512.app.App
-import github.hua0512.data.DanmuData
+import github.hua0512.data.DanmuDataWrapper
+import github.hua0512.data.DanmuDataWrapper.DanmuData
 import github.hua0512.data.Streamer
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.*
-import org.redundent.kotlin.xml.xml
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -99,6 +101,11 @@ abstract class Danmu(val app: App) {
   var enableWrite: Boolean = false
 
   /**
+   * Whether the end of file is written
+   */
+  var isEndOfFileWritten = AtomicBoolean(false)
+
+  /**
    * Represents the start time of the danmu download.
    */
   var startTime: Long = System.currentTimeMillis()
@@ -106,7 +113,7 @@ abstract class Danmu(val app: App) {
   /**
    * A shared flow to write danmu data to file
    */
-  private val writeToFileFlow = MutableSharedFlow<DanmuData?>(replay = 1)
+  private val writeChannel = Channel<DanmuDataWrapper>(BUFFERED, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
   /**
    * Request headers
@@ -168,7 +175,7 @@ abstract class Danmu(val app: App) {
               val data = frame.readBytes()
               // decode danmu
               try {
-                decodeDanmu(this, data)?.also {
+                decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
                   // danmu server time
                   val serverTime = it.serverTime
                   // danmu process start time
@@ -179,11 +186,11 @@ abstract class Danmu(val app: App) {
                     String.format("%.3f", time / 1000.0).toDouble()
                   }
                   // emit danmu to write to file
-                  writeToFileFlow.tryEmit(it.copy(clientTime = danmuInVideoTime))
+                  writeChannel.send(it.copy(clientTime = danmuInVideoTime))
                 }
               } catch (e: Exception) {
                 logger.error("Error decoding danmu: $e")
-              } ?: continue
+              }
             }
 
             is Frame.Close -> {
@@ -203,35 +210,36 @@ abstract class Danmu(val app: App) {
    *
    * @receiver The [CoroutineScope] on which the coroutine will be launched.
    */
-  private fun CoroutineScope.launchIOTask() {
-    launch(Dispatchers.IO) {
-      // buffer 5 danmus
-      writeToFileFlow
+  private fun CoroutineScope.launchIOTask(): Job {
+    writeChannel.invokeOnClose {
+      logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
+      if (!isEndOfFileWritten.get()) {
+        writeEndOfFile()
+        isEndOfFileWritten.set(true)
+      }
+    }
+    return launch {
+      writeChannel.consumeAsFlow()
         .onStart {
-          // check if danmuFile is initialized
-          logger.info("Start writing danmu to : ${danmuFile.absolutePath}")
-          // create file if not exists
-          if (!Files.exists(danmuFile.toPath())) {
+          if (!danmuFile.exists()) {
             danmuFile.createNewFile()
-            danmuFile.writeText("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n")
+            danmuFile.appendText("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n")
           } else {
-            logger.info("${danmuFile.absolutePath} file exists, appending to it.")
+            logger.info("Danmu {} already exists", danmuFile.absolutePath)
           }
         }
-        .buffer(5)
         .onEach {
-          // if it is null, finish writing to file
-          if (it == null) {
-            logger.info("Finish writing danmu to : ${danmuFile.absolutePath}")
-            danmuFile.appendText("</root>")
-            return@onEach
+          when (it) {
+            is DanmuData -> writeToDanmu(it)
+            else -> logger.error("Invalid danmu data {}", it)
           }
-          // write danmu to file
-          writeToDanmu(it)
+        }
+        .catch { e ->
+          logger.error("Error writing danmu to file {}", danmuFile.absolutePath, e)
         }
         .flowOn(Dispatchers.IO)
-        .catch {
-          logger.error("Error writing to file: $it")
+        .onCompletion {
+          logger.info("Danmu {} flow completed, ", danmuFile.absolutePath, it)
         }
         .collect()
     }
@@ -248,14 +256,14 @@ abstract class Danmu(val app: App) {
    */
   private fun writeToDanmu(data: DanmuData) {
     if (!enableWrite) return
-    val xml = xml("d") {
-      val time = data.clientTime
-      val color = if (data.color == -1) "16777215" else data.color
-      attribute("p", "$time,1,25,$color,0,0,0,0")
-      text(data.content)
-    }
-//    logger.debug("Writing danmu to file: ${xml.toString(prettyFormat = false)}")
-    danmuFile.appendText("  ${xml.toString(false)}\n")
+    val time = data.clientTime
+    val color = if (data.color == -1) "16777215" else data.color
+    // ignore font size
+    val fontSize = data.fontSize
+    val xmlContent = """
+      <d p="${time},1,25,$color,0,0,0,0">${data.content}</d>
+    """.trimIndent()
+    danmuFile.appendText("  ${xmlContent}\n")
   }
 
   /**
@@ -278,23 +286,25 @@ abstract class Danmu(val app: App) {
    * Decodes the given byte array into a DanmuData object.
    *
    * @param data The byte array to be decoded.
-   * @return The decoded DanmuData object, or null if decoding fails.
+   * @return A list of [DanmuData] objects decoded from the given byte array.
    */
-  abstract suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData?
+  abstract suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper?>
 
   /**
    * Finish writting danmu to file
    */
-  suspend fun finish() {
-    logger.info("$filePath danmu file finished")
-    isInitialized.set(false)
-    // send null to write channel to finish writing
-    withContext(Dispatchers.IO) {
-      writeToFileFlow.emit(null)
-      writeToFileFlow.resetReplayCache()
-    }
+  fun finish() {
+    logger.info("Danmu $filePath finish triggered")
+    writeChannel.close()
+    enableWrite = false
+    // reset replay cache
     headersMap.clear()
     requestParams.clear()
+  }
+
+  private fun writeEndOfFile() {
+    danmuFile.appendText("</root>")
+    logger.info("Finish writing danmu to : ${danmuFile.absolutePath}")
   }
 
 }

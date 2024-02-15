@@ -30,7 +30,8 @@ import com.google.protobuf.ByteString
 import douyin.Dy
 import douyin.Dy.PushFrame
 import github.hua0512.app.App
-import github.hua0512.data.DanmuData
+import github.hua0512.data.DanmuDataWrapper
+import github.hua0512.data.DanmuDataWrapper.DanmuData
 import github.hua0512.data.Streamer
 import github.hua0512.data.config.DouyinDownloadConfig
 import github.hua0512.plugins.base.Danmu
@@ -38,7 +39,7 @@ import github.hua0512.plugins.base.Download
 import github.hua0512.utils.commonDouyinParams
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.extractDouyinRoomId
-import github.hua0512.utils.getDouyinTTwid
+import github.hua0512.utils.populateDouyinCookieMissedParams
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -71,15 +72,12 @@ class DouyinDanmu(app: App) : Danmu(app) {
         logger.error("Empty douyin cookies")
         return false
       }
-      if ("ttwid" !in it) {
-        val ttwid = app.client.getDouyinTTwid()
-        if (ttwid.isEmpty()) {
-          logger.error("Failed to get ttwid from cookies")
-          return false
-        }
-        return@let "$it; ttwid=$ttwid"
+      try {
+        populateDouyinCookieMissedParams(it, app.client)
+      } catch (e: Exception) {
+        logger.error("Failed to populate douyin cookie missed params", e)
+        return false
       }
-      it
     }
 
     val response = withContext(Dispatchers.IO) {
@@ -128,7 +126,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
     return byteArrayOf()
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): DanmuData? {
+  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper?> {
     val pushFrame = PushFrame.parseFrom(data)
     val logId = pushFrame.logId
     val payload = pushFrame.payload.toByteArray()
@@ -141,31 +139,30 @@ class DouyinDanmu(app: App) : Danmu(app) {
       sendAck(session, logId, internalExt)
     }
     val msgList = payloadPackage.messagesListList
-    msgList.map { msg ->
+    // each frame may contain multiple messages
+    return msgList.map { msg ->
       when (msg.method) {
         "WebcastChatMessage" -> {
           val chatMessage = Dy.ChatMessage.parseFrom(msg.payload)
           val textColor = chatMessage.rtfContent.defaultFormat.color.run {
             if (this.isNullOrEmpty()) -1 else this.toInt(16)
           }
-          return DanmuData(
+          DanmuData(
             chatMessage.user.nickNameBytes.toStringUtf8(),
             textColor,
             chatMessage.contentBytes.toStringUtf8(),
             chatMessage.rtfContent.defaultFormat.fontSize,
             chatMessage.eventTime * 1000,
-          ).also {
-            logger.info("DouyinDanmu: $it, time : ${chatMessage.eventTime}")
-          }
+          )
         }
 
         // TODO :support other types of messages
         else -> {
 //          logger.info("DouyinDanmu: ${msg.method}")
+          null
         }
       }
     }
-    return null
   }
 
 
