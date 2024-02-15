@@ -26,6 +26,14 @@
 
 package github.hua0512
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.LoggerContext
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.ConsoleAppender
+import ch.qos.logback.core.rolling.RollingFileAppender
+import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
+import ch.qos.logback.core.util.FileSize
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
 import kotlinx.coroutines.Dispatchers
@@ -34,17 +42,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.nio.file.Path
+import kotlin.io.path.pathString
 
 val logger: Logger = LoggerFactory.getLogger("Main")
 
 class Application {
   companion object {
+    init {
+      initLogger()
+    }
+
     @JvmStatic
     fun main(args: Array<String>) {
       runBlocking {
         val appComponent: AppComponent = DaggerAppComponent.create()
         val appConfig = appComponent.getAppConfig()
-
         val result = appConfig.initConfig()
         if (!result) {
           logger.error("Failed to initialize config: {}", result)
@@ -65,6 +78,59 @@ class Application {
           cancel("Application is shutting down")
           logger.info("Shutdown complete")
         })
+      }
+    }
+
+    private fun initLogger() {
+      val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
+      loggerContext.reset()
+
+      val patternEncoder = PatternLayoutEncoder().apply {
+        context = loggerContext
+        pattern = "%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+        start()
+      }
+
+      val consoleAppender = ConsoleAppender<ILoggingEvent>().apply {
+        context = loggerContext
+        name = "STDOUT"
+        encoder = patternEncoder
+        start()
+      }
+
+      val configParentPath: Path = System.getenv("CONFIG_PATH").run {
+        if (this != null) {
+          Path.of(this).parent
+        } else {
+          Path.of(System.getProperty("user.dir"))
+        }
+      }
+      val logFile = configParentPath.resolve("logs/run.log").pathString
+      println("Logging to : $logFile")
+
+      val timedRollingPolicy = TimeBasedRollingPolicy<ILoggingEvent>().apply {
+        context = loggerContext
+        fileNamePattern = "$logFile.%d{yyyy-MM-dd}.gz"
+        maxHistory = 7
+        setTotalSizeCap(FileSize.valueOf("100MB"))
+      }
+      val fileAppender = RollingFileAppender<ILoggingEvent>().apply {
+        context = loggerContext
+        name = "FILE"
+        file = logFile
+        encoder = patternEncoder
+
+        rollingPolicy = timedRollingPolicy.also {
+          it.setParent(this)
+          it.start()
+        }
+        start()
+      }
+
+      val rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).apply {
+        addAppender(consoleAppender)
+        addAppender(fileAppender)
+        level = System.getenv("LOG_LEVEL")?.let { Level.valueOf(it) } ?: Level.INFO
       }
     }
   }
