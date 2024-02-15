@@ -3,7 +3,7 @@ plugins {
   kotlin("plugin.serialization") version "1.9.22"
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
   alias(libs.plugins.ktor)
-  id("com.google.protobuf") version "0.9.4"
+//  id("com.google.protobuf") version "0.9.4"
 }
 
 group = "github.hua0512"
@@ -16,23 +16,23 @@ ktor {
     archiveFileName.set("stream-rec.jar")
   }
 }
-
-protobuf {
-  // Configure the protoc executable
-  protoc {
-    // Download from repositories
-    artifact = "com.google.protobuf:protoc:3.25.2"
-  }
-  generateProtoTasks {
-    ofSourceSet("main").forEach { task ->
-      task.builtins {
-        getByName("java") {
-          option("lite")
-        }
-      }
-    }
-  }
-}
+// disable protoc plugin because we have the generated files
+//protobuf {
+//  // Configure the protoc executable
+//  protoc {
+//    // Download from repositories
+//    artifact = "com.google.protobuf:protoc:3.25.2"
+//  }
+//  generateProtoTasks {
+//    ofSourceSet("main").forEach { task ->
+//      task.builtins {
+//        getByName("java") {
+//          option("lite")
+//        }
+//      }
+//    }
+//  }
+//}
 
 repositories {
   mavenCentral()
