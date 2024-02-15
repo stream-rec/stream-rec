@@ -30,7 +30,8 @@ import com.google.protobuf.ByteString
 import douyin.Dy
 import douyin.Dy.PushFrame
 import github.hua0512.app.App
-import github.hua0512.data.DanmuData
+import github.hua0512.data.DanmuDataWrapper
+import github.hua0512.data.DanmuDataWrapper.DanmuData
 import github.hua0512.data.Streamer
 import github.hua0512.data.config.DouyinDownloadConfig
 import github.hua0512.plugins.base.Danmu
@@ -125,7 +126,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
     return byteArrayOf()
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuData?> {
+  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper?> {
     val pushFrame = PushFrame.parseFrom(data)
     val logId = pushFrame.logId
     val payload = pushFrame.payload.toByteArray()

@@ -29,7 +29,7 @@ package github.hua0512.plugins.danmu.huya
 import com.qq.tars.protocol.tars.TarsInputStream
 import com.qq.tars.protocol.tars.TarsOutputStream
 import github.hua0512.app.App
-import github.hua0512.data.DanmuData
+import github.hua0512.data.DanmuDataWrapper
 import github.hua0512.data.Streamer
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.danmu.huya.msg.HuyaMessageNotice
@@ -122,7 +122,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
     }
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuData?> {
+  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper> {
     val huyaSocketCommand = HuyaSocketCommand().apply {
       readFrom(TarsInputStream(data))
     }
@@ -148,7 +148,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
           val time = if (huyaSocketCommand.lTime == 0L) System.currentTimeMillis() else huyaSocketCommand.lTime
           // huya danmu contains only one danmu
           return listOf(
-            DanmuData(
+            DanmuDataWrapper.DanmuData(
               msgNotice.senderInfo.sNickName,
               color = msgNotice.tBulletFormat.iFontColor,
               content = content,
