@@ -104,15 +104,12 @@ suspend fun populateDouyinCookieMissedParams(cookies: String, client: HttpClient
   }
   var finalCookies = cookies
   if ("ttwid" !in cookies) {
-    logger.info("ttwid not found in cookies, trying to get it from server...")
     val ttwid = client.getDouyinTTwid()
     finalCookies += "; ttwid=$ttwid"
-    logger.info("ttwid not found in cookies, got it from server: $ttwid")
   }
   if ("msToken" !in cookies) {
     val msToken = generateDouyinMsToken()
     finalCookies += "; msToken=$msToken"
-    logger.info("msToken not found in cookies, generated a new one: $msToken")
   }
   return finalCookies
 }
@@ -134,7 +131,10 @@ private fun generateDouyinMsToken(length: Int = 107): String {
   for (i in 0 until length) {
     sb.append(source[random.nextInt(source.length)])
   }
-  return sb.toString().also { douyinMsToken = it }
+  return sb.toString().also {
+    douyinMsToken = it
+    logger.info("generated douyin msToken: $it")
+  }
 }
 
 
@@ -164,5 +164,6 @@ private suspend fun HttpClient.getDouyinTTwid(): String {
     throw Exception("Failed to get ttwid from cookies")
   }
   douyinTTwid = ttwid
+  logger.info("got douyin ttwid: $ttwid")
   return ttwid
 }
