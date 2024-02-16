@@ -295,7 +295,7 @@ abstract class Danmu(val app: App) {
    */
   fun finish() {
     logger.info("Danmu $filePath finish triggered")
-    writeChannel.cancel()
+    writeChannel.close()
     enableWrite = false
     // reset replay cache
     headersMap.clear()
