@@ -111,6 +111,11 @@ abstract class Danmu(val app: App) {
   private lateinit var writeChannel: Channel<DanmuDataWrapper?>
 
   /**
+   * IO job to write danmu to file
+   */
+  private lateinit var ioJob: Job
+
+  /**
    * Request headers
    */
   protected val headersMap = mutableMapOf<String, String>()
@@ -130,8 +135,14 @@ abstract class Danmu(val app: App) {
   suspend fun init(streamer: Streamer, startTime: Long): Boolean {
     this.startTime = startTime
     writeChannel = Channel(BUFFERED, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    return initDanmu(streamer, startTime).also {
-      isInitialized.set(it)
+    return initDanmu(streamer, startTime).also { isEnabled ->
+      isInitialized.set(isEnabled)
+      if (isEnabled) {
+        writeChannel.invokeOnClose {
+          logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
+          writeEndOfFile()
+        }
+      }
     }
   }
 
@@ -166,7 +177,7 @@ abstract class Danmu(val app: App) {
         }
       }) {
         // launch a coroutine to write danmu to file
-        launchIOTask()
+        ioJob = launchIOTask()
         // make an initial hello
         sendHello(this)
         // launch a coroutine to send heart beat
@@ -214,10 +225,6 @@ abstract class Danmu(val app: App) {
    * @receiver The [CoroutineScope] on which the coroutine will be launched.
    */
   private fun CoroutineScope.launchIOTask(): Job {
-    writeChannel.invokeOnClose {
-      logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
-      writeEndOfFile()
-    }
     return launch {
       writeChannel.consumeAsFlow()
         .onStart {
@@ -296,10 +303,18 @@ abstract class Danmu(val app: App) {
   fun finish() {
     logger.info("Danmu $filePath finish triggered")
     writeChannel.close()
+    // do not cancel io job here, it will be cancelled when fetchDanmu parent coroutine is cancelled
     enableWrite = false
     // reset replay cache
     headersMap.clear()
     requestParams.clear()
+  }
+
+  /**
+   * Finish IO job
+   */
+  suspend fun finishIoJob() {
+    ioJob.cancelAndJoin()
   }
 
   private fun writeEndOfFile() {
