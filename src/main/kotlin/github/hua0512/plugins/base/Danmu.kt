@@ -159,12 +159,15 @@ abstract class Danmu(val app: App) {
    * Fetch danmu from server using websocket
    *
    */
-  suspend fun fetchDanmu() {
+  suspend fun fetchDanmu() = coroutineScope {
     if (!isInitialized.get()) {
       logger.error("Danmu is not initialized")
-      return
+      return@coroutineScope
     }
-    if (websocketUrl.isEmpty()) return
+    if (websocketUrl.isEmpty()) return@coroutineScope
+
+    // launch a coroutine to write danmu to file
+    ioJob = launchIOTask()
 
     // fetch danmu
     withContext(Dispatchers.IO) {
@@ -176,8 +179,6 @@ abstract class Danmu(val app: App) {
           header(k, v)
         }
       }) {
-        // launch a coroutine to write danmu to file
-        ioJob = launchIOTask()
         // make an initial hello
         sendHello(this)
         // launch a coroutine to send heart beat
@@ -314,7 +315,7 @@ abstract class Danmu(val app: App) {
    * Finish IO job
    */
   suspend fun finishIoJob() {
-    ioJob.cancelAndJoin()
+    ioJob.cancel("Finish IO job")
   }
 
   private fun writeEndOfFile() {
