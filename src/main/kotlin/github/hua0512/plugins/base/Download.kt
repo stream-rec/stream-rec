@@ -256,6 +256,8 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
         } catch (e: IOException) {
           logger.error("(${streamer.name}) Danmu download failed: $e")
           logger.info("(${streamer.name}) Danmu download failed, $danmuRetry retry in 10 seconds...")
+          // only finish the io job if some data
+          danmu.finishIoJob()
           danmuRetry++
           // delay 10 seconds before retrying
           delay(10.toDuration(DurationUnit.SECONDS))
