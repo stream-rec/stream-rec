@@ -121,6 +121,12 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
 
     val streamDataList = mutableListOf<StreamData>()
 
+    // danmu exception handler
+    val danmuExceptionHandler = CoroutineExceptionHandler { _, e ->
+      // ignore exceptions
+      logger.error("(${streamer.name}) Danmu failed: $e")
+    }
+
     while (true) {
       val outputPath = buildOutputFilePath(downloadConfig, fileExtension)
       // check if disk space is enough
@@ -188,7 +194,7 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
 
       // danmu download job, if danmu is enabled,
       // make sure danmuJob won't cancel before downloadJob and any exceptions ocurred in danmuJob won't cancel the parent job
-      val danmuJob = if (isDanmuInitialized) launch { danmuDownload() } else null
+      val danmuJob = if (isDanmuInitialized) launch(danmuExceptionHandler) { danmuDownload() } else null
 
       val downloadJob = async<StreamData?> {
         engine.run()
@@ -204,7 +210,11 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
 
       if (isDanmuInitialized) {
         danmu.finish()
-        danmuJob?.cancel("Download process is finished")
+        try {
+          danmuJob?.cancel("Download process is finished")
+        } catch (e: Exception) {
+          logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
+        }
       }
 
       logger.debug("({}) streamData: {}", streamer.name, streamData)

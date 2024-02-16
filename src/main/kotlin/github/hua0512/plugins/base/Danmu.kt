@@ -160,70 +160,72 @@ abstract class Danmu(val app: App) {
    * Fetch danmu from server using websocket
    *
    */
-  suspend fun fetchDanmu() = coroutineScope {
-    if (!isInitialized.get()) {
-      logger.error("Danmu is not initialized")
-      return@coroutineScope
-    }
-    if (websocketUrl.isEmpty()) return@coroutineScope
+  suspend fun fetchDanmu() {
+    coroutineScope {
+      if (!isInitialized.get()) {
+        logger.error("Danmu is not initialized")
+        return@coroutineScope
+      }
+      if (websocketUrl.isEmpty()) return@coroutineScope
 
-    // launch a coroutine to write danmu to file
-    ioJob = launchIOTask()
+      // launch a coroutine to write danmu to file
+      ioJob = launchIOTask()
 
-    // fetch danmu
-    withContext(Dispatchers.IO) {
-      withRetry(
-        maxRetries = 10,
-        initialDelayMillis = 10000,
-        maxDelayMillis = 60000,
-        factor = 1.5,
-        onError = { e, retryCount ->
-          logger.error("Error fetching danmu: $danmuFile, retry count: $retryCount", e)
-        }
-      ) {
-        app.client.webSocket(websocketUrl, request = {
-          requestParams.forEach { (k, v) ->
-            parameter(k, v)
+      // fetch danmu
+      withContext(Dispatchers.IO) {
+        withRetry(
+          maxRetries = 10,
+          initialDelayMillis = 10000,
+          maxDelayMillis = 60000,
+          factor = 1.5,
+          onError = { e, retryCount ->
+            logger.error("Error fetching danmu: $danmuFile, retry count: $retryCount", e)
           }
-          headersMap.forEach { (k, v) ->
-            header(k, v)
-          }
-        }) {
-          // make an initial hello
-          sendHello(this)
-          // launch a coroutine to send heart beat
-          launchHeartBeatJob(this)
-          while (true) {
-            // received socket frame
-            when (val frame = incoming.receive()) {
-              is Frame.Binary -> {
-                val data = frame.readBytes()
-                // decode danmu
-                try {
-                  decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
-                    // danmu server time
-                    val serverTime = it.serverTime
-                    // danmu process start time
-                    val danmuStartTime = startTime
-                    // danmu in video time
-                    val danmuInVideoTime = (serverTime - danmuStartTime).run {
-                      val time = if (this < 0) 0 else this
-                      String.format("%.3f", time / 1000.0).toDouble()
+        ) {
+          app.client.webSocket(websocketUrl, request = {
+            requestParams.forEach { (k, v) ->
+              parameter(k, v)
+            }
+            headersMap.forEach { (k, v) ->
+              header(k, v)
+            }
+          }) {
+            // make an initial hello
+            sendHello(this)
+            // launch a coroutine to send heart beat
+            launchHeartBeatJob(this)
+            while (true) {
+              // received socket frame
+              when (val frame = incoming.receive()) {
+                is Frame.Binary -> {
+                  val data = frame.readBytes()
+                  // decode danmu
+                  try {
+                    decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
+                      // danmu server time
+                      val serverTime = it.serverTime
+                      // danmu process start time
+                      val danmuStartTime = startTime
+                      // danmu in video time
+                      val danmuInVideoTime = (serverTime - danmuStartTime).run {
+                        val time = if (this < 0) 0 else this
+                        String.format("%.3f", time / 1000.0).toDouble()
+                      }
+                      // emit danmu to write to file
+                      writeChannel.send(it.copy(clientTime = danmuInVideoTime))
                     }
-                    // emit danmu to write to file
-                    writeChannel.send(it.copy(clientTime = danmuInVideoTime))
+                  } catch (e: Exception) {
+                    logger.error("Error decoding danmu: $e")
                   }
-                } catch (e: Exception) {
-                  logger.error("Error decoding danmu: $e")
                 }
-              }
 
-              is Frame.Close -> {
-                logger.info("Danmu connection closed")
-                break
+                is Frame.Close -> {
+                  logger.info("Danmu connection closed")
+                  break
+                }
+                // ignore other frames
+                else -> {}
               }
-              // ignore other frames
-              else -> {}
             }
           }
         }
