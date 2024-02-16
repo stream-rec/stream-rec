@@ -101,11 +101,6 @@ abstract class Danmu(val app: App) {
   var enableWrite: Boolean = false
 
   /**
-   * Whether the end of file is written
-   */
-  var isEndOfFileWritten = AtomicBoolean(false)
-
-  /**
    * Represents the start time of the danmu download.
    */
   var startTime: Long = System.currentTimeMillis()
@@ -221,10 +216,7 @@ abstract class Danmu(val app: App) {
   private fun CoroutineScope.launchIOTask(): Job {
     writeChannel.invokeOnClose {
       logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
-      if (!isEndOfFileWritten.get()) {
-        writeEndOfFile()
-        isEndOfFileWritten.set(true)
-      }
+      writeEndOfFile()
     }
     return launch {
       writeChannel.consumeAsFlow()
@@ -303,7 +295,7 @@ abstract class Danmu(val app: App) {
    */
   fun finish() {
     logger.info("Danmu $filePath finish triggered")
-    writeChannel.cancel()
+    writeChannel.close()
     enableWrite = false
     // reset replay cache
     headersMap.clear()
