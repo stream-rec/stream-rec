@@ -65,32 +65,65 @@ class DownloadService(val app: App, val uploadService: UploadService) {
     else -> throw Exception("Platform not supported")
   }
 
+  private val taskJobs = mutableListOf<Pair<Streamer, Job>>()
+
   suspend fun run() = coroutineScope {
-    val streamers = app.config.streamers
-    val tasks = streamers.filter {
-      !it.isLive && it.isActivated
-    }.map {
-      logger.info("Checking streamer ${it.name}")
-      async {
-        logger.debug("Adding job, current context : {}", coroutineContext)
-        downloadStreamer(it)
+    launch {
+      app.streamersFlow.collect { streamerList ->
+        logger.info("Streamers changed, reloading...")
+
+        // compare the new streamers with the old ones, first by url, then by entity equals
+        // if a streamer is not in the new list, cancel the job
+        // if a streamer is in the new list but not in the old one, start a new job
+        // if a streamer is in both lists, do nothing
+
+        if (streamerList.isEmpty()) {
+          logger.info("No streamers to download")
+          // the new list is empty, cancel all jobs
+          taskJobs.forEach { it.second.cancel() }
+          return@collect
+        }
+
+        val activeStreamers = streamerList.filter { it.isActivated }
+        val oldStreamersSet = taskJobs.map { it.first }.toMutableSet()
+        for (newStreamer in activeStreamers) {
+          val job = taskJobs.find { job -> job.first.url == newStreamer.url }
+          // job is non-null if the streamer is in the old list
+          if (job != null) {
+            val sameJob = taskJobs.find { it.first == newStreamer }
+
+            // if [sameJob] is non-null, then the streamer is in the old list, with same info
+            // no update needed
+            if (sameJob != null) {
+              oldStreamersSet.remove(job.first)
+              continue
+            }
+            // if [sameJob] is null, then the streamer is in the old list, but with different info
+            // do nothing, the old job will be canceled and a new one will be started
+          }
+          // job is null, the streamer is not in the old list
+          // This is a new streamer (or maybe an old one but with new info), start a new job
+          val newJob = async {
+            downloadStreamer(newStreamer)
+          }
+          taskJobs.add(newStreamer to newJob)
+          logger.info("Download for streamer ${newStreamer.name} has been started")
+        }
+
+        // Cancel the jobs for streamers that are not in the new list
+        for (oldStreamer in oldStreamersSet) {
+          val job = taskJobs.find { job -> job.first == oldStreamer }
+          job?.second?.cancel()
+          taskJobs.remove(job)
+          logger.info("Download for streamer ${oldStreamer.name} has been cancelled")
+        }
       }
     }
-    awaitAll(*tasks.toTypedArray())
   }
 
   private suspend fun downloadStreamer(streamer: Streamer) {
-    val job = coroutineContext[Job]
-    logger.debug("current job : {}", job)
-    val coroutineName = CoroutineName("Streamer-${streamer.name}")
-    val newContext = coroutineContext + coroutineName
-    logger.debug("New context : {}", newContext)
-    val newJob = SupervisorJob(job)
-    newJob.invokeOnCompletion {
-      logger.debug("Job completed : $it")
-    }
-    val newScope = CoroutineScope(newContext + newJob)
-    logger.info("Starting download for streamer ${streamer.name}")
+    val newJob = SupervisorJob(coroutineContext[Job])
+    val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
     newScope.launch {
       logger.debug("Launching coroutine : {}", this.coroutineContext)
       if (streamer.isLive) {
