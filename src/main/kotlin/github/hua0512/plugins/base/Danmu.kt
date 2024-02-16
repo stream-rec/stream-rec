@@ -30,6 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.DanmuDataWrapper
 import github.hua0512.data.DanmuDataWrapper.DanmuData
 import github.hua0512.data.Streamer
+import github.hua0512.utils.withRetry
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.websocket.*
@@ -171,49 +172,59 @@ abstract class Danmu(val app: App) {
 
     // fetch danmu
     withContext(Dispatchers.IO) {
-      app.client.webSocket(websocketUrl, request = {
-        requestParams.forEach { (k, v) ->
-          parameter(k, v)
+      withRetry(
+        maxRetries = 10,
+        initialDelayMillis = 10000,
+        maxDelayMillis = 60000,
+        factor = 1.5,
+        onError = { e, retryCount ->
+          logger.error("Error fetching danmu: $danmuFile, retry count: $retryCount", e)
         }
-        headersMap.forEach { (k, v) ->
-          header(k, v)
-        }
-      }) {
-        // make an initial hello
-        sendHello(this)
-        // launch a coroutine to send heart beat
-        launchHeartBeatJob(this)
-        while (true) {
-          // received socket frame
-          when (val frame = incoming.receive()) {
-            is Frame.Binary -> {
-              val data = frame.readBytes()
-              // decode danmu
-              try {
-                decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
-                  // danmu server time
-                  val serverTime = it.serverTime
-                  // danmu process start time
-                  val danmuStartTime = startTime
-                  // danmu in video time
-                  val danmuInVideoTime = (serverTime - danmuStartTime).run {
-                    val time = if (this < 0) 0 else this
-                    String.format("%.3f", time / 1000.0).toDouble()
+      ) {
+        app.client.webSocket(websocketUrl, request = {
+          requestParams.forEach { (k, v) ->
+            parameter(k, v)
+          }
+          headersMap.forEach { (k, v) ->
+            header(k, v)
+          }
+        }) {
+          // make an initial hello
+          sendHello(this)
+          // launch a coroutine to send heart beat
+          launchHeartBeatJob(this)
+          while (true) {
+            // received socket frame
+            when (val frame = incoming.receive()) {
+              is Frame.Binary -> {
+                val data = frame.readBytes()
+                // decode danmu
+                try {
+                  decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
+                    // danmu server time
+                    val serverTime = it.serverTime
+                    // danmu process start time
+                    val danmuStartTime = startTime
+                    // danmu in video time
+                    val danmuInVideoTime = (serverTime - danmuStartTime).run {
+                      val time = if (this < 0) 0 else this
+                      String.format("%.3f", time / 1000.0).toDouble()
+                    }
+                    // emit danmu to write to file
+                    writeChannel.send(it.copy(clientTime = danmuInVideoTime))
                   }
-                  // emit danmu to write to file
-                  writeChannel.send(it.copy(clientTime = danmuInVideoTime))
+                } catch (e: Exception) {
+                  logger.error("Error decoding danmu: $e")
                 }
-              } catch (e: Exception) {
-                logger.error("Error decoding danmu: $e")
               }
-            }
 
-            is Frame.Close -> {
-              logger.info("Danmu connection closed")
-              break
+              is Frame.Close -> {
+                logger.info("Danmu connection closed")
+                break
+              }
+              // ignore other frames
+              else -> {}
             }
-            // ignore other frames
-            else -> {}
           }
         }
       }
@@ -309,13 +320,6 @@ abstract class Danmu(val app: App) {
     // reset replay cache
     headersMap.clear()
     requestParams.clear()
-  }
-
-  /**
-   * Finish IO job
-   */
-  suspend fun finishIoJob() {
-    ioJob.cancel("Finish IO job")
   }
 
   private fun writeEndOfFile() {

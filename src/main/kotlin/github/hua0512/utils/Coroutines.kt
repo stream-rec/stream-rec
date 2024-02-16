@@ -39,7 +39,7 @@ suspend fun <T> withRetry(
   initialDelayMillis: Long = 1000,
   maxDelayMillis: Long = 5000,
   factor: Double = 2.0,
-  onError: (suspend (e: IOException) -> Unit)? = null,
+  onError: (suspend (e: IOException, retryCount: Int) -> Unit)? = null,
   block: suspend () -> T,
 ): T {
   var currentDelay = initialDelayMillis
@@ -47,7 +47,7 @@ suspend fun <T> withRetry(
     try {
       return block()
     } catch (e: IOException) {
-      onError?.invoke(e)
+      onError?.invoke(e, retryCount)
       if (retryCount == maxRetries - 1) {
         // If we've reached the maximum retries, propagate the exception
         throw e
