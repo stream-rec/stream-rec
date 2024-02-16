@@ -67,8 +67,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
   private var subid: Long = 0
 
 
-  override suspend fun init(streamer: Streamer, startTime: Long): Boolean {
-    this.startTime = startTime
+  override suspend fun initDanmu(streamer: Streamer, startTime: Long): Boolean {
     // check if streamer url is empty
     if (streamer.url.isEmpty()) return false
     val roomId = streamer.url.split("huya.com/")[1].split('/')[0].split('?')[0]
@@ -99,7 +98,6 @@ class HuyaDanmu(app: App) : Danmu(app) {
       logger.error("Failed to get huya room info: ayyuid=$ayyuid, topsid=$topsid, subid=$subid")
       return false
     }
-    isInitialized.set(true)
     return true
   }
 
