@@ -113,7 +113,7 @@ abstract class Danmu(val app: App) {
   /**
    * A shared flow to write danmu data to file
    */
-  private val writeChannel = Channel<DanmuDataWrapper>(BUFFERED, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+  private lateinit var writeChannel: Channel<DanmuDataWrapper?>
 
   /**
    * Request headers
@@ -132,7 +132,15 @@ abstract class Danmu(val app: App) {
    * @param startTime start time
    * @return true if initialized successfully
    */
-  abstract suspend fun init(streamer: Streamer, startTime: Long): Boolean
+  suspend fun init(streamer: Streamer, startTime: Long): Boolean {
+    this.startTime = startTime
+    writeChannel = Channel(BUFFERED, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    return initDanmu(streamer, startTime).also {
+      isInitialized.set(it)
+    }
+  }
+
+  abstract suspend fun initDanmu(streamer: Streamer, startTime: Long): Boolean
 
   /**
    * Send one hello
@@ -295,7 +303,7 @@ abstract class Danmu(val app: App) {
    */
   fun finish() {
     logger.info("Danmu $filePath finish triggered")
-    writeChannel.close()
+    writeChannel.cancel()
     enableWrite = false
     // reset replay cache
     headersMap.clear()

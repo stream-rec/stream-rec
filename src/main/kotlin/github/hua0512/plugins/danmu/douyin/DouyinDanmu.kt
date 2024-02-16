@@ -60,8 +60,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
 
   override val heartBeatPack: ByteArray = byteArrayOf()
 
-  override suspend fun init(streamer: Streamer, startTime: Long): Boolean {
-    this.startTime = startTime
+  override suspend fun initDanmu(streamer: Streamer, startTime: Long): Boolean {
     // get room id
     val roomId = extractDouyinRoomId(streamer.url) ?: return false
 
@@ -113,7 +112,6 @@ class DouyinDanmu(app: App) : Danmu(app) {
     requestParams["room_id"] = trueRoomId.toString()
     requestParams["web_rid"] = roomId
     headersMap[HttpHeaders.Cookie] = cookies
-    isInitialized.set(true)
     return true
   }
 
