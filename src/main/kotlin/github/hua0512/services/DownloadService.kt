@@ -132,9 +132,6 @@ class DownloadService(val app: App, val uploadService: UploadService) {
       }
       val plugin = getPlaformDownloader(streamer.platform)
 
-      // bind onPartedDownload actions
-      bindOnPartedDownloadActions(streamer, plugin)
-
       val streamDataList = mutableListOf<StreamData>()
       var retryCount = 0
       val retryDelay = app.config.downloadRetryDelay
@@ -149,7 +146,8 @@ class DownloadService(val app: App, val uploadService: UploadService) {
             continue
           }
           // stream finished with data
-          logger.error("Max retry reached for ${streamer.name}")
+          logger.error("(${streamer.name}) max retry reached")
+          logger.info("(${streamer.name}) has finished streaming")
           // call onStreamingFinished callback with the copy of the list
           launch {
             bindOnStreamingEndActions(streamer, streamDataList.toList())
@@ -176,17 +174,18 @@ class DownloadService(val app: App, val uploadService: UploadService) {
               plugin.download()
             } catch (e: Exception) {
               logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
-              emptyList()
+              null
             }
           }
-          retryCount = 0
-          logger.info("Final stream data : $streamsData")
-          if (streamsData.isEmpty()) {
-            logger.error("No data found for ${streamer.name}")
+          if (streamsData == null) {
+            retryCount++
+            logger.error("(${streamer.name}) download data not found")
             continue
           }
-          streamDataList.addAll(streamsData)
-          logger.info("Stream for ${streamer.name} has ended")
+          retryCount = 0
+          streamDataList.add(streamsData)
+          logger.info("(${streamer.name}) downloaded : $streamsData")
+          launch { executePostPartedDownloadActions(streamer, streamsData) }
         } else {
           logger.info("Streamer ${streamer.name} is not live")
         }
@@ -223,16 +222,14 @@ class DownloadService(val app: App, val uploadService: UploadService) {
     }
   }
 
-  private fun bindOnPartedDownloadActions(streamer: Streamer, plugin: Download) {
+  private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
     val partedActions = streamer.downloadConfig?.onPartedDownload
     if (!partedActions.isNullOrEmpty()) {
-      plugin.onPartedDownload = {
-        partedActions
-          .filter { it.enabled }
-          .forEach { action: Action ->
-            action.mapToAction(listOf(it))
-          }
-      }
+      partedActions
+        .filter { it.enabled }
+        .forEach { action: Action ->
+          action.mapToAction(listOf(streamData))
+        }
     }
   }
 

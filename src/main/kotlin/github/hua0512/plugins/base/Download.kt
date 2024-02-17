@@ -53,7 +53,7 @@ import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: suspend (StreamData) -> Unit = {}) {
+abstract class Download(val app: App, val danmu: Danmu) {
 
   companion object {
     @JvmStatic
@@ -97,14 +97,14 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
    * Download the stream
    * @return a list of [StreamData] containing the downloaded stream data
    */
-  suspend fun download(): List<StreamData> = supervisorScope {
+  suspend fun download(): StreamData? = supervisorScope {
     // check if downloadUrl is valid
-    if (downloadUrl.isEmpty()) return@supervisorScope emptyList()
+    if (downloadUrl.isEmpty()) throw IllegalStateException("(${streamer.name}) downloadUrl is required")
 
     // download config is required and its should not be null
     val downloadConfig = streamer.downloadConfig ?: run {
       logger.error("(${streamer.name}) download config is required")
-      return@supervisorScope emptyList()
+      throw IllegalStateException("(${streamer.name}) download config is required")
     }
 
     val fileExtension = (downloadConfig.outputFileExtension ?: app.config.outputFileFormat).run { "${extension}.part" }
@@ -116,10 +116,6 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
 
     val isDanmuEnabled = downloadConfig.danmu ?: app.config.danmu
     logger.debug("(${streamer.name}) downloadUrl: $downloadUrl")
-    // download the stream in parts
-    // semaphore is used to limit the number of concurrent downloads
-
-    val streamDataList = mutableListOf<StreamData>()
 
     // danmu exception handler
     val danmuExceptionHandler = CoroutineExceptionHandler { _, e ->
@@ -127,126 +123,120 @@ abstract class Download(val app: App, val danmu: Danmu, var onPartedDownload: su
       logger.error("(${streamer.name}) Danmu failed: $e")
     }
 
-    while (true) {
-      val outputPath = buildOutputFilePath(downloadConfig, fileExtension)
-      // check if disk space is enough
-      checkDiskSpace(outputPath.parent, app.config.maxPartSize)
-      // download start time
-      val startTime = System.currentTimeMillis()
 
-      // check if danmu is initialized
-      val isDanmuInitialized = if (isDanmuEnabled) {
-        try {
-          initDanmu(streamer, startTime, outputPath.pathString.replace(fileExtension, "xml"))
-        } catch (e: Exception) {
-          logger.error("(${streamer.name}) Danmu failed to initialize: $e")
-          false
-        }
-      } else false
+    val outputPath = buildOutputFilePath(downloadConfig, fileExtension)
+    // check if disk space is enough
+    checkDiskSpace(outputPath.parent, app.config.maxPartSize)
+    // download start time
+    val startTime = System.currentTimeMillis()
 
-      // progress bar
-      var pb: ProgressBar? = null
-
-      var streamData: StreamData? = StreamData(
-        streamer = streamer,
-        title = downloadTitle,
-        outputFilePath = outputPath.pathString,
-        danmuFilePath = if (isDanmuInitialized) danmu.filePath else null,
-      )
-
-      // download engine
-      val engine = getDownloadEngine().apply {
-        if (fileExtension.contains("mp4") && this is NativeDownloadEngine) {
-          throw Exception("NativeEngine does not support mp4 format")
-        }
-        init(
-          downloadUrl,
-          outputPath.pathString,
-          streamData!!,
-          cookie,
-          commonHeaders.toMap(),
-          startTime,
-          fileLimitSize = app.config.maxPartSize
-        )
-        onDownloadStarted = {
-          danmu.startTime = System.currentTimeMillis()
-          danmu.enableWrite = true
-          // bytes to kB
-          val max = app.config.maxPartSize / 1024
-
-          pb = ProgressBarBuilder()
-            .setTaskName(streamer.name)
-            .setConsumer(DelegatingProgressBarConsumer(logger::info))
-            .setInitialMax(max)
-            .setUpdateIntervalMillis(2.toDuration(DurationUnit.MINUTES).inWholeMilliseconds.toInt())
-            .continuousUpdate()
-            .hideEta()
-            .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
-            .build()
-        }
-        onDownloadProgress = { size, bitrate ->
-          pb?.let {
-            it.stepBy(size)
-            it.extraMessage = if (bitrate.isEmpty()) "Downloading..." else "bitrate: $bitrate"
-          }
-        }
-      }
-
-      // danmu download job, if danmu is enabled,
-      // make sure danmuJob won't cancel before downloadJob and any exceptions ocurred in danmuJob won't cancel the parent job
-      val danmuJob = if (isDanmuInitialized) launch(danmuExceptionHandler) { danmuDownload() } else null
-
-      val downloadJob = async<StreamData?> {
-        engine.run()
-      }
-
+    // check if danmu is initialized
+    val isDanmuInitialized = if (isDanmuEnabled) {
       try {
-        streamData = downloadJob.await()
+        initDanmu(streamer, startTime, outputPath.pathString.replace(fileExtension, "xml"))
       } catch (e: Exception) {
-        logger.error("(${streamer.name}) download failed: $e")
+        logger.error("(${streamer.name}) Danmu failed to initialize: $e")
+        false
       }
+    } else false
 
-      pb?.close()
+    // progress bar
+    var pb: ProgressBar? = null
 
-      if (isDanmuInitialized) {
-        danmu.finish()
-        try {
-          danmuJob?.cancel("Download process is finished")
-        } catch (e: Exception) {
-          logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
-        }
+    var streamData: StreamData? = StreamData(
+      streamer = streamer,
+      title = downloadTitle,
+      outputFilePath = outputPath.pathString,
+      danmuFilePath = if (isDanmuInitialized) danmu.filePath else null,
+    )
+
+    // download engine
+    val engine = getDownloadEngine().apply {
+      if (fileExtension.contains("mp4") && this is NativeDownloadEngine) {
+        throw Exception("NativeEngine does not support mp4 format")
       }
+      init(
+        downloadUrl,
+        outputPath.pathString,
+        streamData!!,
+        cookie,
+        commonHeaders.toMap(),
+        startTime,
+        fileLimitSize = app.config.maxPartSize
+      )
+      onDownloadStarted = {
+        danmu.startTime = System.currentTimeMillis()
+        danmu.enableWrite = true
+        // bytes to kB
+        val max = app.config.maxPartSize / 1024
 
-      logger.debug("({}) streamData: {}", streamer.name, streamData)
-      if (streamData == null) {
-        logger.error("(${streamer.name}) could not download stream")
-        // delete files if download failed
-        outputPath.deleteFile()
-        if (isDanmuInitialized) danmu.danmuFile.deleteFile()
-        break
-      } else {
-        logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
-        streamDataList.add(streamData)
-        if (app.config.minPartSize > 0) {
-          val fileSize = outputPath.toFile().length()
-          if (fileSize < app.config.minPartSize) {
-            logger.error("(${streamer.name}) file size too small: $fileSize")
-            outputPath.deleteFile()
-            if (isDanmuInitialized) danmu.danmuFile.deleteFile()
-            break
-          }
-        }
-        outputPath.rename(Path(outputPath.pathString.removeSuffix(".part")))
-
-        // launch onPartedDownload callback
-        launch {
-          onPartedDownload(streamData)
+        pb = ProgressBarBuilder()
+          .setTaskName(streamer.name)
+          .setConsumer(DelegatingProgressBarConsumer(logger::info))
+          .setInitialMax(max)
+          .setUpdateIntervalMillis(2.toDuration(DurationUnit.MINUTES).inWholeMilliseconds.toInt())
+          .continuousUpdate()
+          .hideEta()
+          .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
+          .build()
+      }
+      onDownloadProgress = { size, bitrate ->
+        pb?.let {
+          it.stepBy(size)
+          it.extraMessage = if (bitrate.isEmpty()) "Downloading..." else "bitrate: $bitrate"
         }
       }
     }
+
+    // danmu download job, if danmu is enabled,
+    // make sure danmuJob won't cancel before downloadJob and any exceptions ocurred in danmuJob won't cancel the parent job
+    val danmuJob = if (isDanmuInitialized) launch(danmuExceptionHandler) { danmuDownload() } else null
+
+    val downloadJob = async<StreamData?> { engine.run() }
+
+    try {
+      streamData = downloadJob.await()
+    } catch (e: Exception) {
+      logger.error("(${streamer.name}) download failed: $e")
+    }
+
+    pb?.close()
+
+    if (isDanmuInitialized) {
+      danmu.finish()
+      try {
+        danmuJob?.cancel("Download process is finished")
+      } catch (e: Exception) {
+        logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
+      }
+    }
+
+    logger.debug("({}) streamData: {}", streamer.name, streamData)
+    if (streamData == null) {
+      logger.error("(${streamer.name}) could not download stream")
+      // delete files if download failed
+      outputPath.deleteFile()
+      if (isDanmuInitialized) danmu.danmuFile.deleteFile()
+      return@supervisorScope null
+    } else {
+      logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
+      if (app.config.minPartSize > 0) {
+        val fileSize = outputPath.toFile().length()
+        if (fileSize < app.config.minPartSize) {
+          logger.error("(${streamer.name}) file size too small: $fileSize")
+          outputPath.deleteFile()
+          if (isDanmuInitialized) danmu.danmuFile.deleteFile()
+          return@supervisorScope null
+        }
+      }
+      outputPath.rename(Path(outputPath.pathString.removeSuffix(".part")))
+    }
+
     logger.debug("(${streamer.name}) finished download")
-    streamDataList
+
+    return@supervisorScope streamData
   }
+
 
   private fun getDownloadEngine() = when (app.config.engine) {
     "ffmpeg" -> FFmpegDownloadEngine(app)
