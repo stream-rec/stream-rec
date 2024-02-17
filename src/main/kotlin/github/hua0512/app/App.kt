@@ -33,12 +33,16 @@ import github.hua0512.data.config.DouyinDownloadConfig
 import github.hua0512.data.config.HuyaDownloadConfig
 import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
+import github.hua0512.services.FileWatcherService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
@@ -56,6 +60,10 @@ class App {
   companion object {
     @JvmStatic
     val logger = LoggerFactory.getLogger(App::class.java)
+
+    fun getConfigPath(): String {
+      return System.getenv("CONFIG_PATH") ?: (System.getProperty("user.dir") + "/config.toml")
+    }
   }
 
   val json by lazy {
@@ -97,8 +105,25 @@ class App {
     }
   }
 
-  var config: AppConfig = AppConfig()
-  var isInitialized = false
+  val fileWatcherService by lazy {
+    FileWatcherService(getConfigPath())
+  }
+
+  var config: AppConfig
+    get() = appFlow.value ?: throw Exception("App config not initialized")
+    set(value) {
+      val previous = appFlow.value
+      val isChanged = previous != value
+      if (isChanged) {
+        logger.info("App config changed : {}", value)
+      }
+      appFlow.value = value
+    }
+
+  val appFlow = MutableStateFlow<AppConfig?>(null)
+
+  val streamersFlow = appFlow.map { it?.streamers ?: emptyList() }
+
   val ffmepgPath = (System.getenv("FFMPEG_PATH") ?: "ffmpeg").run {
     // check if is windows
     if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
@@ -111,15 +136,10 @@ class App {
   // semaphore to limit the number of concurrent downloads
   lateinit var downloadSemaphore: Semaphore
 
-  suspend fun initConfig(): Boolean {
-    logger.info("Initializing app config...")
+  suspend fun initConfig(): AppConfig {
+    logger.debug("Parsing new app config...")
 
-    if (isInitialized) {
-      logger.info("App config already initialized")
-      return true
-    }
-
-    val configPath = System.getenv("CONFIG_PATH") ?: "config.toml"
+    val configPath = getConfigPath()
 
     val content = try {
       withContext(Dispatchers.IO) {
@@ -127,7 +147,7 @@ class App {
       }
     } catch (e: Exception) {
       logger.error("Failed to read config file: {}", e.message)
-      return false
+      throw e
     }
 
     val toml = Toml {
@@ -148,10 +168,7 @@ class App {
     }
     config = parsedConfig
     downloadSemaphore = Semaphore(config.maxConcurrentDownloads)
-    isInitialized = true
-    logger.info("App config initialized")
-    logger.info("Config: {}", config)
-    return true
+    return config
   }
 
 

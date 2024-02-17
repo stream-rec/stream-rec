@@ -34,12 +34,11 @@ import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
 import ch.qos.logback.core.util.FileSize
+import github.hua0512.app.App
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.debounce
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
@@ -53,16 +52,22 @@ class Application {
       initLogger()
     }
 
+    @OptIn(FlowPreview::class)
     @JvmStatic
     fun main(args: Array<String>) {
       runBlocking {
         val appComponent: AppComponent = DaggerAppComponent.create()
         val appConfig = appComponent.getAppConfig()
-        val result = appConfig.initConfig()
-        if (!result) {
-          logger.error("Failed to initialize config: {}", result)
-          return@runBlocking
+        initAppConfig(appConfig)
+
+        val fileWatcher = appConfig.fileWatcherService
+        launch {
+          fileWatcher.watchFileFlow().debounce(500).collect {
+            logger.info("Config file changed, reloading")
+            initAppConfig(appConfig)
+          }
         }
+
         val downloadService = appComponent.getDownloadService()
         val uploadService = appComponent.getUploadService()
 
@@ -132,6 +137,10 @@ class Application {
         addAppender(fileAppender)
         level = System.getenv("LOG_LEVEL")?.let { Level.valueOf(it) } ?: Level.INFO
       }
+    }
+
+    private suspend fun initAppConfig(app: App) {
+      app.initConfig()
     }
   }
 }

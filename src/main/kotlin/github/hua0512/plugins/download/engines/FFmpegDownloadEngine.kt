@@ -57,15 +57,27 @@ class FFmpegDownloadEngine(
       if (this > 0) this else 2621440000
     }
 
+    val segmentTime = app.config.maxPartDuration
+
     // ffmpeg input args
     val defaultFFmpegInputArgs = buildDefaultFFMpegInputArgs(cookies)
 
+    // default output args
     val defaultFFmpegOutputArgs = arrayOf(
       "-bsf:a",
-      "aac_adtstoasc",
-      "-fs",
-      segmentPart.toString(),
-    )
+      "aac_adtstoasc"
+    ) + if (segmentTime != null) { // segment the file, according to the maxPartDuration
+      arrayOf(
+        "-to",
+        segmentTime.toString(),
+      )
+    } else {
+      // segment the file, according to the maxPartSize
+      arrayOf(
+        "-fs",
+        segmentPart.toString(),
+      )
+    }
 
     val fileExtension = downloadFilePath.removeSuffix(".part").substringAfterLast(".")
 

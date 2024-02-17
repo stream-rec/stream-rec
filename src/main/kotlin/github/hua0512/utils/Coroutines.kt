@@ -24,35 +24,38 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.config
+package github.hua0512.utils
 
-import github.hua0512.data.Streamer
-import github.hua0512.data.VideoFormat
-import kotlinx.serialization.Serializable
+import kotlinx.coroutines.delay
+import java.io.IOException
 
 /**
- * Application configuration data class
  * @author hua0512
- * @date : 2024/2/11 13:19
+ * @date : 2024/2/16 17:32
  */
-@Serializable
-data class AppConfig(
-  val engine: String = "ffmpeg",
-  val danmu: Boolean = false,
-  val outputFolder: String = "",
-  val outputFileName: String = "\${stremerName}-\${title}-%yyyy-%MM-%dd %HH:%mm:%ss",
-  val outputFileFormat: VideoFormat = VideoFormat.flv,
-  val minPartSize: Long = 20000000,
-  val maxPartSize: Long = 2621440000,
-  val maxPartDuration: Long? = null,
-  val maxDownloadRetries: Int = 3,
-  val downloadRetryDelay: Long = 10,
-  val maxConcurrentDownloads: Int = 5,
-  val maxConcurrentUploads: Int = 3,
-  val deleteFilesAfterUpload: Boolean = true,
 
-  val huyaConfig: HuyaConfig = HuyaConfig(),
-  val douyinConfig: DouyinConfig = DouyinConfig(),
-
-  val streamers: List<Streamer> = emptyList(),
-)
+suspend fun <T> withRetry(
+  maxRetries: Int = 3,
+  initialDelayMillis: Long = 1000,
+  maxDelayMillis: Long = 5000,
+  factor: Double = 2.0,
+  onError: (suspend (e: IOException, retryCount: Int) -> Unit)? = null,
+  block: suspend () -> T,
+): T {
+  var currentDelay = initialDelayMillis
+  repeat(maxRetries) { retryCount ->
+    try {
+      return block()
+    } catch (e: IOException) {
+      onError?.invoke(e, retryCount)
+      if (retryCount == maxRetries - 1) {
+        // If we've reached the maximum retries, propagate the exception
+        throw e
+      }
+    }
+    delay(currentDelay)
+    currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelayMillis)
+  }
+  // This should not be reached
+  throw IllegalStateException("Unreachable statement")
+}
