@@ -22,7 +22,12 @@ outputFileFormat = "mp4"
 # files smaller than this size will be deleted
 minPartSize = 20000000
 # maximum size (bytes) of a download part file (default to 2.5 GB)
+# if a part file exceeds this size, it will be split into smaller parts
+# if maxPartDuration is set, it has priority over maxPartSize
 maxPartSize = 2621440000
+# maximum duration (seconds) of a download part file, default not set
+# if set, it has priority over maxPartSize
+maxPartDuration = 3600
 # maximum number of concurrent downloads
 maxConcurrentDownloads = 5
 # maximum number of concurrent uploads

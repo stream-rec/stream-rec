@@ -65,32 +65,65 @@ class DownloadService(val app: App, val uploadService: UploadService) {
     else -> throw Exception("Platform not supported")
   }
 
+  private val taskJobs = mutableListOf<Pair<Streamer, Job>>()
+
   suspend fun run() = coroutineScope {
-    val streamers = app.config.streamers
-    val tasks = streamers.filter {
-      !it.isLive && it.isActivated
-    }.map {
-      logger.info("Checking streamer ${it.name}")
-      async {
-        logger.debug("Adding job, current context : {}", coroutineContext)
-        downloadStreamer(it)
+    launch {
+      app.streamersFlow.collect { streamerList ->
+        logger.info("Streamers changed, reloading...")
+
+        // compare the new streamers with the old ones, first by url, then by entity equals
+        // if a streamer is not in the new list, cancel the job
+        // if a streamer is in the new list but not in the old one, start a new job
+        // if a streamer is in both lists, do nothing
+
+        if (streamerList.isEmpty()) {
+          logger.info("No streamers to download")
+          // the new list is empty, cancel all jobs
+          taskJobs.forEach { it.second.cancel() }
+          return@collect
+        }
+
+        val activeStreamers = streamerList.filter { it.isActivated }
+        val oldStreamersSet = taskJobs.map { it.first }.toMutableSet()
+        for (newStreamer in activeStreamers) {
+          val job = taskJobs.find { job -> job.first.url == newStreamer.url }
+          // job is non-null if the streamer is in the old list
+          if (job != null) {
+            val sameJob = taskJobs.find { it.first == newStreamer }
+
+            // if [sameJob] is non-null, then the streamer is in the old list, with same info
+            // no update needed
+            if (sameJob != null) {
+              oldStreamersSet.remove(job.first)
+              continue
+            }
+            // if [sameJob] is null, then the streamer is in the old list, but with different info
+            // do nothing, the old job will be canceled and a new one will be started
+          }
+          // job is null, the streamer is not in the old list
+          // This is a new streamer (or maybe an old one but with new info), start a new job
+          val newJob = async {
+            downloadStreamer(newStreamer)
+          }
+          taskJobs.add(newStreamer to newJob)
+          logger.info("Download for streamer ${newStreamer.name} has been started")
+        }
+
+        // Cancel the jobs for streamers that are not in the new list
+        for (oldStreamer in oldStreamersSet) {
+          val job = taskJobs.find { job -> job.first == oldStreamer }
+          job?.second?.cancel()
+          taskJobs.remove(job)
+          logger.info("Download for streamer ${oldStreamer.name} has been cancelled")
+        }
       }
     }
-    awaitAll(*tasks.toTypedArray())
   }
 
   private suspend fun downloadStreamer(streamer: Streamer) {
-    val job = coroutineContext[Job]
-    logger.debug("current job : {}", job)
-    val coroutineName = CoroutineName("Streamer-${streamer.name}")
-    val newContext = coroutineContext + coroutineName
-    logger.debug("New context : {}", newContext)
-    val newJob = SupervisorJob(job)
-    newJob.invokeOnCompletion {
-      logger.debug("Job completed : $it")
-    }
-    val newScope = CoroutineScope(newContext + newJob)
-    logger.info("Starting download for streamer ${streamer.name}")
+    val newJob = SupervisorJob(coroutineContext[Job])
+    val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
     newScope.launch {
       logger.debug("Launching coroutine : {}", this.coroutineContext)
       if (streamer.isLive) {
@@ -98,9 +131,6 @@ class DownloadService(val app: App, val uploadService: UploadService) {
         return@launch
       }
       val plugin = getPlaformDownloader(streamer.platform)
-
-      // bind onPartedDownload actions
-      bindOnPartedDownloadActions(streamer, plugin)
 
       val streamDataList = mutableListOf<StreamData>()
       var retryCount = 0
@@ -116,7 +146,8 @@ class DownloadService(val app: App, val uploadService: UploadService) {
             continue
           }
           // stream finished with data
-          logger.error("Max retry reached for ${streamer.name}")
+          logger.error("(${streamer.name}) max retry reached")
+          logger.info("(${streamer.name}) has finished streaming")
           // call onStreamingFinished callback with the copy of the list
           launch {
             bindOnStreamingEndActions(streamer, streamDataList.toList())
@@ -143,17 +174,18 @@ class DownloadService(val app: App, val uploadService: UploadService) {
               plugin.download()
             } catch (e: Exception) {
               logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
-              emptyList()
+              null
             }
           }
-          retryCount = 0
-          logger.info("Final stream data : $streamsData")
-          if (streamsData.isEmpty()) {
-            logger.error("No data found for ${streamer.name}")
+          if (streamsData == null) {
+            retryCount++
+            logger.error("(${streamer.name}) download data not found")
             continue
           }
-          streamDataList.addAll(streamsData)
-          logger.info("Stream for ${streamer.name} has ended")
+          retryCount = 0
+          streamDataList.add(streamsData)
+          logger.info("(${streamer.name}) downloaded : $streamsData")
+          launch { executePostPartedDownloadActions(streamer, streamsData) }
         } else {
           logger.info("Streamer ${streamer.name} is not live")
         }
@@ -190,16 +222,14 @@ class DownloadService(val app: App, val uploadService: UploadService) {
     }
   }
 
-  private fun bindOnPartedDownloadActions(streamer: Streamer, plugin: Download) {
+  private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
     val partedActions = streamer.downloadConfig?.onPartedDownload
     if (!partedActions.isNullOrEmpty()) {
-      plugin.onPartedDownload = {
-        partedActions
-          .filter { it.enabled }
-          .forEach { action: Action ->
-            action.mapToAction(listOf(it))
-          }
-      }
+      partedActions
+        .filter { it.enabled }
+        .forEach { action: Action ->
+          action.mapToAction(listOf(streamData))
+        }
     }
   }
 
