@@ -167,9 +167,17 @@ abstract class Download(val app: App, val danmu: Danmu) {
       onDownloadStarted = {
         danmu.startTime = System.currentTimeMillis()
         danmu.enableWrite = true
-        // bytes to kB
-        val max = app.config.maxPartSize / 1024
+        // check if the download is timed
+        val isTimed = app.config.maxPartDuration != null && app.config.maxPartDuration!! > 0
+        val max = if (isTimed) {
+          // check if maxPartSize is set
+          // bytes to kB
+          app.config.maxPartSize.takeIf { it > 0 }?.div(1024) ?: (1024 * 1024 * 1024)
+        } else {
+          app.config.maxPartSize
+        }
 
+        // build progress bar
         pb = ProgressBarBuilder()
           .setTaskName(streamer.name)
           .setConsumer(DelegatingProgressBarConsumer(logger::info))

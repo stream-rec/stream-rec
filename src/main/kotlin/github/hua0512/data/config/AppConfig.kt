@@ -44,6 +44,7 @@ data class AppConfig(
   val outputFileFormat: VideoFormat = VideoFormat.flv,
   val minPartSize: Long = 20000000,
   val maxPartSize: Long = 2621440000,
+  val maxPartDuration: Long? = null,
   val maxDownloadRetries: Int = 3,
   val downloadRetryDelay: Long = 10,
   val maxConcurrentDownloads: Int = 5,
