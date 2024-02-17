@@ -260,7 +260,7 @@ abstract class Danmu(val app: App) {
         }
         .flowOn(Dispatchers.IO)
         .onCompletion {
-          logger.info("Danmu {} flow completed, ", danmuFile.absolutePath, it)
+          logger.debug("Danmu {} flow completed, ", danmuFile.absolutePath, it)
         }
         .collect()
     }
