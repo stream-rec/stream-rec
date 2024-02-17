@@ -256,7 +256,7 @@ abstract class Danmu(val app: App) {
           }
         }
         .catch { e ->
-          logger.error("Error writing danmu to file {}", danmuFile.absolutePath, e)
+          logger.debug("Error writing danmu to file {}", danmuFile.absolutePath, e)
         }
         .flowOn(Dispatchers.IO)
         .onCompletion {
