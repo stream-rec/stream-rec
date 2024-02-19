@@ -4,3 +4,6 @@ build
 *.jar
 *.war
 *.log
+*.db
+db
+stream-rec/build

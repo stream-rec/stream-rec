@@ -1,0 +1,196 @@
+CREATE TABLE IF NOT EXISTS app_config(
+  id INTEGER PRIMARY KEY,
+   engine TEXT DEFAULT 'ffmpeg',
+   danmu INTEGER DEFAULT 0,
+   outputFolder TEXT DEFAULT '',
+   outputFileName TEXT DEFAULT '${stremerName}-${title}-%yyyy-%MM-%dd %HH:%mm:%ss',
+   outputFileFormat TEXT DEFAULT 'flv',
+   minPartSize INTEGER DEFAULT 20000000,
+   maxPartSize INTEGER DEFAULT 2621440000,
+   maxPartDuration INTEGER,
+   maxDownloadRetries INTEGER DEFAULT 3,
+   downloadRetryDelay INTEGER DEFAULT 10,
+   maxConcurrentDownloads INTEGER DEFAULT 5,
+   maxConcurrentUploads INTEGER DEFAULT 3,
+   deleteFilesAfterUpload INTEGER DEFAULT 1,
+   huyaConfig  TEXT,
+   douyinConfig TEXT
+);
+
+-- QUERIES
+
+selectLastInsertedId : SELECT last_insert_rowid();
+
+selectAllAppConfig : SELECT * FROM app_config ORDER BY id DESC;
+getAppConfigById : SELECT * FROM app_config WHERE id = ?;
+
+upsertAppConfig{
+    UPDATE app_config
+    SET engine = :engine, danmu = :danmu, outputFolder = :outputFolder, outputFileName = :outputFileName, outputFileFormat = :outputFileFormat, minPartSize = :minPartSize, maxPartSize = :maxPartSize, maxPartDuration = :maxPartDuration, maxDownloadRetries = :maxDownloadRetries, downloadRetryDelay = :downloadRetryDelay, maxConcurrentDownloads = :maxConcurrentDownloads, maxConcurrentUploads = :maxConcurrentUploads, deleteFilesAfterUpload = :deleteFilesAfterUpload, huyaConfig = :huyaConfig, douyinConfig = :douyinConfig
+    WHERE id = :id;
+
+    INSERT OR IGNORE INTO app_config ( id, engine, danmu, outputFolder, outputFileName, outputFileFormat, minPartSize, maxPartSize, maxPartDuration, maxDownloadRetries, downloadRetryDelay, maxConcurrentDownloads, maxConcurrentUploads, deleteFilesAfterUpload, huyaConfig, douyinConfig)
+    VALUES ( :id, :engine, :danmu, :outputFolder, :outputFileName, :outputFileFormat, :minPartSize, :maxPartSize, :maxPartDuration, :maxDownloadRetries, :downloadRetryDelay, :maxConcurrentDownloads, :maxConcurrentUploads, :deleteFilesAfterUpload, :huyaConfig, :douyinConfig);
+    }
+deleteAppConfig : DELETE FROM app_config WHERE id = ?;
+
+
+
+CREATE TABLE IF NOT EXISTS streamer(
+  streamer_id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL UNIQUE ON CONFLICT ABORT ,
+  platform INTEGER NOT NULL,
+  is_live INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 0,
+--   Storing download config is a headache, but it's the easiest way to store it for now
+  download_config TEXT,
+  app_config_id INTEGER DEFAULT 1,
+  FOREIGN KEY(app_config_id) REFERENCES app_config(id) ON DELETE SET DEFAULT
+);
+
+-- QUERIES
+selectAll : SELECT * FROM streamer;
+selectAllActive : SELECT * FROM streamer WHERE is_active = 1;
+getStreamerById : SELECT * FROM streamer WHERE streamer_id = ?;
+getStreamerByName : SELECT * FROM streamer WHERE name = ?;
+findStreamerByUrl : SELECT * FROM streamer WHERE url = ?;
+
+insertStreamer : INSERT INTO streamer(name, url, platform, is_live, is_active, download_config, app_config_id) VALUES(?, ?, ?,?, ?, ?, 1);
+
+
+
+upsertStreamer {
+    INSERT OR IGNORE INTO streamer (name, url, platform, is_live, is_active, download_config, app_config_id)
+    VALUES (:name, :url, :platform, :is_live, :is_active, :download_config, 1);
+    UPDATE streamer
+    SET name = :name, url = :url, platform = :platform, is_live = :is_live, is_active = :is_active, download_config = :download_config, app_config_id = 1
+    WHERE url = : url;
+}
+deleteStreamer : DELETE FROM streamer WHERE streamer_id = ?;
+
+
+
+CREATE TABLE IF NOT EXISTS StreamData (
+  id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  dateStart INTEGER,
+  dateEnd INTEGER,
+  outputFilePath TEXT NOT NULL,
+  danmuFilePath TEXT,
+  streamerId INTEGER,
+  FOREIGN KEY(streamerId) REFERENCES streamer(streamer_id) ON DELETE CASCADE
+);
+
+getStreamDataById : SELECT * FROM StreamData WHERE id = ?;
+selectAllStreamDataOfStreamer : SELECT * FROM StreamData WHERE streamerId = ? ORDER BY dateStart DESC;
+insertStreamData : INSERT INTO StreamData(title, dateStart, dateEnd, outputFilePath, danmuFilePath, streamerId) VALUES(?, ?, ?, ?, ?, ?);
+updateStreamData : UPDATE StreamData SET title = ?, dateStart = ?, dateEnd = ?, outputFilePath = ?, danmuFilePath = ?, streamerId = ? WHERE id = ?;
+deleteStreamData : DELETE FROM StreamData WHERE id = ?;
+
+
+CREATE TABLE IF NOT EXISTS UploadData (
+  id INTEGER PRIMARY KEY,
+  streamTitle TEXT NOT NULL,
+  streamer TEXT NOT NULL,
+  streamStartTime INTEGER NOT NULL,
+  filePath TEXT NOT NULL,
+  streamDataId INTEGER,
+  status INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY(streamDataId) REFERENCES StreamData(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS UploadResult (
+  id INTEGER PRIMARY KEY,
+  time INTEGER NOT NULL,
+  isSuccess INTEGER NOT NULL DEFAULT 0,
+  message TEXT NOT NULL,
+  filePath TEXT NOT NULL,
+  uploadDataId INTEGER,
+  FOREIGN KEY(uploadDataId) REFERENCES UploadData(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS UploadAction (
+  id INTEGER PRIMARY KEY,
+  time INTEGER NOT NULL,
+  uploadConfig  TEXT NOT NULL
+);
+
+
+CREATE TABLE IF NOT EXISTS UploadActionFiles (
+  uploadActionId INTEGER,
+  uploadDataId INTEGER,
+  FOREIGN KEY(uploadActionId) REFERENCES UploadAction(id) ON DELETE CASCADE,
+  FOREIGN KEY(uploadDataId) REFERENCES UploadData(id) ON DELETE CASCADE
+);
+
+-- UploadAction Queries
+
+-- Selects all records from the UploadAction table and orders them by time in descending order.
+selectAllUploadActions : SELECT * FROM UploadAction ORDER BY time DESC;
+
+selectAllUploadActionsWithFiles : SELECT * FROM UploadAction LEFT JOIN UploadActionFiles ON UploadAction.id = UploadActionFiles.uploadActionId;
+
+-- Selects a record from the UploadAction table where the id matches the provided parameter.
+getUploadActionById : SELECT * FROM UploadAction WHERE id = ?;
+
+-- Inserts a new record into the UploadAction table with the provided time and uploadConfig values.
+insertUploadAction : INSERT INTO UploadAction(time, uploadConfig) VALUES(?, ?);
+
+-- Deletes a record from the UploadAction table where the id matches the provided parameter.
+deleteUploadAction : DELETE FROM UploadAction WHERE id = ?;
+
+
+-- UploadData Queries
+
+-- Selects all records from the UploadData table and orders them by streamStartTime in descending order.
+selectAllUploadData : SELECT * FROM UploadData ORDER BY streamStartTime DESC;
+
+-- Selects all records from the UploadData table where the status is 0 and orders them by streamStartTime in descending order.
+selectAllFailedUploadData : SELECT * FROM UploadData WHERE status = 0 ORDER BY streamStartTime DESC;
+
+-- Selects a record from the UploadData table where the id matches the provided parameter.
+getUploadDataById : SELECT * FROM UploadData WHERE id = ?;
+
+-- Updates the status of a record in the UploadData table where the id matches the provided parameter.
+updateUploadDataStatus : UPDATE UploadData SET status = ? WHERE id = ?;
+
+-- Deletes a record from the UploadData table where the id matches the provided parameter.
+deleteUploadData : DELETE FROM UploadData WHERE id = ?;
+
+-- Inserts a new record into the UploadData table with the provided streamTitle, streamer, streamStartTime, filePath, and streamDataId values.
+insertUploadData : INSERT INTO UploadData(streamTitle, streamer, streamStartTime, filePath, streamDataId, status) VALUES(?, ?, ?, ?, ?, ?);
+
+
+-- UploadActionFiles Queries
+
+-- Selects all records from the UploadActionFiles table.
+selectAllUploadActionFiles : SELECT * FROM UploadActionFiles;
+
+-- Selects a record from the UploadActionFiles table where the uploadActionId matches the provided parameter.
+getUploadActionFilesByActionId : SELECT * FROM UploadActionFiles WHERE uploadActionId = ?;
+
+-- Deletes a record from the UploadActionFiles table where the uploadActionId matches the provided parameter.
+deleteUploadActionFilesByActionId : DELETE FROM UploadActionFiles WHERE uploadActionId = ?;
+
+-- Inserts a new record into the UploadActionFiles table with the provided uploadActionId and uploadDataId values.
+insertUploadActionFiles : INSERT INTO UploadActionFiles(uploadActionId, uploadDataId) VALUES(?, ?);
+
+
+-- UploadResult Queries
+
+-- Selects all records from the UploadResult table and orders them by time in descending order.
+selectAllUploadResult : SELECT * FROM UploadResult ORDER BY time DESC;
+
+-- Selects a record from the UploadResult table where the id matches the provided parameter.
+getUploadResultById : SELECT * FROM UploadResult WHERE id = ?;
+
+findResultsByFilePath : SELECT * FROM UploadResult WHERE filePath = ?;
+
+findResultsByUploadDataId : SELECT * FROM UploadResult WHERE id = ? ORDER BY time DESC;
+
+-- Inserts a new record into the UploadResult table with the provided time, isSuccess, message, and filePath values.
+insertUploadResult : INSERT INTO UploadResult(time, isSuccess, message, filePath, uploadDataId) VALUES(?, ?, ?, ?, ?);
+
+-- Deletes a record from the UploadResult table where the id matches the provided parameter.
+deleteUploadResult : DELETE FROM UploadResult WHERE id = ?;
