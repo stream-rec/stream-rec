@@ -5,7 +5,7 @@ RUN gradle stream-rec:build
 
 FROM amazoncorretto:17-alpine3.19
 WORKDIR /app
-COPY --from=builder /app/build/stream-rec/libs/stream-rec.jar app.jar
+COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
 # Install FFmpeg
 RUN apk add --no-cache ffmpeg
