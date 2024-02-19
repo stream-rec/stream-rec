@@ -29,16 +29,59 @@ package github.hua0512.dao.upload
 import github.hua0512.data.UploadDataId
 import github.hua0512.data.UploadResultId
 import github.hua0512.utils.UploadResultEntity
+import kotlinx.coroutines.flow.Flow
 
 /**
+ * Interface for managing upload results.
+ * Provides methods for streaming, finding, saving, and deleting upload results.
+ *
  * @author hua0512
  * @date : 2024/2/19 10:52
  */
 interface UploadResultDao {
 
+  /**
+   * Streams all upload results.
+   *
+   * @return Flow of list of UploadResultEntity
+   */
+  fun streamUploadResults(): Flow<List<UploadResultEntity>>
+
+  /**
+   * Streams all failed upload results.
+   *
+   * @return Flow of list of UploadResultEntity
+   */
+  fun streamAllFailedUploadResult(): Flow<List<UploadResultEntity>>
+
+
+  /**
+   * Finds all failed upload results.
+   *
+   * @return List of UploadResultEntity
+   */
+  fun findFailedUploadResults(): List<UploadResultEntity>
+
+  /**
+   * Finds upload results by upload ID.
+   *
+   * @param uploadId The ID of the upload
+   * @return List of UploadResultEntity
+   */
   fun findUploadResultByUploadId(uploadId: UploadDataId): List<UploadResultEntity>
 
+  /**
+   * Saves an upload result.
+   *
+   * @param uploadResult The upload result to save
+   * @return The ID of the saved upload result
+   */
   fun saveUploadResult(uploadResult: UploadResultEntity): Long
 
+  /**
+   * Deletes an upload result.
+   *
+   * @param uploadResultId The ID of the upload result to delete
+   */
   fun deleteUploadResult(uploadResultId: UploadResultId)
 }

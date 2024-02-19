@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS UploadResult (
   isSuccess INTEGER NOT NULL DEFAULT 0,
   message TEXT NOT NULL,
   filePath TEXT NOT NULL,
-  uploadDataId INTEGER,
+  uploadDataId INTEGER NOT NULL,
   FOREIGN KEY(uploadDataId) REFERENCES UploadData(id) ON DELETE CASCADE
 );
 
@@ -118,8 +118,8 @@ CREATE TABLE IF NOT EXISTS UploadAction (
 
 
 CREATE TABLE IF NOT EXISTS UploadActionFiles (
-  uploadActionId INTEGER,
-  uploadDataId INTEGER,
+  uploadActionId INTEGER NOT NULL,
+  uploadDataId INTEGER NOT NULL,
   FOREIGN KEY(uploadActionId) REFERENCES UploadAction(id) ON DELETE CASCADE,
   FOREIGN KEY(uploadDataId) REFERENCES UploadData(id) ON DELETE CASCADE
 );
@@ -176,11 +176,20 @@ deleteUploadActionFilesByActionId : DELETE FROM UploadActionFiles WHERE uploadAc
 -- Inserts a new record into the UploadActionFiles table with the provided uploadActionId and uploadDataId values.
 insertUploadActionFiles : INSERT INTO UploadActionFiles(uploadActionId, uploadDataId) VALUES(?, ?);
 
+-- Get upload action file by upload data id
+getUploadActionFileByUploadDataId : SELECT * FROM UploadActionFiles WHERE uploadDataId = ?;
+
+-- Get UploadAction by upload data id, merge with UploadAction
+getUploadActionByUploadDataId : SELECT * FROM UploadActionFiles LEFT JOIN UploadAction ON UploadActionFiles.uploadActionId = UploadAction.id WHERE uploadDataId = ?;
+
 
 -- UploadResult Queries
 
 -- Selects all records from the UploadResult table and orders them by time in descending order.
 selectAllUploadResult : SELECT * FROM UploadResult ORDER BY time DESC;
+
+-- Selects all records from the UploadResult table where the isSuccess is 0 and orders them by time in descending order.
+selectAllFailedUploadResult : SELECT * FROM UploadResult WHERE isSuccess = 0 ORDER BY time DESC;
 
 -- Selects a record from the UploadResult table where the id matches the provided parameter.
 getUploadResultById : SELECT * FROM UploadResult WHERE id = ?;

@@ -33,16 +33,32 @@ import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.data.StreamDataId
 import github.hua0512.data.UploadActionId
 import github.hua0512.data.UploadDataId
+import github.hua0512.data.UploadResultId
 import github.hua0512.data.upload.UploadAction
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
 import github.hua0512.utils.asLong
 import github.hua0512.utils.boolean
+import github.hua0512.utils.toUploadResult
 import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 
 /**
+ * Repository class for managing upload actions.
+ * This class provides methods for streaming failed upload results, saving upload actions and results,
+ * getting upload data, changing upload data status, deleting upload results, and getting upload action by upload data ID.
+ *
+ * @property json Json serializer/deserializer.
+ * @property uploadActionDao DAO for managing upload actions.
+ * @property uploadDataDao DAO for managing upload data.
+ * @property uploadActionFilesDao DAO for managing upload action files.
+ * @property uploadResultDao DAO for managing upload results.
+ *
  * @author hua0512
  * @date : 2024/2/17 20:20
  */
@@ -54,7 +70,26 @@ class UploadActionRepository(
   val uploadResultDao: UploadResultDao,
 ) {
 
+  /**
+   * Streams all failed upload results.
+   *
+   * This function retrieves all failed upload results from the database and converts them to UploadResult objects.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @return Flow of list of UploadResult
+   */
+  suspend fun streamFailedUploadResults(): Flow<List<UploadResult>> =
+    uploadResultDao.streamAllFailedUploadResult().map { it.map { it.toUploadResult() } }.flowOn(Dispatchers.IO)
 
+  /**
+   * Saves an upload action.
+   *
+   * This function saves an upload action to the database. It also saves the associated upload data and inserts the upload action files.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @param uploadAction The upload action to save
+   * @return The ID of the saved upload action
+   */
   suspend fun save(uploadAction: UploadAction): UploadActionId {
     val actionId = withIOContext {
       val uploadConfigString = json.encodeToString(UploadConfig.serializer(), uploadAction.uploadConfig)
@@ -79,12 +114,29 @@ class UploadActionRepository(
     return actionId
   }
 
+  /**
+   * Saves an upload result.
+   *
+   * This function saves an upload result to the database.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @param uploadResult The upload result to save
+   */
   suspend fun saveResult(uploadResult: UploadResult) {
     return withIOContext {
       uploadResultDao.saveUploadResult(uploadResult.toEntity())
     }
   }
 
+  /**
+   * Retrieves upload data by its ID.
+   *
+   * This function retrieves upload data from the database using the upload data ID.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @param uploadDataId The ID of the upload data
+   * @return UploadData or null if no upload data with the given ID exists
+   */
   suspend fun getUploadData(uploadDataId: UploadDataId): UploadData? {
     return withIOContext {
       uploadDataDao.getUploadDataById(uploadDataId)?.let { uploadData ->
@@ -102,9 +154,53 @@ class UploadActionRepository(
     }
   }
 
+  /**
+   * Changes the status of the upload data.
+   *
+   * This function updates the status of the upload data in the database.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @param uploadDataId The ID of the upload data to update.
+   * @param status The new status to set for the upload data.
+   */
   suspend fun changeUploadDataStatus(uploadDataId: Long, status: Boolean) {
     return withIOContext {
       uploadDataDao.updateUploadDataStatus(UploadDataId(uploadDataId), status.asLong)
+    }
+  }
+
+  /**
+   * Deletes an upload result.
+   *
+   * This function deletes an upload result from the database.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @param id The ID of the upload result to delete.
+   */
+  suspend fun deleteUploadResult(id: UploadResultId) {
+    return withIOContext {
+      uploadResultDao.deleteUploadResult(id)
+    }
+  }
+
+  /**
+   * Retrieves an upload action by its associated upload data ID.
+   *
+   * This function retrieves an upload action from the database using the upload data ID.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @param id The ID of the upload data.
+   * @return UploadAction or null if no upload action with the given upload data ID exists.
+   */
+  suspend fun getUploadActionIdByUploadDataId(id: UploadDataId): UploadAction? {
+    return withIOContext {
+      uploadActionFilesDao.getUploadActionByUploadDataId(id)?.let { uploadAction ->
+        UploadAction(
+          id = uploadAction.id,
+          time = uploadAction.time,
+          uploadConfig = json.decodeFromString(UploadConfig.serializer(), uploadAction.uploadConfig)
+        )
+      }
     }
   }
 

@@ -27,6 +27,8 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
+import github.hua0512.data.UploadDataId
+import github.hua0512.data.UploadResultId
 import github.hua0512.data.upload.UploadAction
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadConfig.NoopConfig
@@ -42,23 +44,55 @@ import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
+
+/**
+ * Service class for managing upload actions.
+ *
+ * This class provides methods for running the upload service, uploading an upload action, and providing an uploader based on the upload configuration.
+ * It also contains a flow of upload actions and a map to keep track of failed uploads and the number of times they failed (in-memory).
+ *
+ * @property app The application instance.
+ * @property uploadRepo The repository for managing upload actions.
+ *
+ * @author hua0512
+ * @date : 2024/2/19 15:30
+ */
 class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
 
-  val uploadActionFlow = MutableSharedFlow<UploadAction>(replay = 1)
+  /**
+   * A shared flow of upload actions. This flow is used to emit upload actions to be processed.
+   */
+  private val uploadActionFlow = MutableSharedFlow<UploadAction>(replay = 1)
 
+
+  /**
+   * A map to keep track of failed uploads and the number of times they failed.
+   * The key is the ID of the upload data and the value is the number of times the upload has failed.
+   */
+  private val shouldNotRetryMap = mutableMapOf<UploadDataId, Int>()
 
   companion object {
+    /**
+     * Logger for this class.
+     */
     @JvmStatic
     private val logger: Logger = LoggerFactory.getLogger(UploadService::class.java)
   }
 
+  /**
+   * Runs the upload service.
+   * This function launches two coroutines. One for processing upload actions and another for handling failed uploads.
+   */
   suspend fun run() = coroutineScope {
     launch {
       uploadActionFlow
@@ -86,30 +120,60 @@ class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
           }
           logger.debug("Upload results: {}", results)
         }
+        .catch {
+          logger.error("Error in upload action flow", it)
+        }
         .collect()
     }
+
     // launch a coroutine scanning for failed uploads
     launch {
-//      uploadRepo.uploadDataSubscription()
-//        .onEach { _ ->
-//          val failedUploads = uploadRepo.getFailedUpdloadDataList()
-//          failedUploads.forEach {
-//
-//            val linkedAction = uploadRepo.get(it.uploadActionId!!)
-//            if (linkedAction == null) {
-//              logger.error("Failed to get linked action for id: ${it.uploadActionId}")
-//              return@forEach
-//            }
-//            val linkedConfig = linkedAction.uploadConfig
-//            val linkedPlatform = linkedConfig.platform
-//          }
-//        }
-//        .collect()
+      uploadRepo.streamFailedUploadResults().onEach { failedResults ->
+        // for each failed upload get its upload data
+        failedResults.forEach { failedResult ->
+          val uploadData = uploadRepo.getUploadData(UploadDataId(failedResult.uploadDataId))
+          if (uploadData == null) {
+            // if the upload data is null, delete the failedResults
+            logger.info("Deleting failed upload failedResults: $failedResult")
+            uploadRepo.deleteUploadResult(UploadResultId(failedResult.id))
+          } else {
+            // if the upload data is not null, re-upload the file
+            // get upload action id
+            val uploadDataId = UploadDataId(uploadData.id)
+            val count = shouldNotRetryMap.getOrDefault(uploadDataId, 0)
+            // ignore if the upload data has failed more than 3 times
+            if (count >= 3) {
+              logger.error("Failed to upload file: ${uploadData.filePath} more than 3 times, skipping")
+              return@onEach
+            }
 
+            val uploadAction = uploadRepo.getUploadActionIdByUploadDataId(uploadDataId) ?: run {
+              logger.error("Upload action not found for upload data: $uploadData")
+              return@onEach  // skip this failed result
+            }
+            // calculate the next retry time, current retry count * 2 factor * 10m
+            logger.info("Retrying failed upload: ${uploadData.filePath} in $count minutes")
+            val delayInMinutes = (count + 1) * 2 * 10
+            delay(duration = delayInMinutes.toDuration(DurationUnit.MINUTES))
+            // emit the same upload action with the failed upload data
+            uploadActionFlow.emit(uploadAction.copy(files = setOf(uploadData)))
+            // increment the count
+            shouldNotRetryMap[uploadDataId] = count + 1
+          }
+        }
+      }.catch {
+        logger.error("Error in failed upload results flow", it)
+      }.collect()
     }
 
   }
 
+  /**
+   * Uploads an upload action.
+   * This function saves the upload action to the repository and emits it to the upload action flow.
+   *
+   * @param uploadAction The upload action to upload.
+   */
   suspend fun upload(uploadAction: UploadAction) {
     val saved = withIOContext {
       uploadRepo.save(uploadAction)
@@ -118,6 +182,16 @@ class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
     uploadActionFlow.emit(uploadAction)
   }
 
+
+  /**
+   * Uploads a collection of files in parallel.
+   * This function uses the provided plugin to upload each file in the collection.
+   * The number of concurrent uploads is determined by the application's configuration.
+   *
+   * @param files The collection of files to upload.
+   * @param plugin The plugin to use for uploading the files.
+   * @return A list of upload results.
+   */
   @OptIn(ExperimentalCoroutinesApi::class)
   private suspend fun parallelUpload(files: Collection<UploadData>, plugin: Upload): List<UploadResult> = coroutineScope {
     files.asFlow()
@@ -127,6 +201,14 @@ class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
       .toList()
   }
 
+  /**
+   * Uploads a file and emits the result.
+   * This function attempts to upload the file up to three times. If the upload fails three times, it emits a failed upload result.
+   *
+   * @param file The file to upload.
+   * @param plugin The plugin to use for uploading the file.
+   * @return A flow of upload results.
+   */
   private fun uploadFileFlow(file: UploadData, plugin: Upload): Flow<UploadResult> = flow {
     var attempts = 0
     var success = false
@@ -166,6 +248,14 @@ class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
     }
   }
 
+  /**
+   * Provides an uploader based on the upload configuration.
+   * This function returns an uploader based on the type of the upload configuration.
+   *
+   * @param config The upload configuration.
+   * @return An uploader.
+   * @throws IllegalArgumentException If the upload configuration is invalid.
+   */
   private fun provideUploader(config: UploadConfig) = when (config) {
     is RcloneConfig -> RcloneUploader(app, config)
     is NoopConfig -> NoopUploader(app)

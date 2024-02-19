@@ -28,15 +28,47 @@ package github.hua0512.dao.upload
 
 import github.hua0512.data.UploadActionId
 import github.hua0512.data.UploadDataId
+import github.hua0512.utils.UploadActionEntity
 import github.hua0512.utils.UploadActionFilesEntity
 
 /**
+ * Interface for managing upload action files.
+ * Provides methods for retrieving upload action files and inserting new ones.
+ *
  * @author hua0512
  * @date : 2024/2/19 12:20
  */
 interface UploadActionFilesDao {
 
+  /**
+   * Retrieves an upload action by its associated upload data ID.
+   *
+   * @param uploadDataId The ID of the upload data
+   * @return UploadActionEntity or null if no upload action with the given upload data ID exists
+   */
+  fun getUploadActionByUploadDataId(uploadDataId: UploadDataId): UploadActionEntity?
+
+  /**
+   * Retrieves an upload action file by its associated upload data ID.
+   *
+   * @param uploadDataId The ID of the upload data
+   * @return UploadActionFilesEntity or null if no upload action file with the given upload data ID exists
+   */
+  fun getUploadActionFileByUploadDataId(uploadDataId: UploadDataId): UploadActionFilesEntity?
+
+  /**
+   * Retrieves all upload action files associated with a specific action ID.
+   *
+   * @param actionId The ID of the upload action
+   * @return List of UploadActionFilesEntity
+   */
   fun getUploadActionFilesByActionId(actionId: UploadActionId): List<UploadActionFilesEntity>
 
+  /**
+   * Inserts new upload action files.
+   *
+   * @param uploadActionId The ID of the upload action
+   * @param uploadDataId The ID of the upload data
+   */
   fun insertUploadActionFiles(uploadActionId: UploadActionId, uploadDataId: UploadDataId)
 }

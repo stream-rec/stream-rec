@@ -36,6 +36,9 @@ import github.hua0512.utils.UploadActionEntity
  * @date : 2024/2/19 10:58
  */
 class UploadActionDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, UploadActionDao {
+  override fun getUploadActionById(uploadId: UploadActionId): UploadActionEntity? {
+    return queries.getUploadActionById(uploadId.value).executeAsOneOrNull()
+  }
 
   override fun getUploadActionByUploadId(uploadId: UploadActionId): List<UploadActionEntity> {
     return queries.getUploadActionById(uploadId.value).executeAsList()

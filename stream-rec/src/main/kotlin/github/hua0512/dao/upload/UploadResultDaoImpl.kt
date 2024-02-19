@@ -26,13 +26,31 @@
 
 package github.hua0512.dao.upload
 
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
 import github.hua0512.StreamRecDatabase
 import github.hua0512.dao.BaseDaoImpl
 import github.hua0512.data.UploadDataId
 import github.hua0512.data.UploadResultId
+import github.hua0512.sqldelight.db.UploadResult
 import github.hua0512.utils.UploadResultEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
 
 class UploadResultDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, UploadResultDao {
+  override fun streamUploadResults(): Flow<List<UploadResult>> {
+    return queries.selectAllUploadResult().asFlow().mapToList(Dispatchers.IO)
+  }
+
+  override fun streamAllFailedUploadResult(): Flow<List<UploadResultEntity>> {
+    return queries.selectAllFailedUploadResult().asFlow().mapToList(Dispatchers.IO)
+  }
+
+  override fun findFailedUploadResults(): List<UploadResultEntity> {
+    return queries.selectAllFailedUploadResult().executeAsList()
+  }
+
   override fun findUploadResultByUploadId(uploadId: UploadDataId): List<UploadResultEntity> {
     return queries.findResultsByUploadDataId(uploadId.value).executeAsList()
   }
