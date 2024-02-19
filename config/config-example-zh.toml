@@ -1,0 +1,192 @@
+###### 全局配置 ########
+
+# 下载引擎，目前只支持ffmpeg
+engine = "ffmpeg"
+# 全局弹幕下载开关
+danmu = true
+# global flag to enable/disable delete files after upload
+# 全局下载完成后删除文件开关
+# 仅在streamers.downloadConfig.onPartedDownload和streamers.downloadConfig.onStreamingFinished为空的时候启用
+deleteFilesAfterUpload = true
+# 写入文件的路径
+# 可以使用的占位符："{title}"（直播标题）, "{streamer}"（主播名称）,
+# 直播日期占位符 "%yyyy"(年）, "%MM"（月）, "%dd"（日）, "%HH"（小时）, "%mm"（分钟）, "%ss" （秒）
+# 例如： "/home/hua0512/录播/{streamer}/%yyyy-%MM-%dd"
+# Windows用户应该使用双反斜杠或单斜杠来避免转义字符，例如："C:\\Users\\yourname\\Downloads" 或 "C:/Users/yourname/Downloads"
+outputFolder = "path/to/your/output/folder"
+# 输出文件名格式
+# 可以使用的占位符的与outputFolder相同 "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss"
+# 请不要在文件名中使用以下字符：\ / : * ? " < > |
+# 请不要在文件名中加入文件扩展名，文件扩展名将在outputFileFormat中指定
+outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
+# 输出文件格式
+# 可以使用的值：mp4, flv ... (ffmpeg支持的格式)
+outputFileFormat = "mp4"
+# 最小文件大小（字节）以被视为有效的下载文件（默认为20 MB）
+# 注意，如果一个部分文件小于这个值，它将被删除
+# 该值使用的是二进制字节单位，所以20000000表示20MB
+minPartSize = 20000000
+# 下载部分文件的最大大小（字节）（默认为2.5 GB）
+# 调整此值以适应您的磁盘大小
+# 如果一个部分文件超过这个大小，它将被分成更小的部分（分段下载)
+# 如果设置了maxPartDuration，它将优先于maxPartSize
+maxPartSize = 2621440000
+# 下载部分文件的最大持续时间（秒），默认未设置
+# 如果一个部分文件超过这个时间，它将被分成更小的部分（分段下载)
+# 列如：3600表示1小时
+# 如果设置，它将优先于maxPartSize
+maxPartDuration = 3600
+# 最大并发下载数（默认为5）
+# 请将此值保持大于主播数
+maxConcurrentDownloads = 5
+# 最大并发上传数 (默认为3)
+# 适当调整此值以适应你的网络带宽
+maxConcurrentUploads = 3
+# 主播下播后检查次数（默认为3）
+maxDownloadRetries = 3
+# 主播下播后下载重试之间的延迟，单位 秒（默认10秒）
+downloadRetryDelay = 10
+
+###### 全局配置结束 ########
+
+############################################################################################
+
+###### 平台配置 ########
+
+# 虎牙平台默认配置
+[huyaConfig]
+# 虎牙主CDN， 默认为 "AL"
+# 可用值: "AL", HW", "TX", "BD", ...
+# 当主CDN不可用时，将随机选择一个CDN
+primaryCdn = "AL"
+# 最大比特率（默认为10000） 也就是10M，通常为蓝光画质
+maxBitRate = 10000
+# cookies (可选)
+cookies = "your cookies"
+
+# 抖音平台默认配置
+[douyinConfig]
+# 录制抖音直播需要的cookies
+# ttwid, __ac_nonce, __ac_signature
+# 列如: ttwid=aaaa; msToken=bbbb; __ac_nonce=cccc; __ac_signature=dddd;
+cookies = "your cookies"
+# 抖音直播画质
+# 可用值: "origin"（原画）, "uhd"（蓝光）, "hd"（超清）, "sd"（高清）, "ld"（标清）, "md"（流畅）, "audio"（音频）
+quality = "origin"
+
+###### 平台配置结束 ########
+
+############################################################################################
+
+###### 主播列表配置 ########
+# 要录制的主播
+# 下面是一个主播简易配置的示例
+# 你可以通过复制并更改来添加更多的主播
+
+############## 主播配置 ##############
+
+[[streamers]]
+# 主播名称（必填）
+name = "TheShy"
+# 直播链接（必填）
+url = "https://www.huya.com/991111"
+# 是否启用录制（默认启用，true）
+isActivated = false
+############################################################
+
+# 主播配置
+# 下面是一个主播完整配置的示例
+[[streamers]]
+# 主播名称（必填）
+name = "TheShy"
+# 直播链接（必填）
+url = "https://www.huya.com/991111"
+# 是否启用录制（默认启用，true）
+isActivated = true
+
+# 主播下载配置
+# 如果未指定，将使用全局对应的平台配置
+[streamers.downloadConfig]
+# 平台类型（必填）， 可用值: "huya", "douyin"
+type = "huya"
+# cookies (可选)
+# 如果未指定，将使用全局对应的平台配置
+cookies = "your cookies"
+# 虎牙CDN（可选），默认为全局虎牙平台主CDN huyaConfig.primaryCdn
+primaryCdn = "HW"
+# 是否下载弹幕（可选），默认为全局弹幕下载开关
+danmu = true
+# 最大比特率（可选），默认为全局平台配置最大比特率
+maxBitRate = 10000
+# 输出文件夹（可选），默认为全局输出文件夹
+# 相关信息请参考全局配置
+outputFolder = "path/to/your/output/folder/{streamer}/%yyyy-%MM-%dd}"
+# 输出文件名（可选），默认为全局输出文件名
+# 相关信息请参考全局配置
+outputFileName = "{title}-%yyyy-%MM-%dd %HH:%mm:%ss"
+# 输出文件格式（可选），默认为全局输出文件格式
+outputFileExtension = "mp4"
+
+# 异步回调列表，当一个分段下载完成时执行
+# 多个回调将按照列表中的顺序执行
+
+# 单异步回调，当一个分段下载完成时执行
+# 列表中的每个回调都是一个独立的回调，使用时请小心
+# 注意! 启用此回调时，如果全局标志deleteFilesAfterUpload启用，回调完成后将删除下载的文件
+[[streamers.downloadConfig.onPartedDownload]]
+# 回调类型，可用值: "rclone", "command"
+# 当使用"command"时，命令将在shell中执行，并且下载的文件路径将作为第一个参数传递
+type = "rclone"
+# 是否启用此回调（默认为false）
+enabled = true
+# rclone操作类型
+# 如果使用命令，请删除此行
+rcloneOperation = "copy"
+# rclone远程路径
+# 仅在类型为"rclone"时使用
+# 可用的占位符值: "{title}", "{streamer}", "%yyyy", "%MM", "%dd", "%HH", "%mm", "%ss" 请参考全局配置文件输出文件夹和输出文件名
+# 例如: remotePath = "onedrive:录播/{streamer}/%yyyy-%MM-%dd"
+# 请注意，如果您使用的是rclone，您需要在rclone.conf中配置远程
+remotePath = "drive:your/remote/path"
+# 软件名称，仅在类型为"command"时使用
+# 如果使用rclone，请删除此行
+# program = "ls"
+
+# 软件参数 (可选) rclone和command都可以使用，以下是rclone的示例
+args = [
+    "--config",
+    "/path/to/your/rclone.conf",
+    "-P",
+    "--onedrive-chunk-size",
+    "100M"
+]
+
+# 异步回调列表，当主播检测到下播时执行的回调
+# 多个回调将按照列表中的顺序执行
+
+# 注意！ 当 streamers.downloadConfig.onPartedDownload 启用时，不能保证在回调执行时 onPartedDownload 已经完成
+# 同时使用两个回调时请小心
+# 注意！ 如果全局标志deleteFilesAfterUpload启用，回调完成后将删除下载的文件
+# 注意！ 如果你同时使用两个回调，请确保它们不会相互干扰
+[[streamers.downloadConfig.onStreamingFinished]]
+
+# 回调类型，可用值: "rclone", "command"
+# 当使用"command"时，命令将在shell中执行，并且下载的文件路径将作为第一个参数(string)传递, 多个文件路径将以换行符分隔
+# 例如: /path/to/your/file1\n/path/to/your/file2\n/path/to/your/file3
+# rclone 请查看上面的示例
+type = "command"
+# 是否启用此回调（默认为false）
+enabled = true
+# 软件名称，仅在类型为"command"时使用
+# 如果使用rclone，请删除此行
+program = "ls"
+# 软件参数 (可选) rclone和command都可以使用，以下是rclone的示例
+args = [
+    "-l"
+]
+
+############## 主播配置结束 ##############
+
+############################################################################################
+
+###### 主播列表配置结束 ########
