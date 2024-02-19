@@ -42,6 +42,9 @@ downloadRetryDelay = 10
 ############################################################################################
 
 ###### START OF PLATFORM CONFIG SECTION ########
+
+# Default platforms configs
+
 # Huya platform config
 [huyaConfig]
 # primary CDN to use (default to "AL")
