@@ -40,7 +40,7 @@ data class AppConfig(
   val engine: String = "ffmpeg",
   val danmu: Boolean = false,
   val outputFolder: String = "",
-  val outputFileName: String = "\${stremerName}-\${title}-%yyyy-%MM-%dd %HH:%mm:%ss",
+  val outputFileName: String = "{stremerName}-{title}-%yyyy-%MM-%dd %HH:%mm:%ss",
   val outputFileFormat: VideoFormat = VideoFormat.flv,
   val minPartSize: Long = 20000000,
   val maxPartSize: Long = 2621440000,

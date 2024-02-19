@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS app_config(
    engine TEXT DEFAULT 'ffmpeg',
    danmu INTEGER DEFAULT 0,
    outputFolder TEXT DEFAULT '',
-   outputFileName TEXT DEFAULT '${stremerName}-${title}-%yyyy-%MM-%dd %HH:%mm:%ss',
+   outputFileName TEXT DEFAULT '{stremerName}-{title}-%yyyy-%MM-%dd %HH:%mm:%ss',
    outputFileFormat TEXT DEFAULT 'flv',
    minPartSize INTEGER DEFAULT 20000000,
    maxPartSize INTEGER DEFAULT 2621440000,
