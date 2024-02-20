@@ -46,6 +46,7 @@ import github.hua0512.repo.StreamerRepository
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.InputSource
+import github.hua0512.utils.process.Redirect
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
@@ -333,6 +334,7 @@ class DownloadService(val app: App, val uploadService: UploadService, val repo: 
           val exitCode = executeProcess(
             this.program, *this.args.toTypedArray(),
             stdin = InputSource.fromString(streamDataList.joinToString("\n") { it.outputFilePath }),
+            stdout = Redirect.CAPTURE,
             directory = downloadOutputFolder,
             destroyForcibly = true,
             consumer = { line ->
