@@ -60,6 +60,8 @@ val commonDouyinParams = mapOf(
   "heartbeatDuration" to "0"
 )
 
+private val douyinMsTokenLock = Any()
+
 /**
  * The `ttwid` parameter from the Douyin cookies.
  */
@@ -121,19 +123,20 @@ suspend fun populateDouyinCookieMissedParams(cookies: String, client: HttpClient
  * @return A random string to be used as the `msToken` parameter in Douyin requests
  */
 private fun generateDouyinMsToken(length: Int = 107): String {
-  // return the token if it has already been generated
-  if (::douyinMsToken.isInitialized) return douyinMsToken
+  synchronized(douyinMsTokenLock) {
+    if (::douyinMsToken.isInitialized) return douyinMsToken
 
-  // generate a random string, with length 107
-  val source = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=_"
-  val random = Random()
-  val sb = StringBuilder()
-  for (i in 0 until length) {
-    sb.append(source[random.nextInt(source.length)])
-  }
-  return sb.toString().also {
-    douyinMsToken = it
-    logger.info("generated douyin msToken: $it")
+    // generate a random string, with length 107
+    val source = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789=_"
+    val random = Random()
+    val sb = StringBuilder()
+    for (i in 0 until length) {
+      sb.append(source[random.nextInt(source.length)])
+    }
+    return sb.toString().also {
+      douyinMsToken = it
+      logger.info("generated douyin msToken: $it")
+    }
   }
 }
 
