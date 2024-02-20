@@ -1,6 +1,6 @@
 import org.junit.Test
 
-class CookiesExtractor {
+class DouyinCookiesExtractor {
 
   @Test
   fun extractCookiesFromString() {

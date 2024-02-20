@@ -33,11 +33,10 @@ import github.hua0512.data.upload.UploadResult
 import github.hua0512.plugins.base.Upload
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
+import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -55,42 +54,21 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
         throw UploadInvalidArgumentsException("invalid remote path: $it")
       }
     }
-    // rclone copy <local file> <remote folder>
-    val cmds = arrayOf(
+    val startInstant = Instant.fromEpochSeconds(uploadData.streamStartTime)
+    val streamer = uploadData.streamer
+    val replacedRemote = remotePath.run {
+      replacePlaceholders(streamer, uploadData.streamTitle, startInstant)
+    }
+
+    val rcloneCommand = arrayOf(
       "rclone",
       uploadConfig.rcloneOperation,
-    )
-    val extraCmds = uploadConfig.args.toTypedArray()
-
-    // rclone "operation" <local file> <remote folder> --args
-    // format dateStart to local time
-    val startTimeString = Instant.fromEpochMilliseconds(uploadData.streamStartTime).toLocalDateTime(TimeZone.currentSystemDefault())
-    val streamer = uploadData.streamer
-
-    val toReplace: Map<String, String> = mapOf(
-      "{streamer}" to streamer,
-      "{title}" to uploadData.streamTitle,
-      "%yyyy" to startTimeString.year.toString(),
-      "%MM" to startTimeString.monthNumber.toString(),
-      "%dd" to startTimeString.dayOfMonth.toString(),
-      "%HH" to startTimeString.hour.toString(),
-      "%mm" to startTimeString.minute.toString(),
-      "%ss" to startTimeString.second.toString(),
-    )
-
-    val replacedRemote = remotePath.run {
-      var result = this
-      toReplace.forEach { (k, v) ->
-        result = result.replace(k, v)
-      }
-      result
-    }
-    val finalCmds = cmds + arrayOf(
       uploadData.filePath,
       replacedRemote
-    ) + extraCmds
+    ) + uploadConfig.args.toTypedArray()
 
-    val resultCode = executeProcess(*finalCmds, stdout = Redirect.CAPTURE, consumer = {
+    // rclone "operation" <local file> <remote folder> --args
+    val resultCode = executeProcess(*rcloneCommand, stdout = Redirect.CAPTURE, consumer = {
       logger.debug(it)
     })
 
