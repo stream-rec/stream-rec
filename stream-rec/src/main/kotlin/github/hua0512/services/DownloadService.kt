@@ -44,13 +44,15 @@ import github.hua0512.plugins.download.Huya
 import github.hua0512.repo.StreamDataRepository
 import github.hua0512.repo.StreamerRepository
 import github.hua0512.utils.deleteFile
+import github.hua0512.utils.executeProcess
+import github.hua0512.utils.process.InputSource
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.File
 import kotlin.coroutines.coroutineContext
-import kotlin.coroutines.resume
 import kotlin.io.path.Path
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -157,7 +159,6 @@ class DownloadService(val app: App, val uploadService: UploadService, val repo: 
     val newJob = SupervisorJob(coroutineContext[Job])
     val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
     newScope.launch {
-      logger.debug("Launching coroutine : {}", this.coroutineContext)
       if (streamer.isLive) {
         logger.info("Streamer ${streamer.name} is already live")
         return@launch
@@ -318,35 +319,26 @@ class DownloadService(val app: App, val uploadService: UploadService, val repo: 
       is CommandAction -> {
         this.run {
           logger.info("Running command action : $this")
-          val exitCode = suspendCancellableCoroutine<Int> {
-            val inputString = streamDataList.joinToString("\n") { it.outputFilePath }
-            val processDirectory = app.config.outputFolder.ifEmpty { null }
-            val process = ProcessBuilder(this.program, *this.args.toTypedArray())
-              .redirectError(ProcessBuilder.Redirect.PIPE)
-              .run {
-                if (processDirectory != null) {
-                  directory(Path(processDirectory).toFile())
-                } else {
-                  this
-                }
-              }
-              .start()
 
-            val writter = process.outputStream.bufferedWriter()
-            // write the list of files to the process input
-            writter.use {
-              it.write(inputString)
-            }
-            val job = Job()
-            val scope = CoroutineScope(Dispatchers.IO + job)
-            scope.launch {
-              process.waitFor()
-              it.resume(process.exitValue())
-            }
-            job.invokeOnCompletion {
-              process.destroy()
+          val downloadOutputFolder: File? = (streamDataList.first().streamer.downloadConfig?.outputFolder ?: app.config.outputFolder).let { path ->
+            Path(path).toFile().also {
+              // if the folder does not exist, then it should be an error
+              if (!it.exists()) {
+                logger.error("Output folder $this does not exist")
+                return@let null
+              }
             }
           }
+          // execute the command
+          val exitCode = executeProcess(
+            this.program, *this.args.toTypedArray(),
+            stdin = InputSource.fromString(streamDataList.joinToString("\n") { it.outputFilePath }),
+            directory = downloadOutputFolder,
+            destroyForcibly = true,
+            consumer = { line ->
+              logger.info(line)
+            }
+          )
           logger.info("Command action $this finished with exit code $exitCode")
         }
       }

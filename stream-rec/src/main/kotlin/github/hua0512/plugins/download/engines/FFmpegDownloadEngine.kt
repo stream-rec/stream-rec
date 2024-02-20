@@ -28,15 +28,12 @@ package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
 import github.hua0512.data.stream.StreamData
+import github.hua0512.utils.executeProcess
+import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.withIOContext
 import io.ktor.http.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
-import kotlin.coroutines.resume
 
 /**
  * FFmpegDownloadEngine is a download engine that uses ffmpeg to download the stream.
@@ -89,41 +86,23 @@ class FFmpegDownloadEngine(
     val streamer = streamData!!.streamer
 
     return withIOContext {
-      val builder = ProcessBuilder(*cmds)
       logger.info("(${streamer.name}) Starting download using ffmpeg...")
-      // use suspendCancellableCoroutine to handle process cancellation
-      val exitCode = suspendCancellableCoroutine { continuation ->
-        val process = builder
-          .redirectErrorStream(true)
-          .start()
-        onDownloadStarted()
-        // handle process cancellation
-        continuation.invokeOnCancellation {
-          process.destroy()
-          logger.info("(${streamer.name}) download process is cancelled : $it")
+      onDownloadStarted()
+      // last size of the file
+      var lastSize = 0L
+      val exitCode = executeProcess(app.ffmepgPath, *cmds, stdout = Redirect.CAPTURE, destroyForcibly = true) { line ->
+        if (!line.startsWith("size="))
+          logger.info("${streamer.name} - $line")
+        else {
+          //  size=     768kB time=00:00:02.70 bitrate=2330.2kbits/s speed=5.28x
+          val sizeString = line.substringAfter("size=").substringBefore("time").trim()
+          // extract the size in kB
+          val size = sizeString.replace(Regex("[^0-9]"), "").toLong()
+          val diff = size - lastSize
+          lastSize = size
+          val bitrate = line.substringAfter("bitrate=").substringBefore("speed").trim()
+          onDownloadProgress(diff, bitrate)
         }
-        launch {
-          var lastSize = 0L
-          while (process.isAlive) {
-            process.inputStream.bufferedReader().readLine()?.let { line ->
-              if (!line.startsWith("size="))
-                logger.info("${streamer.name} - $line")
-              else {
-                //  size=     768kB time=00:00:02.70 bitrate=2330.2kbits/s speed=5.28x
-                val sizeString = line.substringAfter("size=").substringBefore("time").trim()
-                // extract the size in kB
-                val size = sizeString.replace(Regex("[^0-9]"), "").toLong()
-                val diff = size - lastSize
-                lastSize = size
-                val bitrate = line.substringAfter("bitrate=").substringBefore("speed").trim()
-                onDownloadProgress(diff, bitrate)
-              }
-            }
-          }
-          logger.info("(${streamer.name}) - ffmpeg process is finished")
-        }
-
-        continuation.resume(process.waitFor())
       }
 
       logger.info("(${streamer.name}) download finished, exit code: $exitCode")
@@ -146,7 +125,6 @@ class FFmpegDownloadEngine(
     defaultFFmpegOutputArgs: Array<String>,
     fileExtension: String,
   ) = arrayOf(
-    app.ffmepgPath,
     "-y"
   ) + defaultFFmpegInputArgs + arrayOf(
     "-i",
