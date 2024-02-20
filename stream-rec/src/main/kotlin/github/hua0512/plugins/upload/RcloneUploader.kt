@@ -31,16 +31,15 @@ import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
 import github.hua0512.plugins.base.Upload
+import github.hua0512.utils.executeProcess
+import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.withIOContext
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.coroutines.resume
 
 class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneConfig) : Upload(app, uploadConfig) {
 
@@ -91,23 +90,9 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
       replacedRemote
     ) + extraCmds
 
-    val resultCode = suspendCancellableCoroutine {
-      val builder = ProcessBuilder(*finalCmds)
-        .redirectErrorStream(true)
-        .start()
-
-      it.invokeOnCancellation {
-        builder.destroy()
-      }
-      launch {
-        builder.inputStream.bufferedReader().readText().let { line ->
-          logger.debug(line)
-        }
-      }
-
-      val code = builder.waitFor()
-      it.resume(code)
-    }
+    val resultCode = executeProcess(*finalCmds, stdout = Redirect.CAPTURE, consumer = {
+      logger.debug(it)
+    })
 
     if (resultCode != 0) {
       throw UploadFailedException("rclone failed with exit code: $resultCode", uploadData.filePath)
