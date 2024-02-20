@@ -28,6 +28,7 @@ package github.hua0512.utils
 
 import github.hua0512.logger
 import github.hua0512.plugins.base.Download
+import github.hua0512.plugins.download.Douyin
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -81,7 +82,7 @@ private lateinit var douyinMsToken: String
 internal fun extractDouyinRoomId(url: String): String? {
   if (url.isEmpty()) return null
   return try {
-    val roomIdPattern = "douyin.com/([^?]*)".toRegex()
+    val roomIdPattern = Douyin.REGEX.toRegex()
     roomIdPattern.find(url)?.groupValues?.get(1) ?: run {
       logger.error("Failed to get douyin room id from url: $url")
       return null
