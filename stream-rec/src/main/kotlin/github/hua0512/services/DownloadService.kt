@@ -335,6 +335,7 @@ class DownloadService(val app: App, val uploadService: UploadService, val repo: 
             this.program, *this.args.toTypedArray(),
             stdin = InputSource.fromString(streamDataList.joinToString("\n") { it.outputFilePath }),
             stdout = Redirect.CAPTURE,
+            stderr = Redirect.CAPTURE,
             directory = downloadOutputFolder,
             destroyForcibly = true,
             consumer = { line ->
