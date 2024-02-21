@@ -69,7 +69,7 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
 
     logger.debug("Processing {}...", rcloneCommand.toList())
     // rclone "operation" <local file> <remote folder> --args
-    val resultCode = executeProcess(*rcloneCommand, stdout = Redirect.CAPTURE, stderr = Redirect.CAPTURE, consumer = {
+    val resultCode = executeProcess(*rcloneCommand, stdout = Redirect.SILENT, stderr = Redirect.CAPTURE, consumer = {
       logger.info(it)
     })
 
