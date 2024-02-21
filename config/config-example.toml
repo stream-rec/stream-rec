@@ -165,10 +165,10 @@ type = "command"
 enabled = true
 # program name, only used when type is "command"
 # remove this line if you're using rclone
-program = "ls"
+program = "bash"
 # program args
 args = [
-    "-l"
+    "./your_script.sh",
 ]
 
 ##############START OF STREAMER CONFIG SECTION##############
