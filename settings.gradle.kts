@@ -1,4 +1,4 @@
-rootProject.name = "stream-download"
+rootProject.name = "stream-rec"
 include("stream-rec")
 
 dependencyResolutionManagement {
