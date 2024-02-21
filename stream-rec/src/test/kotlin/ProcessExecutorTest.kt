@@ -24,33 +24,30 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.upload
+import github.hua0512.utils.executeProcess
+import github.hua0512.utils.process.InputSource
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import java.io.File
 
-import github.hua0512.utils.UploadDataEntity
-import github.hua0512.utils.asLong
-import kotlinx.serialization.Serializable
+class ProcessExecutorTest {
 
-@Serializable
-data class UploadData(
-  var id: Long = 0,
-  val streamTitle: String,
-  val streamer: String,
-  // epoch seconds of the stream start time
-  val streamStartTime: Long,
-  val filePath: String,
-  var status: Boolean = false,
-) {
-  var streamDataId: Long = -1
 
-  fun toEntity(): UploadDataEntity {
-    return UploadDataEntity(
-      id = id,
-      streamTitle = streamTitle,
-      streamer = streamer,
-      streamStartTime = streamStartTime,
-      filePath = filePath,
-      status = status.asLong,
-      streamDataId = streamDataId
+  @Test
+  fun `test execute`() = runTest {
+
+    println(System.getProperty("user.dir"))
+
+    val file = File(System.getProperty("user.dir")).parentFile
+    val exitCode = executeProcess(
+      "powershell",
+      "./run.sh",
+      stdin = InputSource.fromString("inputString\naaaaaaaa\n"),
+      directory = file
     )
+
+    // Assert
+    assertEquals(0, exitCode)
   }
 }

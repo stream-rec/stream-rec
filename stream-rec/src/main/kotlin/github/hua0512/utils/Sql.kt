@@ -26,9 +26,11 @@
 
 package github.hua0512.utils
 
+import github.hua0512.data.UploadResultId
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.upload.UploadResult
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -75,3 +77,14 @@ fun Streamer.toStreamerEntity(json: Json) = StreamerEntity(
   download_config = downloadConfig?.let { json.encodeToString<DownloadConfig>(it) },
   1
 )
+
+
+fun UploadResultEntity.toUploadResult() = UploadResult(
+  id = id,
+  time = time,
+  isSuccess = isSuccess.boolean,
+  message = message,
+  filePath = filePath,
+).also {
+  it.uploadDataId = uploadDataId
+}

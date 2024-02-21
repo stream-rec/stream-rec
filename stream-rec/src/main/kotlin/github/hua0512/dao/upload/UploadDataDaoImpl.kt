@@ -43,7 +43,7 @@ class UploadDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl,
 
   override fun insertUploadData(title: String, streamer: String, startTime: Long, filePath: String, streamDataId: StreamDataId, status: Long): Long {
     queries.insertUploadData(title, streamer, startTime, filePath, streamDataId.value, status)
-    return queries.selectLastInsertedId().executeAsOne()
+    return queries.getUploadDataIdByTimeAndPath(startTime, filePath).executeAsOne()
   }
 
   override fun updateUploadDataStatus(id: UploadDataId, status: Long) {

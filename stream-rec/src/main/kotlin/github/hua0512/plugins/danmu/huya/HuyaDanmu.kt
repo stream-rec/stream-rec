@@ -73,7 +73,13 @@ class HuyaDanmu(app: App) : Danmu(app) {
   override suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean {
     // check if streamer url is empty
     if (streamer.url.isEmpty()) return false
-    val roomId = streamer.url.split("huya.com/")[1].split('/')[0].split('?')[0]
+    val roomId = try {
+      val matchResult = Huya.REGEX.toRegex().find(streamer.url) ?: return false
+      matchResult.groupValues.last()
+    } catch (e: Exception) {
+      logger.error("Failed to get huya room id: $e")
+      return false
+    }
     val response = withIOContext {
       app.client.get(Huya.BASE_URL + "/$roomId") {
         headers {

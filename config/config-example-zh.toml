@@ -179,10 +179,10 @@ type = "command"
 enabled = true
 # 软件名称，仅在类型为"command"时使用
 # 如果使用rclone，请删除此行
-program = "ls"
+program = "bash"
 # 软件参数 (可选) rclone和command都可以使用，以下是rclone的示例
 args = [
-    "-l"
+    "./your_script.sh",
 ]
 
 ############## 主播配置结束 ##############

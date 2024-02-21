@@ -30,6 +30,7 @@ import github.hua0512.StreamRecDatabase
 import github.hua0512.dao.BaseDaoImpl
 import github.hua0512.data.UploadActionId
 import github.hua0512.data.UploadDataId
+import github.hua0512.utils.UploadActionEntity
 import github.hua0512.utils.UploadActionFilesEntity
 
 /**
@@ -37,6 +38,19 @@ import github.hua0512.utils.UploadActionFilesEntity
  * @date : 2024/2/19 12:23
  */
 class UploadActionFilesDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, UploadActionFilesDao {
+  override fun getUploadActionByUploadDataId(uploadDataId: UploadDataId): UploadActionEntity? {
+    val query = queries.getUploadActionByUploadDataId(uploadDataId.value).executeAsOneOrNull() ?: return null
+    return UploadActionEntity(
+      query.uploadActionId,
+      query.time ?: 0,
+      query.uploadConfig ?: "",
+    )
+  }
+
+  override fun getUploadActionFileByUploadDataId(uploadDataId: UploadDataId): UploadActionFilesEntity? {
+    return queries.getUploadActionFileByUploadDataId(uploadDataId.value).executeAsOneOrNull()
+  }
+
   override fun getUploadActionFilesByActionId(actionId: UploadActionId): List<UploadActionFilesEntity> {
     return queries.getUploadActionFilesByActionId(actionId.value).executeAsList()
   }

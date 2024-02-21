@@ -1,3 +1,8 @@
+import github.hua0512.plugins.download.Huya
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
 /*
  * MIT License
  *
@@ -24,33 +29,13 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.upload
+class HuyaTest {
 
-import github.hua0512.utils.UploadDataEntity
-import github.hua0512.utils.asLong
-import kotlinx.serialization.Serializable
 
-@Serializable
-data class UploadData(
-  var id: Long = 0,
-  val streamTitle: String,
-  val streamer: String,
-  // epoch seconds of the stream start time
-  val streamStartTime: Long,
-  val filePath: String,
-  var status: Boolean = false,
-) {
-  var streamDataId: Long = -1
-
-  fun toEntity(): UploadDataEntity {
-    return UploadDataEntity(
-      id = id,
-      streamTitle = streamTitle,
-      streamer = streamer,
-      streamStartTime = streamStartTime,
-      filePath = filePath,
-      status = status.asLong,
-      streamDataId = streamDataId
-    )
+  @Test
+  fun testUrl() = runTest {
+    val url = "https://www.huya.com/geminiii?from=live"
+    val matchResult = Huya.REGEX.toRegex().find(url) ?: throw IllegalArgumentException("Invalid url")
+    assertEquals(matchResult.groupValues.last(), "geminiii")
   }
 }

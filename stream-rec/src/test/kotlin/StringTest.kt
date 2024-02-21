@@ -1,3 +1,8 @@
+import github.hua0512.utils.replacePlaceholders
+import kotlinx.datetime.Instant
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
 /*
  * MIT License
  *
@@ -24,33 +29,20 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.upload
+class StringTest {
 
-import github.hua0512.utils.UploadDataEntity
-import github.hua0512.utils.asLong
-import kotlinx.serialization.Serializable
 
-@Serializable
-data class UploadData(
-  var id: Long = 0,
-  val streamTitle: String,
-  val streamer: String,
-  // epoch seconds of the stream start time
-  val streamStartTime: Long,
-  val filePath: String,
-  var status: Boolean = false,
-) {
-  var streamDataId: Long = -1
+  @Test
+  fun testReplace() {
+    val streamer = "雪乃荔荔枝"
+    val title = "新人第一天开播"
+    val time = 1708461712L
+    val instant = Instant.fromEpochSeconds(time)
 
-  fun toEntity(): UploadDataEntity {
-    return UploadDataEntity(
-      id = id,
-      streamTitle = streamTitle,
-      streamer = streamer,
-      streamStartTime = streamStartTime,
-      filePath = filePath,
-      status = status.asLong,
-      streamDataId = streamDataId
-    )
+    val fileFormat = "{streamer} - {title} - %yyyy-%MM-%dd %HH-%mm-%ss"
+
+    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
+
+    assertEquals("雪乃荔荔枝 - 新人第一天开播 - 2024-2-20 21-41-52", formatted)
   }
 }

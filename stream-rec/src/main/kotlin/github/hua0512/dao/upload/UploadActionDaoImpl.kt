@@ -36,6 +36,9 @@ import github.hua0512.utils.UploadActionEntity
  * @date : 2024/2/19 10:58
  */
 class UploadActionDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, UploadActionDao {
+  override fun getUploadActionById(uploadId: UploadActionId): UploadActionEntity? {
+    return queries.getUploadActionById(uploadId.value).executeAsOneOrNull()
+  }
 
   override fun getUploadActionByUploadId(uploadId: UploadActionId): List<UploadActionEntity> {
     return queries.getUploadActionById(uploadId.value).executeAsList()
@@ -43,7 +46,16 @@ class UploadActionDaoImpl(override val database: StreamRecDatabase) : BaseDaoImp
 
   override fun saveUploadAction(time: Long, configString: String): UploadActionId {
     queries.insertUploadAction(time, configString)
-    return UploadActionId(queries.selectLastInsertedId().executeAsOne())
+    // TODO: Queries are not returning the id of the inserted row
+    // In multi-threaded environment, select last_insert_rowid() is not safe
+    // so we need to use another way to get the id of the inserted row
+    // time should be unique, but we check it with configString to be sure.
+    // Meanwhile, we should use a random number to fasten the query instead of performing a select with the configString which slows down the query.
+    // But, we are not developing a high performance application, so we can use this way.
+    // SUBJECT TO CHANGE IN THE FUTURE
+    return queries.getUploadActionIdByTimeAndConfig(time, configString).executeAsOne().run {
+      UploadActionId(this)
+    }
   }
 
 

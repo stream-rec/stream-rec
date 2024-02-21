@@ -35,6 +35,7 @@ import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.NativeDownloadEngine
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.rename
+import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.withIOContext
 import io.ktor.http.*
 import kotlinx.coroutines.*
@@ -262,28 +263,13 @@ abstract class Download(val app: App, val danmu: Danmu) {
 
 
   private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String): Path {
-    val localeDate = LocalDateTime.now().run {
-      format(ofPattern("yyyy-MM-dd HH-mm-ss"))
-    }
-    // replace placeholders in the output file name
-    val toReplace = mapOf(
-      "{streamer}" to streamer.name,
-      "{title}" to downloadTitle,
-      "%yyyy" to localeDate.substring(0, 4),
-      "%MM" to localeDate.substring(5, 7),
-      "%dd" to localeDate.substring(8, 10),
-      "%HH" to localeDate.substring(11, 13),
-      "%mm" to localeDate.substring(14, 16),
-      "%ss" to localeDate.substring(17, 19),
-    )
+    val timestamp = Clock.System.now()
     val outputFileName = (if (downloadConfig.outputFileName.isNullOrEmpty()) {
       app.config.outputFileName
     } else {
       downloadConfig.outputFileName!!
     }).run {
-      formatToFriendlyFileName(toReplace.entries.fold(this) { acc, entry ->
-        acc.replace(entry.key, entry.value)
-      } + ".$fileExtension")
+      formatToFriendlyFileName(this.replacePlaceholders(streamer.name, downloadTitle, timestamp) + ".$fileExtension")
     }
 
     val outputFolder = (if (downloadConfig.outputFolder.isNullOrEmpty()) {
@@ -293,9 +279,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
     }).run {
       val str = if (endsWith(File.separator)) this else this + File.separator
       // system file separator
-      toReplace.entries.fold(str) { acc, entry ->
-        acc.replace(entry.key, entry.value)
-      }
+      str.replacePlaceholders(streamer.name, downloadTitle, timestamp)
     }
     val sum = outputFolder + outputFileName
 
