@@ -335,10 +335,17 @@ class DownloadService(
               }
             }
           }
+          // files + danmu files
+          val finalList: List<String> = streamDataList.flatMap { streamData ->
+            listOfNotNull(
+              streamData.outputFilePath,
+              streamData.danmuFilePath
+            )
+          }
           // execute the command
           val exitCode = executeProcess(
             this.program, *this.args.toTypedArray(),
-            stdin = InputSource.fromString(streamDataList.joinToString("\n") { it.outputFilePath }),
+            stdin = InputSource.fromString(finalList.joinToString("\n") { it }),
             stdout = Redirect.CAPTURE,
             stderr = Redirect.CAPTURE,
             directory = downloadOutputFolder,
