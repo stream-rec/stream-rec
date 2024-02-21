@@ -57,7 +57,7 @@ class UploadResultDaoImpl(override val database: StreamRecDatabase) : BaseDaoImp
 
   override fun saveUploadResult(uploadResult: UploadResultEntity): Long {
     queries.insertUploadResult(uploadResult.time, uploadResult.isSuccess, uploadResult.message, uploadResult.filePath, uploadResult.uploadDataId)
-    return queries.selectLastInsertedId().executeAsOne()
+    return queries.getUploadResultIdByTimeAndPath(uploadResult.time, uploadResult.filePath).executeAsOne()
   }
 
   override fun deleteUploadResult(uploadResultId: UploadResultId) {

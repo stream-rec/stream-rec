@@ -51,7 +51,7 @@ class StreamDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl,
       streamData.streamerId
     )
     // get the last inserted id
-    return queries.selectLastInsertedId().executeAsOne()
+    return queries.getStreamDataIdByOutputFilePath(streamData.outputFilePath).executeAsOne()
   }
 
   override suspend fun deleteStreamData(streamData: StreamDataEntity) {

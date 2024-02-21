@@ -38,6 +38,7 @@ import github.hua0512.data.upload.UploadAction
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
+import github.hua0512.logger
 import github.hua0512.utils.asLong
 import github.hua0512.utils.boolean
 import github.hua0512.utils.toUploadResult
@@ -98,6 +99,7 @@ class UploadActionRepository(
     // save upload data
     withIOContext {
       uploadAction.files.forEach {
+        logger.debug("Saving upload data for file: {}, {}", it, it.streamDataId)
         val uploadDataId = uploadDataDao.insertUploadData(
           it.streamTitle,
           it.streamer,

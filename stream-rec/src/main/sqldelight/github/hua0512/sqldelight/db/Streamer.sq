@@ -19,8 +19,6 @@ CREATE TABLE IF NOT EXISTS app_config(
 
 -- QUERIES
 
-selectLastInsertedId : SELECT last_insert_rowid();
-
 selectAllAppConfig : SELECT * FROM app_config ORDER BY id DESC;
 getAppConfigById : SELECT * FROM app_config WHERE id = ?;
 
@@ -83,6 +81,7 @@ CREATE TABLE IF NOT EXISTS StreamData (
 );
 
 getStreamDataById : SELECT * FROM StreamData WHERE id = ?;
+getStreamDataIdByOutputFilePath : SELECT id FROM StreamData WHERE outputFilePath = ? LIMIT 1;
 selectAllStreamDataOfStreamer : SELECT * FROM StreamData WHERE streamerId = ? ORDER BY dateStart DESC;
 insertStreamData : INSERT INTO StreamData(title, dateStart, dateEnd, outputFilePath, danmuFilePath, streamerId) VALUES(?, ?, ?, ?, ?, ?);
 updateStreamData : UPDATE StreamData SET title = ?, dateStart = ?, dateEnd = ?, outputFilePath = ?, danmuFilePath = ?, streamerId = ? WHERE id = ?;
@@ -137,6 +136,8 @@ getUploadActionById : SELECT * FROM UploadAction WHERE id = ?;
 -- Inserts a new record into the UploadAction table with the provided time and uploadConfig values.
 insertUploadAction : INSERT INTO UploadAction(time, uploadConfig) VALUES(?, ?);
 
+getUploadActionIdByTimeAndConfig : SELECT id FROM UploadAction WHERE time = ? AND uploadConfig = ? LIMIT 1;
+
 -- Deletes a record from the UploadAction table where the id matches the provided parameter.
 deleteUploadAction : DELETE FROM UploadAction WHERE id = ?;
 
@@ -160,6 +161,8 @@ deleteUploadData : DELETE FROM UploadData WHERE id = ?;
 
 -- Inserts a new record into the UploadData table with the provided streamTitle, streamer, streamStartTime, filePath, and streamDataId values.
 insertUploadData : INSERT INTO UploadData(streamTitle, streamer, streamStartTime, filePath, streamDataId, status) VALUES(?, ?, ?, ?, ?, ?);
+
+getUploadDataIdByTimeAndPath : SELECT id FROM UploadData WHERE streamStartTime = ? AND filePath = ? LIMIT 1;
 
 
 -- UploadActionFiles Queries
@@ -200,6 +203,8 @@ findResultsByUploadDataId : SELECT * FROM UploadResult WHERE id = ? ORDER BY tim
 
 -- Inserts a new record into the UploadResult table with the provided time, isSuccess, message, and filePath values.
 insertUploadResult : INSERT INTO UploadResult(time, isSuccess, message, filePath, uploadDataId) VALUES(?, ?, ?, ?, ?);
+
+getUploadResultIdByTimeAndPath : SELECT id FROM UploadResult WHERE time =  ? AND filePath = ? LIMIT 1;
 
 -- Deletes a record from the UploadResult table where the id matches the provided parameter.
 deleteUploadResult : DELETE FROM UploadResult WHERE id = ?;

@@ -58,7 +58,12 @@ import kotlin.io.path.Path
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-class DownloadService(val app: App, val uploadService: UploadService, val repo: StreamerRepository, val streamDataRepository: StreamDataRepository) {
+class DownloadService(
+  val app: App,
+  private val uploadService: UploadService,
+  val repo: StreamerRepository,
+  private val streamDataRepository: StreamDataRepository,
+) {
 
   companion object {
     @JvmStatic
@@ -223,14 +228,13 @@ class DownloadService(val app: App, val uploadService: UploadService, val repo: 
           retryCount = 0
           // save the stream data to the database
           try {
-            streamDataRepository.saveStreamData(streamsData).also {
-              streamsData.id = it
-            }
+            streamsData.id = streamDataRepository.saveStreamData(streamsData)
+            logger.debug("({}) saved to db : {}", streamer.name, streamsData)
           } catch (e: Exception) {
             logger.error("Error while saving stream data for ${streamer.name} : ${e.message}")
           }
           streamDataList.add(streamsData)
-          logger.info("(${streamer.name}) downloaded : $streamsData")
+          logger.info("(${streamer.name}) downloaded : $streamsData, ${streamsData.id}")
           launch { executePostPartedDownloadActions(streamer, streamsData) }
         } else {
           logger.info("Streamer ${streamer.name} is not live")
@@ -294,12 +298,12 @@ class DownloadService(val app: App, val uploadService: UploadService, val repo: 
                 it.streamDataId = streamData.id
 
               },
-              streamData.danmuFilePath?.let {
+              streamData.danmuFilePath?.let { danmu ->
                 UploadData(
                   streamTitle = streamData.title,
                   streamer = streamData.streamer.name,
                   streamStartTime = streamData.dateStart,
-                  filePath = it
+                  filePath = danmu
                 ).also {
                   it.streamDataId = streamData.id
                 }
@@ -310,6 +314,7 @@ class DownloadService(val app: App, val uploadService: UploadService, val repo: 
             time = Clock.System.now().toEpochMilliseconds(),
             files = finalList.toSet(),
             uploadConfig = RcloneConfig(
+              rcloneOperation = this.rcloneOperation,
               remotePath = this.remotePath,
               args = this.args
             )

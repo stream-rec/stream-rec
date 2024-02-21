@@ -46,7 +46,9 @@ class UploadActionDaoImpl(override val database: StreamRecDatabase) : BaseDaoImp
 
   override fun saveUploadAction(time: Long, configString: String): UploadActionId {
     queries.insertUploadAction(time, configString)
-    return UploadActionId(queries.selectLastInsertedId().executeAsOne())
+    return queries.getUploadActionIdByTimeAndConfig(time, configString).executeAsOne().run {
+      UploadActionId(this)
+    }
   }
 
 
