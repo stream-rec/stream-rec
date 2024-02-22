@@ -33,12 +33,10 @@ import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
 import github.hua0512.utils.toMD5Hex
 import github.hua0512.utils.withIOContext
-import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.util.*
-import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -109,7 +107,8 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
       return false
     }
     val state = app.json.parseToJsonElement(matchJson).jsonObject["state"]?.jsonPrimitive?.content ?: ""
-    if (state != "ON") {
+    val liveChannel = app.json.parseToJsonElement(matchJson).jsonObject["liveChannel"]?.jsonPrimitive?.longOrNull ?: 0
+    if (state != "ON" || liveChannel == 0L) {
       logger.debug("(${streamer.name}) is not live")
       return false
     }
@@ -217,23 +216,7 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
         downloadUrl = "$downloadUrl&ratio=$maxSupportedBitrate"
       }
 
-      // The live status update on Huya experiences considerable delay (>1minute)
-      // so we need to check if the streamer is still live
-      if (streamer.isLive)
-      // this request should timeout if the streamer is not live
-        return@withContext withIOContext {
-          app.client.prepareGet(downloadUrl) {
-            headers {
-              append(HttpHeaders.Accept, "*/*")
-              append(HttpHeaders.AcceptEncoding, "gzip, deflate, br")
-              platformHeaders.forEach { append(it.first, it.second) }
-            }
-          }.execute {
-            val channel: ByteReadChannel = it.body()
-            channel.availableForRead > 0
-          }
-        }
-      else true
+      true
     }
   }
 
