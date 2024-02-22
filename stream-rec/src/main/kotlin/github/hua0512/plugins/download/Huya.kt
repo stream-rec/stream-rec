@@ -60,7 +60,6 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
   override val regexPattern: String = REGEX
 
   override suspend fun shouldDownload(streamer: Streamer): Boolean {
-    logger.debug("Check should download in coroutine scope : {}, parent : {}", coroutineContext, coroutineContext[Job.Key])
     this.streamer = streamer
     val url = streamer.url
     val roomId = try {
