@@ -27,9 +27,9 @@
 package github.hua0512.plugins.download
 
 import github.hua0512.app.App
-import github.hua0512.data.stream.Streamer
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.platform.DouyinQuality
+import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
 import github.hua0512.utils.commonDouyinParams
@@ -39,8 +39,6 @@ import github.hua0512.utils.withIOContext
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -76,15 +74,9 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
 
     val cookies = (config.cookies ?: app.config.douyinConfig.cookies).let {
       if (it.isNullOrEmpty()) {
-        logger.error("Please provide douyin cookies!")
-        return false
+        throw IllegalArgumentException("(${streamer.name}) Please provide douyin cookies!")
       }
-      try {
-        populateDouyinCookieMissedParams(it, app.client)
-      } catch (e: Exception) {
-        logger.error("Failed to populate douyin cookie missed params", e)
-        return false
-      }
+      populateDouyinCookieMissedParams(it, app.client)
     }
 
     val response = withIOContext {
@@ -102,7 +94,7 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
     }
 
     if (response.status != HttpStatusCode.OK) {
-      logger.debug("Streamer : {} response status is not OK : {}", streamer.name, response.status)
+      logger.debug("(${streamer.name}) response status is not OK : {}", response.status)
       return false
     }
 
@@ -110,22 +102,22 @@ class Douyin(app: App, danmu: Danmu) : Download(app, danmu) {
 //    logger.debug("(${streamer.name}) data: $data")
     val json = app.json.parseToJsonElement(data)
     val liveData = json.jsonObject["data"]?.jsonObject?.get("data")?.jsonArray?.get(0)?.jsonObject ?: run {
-      logger.debug("${streamer.name} unable to get live data")
+      logger.debug("(${streamer.name}) unable to get live data")
       return false
     }
 
     downloadTitle = liveData["title"]?.jsonPrimitive?.content ?: run {
-      logger.debug("${streamer.name} unable to get live title")
+      logger.debug("(${streamer.name}) unable to get live title")
       return false
     }
 
     val status = liveData["status"]?.jsonPrimitive?.int ?: run {
-      logger.debug("${streamer.name} unable to get live status")
+      logger.debug("(${streamer.name}) unable to get live status")
       return false
     }
 
     if (status != 2) {
-      logger.debug("Streamer : ${streamer.name} is not live")
+      logger.debug("(${streamer.name}) is not live")
       return false
     }
 

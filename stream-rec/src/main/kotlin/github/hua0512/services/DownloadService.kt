@@ -202,6 +202,11 @@ class DownloadService(
         val isLive = try {
           // check if streamer is live
           plugin.shouldDownload(streamer)
+        } catch (e: IllegalArgumentException) {
+          // invalid url, or invalid streamer cases
+          // cancel the job
+          cancel("(${streamer.name}) invalid url or invalid streamer : ${e.message}")
+          return@launch
         } catch (e: Exception) {
           logger.error("Error while checking if ${streamer.name} is live : ${e.message}")
           false

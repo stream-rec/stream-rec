@@ -103,7 +103,7 @@ internal fun extractDouyinRoomId(url: String): String? {
  */
 suspend fun populateDouyinCookieMissedParams(cookies: String, client: HttpClient): String {
   if (cookies.isEmpty()) {
-    throw Exception("Empty cookies")
+    throw IllegalArgumentException("Empty cookies")
   }
   var finalCookies = cookies
   if ("ttwid" !in cookies) {
