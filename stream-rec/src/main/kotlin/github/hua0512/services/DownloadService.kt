@@ -59,9 +59,9 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 class DownloadService(
-  val app: App,
+  private val app: App,
   private val uploadService: UploadService,
-  val repo: StreamerRepository,
+  private val repo: StreamerRepository,
   private val streamDataRepository: StreamDataRepository,
 ) {
 
@@ -106,10 +106,9 @@ class DownloadService(
         }
         // cancel the jobs of the streamers that are not in the new list
         toCancel.forEach { streamer ->
-          val old = cancelJob(streamer)?.let {
+          cancelJob(streamer, "delete")?.let {
             repo.deleteStreamer(it)
           }
-          logger.info("${streamer.name}, ${streamer.url} job cancelled")
         }
 
         // diff the new streamers with the old ones
@@ -125,41 +124,25 @@ class DownloadService(
             new.isLive = old.isLive
             // if the entity is different, cancel the old job and start a new one
             if (old != new) {
-              cancelJob(new)
-              logger.info("${new.name}, ${new.url} job cancelled due to entity change")
+              cancelJob(new, "entity changed")
               // update db
               repo.insertOrUpdate(new)
-              if (!new.isActivated) {
-                logger.info("${new.name}, ${new.url} is not activated")
-                return@forEach
-              }
-              val newJob = async { downloadStreamer(new) }
-              taskJobs.add(new to newJob)
+              if (validateActivation(new)) return@forEach
+              startDownloadJob(new)
             }
           } else {
             // update db
             repo.insertOrUpdate(new)
             val id = repo.findStreamerByUrl(new.url)?.id ?: -1
             new.id = id
-            if (!new.isActivated) {
-              logger.info("${new.name}, ${new.url} is not activated")
-              return@forEach
-            }
-            val newJob = async { downloadStreamer(new) }
-            taskJobs.add(new to newJob)
-            logger.info("${new.name}, ${new.url} job started")
+            if (validateActivation(new)) return@forEach
+            startDownloadJob(new)
           }
         }
       }
     }
   }
 
-  private fun cancelJob(new: Streamer): Streamer? {
-    val pair = taskJobs.find { it.first.url == new.url }
-    pair?.second?.cancel()
-    taskJobs.remove(pair)
-    return pair?.first
-  }
 
   private suspend fun downloadStreamer(streamer: Streamer) {
     val newJob = SupervisorJob(coroutineContext[Job])
@@ -177,7 +160,7 @@ class DownloadService(
       val maxRetry = app.config.maxDownloadRetries
       while (true) {
 
-        if (retryCount > maxRetry) {
+        if (retryCount >= maxRetry) {
           retryCount = 0
           streamer.isLive = false
           // update db with the new isLive value
@@ -381,6 +364,48 @@ class DownloadService(
       else -> throw UnsupportedOperationException("Invalid action: $this")
     }
 
+  }
+
+  /**
+   * Starts a new download job for a given [Streamer].
+   *
+   * @param new The [Streamer] object for which to start the download job.
+   */
+  private fun CoroutineScope.startDownloadJob(new: Streamer) {
+    val newJob = async { downloadStreamer(new) }
+    taskJobs.add(new to newJob)
+    logger.info("${new.name}, ${new.url} job started")
+  }
+
+  /**
+   * Validates the activation status of a given [Streamer].
+   *
+   * @param new The [Streamer] object to validate.
+   * @return true if the [Streamer] is not activated, false otherwise.
+   */
+  private fun validateActivation(new: Streamer): Boolean {
+    if (!new.isActivated) {
+      logger.info("${new.name}, ${new.url} is not activated")
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Cancels the job of a given [Streamer].
+   *
+   * @param new The [Streamer] object for which to cancel the job.
+   * @param reason The reason for cancelling the job.
+   * @return The [Streamer] object that was cancelled.
+   */
+  private fun cancelJob(new: Streamer, reason: String = ""): Streamer? {
+    return taskJobs.find { it.first.url == new.url }?.run {
+      second?.cancel().also {
+        logger.info("${first.name}, ${first.url} job cancelled : $reason")
+      }
+      taskJobs.remove(this)
+      first
+    }
   }
 
 }
