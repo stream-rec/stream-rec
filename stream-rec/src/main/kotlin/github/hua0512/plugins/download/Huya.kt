@@ -38,12 +38,10 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.util.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.*
 import java.util.*
-import kotlin.coroutines.coroutineContext
 
 class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
   companion object {
@@ -66,11 +64,11 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
       val matchResult = regexPattern.toRegex().find(url) ?: return false
       matchResult.groupValues.last()
     } catch (e: Exception) {
-      throw IllegalArgumentException("(${streamer.name}) url is not valid, ${e.message}")
+      throw IllegalArgumentException("${streamer.name} url is not valid, ${e.message}")
     }
 
     if (roomId.isEmpty()) {
-      throw IllegalArgumentException("(${streamer.name}) url is not valid")
+      throw IllegalArgumentException("${streamer.name} url is not valid")
     }
 
     val response: HttpResponse = withIOContext {
@@ -96,19 +94,19 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
     val matchResult = pattern.find(body)
     val match = matchResult?.value ?: ""
     if (match.isEmpty()) {
-      logger.error("(${streamer.name}) match is empty")
+      logger.error("${streamer.name} match is empty")
       return false
     }
     val matchJson = matchResult?.groupValues?.get(1) ?: ""
 
     if (matchJson.isEmpty()) {
-      logger.error("(${streamer.name}) matchJson is empty")
+      logger.error("${streamer.name} matchJson is empty")
       return false
     }
     val state = app.json.parseToJsonElement(matchJson).jsonObject["state"]?.jsonPrimitive?.content ?: ""
     val liveChannel = app.json.parseToJsonElement(matchJson).jsonObject["liveChannel"]?.jsonPrimitive?.longOrNull ?: 0
+
     if (state != "ON" || liveChannel == 0L) {
-      logger.debug("(${streamer.name}) is not live")
       return false
     }
 
@@ -119,11 +117,11 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
 
       val data = json.jsonObject
       val vMultiStreamInfo = data["vMultiStreamInfo"] ?: run {
-        logger.debug("(${streamer.name}) is not live, vMultiStreamInfo is null")
+        logger.debug("${streamer.name} is not live, vMultiStreamInfo is null")
         return@withContext false
       }
       val gameLiveInfo = data["data"]?.jsonArray?.get(0)?.jsonObject?.get("gameLiveInfo")?.jsonObject ?: run {
-        logger.debug("(${streamer.name}) is not live, gameLiveInfo is null")
+        logger.debug("${streamer.name} is not live, gameLiveInfo is null")
         return@withContext false
       }
 
@@ -131,7 +129,7 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
         if (this.isNullOrEmpty()) null
         else this
       } ?: run {
-        logger.debug("(${streamer.name}) is not live, gameStreamInfoList is null")
+        logger.debug("${streamer.name} is not live, gameStreamInfoList is null")
         return@withContext false
       }
 
@@ -165,11 +163,11 @@ class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
         // try to find the preselected cdn
         gameStreamInfoList.firstOrNull { it.jsonObject["sCdnType"]?.jsonPrimitive?.content?.uppercase(Locale.getDefault()) == preselectedCdn }?.jsonObject
           ?: run {
-            logger.error("(${streamer.name}) Preselected CDN ($preselectedCdn) not found")
+            logger.error("${streamer.name} preselected CDN ($preselectedCdn) not found, falling back to random")
             gameStreamInfoList.firstOrNull()?.jsonObject
           }
       } ?: run {
-        logger.error("(${streamer.name}) Error parsing streamInfo")
+        logger.error("${streamer.name} error parsing streamInfo")
         return@withContext false
       }
 

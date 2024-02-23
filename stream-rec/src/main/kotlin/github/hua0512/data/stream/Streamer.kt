@@ -42,5 +42,9 @@ data class Streamer(
 ) : StreamerDTO {
 
   var id: Long = -1
+  override fun toString(): String {
+    return "Streamer(id=$id, name='$name', url='$url', platform=$platform, isLive=$isLive, isActivated=$isActivated, downloadConfig=$downloadConfig)"
+  }
+
 
 }

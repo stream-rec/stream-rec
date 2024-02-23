@@ -65,6 +65,9 @@ upsertStreamer {
     SET name = :name, url = :url, platform = :platform, is_live = :is_live, is_active = :is_active, download_config = :download_config, app_config_id = 1
     WHERE url = : url;
 }
+
+changeStreamerLiveStatus : UPDATE streamer SET is_live = ? WHERE streamer_id = ?;
+
 deleteStreamer : DELETE FROM streamer WHERE streamer_id = ?;
 
 

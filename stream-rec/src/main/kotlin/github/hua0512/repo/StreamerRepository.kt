@@ -58,6 +58,12 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
     }
   }
 
+  suspend fun getStreamersActive(): List<Streamer> {
+    return withIOContext {
+      dao.getAllStremersActive().map { it.toStreamer(json) }
+    }
+  }
+
 
   suspend fun findStreamerByUrl(url: String): Streamer? {
     return withIOContext {
@@ -73,12 +79,12 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
       } else null
 
       dao.updateStreamer(
-        streamer.name,
-        streamer.url,
-        streamer.platform.id.toLong(),
-        streamer.isLive.asLong,
-        streamer.isActivated.asLong,
-        downloadConfig
+        name = streamer.name,
+        url = streamer.url,
+        platform = streamer.platform.id.toLong(),
+        isLive = streamer.isLive.asLong,
+        isActive = streamer.isActivated.asLong,
+        downloadConfig = downloadConfig
       )
       logger.debug("updatedStreamer: {}", streamer)
     }
@@ -107,7 +113,18 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
     if (oldStreamer.id == 0L) throw IllegalArgumentException("Streamer id is 0")
     return withIOContext {
       dao.deleteStreamer(StreamerId(oldStreamer.id))
-      logger.debug("deleteStreamer: {}", oldStreamer)
+      logger.debug("deletedStreamer: {}", oldStreamer)
+    }
+  }
+
+  /**
+   * Change streamer active status
+   * @param id streamer id
+   * @param status true: active, false: inactive
+   */
+  suspend fun changeStreamerLiveStatus(id: Long, status: Boolean) {
+    return withIOContext {
+      dao.changeStreamerLiveStatus(StreamerId(id), status.asLong)
     }
   }
 

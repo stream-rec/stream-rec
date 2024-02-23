@@ -101,12 +101,12 @@ abstract class Download(val app: App, val danmu: Danmu) {
    */
   suspend fun download(): StreamData? = supervisorScope {
     // check if downloadUrl is valid
-    if (downloadUrl.isEmpty()) throw IllegalStateException("(${streamer.name}) downloadUrl is required")
+    if (downloadUrl.isEmpty()) throw IllegalArgumentException("(${streamer.name}) downloadUrl is required")
 
     // download config is required and its should not be null
     val downloadConfig = streamer.downloadConfig ?: run {
       logger.error("(${streamer.name}) download config is required")
-      throw IllegalStateException("(${streamer.name}) download config is required")
+      throw IllegalArgumentException("(${streamer.name}) download config is required")
     }
 
     val fileExtension = (downloadConfig.outputFileExtension ?: app.config.outputFileFormat).run { "${extension}.part" }
@@ -155,7 +155,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
     // download engine
     val engine = getDownloadEngine().apply {
       if (fileExtension.contains("mp4") && this is NativeDownloadEngine) {
-        throw Exception("NativeEngine does not support mp4 format")
+        throw UnsupportedOperationException("NativeEngine does not support mp4 format")
       }
       init(
         downloadUrl,

@@ -49,4 +49,9 @@ data class StreamData(
     streamerId = streamer.id,
     id = id
   )
+
+  override fun toString(): String {
+    return "StreamData(id=$id, title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, streamer=$streamer)"
+  }
+
 }

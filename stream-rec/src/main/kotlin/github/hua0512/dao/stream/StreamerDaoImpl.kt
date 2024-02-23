@@ -83,6 +83,13 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     )
   }
 
+  override suspend fun changeStreamerLiveStatus(id: StreamerId, isLive: Long) {
+    if (id.value == -1L) {
+      return
+    }
+    return queries.changeStreamerLiveStatus(isLive, id.value)
+  }
+
   override suspend fun updateStreamer(
     name: String,
     url: String,

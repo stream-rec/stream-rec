@@ -27,7 +27,6 @@
 package github.hua0512.dao.stream
 
 import github.hua0512.data.StreamerId
-import github.hua0512.data.stream.Streamer
 import github.hua0512.utils.StreamerEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -47,6 +46,7 @@ interface StreamerDao {
 
   suspend fun getStreamerById(id: StreamerId): StreamerEntity?
   suspend fun insertStreamer(name: String, url: String, platform: Long, isLive: Long, isActive: Long, downloadConfig: String?)
+  suspend fun changeStreamerLiveStatus(id: StreamerId, isLive: Long)
   suspend fun updateStreamer(name: String, url: String, platform: Long, isLive: Long, isActive: Long, downloadConfig: String?)
   suspend fun deleteStreamer(id: StreamerId)
 }

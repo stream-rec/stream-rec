@@ -27,7 +27,6 @@
 package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
-import github.hua0512.services.FileWatcherService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -109,4 +108,28 @@ class App(val json: Json) {
   // semaphore to limit the number of concurrent downloads
   lateinit var downloadSemaphore: Semaphore
 
+
+  /**
+   * Releases the download semaphore if it has been initialized and the number of available permits
+   * is not equal to the maximum concurrent downloads.
+   */
+  fun releaseSemaphore() {
+    if (::downloadSemaphore.isInitialized) {
+      try {
+        if (downloadSemaphore.availablePermits != config.maxConcurrentDownloads) {
+          downloadSemaphore.release()
+        }
+      } catch (e: IllegalStateException) {
+        // ignore
+      }
+    }
+  }
+
+  /**
+   * Releases the download semaphore and closes the HTTP client.
+   */
+  fun releaseAll() {
+    client.close()
+    releaseSemaphore()
+  }
 }

@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.nio.file.ClosedWatchServiceException
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -69,9 +70,18 @@ class Application {
           initAppConfig(appConfigRepository, app)
         }
 
+
         val fileWatcherService = appConfigRepository.getFileWatcherService()?.also {
           launch {
-            it.watchFileFlow().debounce(500).collect {
+            try {
+              it.watchFileModifications()
+            } catch (e: ClosedWatchServiceException) {
+              logger.error("FileWatcherService was interrupted", e)
+            }
+          }
+
+          launch {
+            it.eventFlow.debounce(500).collect {
               logger.info("Config file changed, reloading")
               appConfig = initAppConfig(appConfigRepository, app)
             }
@@ -89,8 +99,13 @@ class Application {
         }
 
         Runtime.getRuntime().addShutdownHook(Thread {
-          logger.info("Shutting down")
+          logger.info("Shutting down...")
+          fileWatcherService?.close()
           cancel("Application is shutting down")
+          app.apply {
+            // release all
+            releaseAll()
+          }
           logger.info("Shutdown complete")
         })
       }
@@ -162,8 +177,10 @@ class Application {
 
     private suspend fun initAppConfig(repo: AppConfigRepository, app: App): AppConfig {
       return repo.getAppConfig().also {
-        app.config = it
-        app.downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
+        with(app) {
+          config = it
+          downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
+        }
       }
     }
 

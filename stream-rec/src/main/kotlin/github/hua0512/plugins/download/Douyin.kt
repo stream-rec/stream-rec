@@ -68,7 +68,7 @@ class Douyin(app: App, danmu: DouyinDanmu) : Download(app, danmu) {
 
     val cookies = (config.cookies ?: app.config.douyinConfig.cookies).let {
       if (it.isNullOrEmpty()) {
-        throw IllegalArgumentException("(${streamer.name}) Please provide douyin cookies!")
+        throw IllegalArgumentException("${streamer.name} Please provide douyin cookies!")
       }
       populateDouyinCookieMissedParams(it, app.client)
     }
@@ -88,30 +88,29 @@ class Douyin(app: App, danmu: DouyinDanmu) : Download(app, danmu) {
     }
 
     if (response.status != HttpStatusCode.OK) {
-      logger.debug("(${streamer.name}) response status is not OK : {}", response.status)
+      logger.debug("${streamer.name} response status is not OK : {}", response.status)
       return false
     }
 
     val data = response.bodyAsText()
-//    logger.debug("(${streamer.name}) data: $data")
+//    logger.debug("${streamer.name} data: $data")
     val json = app.json.parseToJsonElement(data)
     val liveData = json.jsonObject["data"]?.jsonObject?.get("data")?.jsonArray?.get(0)?.jsonObject ?: run {
-      logger.debug("(${streamer.name}) unable to get live data")
+      logger.debug("${streamer.name} unable to get live data")
       return false
     }
 
     downloadTitle = liveData["title"]?.jsonPrimitive?.content ?: run {
-      logger.debug("(${streamer.name}) unable to get live title")
+      logger.debug("${streamer.name} unable to get live title")
       return false
     }
 
     val status = liveData["status"]?.jsonPrimitive?.int ?: run {
-      logger.debug("(${streamer.name}) unable to get live status")
+      logger.debug("${streamer.name} unable to get live status")
       return false
     }
 
     if (status != 2) {
-      logger.debug("(${streamer.name}) is not live")
       return false
     }
 
@@ -122,22 +121,22 @@ class Douyin(app: App, danmu: DouyinDanmu) : Download(app, danmu) {
     val streamDataJson =
       liveData["stream_url"]?.jsonObject?.get("live_core_sdk_data")?.jsonObject?.get("pull_data")?.jsonObject?.get("stream_data")?.jsonPrimitive?.content
         ?: run {
-          logger.error("(${streamer.name}) unable to get stream data")
+          logger.error("${streamer.name} unable to get stream data")
           return false
         }
 
     val streamsData = app.json.parseToJsonElement(streamDataJson).jsonObject["data"]?.jsonObject ?: run {
-      logger.error("(${streamer.name}) unable to parse stream data")
+      logger.error("${streamer.name} unable to parse stream data")
       return false
     }
 
     val streamData = streamsData[selectedQuality]?.jsonObject ?: run {
-      logger.error("(${streamer.name}) unable to get stream data for quality: $selectedQuality")
+      logger.error("${streamer.name} unable to get stream data for quality: $selectedQuality")
       return false
     }
 
     downloadUrl = streamData["main"]?.jsonObject?.get("flv")?.jsonPrimitive?.content ?: run {
-      logger.error("(${streamer.name}) unable to get stream url")
+      logger.error("${streamer.name} unable to get stream url")
       return false
     }
 

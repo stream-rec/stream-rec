@@ -36,7 +36,11 @@ import org.slf4j.LoggerFactory
  * @author hua0512
  * @date : 2024/2/19 0:42
  */
-class AppConfigRepository(private val localDataSource: LocalDataSource, private val tomlDataSource: TomlDataSource) {
+class AppConfigRepository(
+  private val localDataSource: LocalDataSource,
+  private val tomlDataSource: TomlDataSource,
+  private val streamersRepo: StreamerRepository,
+) {
 
   private lateinit var fileWatcherService: FileWatcherService
 
@@ -50,11 +54,17 @@ class AppConfigRepository(private val localDataSource: LocalDataSource, private 
     return withIOContext {
       try {
         // prioritize toml data source over local data source
-        tomlDataSource.getAppConfig().also {
+        tomlDataSource.getAppConfig().also { appConfig ->
           path = tomlDataSource.getPath()
 
           // save to local data source
-          localDataSource.saveAppConfig(it)
+          localDataSource.saveAppConfig(appConfig)
+
+          // update streamers
+          val streamers = appConfig.streamers
+          streamers.forEach {
+            streamersRepo.insertOrUpdate(it)
+          }
         }
       } catch (e: Exception) {
         logger.error("Failed to get app config from toml data source, falling back to local", e)
