@@ -64,7 +64,9 @@ class FFmpegDownloadEngine(
     // default output args
     val defaultFFmpegOutputArgs = arrayOf(
       "-bsf:a",
-      "aac_adtstoasc"
+      "aac_adtstoasc",
+      "-fflags",
+      "+discardcorrupt",
     ) + if (segmentTime != null) { // segment the file, according to the maxPartDuration
       arrayOf(
         "-to",
