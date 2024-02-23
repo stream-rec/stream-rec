@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "github.hua0512"
-version = "0.3.0"
+version = "0.3.1"
 
 application.mainClass.set("github.hua0512.Application")
 
