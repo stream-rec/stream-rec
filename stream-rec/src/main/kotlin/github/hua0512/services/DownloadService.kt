@@ -47,9 +47,11 @@ import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
+import github.hua0512.utils.replacePlaceholders
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -288,7 +290,7 @@ class DownloadService(
   }
 
   private suspend fun Action.mapToAction(streamDataList: List<StreamData>) {
-    return when (this) {
+    when (this) {
       is RcloneAction -> {
         this.run {
           val finalList = streamDataList.flatMap { streamData ->
@@ -327,10 +329,14 @@ class DownloadService(
       }
 
       is CommandAction -> {
-        this.run {
+        this.apply {
           logger.info("Running command action : $this")
 
-          val downloadOutputFolder: File? = (streamDataList.first().streamer.downloadConfig?.outputFolder ?: app.config.outputFolder).let { path ->
+          val streamData = streamDataList.first()
+          val streamer = streamData.streamer
+          val downloadOutputFolder: File? = (streamer.downloadConfig?.outputFolder ?: app.config.outputFolder).let {
+            val instant = Instant.fromEpochSeconds(streamData.dateStart!!)
+            val path = it.replacePlaceholders(streamer.name, streamData.title, instant)
             Path(path).toFile().also {
               // if the folder does not exist, then it should be an error
               if (!it.exists()) {
@@ -340,16 +346,27 @@ class DownloadService(
             }
           }
           // files + danmu files
-          val finalList: List<String> = streamDataList.flatMap { streamData ->
+          val finalList: String = streamDataList.flatMap { streamData ->
             listOfNotNull(
               streamData.outputFilePath,
               streamData.danmuFilePath
             )
+          }.run {
+            if (this.isEmpty()) {
+              logger.error("No files to process")
+              return@apply
+            }
+            StringBuilder().apply {
+              this.forEach {
+                append(it)
+                append("\n")
+              }
+            }.toString()
           }
           // execute the command
           val exitCode = executeProcess(
             this.program, *this.args.toTypedArray(),
-            stdin = InputSource.fromString(finalList.joinToString("\n") { it }),
+            stdin = InputSource.fromString(finalList),
             stdout = Redirect.CAPTURE,
             stderr = Redirect.CAPTURE,
             directory = downloadOutputFolder,
