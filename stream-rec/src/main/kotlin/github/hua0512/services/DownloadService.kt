@@ -201,44 +201,45 @@ class DownloadService(
           // save streamer to the database with the new isLive value
           repo.changeStreamerLiveStatus(streamer.id, true)
           // stream is live, start downloading
-          val streamsData = app.downloadSemaphore.withPermit {
-            try {
-              plugin.download()
-            } catch (e: Exception) {
-              when (e) {
-                is IllegalArgumentException -> {
-                  logger.error("${streamer.name} invalid url or invalid streamer : ${e.message}")
-                  return@launch
-                }
+          // while loop for parting the download
+          while (true) {
+            val streamsData = app.downloadSemaphore.withPermit {
+              try {
+                plugin.download()
+              } catch (e: Exception) {
+                when (e) {
+                  is IllegalArgumentException -> {
+                    logger.error("${streamer.name} invalid url or invalid streamer : ${e.message}")
+                    return@launch
+                  }
 
-                is UnsupportedOperationException -> {
-                  logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
-                  return@launch
-                }
+                  is UnsupportedOperationException -> {
+                    logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
+                    return@launch
+                  }
 
-                else -> {
-                  logger.error("${streamer.name} Error while getting stream data : ${e.message}")
-                  null
+                  else -> {
+                    logger.error("${streamer.name} Error while getting stream data : ${e.message}")
+                    null
+                  }
                 }
               }
             }
+            if (streamsData == null) {
+              logger.error("${streamer.name} unable to get stream data ($retryCount/$maxRetry)")
+              break
+            }
+            // save the stream data to the database
+            try {
+              streamDataRepository.saveStreamData(streamsData)
+              logger.debug("saved to db : {}", streamsData)
+            } catch (e: Exception) {
+              logger.error("${streamer.name} error while saving $streamsData : ${e.message}")
+            }
+            streamDataList.add(streamsData)
+            logger.info("${streamer.name} downloaded : $streamsData}")
+            launch { executePostPartedDownloadActions(streamer, streamsData) }
           }
-          if (streamsData == null) {
-            retryCount++
-            logger.error("${streamer.name} unable to get stream data ($retryCount/$maxRetry)")
-            continue
-          }
-          retryCount = 0
-          // save the stream data to the database
-          try {
-            streamDataRepository.saveStreamData(streamsData)
-            logger.debug("saved to db : {}", streamsData)
-          } catch (e: Exception) {
-            logger.error("${streamer.name} error while saving $streamsData : ${e.message}")
-          }
-          streamDataList.add(streamsData)
-          logger.info("${streamer.name} downloaded : $streamsData}")
-          launch { executePostPartedDownloadActions(streamer, streamsData) }
         } else {
           logger.info("${streamer.name} is not live")
         }
