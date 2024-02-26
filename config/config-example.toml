@@ -32,9 +32,9 @@ maxPartDuration = 3600
 maxConcurrentDownloads = 5
 # maximum number of concurrent uploads
 maxConcurrentUploads = 3
-# the maximum number of download retries after a failure
+# the maximum number of download retries after a failure (Server error, network error, streamer offline, ...)
 maxDownloadRetries = 3
-# delay between download retries
+# delay (seconds) to wait after a download failure before retrying
 downloadRetryDelay = 10
 
 ###### END OF GLOBAL CONFIG SECTION ########
@@ -54,6 +54,8 @@ primaryCdn = "AL"
 maxBitRate = 10000
 # cookies to use (optional)
 cookies = "your cookies"
+# Delay (seconds) to wait after a parted download is finished. By default, its value is 15.
+downloadRetryDelay = 10
 
 # Douyin platform config
 [douyinConfig]
@@ -64,6 +66,8 @@ cookies = "your cookies"
 # maximum quality supported
 # possible values: "origin", "uhd", "hd", "sd", "ld", "md", "audio"
 quality = "origin"
+# delay (seconds) to wait after a parted download is finished. By default, its value is 5.
+downloadRetryDelay = 5
 
 ###### END OF PLATFORM CONFIG SECTION ########
 

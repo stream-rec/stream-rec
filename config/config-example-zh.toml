@@ -63,6 +63,9 @@ primaryCdn = "AL"
 maxBitRate = 10000
 # cookies (可选)
 cookies = "your cookies"
+# 平台分段下载延迟，单位 秒（默认15秒）
+# 开启分段下载时，每个分段之间的延迟，以避免被封禁
+downloadRetryDelay = 15
 
 # 抖音平台默认配置
 [douyinConfig]
@@ -73,6 +76,9 @@ cookies = "your cookies"
 # 抖音直播画质
 # 可用值: "origin"（原画）, "uhd"（蓝光）, "hd"（超清）, "sd"（高清）, "ld"（标清）, "md"（流畅）, "audio"（音频）
 quality = "origin"
+# 平台分段下载延迟，单位 秒（默认5秒）
+# 开启分段下载时，每个分段之间的延迟，以避免被封禁
+downloadRetryDelay = 5
 
 ###### 平台配置结束 ########
 

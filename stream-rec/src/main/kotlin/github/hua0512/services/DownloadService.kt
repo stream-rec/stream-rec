@@ -30,6 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.config.Action
 import github.hua0512.data.config.Action.CommandAction
 import github.hua0512.data.config.Action.RcloneAction
+import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
@@ -77,6 +78,15 @@ class DownloadService(
     StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app))
     else -> throw Exception("Platform not supported")
   }
+
+  private val StreamingPlatform.platformConfig: DownloadConfigDTO
+    get() {
+      return when (this) {
+        StreamingPlatform.HUYA -> app.config.huyaConfig
+        StreamingPlatform.DOUYIN -> app.config.douyinConfig
+        else -> throw UnsupportedOperationException("Platform not supported")
+      }
+    }
 
   private val taskJobs = mutableSetOf<Pair<Streamer, Job?>>()
 
@@ -241,6 +251,8 @@ class DownloadService(
             streamDataList.add(streamsData)
             logger.info("${streamer.name} downloaded : $streamsData}")
             launch { executePostPartedDownloadActions(streamer, streamsData) }
+            val platformRetryDelay = streamer.platform.platformConfig.partedDownloadRetry ?: 0
+            delay(platformRetryDelay.toDuration(DurationUnit.SECONDS))
           }
         } else {
           logger.info("${streamer.name} is not live")

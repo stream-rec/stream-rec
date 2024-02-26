@@ -35,6 +35,7 @@ import kotlinx.serialization.Serializable
 data class DouyinConfig(
   override val cookies: String? = null,
   override val quality: DouyinQuality = DouyinQuality.origin,
+  override val partedDownloadRetry: Int? = 5,
 ) : DouyinConfigDTO {
   override val danmu: Boolean
     get() = TODO("Not yet implemented")

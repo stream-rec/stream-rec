@@ -40,6 +40,7 @@ data class HuyaConfig(
   override val primaryCdn: String = "AL",
   override val maxBitRate: Int? = 10000,
   override val cookies: String? = null,
+  override val partedDownloadRetry: Int? = 15,
 ) : HuyaConfigDTO {
   override val danmu: Boolean
     get() = TODO("Not yet implemented")
