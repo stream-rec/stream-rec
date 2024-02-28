@@ -31,12 +31,13 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
+import github.hua0512.plugins.danmu.exceptions.DownloadProcesseFinishedException
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.NativeDownloadEngine
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.rename
 import github.hua0512.utils.replacePlaceholders
-import github.hua0512.utils.withIOContext
+import github.hua0512.utils.withIORetry
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
@@ -61,7 +62,6 @@ abstract class Download(val app: App, val danmu: Danmu) {
     @JvmStatic
     protected val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
-    @JvmStatic
     val commonHeaders = arrayOf(
       HttpHeaders.Accept to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       HttpHeaders.AcceptLanguage to "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
@@ -119,13 +119,6 @@ abstract class Download(val app: App, val danmu: Danmu) {
     val isDanmuEnabled = downloadConfig.danmu ?: app.config.danmu
     logger.debug("(${streamer.name}) downloadUrl: $downloadUrl")
 
-    // danmu exception handler
-    val danmuExceptionHandler = CoroutineExceptionHandler { _, e ->
-      // ignore exceptions
-      logger.error("(${streamer.name}) Danmu failed: $e")
-    }
-
-
     val outputPath = buildOutputFilePath(downloadConfig, fileExtension)
     // check if disk space is enough
     checkDiskSpace(outputPath.parent, app.config.maxPartSize)
@@ -133,14 +126,24 @@ abstract class Download(val app: App, val danmu: Danmu) {
     val startTime = Clock.System.now()
 
     // check if danmu is initialized
-    val isDanmuInitialized = if (isDanmuEnabled) {
-      try {
-        initDanmu(streamer, startTime, outputPath.pathString.replace(fileExtension, "xml"))
-      } catch (e: Exception) {
-        logger.error("(${streamer.name}) Danmu failed to initialize: $e")
-        false
+    val danmuJob = if (isDanmuEnabled) {
+      async(Dispatchers.IO) {
+        val status: Boolean = withIORetry(
+          maxRetries = 3,
+          maxDelayMillis = 10000,
+          onError = { e, count -> logger.error("(${streamer.name}) Danmu failed to initialize($count): $e") }) {
+          initDanmu(streamer, startTime, outputPath.pathString.replace(fileExtension, "xml"))
+        }
+        if (!status) {
+          logger.error("(${streamer.name}) Danmu failed to initialize")
+          return@async
+        }
+        // download danmu
+        danmuDownload()
       }
-    } else false
+    } else {
+      null
+    }
 
     // progress bar
     var pb: ProgressBar? = null
@@ -149,7 +152,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
       streamer = streamer,
       title = downloadTitle,
       outputFilePath = outputPath.pathString,
-      danmuFilePath = if (isDanmuInitialized) danmu.filePath else null,
+      danmuFilePath = if (isDanmuEnabled) danmu.filePath else null,
     )
 
     // download engine
@@ -167,7 +170,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
         fileLimitSize = app.config.maxPartSize
       )
       onDownloadStarted = {
-        danmu.startTime = Clock.System.now()
+        danmu.videoStartTime = Clock.System.now()
         danmu.enableWrite = true
         // check if the download is timed
         val isTimed = app.config.maxPartDuration != null && app.config.maxPartDuration!! > 0
@@ -198,10 +201,6 @@ abstract class Download(val app: App, val danmu: Danmu) {
       }
     }
 
-    // danmu download job, if danmu is enabled,
-    // make sure danmuJob won't cancel before downloadJob and any exceptions ocurred in danmuJob won't cancel the parent job
-    val danmuJob = if (isDanmuInitialized) launch(danmuExceptionHandler) { danmuDownload() } else null
-
     val downloadJob = async<StreamData?> { engine.run() }
 
     try {
@@ -212,10 +211,11 @@ abstract class Download(val app: App, val danmu: Danmu) {
 
     pb?.close()
 
-    if (isDanmuInitialized) {
+    if (isDanmuEnabled) {
       danmu.finish()
       try {
-        danmuJob?.cancel("Download process is finished")
+        danmuJob?.cancel("Download process is finished", DownloadProcesseFinishedException())
+        danmuJob?.join()
       } catch (e: Exception) {
         logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
       }
@@ -226,7 +226,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
       logger.error("(${streamer.name}) could not download stream")
       // delete files if download failed
       outputPath.deleteFile()
-      if (isDanmuInitialized) danmu.danmuFile.deleteFile()
+      if (isDanmuEnabled) danmu.danmuFile.deleteFile()
       return@supervisorScope null
     } else {
       logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
@@ -235,7 +235,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
         if (fileSize < app.config.minPartSize) {
           logger.error("(${streamer.name}) file size too small: $fileSize")
           outputPath.deleteFile()
-          if (isDanmuInitialized) danmu.danmuFile.deleteFile()
+          if (isDanmuEnabled) danmu.danmuFile.deleteFile()
           return@supervisorScope null
         }
       }
@@ -256,7 +256,11 @@ abstract class Download(val app: App, val danmu: Danmu) {
 
   private suspend fun danmuDownload() {
     logger.info("(${streamer.name}) Starting danmu download...")
-    danmu.fetchDanmu()
+    try {
+      danmu.fetchDanmu()
+    } catch (e: Exception) {
+      logger.error("(${streamer.name}) danmuDownload failed: $e")
+    }
   }
 
 
@@ -302,18 +306,15 @@ abstract class Download(val app: App, val danmu: Danmu) {
   }
 
 
-  protected suspend fun initDanmu(streamer: Streamer, startTime: Instant, filePath: String): Boolean =
-    withIOContext {
-      danmu.init(streamer, startTime).run {
-        if (this) {
-          logger.info("(${streamer.name}) Danmu initialized")
-          danmu.filePath = filePath
-        } else {
-          logger.error("${streamer.name}) Danmu failed to initialize")
-        }
-        this
-      }
+  protected suspend fun initDanmu(streamer: Streamer, startTime: Instant, filePath: String): Boolean = danmu.init(streamer, startTime).run {
+    if (this) {
+      logger.info("(${streamer.name}) Danmu initialized")
+      danmu.filePath = filePath
+    } else {
+      logger.error("${streamer.name}) Danmu failed to initialize")
     }
+    this
+  }
 
 
   protected fun formatToFriendlyFileName(fileName: String): String {

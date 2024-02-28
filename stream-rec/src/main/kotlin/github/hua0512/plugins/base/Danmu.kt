@@ -30,6 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.DanmuDataWrapper
 import github.hua0512.data.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
+import github.hua0512.plugins.danmu.exceptions.DownloadProcesseFinishedException
 import github.hua0512.utils.withIOContext
 import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
@@ -107,7 +108,7 @@ abstract class Danmu(val app: App) {
   /**
    * Represents the start time of the danmu download.
    */
-  var startTime: Instant = kotlinx.datetime.Clock.System.now()
+  var videoStartTime: Instant = Clock.System.now()
 
   /**
    * A shared flow to write danmu data to file
@@ -137,13 +138,17 @@ abstract class Danmu(val app: App) {
    * @return true if initialized successfully
    */
   suspend fun init(streamer: Streamer, startTime: Instant): Boolean {
-    this.startTime = startTime
+    this.videoStartTime = startTime
     writeChannel = Channel(BUFFERED, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     return initDanmu(streamer, startTime).also { isEnabled ->
       isInitialized.set(isEnabled)
       if (isEnabled) {
         writeChannel.invokeOnClose {
-          logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
+          if (it?.cause is DownloadProcesseFinishedException) {
+            logger.info("closing danmu channel, finish writing danmu to file: {}", danmuFile.absolutePath)
+          } else {
+            logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
+          }
           writeEndOfFile()
         }
       }
@@ -163,13 +168,13 @@ abstract class Danmu(val app: App) {
    * Fetch danmu from server using websocket
    *
    */
-  suspend fun fetchDanmu() {
-    coroutineScope {
+  suspend fun fetchDanmu() = withIOContext {
+    supervisorScope {
       if (!isInitialized.get()) {
         logger.error("Danmu is not initialized")
-        return@coroutineScope
+        return@supervisorScope
       }
-      if (websocketUrl.isEmpty()) return@coroutineScope
+      if (websocketUrl.isEmpty()) return@supervisorScope
 
       // launch a coroutine to write danmu to file
       ioJob = launchIOTask()
@@ -208,7 +213,7 @@ abstract class Danmu(val app: App) {
                       // danmu server time
                       val serverTime = it.serverTime
                       // danmu process start time
-                      val danmuStartTime = startTime.toEpochMilliseconds()
+                      val danmuStartTime = videoStartTime.toEpochMilliseconds()
                       // danmu in video time
                       val danmuInVideoTime = (serverTime - danmuStartTime).run {
                         val time = if (this < 0) 0 else this
@@ -259,7 +264,9 @@ abstract class Danmu(val app: App) {
           }
         }
         .catch { e ->
-          logger.debug("Error writing danmu to file {}", danmuFile.absolutePath, e)
+          if (e !is DownloadProcesseFinishedException) {
+            logger.error("Error writing danmu to file {}", danmuFile.absolutePath, e)
+          }
         }
         .flowOn(Dispatchers.IO)
         .onCompletion {
