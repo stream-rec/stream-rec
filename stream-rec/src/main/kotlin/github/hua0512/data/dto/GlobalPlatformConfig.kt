@@ -24,46 +24,12 @@
  * SOFTWARE.
  */
 
-package github.hua0512.dao
-
-import github.hua0512.StreamRecDatabase
-import github.hua0512.utils.AppConfigEntity
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+package github.hua0512.data.dto
 
 /**
- * AppConfigDao implementation
  * @author hua0512
- * @date : 2024/2/19 0:13
+ * @date : 2024/2/28 23:39
  */
-class AppConfigDaoImpl(override val database: StreamRecDatabase, private val json: Json) : BaseDaoImpl, AppConfigDao {
-  override suspend fun getLatestAppConfig(): AppConfigEntity? {
-    // always return the 1st streamer's config
-    return queries.getAppConfigById(1).executeAsOneOrNull()
-  }
-
-  override suspend fun upsert(appConfig: AppConfigEntity) {
-    return appConfig.run {
-      queries.upsertAppConfig(
-        engine,
-        danmu,
-        outputFolder,
-        outputFileName,
-        outputFileFormat,
-        minPartSize,
-        maxPartSize,
-        maxPartDuration,
-        maxDownloadRetries,
-        downloadRetryDelay,
-        maxConcurrentDownloads,
-        maxConcurrentUploads,
-        deleteFilesAfterUpload,
-        json.encodeToString(huyaConfig),
-        json.encodeToString(douyinConfig),
-        id,
-      )
-    }
-  }
-
-
+interface GlobalPlatformConfig {
+  val partedDownloadRetry: Int?
 }

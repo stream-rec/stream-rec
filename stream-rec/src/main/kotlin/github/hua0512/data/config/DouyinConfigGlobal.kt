@@ -26,32 +26,15 @@
 
 package github.hua0512.data.config
 
-import github.hua0512.data.VideoFormat
-import github.hua0512.data.dto.HuyaConfigDTO
+import github.hua0512.data.dto.DouyinConfigDTO
+import github.hua0512.data.dto.GlobalPlatformConfig
+import github.hua0512.data.platform.DouyinQuality
 import kotlinx.serialization.Serializable
 
-/**
- * Huya configuration data class
- * @author hua0512
- * @date : 2024/2/11 13:28
- */
 @Serializable
-data class HuyaConfig(
-  override val primaryCdn: String = "AL",
-  override val maxBitRate: Int? = 10000,
+data class DouyinConfigGlobal(
   override val cookies: String? = null,
-  override val partedDownloadRetry: Int? = 15,
-) : HuyaConfigDTO {
-  override val danmu: Boolean
-    get() = TODO("Not yet implemented")
-  override val outputFolder: String?
-    get() = TODO("Not yet implemented")
-  override val outputFileName: String?
-    get() = TODO("Not yet implemented")
-  override val outputFileExtension: VideoFormat?
-    get() = TODO("Not yet implemented")
-  override val onPartedDownload: List<Action>?
-    get() = TODO("Not yet implemented")
-  override val onStreamingFinished: List<Action>?
-    get() = TODO("Not yet implemented")
+  override val quality: DouyinQuality = DouyinQuality.origin,
+  override val partedDownloadRetry: Int? = 5,
+) : GlobalPlatformConfig, DouyinConfigDTO {
 }

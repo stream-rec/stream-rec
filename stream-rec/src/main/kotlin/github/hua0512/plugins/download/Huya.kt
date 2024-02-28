@@ -29,8 +29,8 @@ package github.hua0512.plugins.download
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
+import github.hua0512.plugins.danmu.huya.HuyaDanmu
 import github.hua0512.utils.toMD5Hex
 import github.hua0512.utils.withIOContext
 import io.ktor.client.request.*
@@ -43,7 +43,7 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.json.*
 import java.util.*
 
-class Huya(app: App, danmu: Danmu) : Download(app, danmu) {
+class Huya(app: App, danmu: HuyaDanmu) : Download(app, danmu) {
   companion object {
     internal const val BASE_URL = "https://www.huya.com"
 

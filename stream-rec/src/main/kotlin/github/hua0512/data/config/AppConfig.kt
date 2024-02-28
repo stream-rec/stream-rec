@@ -51,8 +51,8 @@ data class AppConfig(
   val maxConcurrentUploads: Int = 3,
   val deleteFilesAfterUpload: Boolean = true,
 
-  val huyaConfig: HuyaConfig = HuyaConfig(),
-  val douyinConfig: DouyinConfig = DouyinConfig(),
+  val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
+  val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
 
   val streamers: List<Streamer> = emptyList(),
 ) {

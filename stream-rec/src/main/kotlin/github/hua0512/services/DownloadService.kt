@@ -30,7 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.config.Action
 import github.hua0512.data.config.Action.CommandAction
 import github.hua0512.data.config.Action.RcloneAction
-import github.hua0512.data.dto.DownloadConfigDTO
+import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
@@ -79,7 +79,7 @@ class DownloadService(
     else -> throw Exception("Platform not supported")
   }
 
-  private val StreamingPlatform.platformConfig: DownloadConfigDTO
+  private val StreamingPlatform.platformConfig: GlobalPlatformConfig
     get() {
       return when (this) {
         StreamingPlatform.HUYA -> app.config.huyaConfig
