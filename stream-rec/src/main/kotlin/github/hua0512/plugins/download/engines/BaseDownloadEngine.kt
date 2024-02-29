@@ -39,9 +39,11 @@ import kotlinx.datetime.Instant
  */
 abstract class BaseDownloadEngine(
   open val app: App,
-  open var onDownloadStarted: () -> Unit = {},
-  open var onDownloadProgress: (diff: Long, bitrate: String) -> Unit = { _, _ -> },
 ) {
+
+  protected var onDownloadStarted: () -> Unit = {}
+  protected var onDownloadProgress: (diff: Long, bitrate: String) -> Unit = { _, _ -> }
+  protected var onDownloadFinished: (StreamData?) -> Unit = {}
 
   protected var cookies: String? = ""
   protected var downloadUrl: String? = null
@@ -92,7 +94,9 @@ abstract class BaseDownloadEngine(
       throw IllegalStateException("Engine is not initialized")
     }
     return withIOContext {
-      startDownload()
+      startDownload().also {
+        onDownloadFinished(it)
+      }
     }
   }
 
@@ -103,4 +107,30 @@ abstract class BaseDownloadEngine(
    */
   abstract suspend fun startDownload(): StreamData?
 
+  /**
+   * Sets the callback to be executed when the download starts.
+   *
+   * @param callback The callback to be executed when the download starts.
+   */
+  fun onDownloadStarted(callback: () -> Unit) {
+    onDownloadStarted = callback
+  }
+
+  /**
+   * Sets the callback to be executed when the download progresses.
+   *
+   * @param callback The callback to be executed when the download progresses.
+   */
+  fun onDownloadProgress(callback: (diff: Long, bitrate: String) -> Unit) {
+    onDownloadProgress = callback
+  }
+
+  /**
+   * Sets the callback to be executed when the download finishes.
+   *
+   * @param callback The callback to be executed when the download finishes.
+   */
+  fun onDownloadFinished(callback: (StreamData?) -> Unit) {
+    onDownloadFinished = callback
+  }
 }

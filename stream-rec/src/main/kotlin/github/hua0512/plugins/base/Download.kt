@@ -39,10 +39,7 @@ import github.hua0512.utils.rename
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.withIORetry
 import io.ktor.http.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import me.tongfei.progressbar.DelegatingProgressBarConsumer
@@ -173,7 +170,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
         startTime,
         fileLimitSize = app.config.maxPartSize
       )
-      onDownloadStarted = {
+      onDownloadStarted {
         danmu.videoStartTime = Clock.System.now()
         danmu.enableWrite = true
         // check if the download is timed
@@ -197,11 +194,14 @@ abstract class Download(val app: App, val danmu: Danmu) {
           .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
           .build()
       }
-      onDownloadProgress = { size, bitrate ->
+      onDownloadProgress { size, bitrate ->
         pb?.let {
           it.stepBy(size)
           it.extraMessage = if (bitrate.isEmpty()) "Downloading..." else "bitrate: $bitrate"
         }
+      }
+      onDownloadFinished {
+        pb?.close()
       }
     }
 
@@ -213,24 +213,16 @@ abstract class Download(val app: App, val danmu: Danmu) {
       logger.error("(${streamer.name}) download failed: $e")
     }
 
-    pb?.close()
-
+    // stop danmu job
     if (isDanmuEnabled) {
-      danmu.finish()
-      try {
-        danmuJob?.cancel("Download process is finished", DownloadProcesseFinishedException())
-        danmuJob?.join()
-      } catch (e: Exception) {
-        logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
-      }
+      stopDanmuJob(danmuJob)
     }
 
     logger.debug("({}) streamData: {}", streamer.name, streamData)
     if (streamData == null) {
       logger.error("(${streamer.name}) could not download stream")
       // delete files if download failed
-      outputPath.deleteFile()
-      if (isDanmuEnabled) danmu.danmuFile.deleteFile()
+      deleteOutputs(outputPath, isDanmuEnabled)
       return@supervisorScope null
     } else {
       logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
@@ -238,17 +230,21 @@ abstract class Download(val app: App, val danmu: Danmu) {
         val fileSize = outputPath.toFile().length()
         if (fileSize < app.config.minPartSize) {
           logger.error("(${streamer.name}) file size too small: $fileSize")
-          outputPath.deleteFile()
-          if (isDanmuEnabled) danmu.danmuFile.deleteFile()
+          deleteOutputs(outputPath, isDanmuEnabled)
           return@supervisorScope null
         }
       }
       outputPath.rename(Path(outputPath.pathString.removeSuffix(".part")))
     }
 
-    logger.debug("(${streamer.name}) finished download")
+    logger.debug("(${streamer.name}) finished parted download")
 
     return@supervisorScope streamData
+  }
+
+  private fun deleteOutputs(outputPath: Path, isDanmuEnabled: Boolean) {
+    outputPath.deleteFile()
+    if (isDanmuEnabled) danmu.danmuFile.deleteFile()
   }
 
 
@@ -321,6 +317,15 @@ abstract class Download(val app: App, val danmu: Danmu) {
     this
   }
 
+  private suspend fun stopDanmuJob(danmuJob: Deferred<Unit>?) {
+    danmu.finish()
+    try {
+      danmuJob?.cancel("Download process is finished", DownloadProcesseFinishedException())
+      danmuJob?.join()
+    } catch (e: Exception) {
+      logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
+    }
+  }
 
   protected fun formatToFriendlyFileName(fileName: String): String {
     return fileName.replace(Regex("[/\n\r\t\u0000\u000c`?*\\\\<>|\":]"), "_")

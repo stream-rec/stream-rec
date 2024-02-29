@@ -42,8 +42,6 @@ import org.slf4j.LoggerFactory
  */
 class FFmpegDownloadEngine(
   override val app: App,
-  override var onDownloadStarted: () -> Unit = {},
-  override var onDownloadProgress: (size: Long, bitrate: String) -> Unit = { _, _ -> },
 ) : BaseDownloadEngine(app = app) {
 
   companion object {
