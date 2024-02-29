@@ -39,7 +39,7 @@ data class Streamer(
   override var isLive: Boolean = false,
   override var isActivated: Boolean = true,
   override var avatar: String? = null,
-  override var streamTitle: String?,
+  override var streamTitle: String? = null,
   override val downloadConfig: DownloadConfig? = null,
 ) : StreamerDTO {
 

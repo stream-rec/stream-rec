@@ -262,7 +262,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
     try {
       danmu.fetchDanmu()
     } catch (e: Exception) {
-      if (e.cause !is DownloadProcesseFinishedException)
+      if (e !is DownloadProcesseFinishedException || e.cause !is DownloadProcesseFinishedException)
         logger.error("(${streamer.name}) danmuDownload failed: $e")
     }
   }
