@@ -45,8 +45,19 @@ interface StreamerDao {
   suspend fun getAllStremersActive(): List<StreamerEntity>
 
   suspend fun getStreamerById(id: StreamerId): StreamerEntity?
-  suspend fun insertStreamer(name: String, url: String, platform: Long, isLive: Long, isActive: Long, downloadConfig: String?)
-  suspend fun changeStreamerLiveStatus(id: StreamerId, isLive: Long)
-  suspend fun updateStreamer(name: String, url: String, platform: Long, isLive: Long, isActive: Long, downloadConfig: String?)
+  suspend fun insertStreamer(
+    name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
+    avatar: String?, downloadConfig: String?,
+  )
+
+  suspend fun updateStreamStatus(id: StreamerId, isLive: Long, streamTitle: String?)
+
+  suspend fun updateAvatar(id: StreamerId, avatar: String?)
+
+  suspend fun updateStreamer(
+    name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
+    avatar: String?, downloadConfig: String?,
+  )
+
   suspend fun deleteStreamer(id: StreamerId)
 }

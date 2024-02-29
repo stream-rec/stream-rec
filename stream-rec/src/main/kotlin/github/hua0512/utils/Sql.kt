@@ -26,10 +26,9 @@
 
 package github.hua0512.utils
 
-import github.hua0512.data.UploadResultId
+import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.upload.UploadResult
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -59,6 +58,8 @@ fun StreamerEntity.toStreamer(json: Json) = Streamer(
   platform = StreamingPlatform.fromId(platform.toInt()) ?: StreamingPlatform.UNKNOWN,
   isLive = is_live.boolean,
   isActivated = is_active.boolean,
+  avatar = avatar,
+  streamTitle = description,
   downloadConfig = if (download_config != null) {
     json.decodeFromString<DownloadConfig>(download_config)
   } else null
@@ -74,8 +75,10 @@ fun Streamer.toStreamerEntity(json: Json) = StreamerEntity(
   platform = platform.id.toLong(),
   is_live = isLive.asLong,
   is_active = isActivated.asLong,
+  description = streamTitle,
+  avatar = avatar,
   download_config = downloadConfig?.let { json.encodeToString<DownloadConfig>(it) },
-  1
+  app_config_id = 1
 )
 
 

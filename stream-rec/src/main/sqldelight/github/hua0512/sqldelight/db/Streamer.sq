@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS streamer(
   is_active INTEGER NOT NULL DEFAULT 0,
 --   Storing download config is a headache, but it's the easiest way to store it for now
   download_config TEXT,
+  description TEXT,
+  avatar TEXT,
   app_config_id INTEGER DEFAULT 1,
   FOREIGN KEY(app_config_id) REFERENCES app_config(id) ON DELETE SET DEFAULT
 );
@@ -54,19 +56,21 @@ getStreamerById : SELECT * FROM streamer WHERE streamer_id = ?;
 getStreamerByName : SELECT * FROM streamer WHERE name = ?;
 findStreamerByUrl : SELECT * FROM streamer WHERE url = ?;
 
-insertStreamer : INSERT INTO streamer(name, url, platform, is_live, is_active, download_config, app_config_id) VALUES(?, ?, ?,?, ?, ?, 1);
+insertStreamer : INSERT INTO streamer(name, url, platform, is_live, is_active, description, avatar, download_config, app_config_id) VALUES(?, ?, ?,?, ?,?,?, ?, 1);
 
 
 
 upsertStreamer {
-    INSERT OR IGNORE INTO streamer (name, url, platform, is_live, is_active, download_config, app_config_id)
-    VALUES (:name, :url, :platform, :is_live, :is_active, :download_config, 1);
+    INSERT OR IGNORE INTO streamer (name, url, platform, is_live, is_active,description, avatar, download_config, app_config_id)
+    VALUES (:name, :url, :platform, :is_live, :is_active, :description, :avatar,:download_config, 1);
     UPDATE streamer
-    SET name = :name, url = :url, platform = :platform, is_live = :is_live, is_active = :is_active, download_config = :download_config, app_config_id = 1
+    SET name = :name, url = :url, platform = :platform, is_live = :is_live, is_active = :is_active, avatar = :avatar, description = :description, download_config = :download_config, app_config_id = 1
     WHERE url = : url;
 }
 
-changeStreamerLiveStatus : UPDATE streamer SET is_live = ? WHERE streamer_id = ?;
+updateStreamStatus : UPDATE streamer SET is_live = ?, description = ? WHERE streamer_id = ?;
+
+updateStreamerAvatar : UPDATE streamer SET avatar = ? WHERE streamer_id = ?;
 
 deleteStreamer : DELETE FROM streamer WHERE streamer_id = ?;
 

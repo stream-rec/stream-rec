@@ -39,5 +39,7 @@ interface StreamerDTO {
   val platform: StreamingPlatform
   var isLive: Boolean
   var isActivated: Boolean
+  var avatar: String?
+  var streamTitle: String?
   val downloadConfig: DownloadConfig?
 }

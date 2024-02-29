@@ -176,7 +176,7 @@ class DownloadService(
           retryCount = 0
           streamer.isLive = false
           // update db with the new isLive value
-          repo.changeStreamerLiveStatus(streamer.id, false)
+          repo.updateStreamerLiveStatus(streamer.id, false)
           // stream is not live or without data
           if (streamDataList.isEmpty()) {
             continue
@@ -211,7 +211,9 @@ class DownloadService(
         if (isLive) {
           streamer.isLive = true
           // save streamer to the database with the new isLive value
-          repo.changeStreamerLiveStatus(streamer.id, true)
+          repo.updateStreamerLiveStatus(streamer.id, true, streamer.streamTitle)
+          if (!streamer.avatar.isNullOrEmpty())
+            repo.updateStreamerAvatar(streamer.id, streamer.avatar)
           // stream is live, start downloading
           // while loop for parting the download
           while (true) {
@@ -255,7 +257,11 @@ class DownloadService(
             delay(platformRetryDelay.toDuration(DurationUnit.SECONDS))
           }
         } else {
-          logger.info("${streamer.name} is not live")
+          if (streamDataList.isNotEmpty()) {
+            logger.error("${streamer.name} unable to get stream data ($retryCount/$maxRetry)")
+          } else {
+            logger.info("${streamer.name} is not live")
+          }
         }
         retryCount++
         // if a data list is not empty, then it means the stream has ended

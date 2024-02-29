@@ -53,6 +53,8 @@ class Huya(app: App, danmu: HuyaDanmu) : Download(app, danmu) {
     )
 
     internal val REGEX = "(?:https?://)?(?:(?:www|m)\\.)?huya\\.com/([a-zA-Z0-9]+)"
+
+    internal val AVATAR_REGEX = "avatar\"\\s*:\\s*\"([^\"]+)"
   }
 
   override val regexPattern: String = REGEX
@@ -109,6 +111,13 @@ class Huya(app: App, danmu: HuyaDanmu) : Download(app, danmu) {
     if (state != "ON" || liveChannel == 0L) {
       return false
     }
+
+    // get avatar
+    val avatarMatchResult = AVATAR_REGEX.toRegex().find(body)
+    val avatar = avatarMatchResult?.groupValues?.get(1) ?: "".also {
+      logger.info("${streamer.name} avatar is empty")
+    }
+    streamer.avatar = avatar
 
     return withContext(Dispatchers.Default) {
 

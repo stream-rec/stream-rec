@@ -39,7 +39,10 @@ import github.hua0512.utils.rename
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.withIORetry
 import io.ktor.http.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.supervisorScope
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import me.tongfei.progressbar.DelegatingProgressBarConsumer
@@ -259,7 +262,8 @@ abstract class Download(val app: App, val danmu: Danmu) {
     try {
       danmu.fetchDanmu()
     } catch (e: Exception) {
-      logger.error("(${streamer.name}) danmuDownload failed: $e")
+      if (e.cause !is DownloadProcesseFinishedException)
+        logger.error("(${streamer.name}) danmuDownload failed: $e")
     }
   }
 

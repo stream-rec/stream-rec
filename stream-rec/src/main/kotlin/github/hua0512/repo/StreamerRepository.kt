@@ -84,6 +84,8 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
         platform = streamer.platform.id.toLong(),
         isLive = streamer.isLive.asLong,
         isActive = streamer.isActivated.asLong,
+        avatar = streamer.avatar,
+        description = streamer.streamTitle,
         downloadConfig = downloadConfig
       )
       logger.debug("updatedStreamer: {}", streamer)
@@ -98,12 +100,14 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
       } else null
 
       dao.insertStreamer(
-        newStreamer.name,
-        newStreamer.url,
-        newStreamer.platform.id.toLong(),
-        newStreamer.isLive.asLong,
-        newStreamer.isActivated.asLong,
-        downloadConfig
+        name = newStreamer.name,
+        url = newStreamer.url,
+        platform = newStreamer.platform.id.toLong(),
+        isLive = newStreamer.isLive.asLong,
+        isActive = newStreamer.isActivated.asLong,
+        description = newStreamer.streamTitle,
+        avatar = newStreamer.avatar,
+        downloadConfig = downloadConfig
       )
       logger.debug("saveStreamer: {}, downloadConfig: {}", newStreamer, downloadConfig)
     }
@@ -122,9 +126,15 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
    * @param id streamer id
    * @param status true: active, false: inactive
    */
-  suspend fun changeStreamerLiveStatus(id: Long, status: Boolean) {
+  suspend fun updateStreamerLiveStatus(id: Long, status: Boolean, streamTitle: String? = null) {
     return withIOContext {
-      dao.changeStreamerLiveStatus(StreamerId(id), status.asLong)
+      dao.updateStreamStatus(StreamerId(id), status.asLong, streamTitle)
+    }
+  }
+
+  suspend fun updateStreamerAvatar(id: Long, avatar: String?) {
+    return withIOContext {
+      dao.updateAvatar(StreamerId(id), avatar)
     }
   }
 

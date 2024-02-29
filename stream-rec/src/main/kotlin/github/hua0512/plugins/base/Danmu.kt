@@ -144,7 +144,7 @@ abstract class Danmu(val app: App) {
       isInitialized.set(isEnabled)
       if (isEnabled) {
         writeChannel.invokeOnClose {
-          if (it?.cause is DownloadProcesseFinishedException) {
+          if (it is DownloadProcesseFinishedException) {
             logger.info("closing danmu channel, finish writing danmu to file: {}", danmuFile.absolutePath)
           } else {
             logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)

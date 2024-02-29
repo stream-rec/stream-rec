@@ -114,6 +114,12 @@ class Douyin(app: App, danmu: DouyinDanmu) : Download(app, danmu) {
       return false
     }
 
+    // update avatar
+    val avatar = AVATAR_REGEX.toRegex().find(data)?.groupValues?.get(1) ?: "".also {
+      logger.debug("${streamer.name} unable to get avatar")
+    }
+    streamer.avatar = avatar
+
     val selectedQuality = (config.quality?.value ?: app.config.douyinConfig.quality.value).run {
       this.ifEmpty { DouyinQuality.origin.value }
     }
@@ -149,6 +155,8 @@ class Douyin(app: App, danmu: DouyinDanmu) : Download(app, danmu) {
     private const val BASE_URL = "https://www.douyin.com"
 
     internal const val REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9]+)"
+
+    internal const val AVATAR_REGEX = "\"avatar_thumb\":\\{\"url_list\":\\[\"([^\"]+)\""
 
 
     /**

@@ -71,6 +71,8 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     platform: Long,
     isLive: Long,
     isActive: Long,
+    description: String?,
+    avatar: String?,
     downloadConfig: String?,
   ) {
     return queries.insertStreamer(
@@ -79,15 +81,17 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
       platform = platform,
       is_live = isLive,
       is_active = isActive,
+      description = description,
+      avatar = avatar,
       download_config = downloadConfig
     )
   }
 
-  override suspend fun changeStreamerLiveStatus(id: StreamerId, isLive: Long) {
+  override suspend fun updateStreamStatus(id: StreamerId, isLive: Long, streamTitle: String?) {
     if (id.value == -1L) {
       return
     }
-    return queries.changeStreamerLiveStatus(isLive, id.value)
+    return queries.updateStreamStatus(isLive, streamTitle, id.value)
   }
 
   override suspend fun updateStreamer(
@@ -96,6 +100,8 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     platform: Long,
     isLive: Long,
     isActive: Long,
+    description: String?,
+    avatar: String?,
     downloadConfig: String?,
   ) {
     return queries.upsertStreamer(
@@ -104,8 +110,14 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
       platform = platform,
       is_live = isLive,
       is_active = isActive,
+      description = description,
+      avatar = avatar,
       download_config = downloadConfig,
     )
+  }
+
+  override suspend fun updateAvatar(id: StreamerId, avatar: String?) {
+    return queries.updateStreamerAvatar(avatar, id.value)
   }
 
   override suspend fun deleteStreamer(id: StreamerId) {
