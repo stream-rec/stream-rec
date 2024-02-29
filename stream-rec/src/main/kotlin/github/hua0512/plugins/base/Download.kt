@@ -127,7 +127,8 @@ abstract class Download(val app: App, val danmu: Danmu) {
     checkDiskSpace(outputPath.parent, app.config.maxPartSize)
     // download start time
     val startTime = Clock.System.now()
-
+    // danmu file path
+    val danmuPath = outputPath.pathString.replace(fileExtension, "xml")
     // check if danmu is initialized
     val danmuJob = if (isDanmuEnabled) {
       async(Dispatchers.IO) {
@@ -135,7 +136,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
           maxRetries = 3,
           maxDelayMillis = 10000,
           onError = { e, count -> logger.error("(${streamer.name}) Danmu failed to initialize($count): $e") }) {
-          initDanmu(streamer, startTime, outputPath.pathString.replace(fileExtension, "xml"))
+          initDanmu(streamer, startTime, danmuPath)
         }
         if (!status) {
           logger.error("(${streamer.name}) Danmu failed to initialize")
@@ -155,7 +156,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
       streamer = streamer,
       title = downloadTitle,
       outputFilePath = outputPath.pathString,
-      danmuFilePath = if (isDanmuEnabled) danmu.filePath else null,
+      danmuFilePath = if (isDanmuEnabled) danmuPath else null,
     )
 
     // download engine
