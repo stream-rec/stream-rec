@@ -28,7 +28,7 @@ package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
@@ -37,7 +37,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
-import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 
 class App(val json: Json) {
@@ -51,15 +52,9 @@ class App(val json: Json) {
   }
 
   val client by lazy {
-    HttpClient(OkHttp) {
+    HttpClient(CIO) {
       engine {
-        config {
-          followRedirects(true)
-          connectTimeout(5, SECONDS)
-          readTimeout(5, SECONDS)
-          writeTimeout(5, SECONDS)
-          pingInterval(10, SECONDS)
-        }
+        pipelining = true
       }
       install(Logging) {
         logger = Logger.DEFAULT
@@ -75,6 +70,11 @@ class App(val json: Json) {
 //        storage = AcceptAllCookiesStorage()
 //      }
 
+      install(HttpTimeout) {
+        requestTimeoutMillis = 5000
+        connectTimeoutMillis = 5000
+        socketTimeoutMillis = 30.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
+      }
       install(WebSockets) {
         pingInterval = 10_000
       }

@@ -32,7 +32,7 @@ sqldelight {
 dependencies {
   implementation(libs.ch.qos.logback.classic)
   implementation(libs.io.ktor.client.core)
-  implementation(libs.io.ktor.client.okhttp)
+  implementation(libs.io.ktor.client.cio)
   implementation(libs.io.ktor.serialization.kotlinx.json)
   implementation(libs.io.ktor.client.logging)
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
