@@ -222,7 +222,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
     if (streamData == null) {
       logger.error("(${streamer.name}) could not download stream")
       // delete files if download failed
-      deleteOutputs(outputPath, isDanmuEnabled)
+      deleteOutputs(outputPath, isDanmuEnabled, Path(danmuPath))
       return@supervisorScope null
     } else {
       logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
@@ -230,7 +230,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
         val fileSize = outputPath.toFile().length()
         if (fileSize < app.config.minPartSize) {
           logger.error("(${streamer.name}) file size too small: $fileSize")
-          deleteOutputs(outputPath, isDanmuEnabled)
+          deleteOutputs(outputPath, isDanmuEnabled, Path(danmuPath))
           return@supervisorScope null
         }
       }
@@ -242,9 +242,9 @@ abstract class Download(val app: App, val danmu: Danmu) {
     return@supervisorScope streamData
   }
 
-  private fun deleteOutputs(outputPath: Path, isDanmuEnabled: Boolean) {
+  private fun deleteOutputs(outputPath: Path, isDanmuEnabled: Boolean, danmuPath: Path) {
     outputPath.deleteFile()
-    if (isDanmuEnabled) danmu.danmuFile.deleteFile()
+    if (isDanmuEnabled) danmuPath.deleteFile()
   }
 
 
