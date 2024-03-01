@@ -240,7 +240,7 @@ class DownloadService(
               }
             }
             if (streamsData == null) {
-              logger.error("${streamer.name} unable to get stream data ($retryCount/$maxRetry)")
+              logger.error("${streamer.name} unable to get stream data (${retryCount + 1})/$maxRetry)")
               break
             }
             // save the stream data to the database
