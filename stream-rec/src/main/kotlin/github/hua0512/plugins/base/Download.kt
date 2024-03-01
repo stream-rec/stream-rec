@@ -130,8 +130,8 @@ abstract class Download(val app: App, val danmu: Danmu) {
     val danmuJob = if (isDanmuEnabled) {
       async(Dispatchers.IO) {
         val status: Boolean = withIORetry(
-          maxRetries = 3,
-          maxDelayMillis = 10000,
+          maxRetries = 5,
+          maxDelayMillis = 30000,
           onError = { e, count -> logger.error("(${streamer.name}) Danmu failed to initialize($count): $e") }) {
           initDanmu(streamer, startTime, danmuPath)
         }
