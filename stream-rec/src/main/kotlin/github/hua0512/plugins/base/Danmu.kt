@@ -67,7 +67,7 @@ abstract class Danmu(val app: App) {
   /**
    * Whether the danmu is initialized
    */
-  protected val isInitialized = AtomicBoolean(false)
+  val isInitialized = AtomicBoolean(false)
 
   /**
    * Danmu websocket url

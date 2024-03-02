@@ -216,6 +216,10 @@ abstract class Download(val app: App, val danmu: Danmu) {
     // stop danmu job
     if (isDanmuEnabled) {
       stopDanmuJob(danmuJob)
+      // check if download is initialized
+      if (!danmu.isInitialized.get()) {
+        streamData = streamData?.copy(danmuFilePath = null)
+      }
     }
 
     logger.debug("({}) streamData: {}", streamer.name, streamData)
