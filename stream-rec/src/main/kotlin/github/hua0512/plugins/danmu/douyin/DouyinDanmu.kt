@@ -32,19 +32,20 @@ import douyin.Dy.PushFrame
 import github.hua0512.app.App
 import github.hua0512.data.DanmuDataWrapper
 import github.hua0512.data.DanmuDataWrapper.DanmuData
+import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.stream.Streamer
-import github.hua0512.data.config.DownloadConfig.*
 import github.hua0512.plugins.base.Danmu
 import github.hua0512.plugins.base.Download
-import github.hua0512.utils.*
-import github.hua0512.utils.extractDouyinRoomId
+import github.hua0512.plugins.download.Douyin.Companion.commonDouyinParams
+import github.hua0512.plugins.download.Douyin.Companion.extractDouyinRoomId
+import github.hua0512.plugins.download.Douyin.Companion.populateDouyinCookieMissedParams
+import github.hua0512.utils.decompressGzip
+import github.hua0512.utils.withIOContext
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
 
 /**
@@ -85,7 +86,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
           append(HttpHeaders.Referrer, "https://live.douyin.com")
           append(HttpHeaders.Cookie, cookies)
         }
-        commonDouyinParams.forEach { t, u ->
+        commonDouyinParams.forEach { (t, u) ->
           parameter(t, u)
         }
         parameter("web_rid", roomId)

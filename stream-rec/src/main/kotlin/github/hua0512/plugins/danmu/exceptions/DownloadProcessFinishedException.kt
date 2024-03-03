@@ -24,29 +24,13 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
-
-import github.hua0512.data.VideoFormat
-import github.hua0512.data.config.Action
+package github.hua0512.plugins.danmu.exceptions
 
 /**
+ * Exception to indicate that the download process has finished.
  * @author hua0512
- * @date : 2024/2/11 19:58
+ * @date : 2024/2/29 0:02
  */
-interface DownloadConfigDTO {
-
-  val cookies: String?
-  val danmu: Boolean?
-  val maxBitRate: Int?
-  val outputFolder: String?
-  val outputFileName: String?
-  val outputFileExtension: VideoFormat?
-  val partedDownloadRetry: Int?
-
-
-  val onPartedDownload: List<Action>?
-
-
-  val onStreamingFinished: List<Action>?
-
+data object DownloadProcessFinishedException : Exception() {
+  private fun readResolve(): Any = DownloadProcessFinishedException
 }

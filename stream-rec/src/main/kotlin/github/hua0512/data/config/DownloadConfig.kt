@@ -58,7 +58,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
     override var outputFileExtension: VideoFormat? = null
     override var onPartedDownload: List<Action> = emptyList()
     override var onStreamingFinished: List<Action> = emptyList()
-
+    override val partedDownloadRetry: Int? = null
   }
 
 
@@ -77,7 +77,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
     override var outputFileExtension: VideoFormat? = null
     override var onPartedDownload: List<Action> = emptyList()
     override var onStreamingFinished: List<Action> = emptyList()
-
+    override val partedDownloadRetry: Int? = null
 
     companion object {
       val default = HuyaDownloadConfig(

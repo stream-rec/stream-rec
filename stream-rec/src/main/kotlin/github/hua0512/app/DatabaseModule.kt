@@ -26,7 +26,9 @@
 
 package github.hua0512.app
 
+import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import app.cash.sqldelight.logs.LogSqliteDriver
 import dagger.Module
 import dagger.Provides
 import github.hua0512.StreamRecDatabase
@@ -37,6 +39,7 @@ import github.hua0512.dao.stream.StreamDataDaoImpl
 import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.dao.stream.StreamerDaoImpl
 import github.hua0512.dao.upload.*
+import github.hua0512.logger
 import github.hua0512.repo.TomlDataSource
 import kotlinx.serialization.json.Json
 import java.util.*
@@ -54,19 +57,22 @@ class DatabaseModule {
 
   @Provides
   @Singleton
-  fun provideSqlDriver(): JdbcSqliteDriver {
+  fun provideSqlDriver(): SqlDriver {
     val configPath = TomlDataSource.getDefaultTomlPath()
     val path = Path(configPath).parent.resolve("db/stream-rec.db").also {
       it.createParentDirectories()
     }
-    return JdbcSqliteDriver("jdbc:sqlite:${path.pathString}", properties = Properties().apply {
-      put("foreign_keys", "true")
-    })
+    return LogSqliteDriver(
+      sqlDriver = JdbcSqliteDriver("jdbc:sqlite:${path.pathString}", Properties().apply {
+        put("foreign_keys", "true")
+      }),
+      logger = { logger.trace(it) }
+    )
   }
 
   @Provides
   @Singleton
-  fun provideDatabase(sqlDriver: JdbcSqliteDriver): StreamRecDatabase {
+  fun provideDatabase(sqlDriver: SqlDriver): StreamRecDatabase {
     StreamRecDatabase.Schema.create(sqlDriver)
     return StreamRecDatabase(driver = sqlDriver)
   }

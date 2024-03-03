@@ -38,9 +38,15 @@ data class Streamer(
   override val platform: StreamingPlatform = StreamingPlatform.UNKNOWN,
   override var isLive: Boolean = false,
   override var isActivated: Boolean = true,
+  override var avatar: String? = null,
+  override var streamTitle: String? = null,
   override val downloadConfig: DownloadConfig? = null,
 ) : StreamerDTO {
 
   var id: Long = -1
+  override fun toString(): String {
+    return "Streamer(id=$id, name='$name', url='$url', platform=$platform, isLive=$isLive, isActivated=$isActivated, downloadConfig=$downloadConfig)"
+  }
+
 
 }

@@ -27,6 +27,7 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
+import github.hua0512.data.VideoFormat
 import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
@@ -34,6 +35,7 @@ import github.hua0512.utils.withIOContext
 import io.ktor.http.*
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
+import java.util.*
 
 /**
  * FFmpegDownloadEngine is a download engine that uses ffmpeg to download the stream.
@@ -42,8 +44,6 @@ import org.slf4j.LoggerFactory
  */
 class FFmpegDownloadEngine(
   override val app: App,
-  override var onDownloadStarted: () -> Unit = {},
-  override var onDownloadProgress: (size: Long, bitrate: String) -> Unit = { _, _ -> },
 ) : BaseDownloadEngine(app = app) {
 
   companion object {
@@ -55,33 +55,38 @@ class FFmpegDownloadEngine(
     val segmentPart = app.config.maxPartSize.run {
       if (this > 0) this else 2621440000
     }
-
+    downloadFormat = downloadFormat ?: extractFormatFromPath(downloadFilePath)
     val segmentTime = app.config.maxPartDuration
 
     // ffmpeg input args
     val defaultFFmpegInputArgs = buildDefaultFFMpegInputArgs(cookies)
 
     // default output args
-    val defaultFFmpegOutputArgs = arrayOf(
-      "-bsf:a",
-      "aac_adtstoasc"
-    ) + if (segmentTime != null) { // segment the file, according to the maxPartDuration
-      arrayOf(
-        "-to",
-        segmentTime.toString(),
+    val defaultFFmpegOutputArgs = mutableListOf<String>().apply {
+      if (downloadFormat == VideoFormat.avi) {
+        add("-bsf:v")
+        add("h264_mp4toannexb")
+      }
+      addAll(
+        arrayOf(
+          "-bsf:a",
+          "aac_adtstoasc",
+          "-fflags",
+          "+discardcorrupt",
+        )
       )
-    } else {
-      // segment the file, according to the maxPartSize
-      arrayOf(
-        "-fs",
-        segmentPart.toString(),
-      )
+      // segment the file, according to the maxPartDuration
+      if (segmentTime != null) {
+        add("-to")
+        add(segmentTime.toString())
+      } else { // segment the file, according to the maxPartSize
+        add("-fs")
+        add(segmentPart.toString())
+      }
     }
 
-    val fileExtension = downloadFilePath.removeSuffix(".part").substringAfterLast(".")
-
     // ffmpeg running commands
-    val cmds = buildFFMpegRunningCmd(defaultFFmpegInputArgs, defaultFFmpegOutputArgs, fileExtension) + downloadFilePath
+    val cmds = buildFFMpegRunningCmd(defaultFFmpegInputArgs, defaultFFmpegOutputArgs.toTypedArray()) + downloadFilePath
 
     val streamer = streamData!!.streamer
 
@@ -120,10 +125,14 @@ class FFmpegDownloadEngine(
     }
   }
 
+  private fun extractFormatFromPath(downloadFilePath: String): VideoFormat? {
+    val extension = downloadFilePath.substringAfterLast(".").lowercase(Locale.getDefault())
+    return VideoFormat.format(extension)
+  }
+
   private fun buildFFMpegRunningCmd(
     defaultFFmpegInputArgs: List<String>,
     defaultFFmpegOutputArgs: Array<String>,
-    fileExtension: String,
   ) = arrayOf(
     "-y"
   ) + defaultFFmpegInputArgs + arrayOf(
@@ -133,7 +142,7 @@ class FFmpegDownloadEngine(
     "-c",
     "copy",
     "-f",
-    fileExtension.removeSuffix(".part"),
+    downloadFormat!!.ffmpegMuxer,
   )
 
   private fun buildDefaultFFMpegInputArgs(cookies: String? = null) = mutableListOf<String>().apply {

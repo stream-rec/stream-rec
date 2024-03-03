@@ -45,8 +45,12 @@ import kotlinx.serialization.json.Json
 class RepositoryModule {
 
   @Provides
-  fun provideAppConfigRepository(localDataSource: LocalDataSource, tomlDataSource: TomlDataSource): AppConfigRepository =
-    AppConfigRepository(localDataSource, tomlDataSource)
+  fun provideAppConfigRepository(
+    localDataSource: LocalDataSource,
+    tomlDataSource: TomlDataSource,
+    streamerRepository: StreamerRepository,
+  ): AppConfigRepository =
+    AppConfigRepository(localDataSource, tomlDataSource, streamerRepository)
 
   @Provides
   fun provideStreamerRepository(streamerDao: StreamerDao, json: Json): StreamerRepository = StreamerRepository(streamerDao, json)

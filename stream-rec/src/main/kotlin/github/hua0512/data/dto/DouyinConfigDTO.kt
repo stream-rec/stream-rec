@@ -32,7 +32,8 @@ import github.hua0512.data.platform.DouyinQuality
  * @author hua0512
  * @date : 2024/2/11 20:00
  */
-interface DouyinConfigDTO : DownloadConfigDTO {
+interface DouyinConfigDTO {
 
   val quality: DouyinQuality?
+  val cookies: String?
 }

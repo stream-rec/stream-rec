@@ -30,6 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.config.Action
 import github.hua0512.data.config.Action.CommandAction
 import github.hua0512.data.config.Action.RcloneAction
+import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
@@ -47,9 +48,11 @@ import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
+import github.hua0512.utils.replacePlaceholders
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -59,9 +62,9 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 class DownloadService(
-  val app: App,
+  private val app: App,
   private val uploadService: UploadService,
-  val repo: StreamerRepository,
+  private val repo: StreamerRepository,
   private val streamDataRepository: StreamDataRepository,
 ) {
 
@@ -76,14 +79,20 @@ class DownloadService(
     else -> throw Exception("Platform not supported")
   }
 
-  private val taskJobs = mutableListOf<Pair<Streamer, Job>>()
-
-  suspend fun run() = coroutineScope {
-    launch {
-      repo.stream().collect {
-        logger.debug("db streamers list : {}", it)
+  private val StreamingPlatform.platformConfig: GlobalPlatformConfig
+    get() {
+      return when (this) {
+        StreamingPlatform.HUYA -> app.config.huyaConfig
+        StreamingPlatform.DOUYIN -> app.config.douyinConfig
+        else -> throw UnsupportedOperationException("Platform not supported")
       }
     }
+
+  private val taskJobs = mutableSetOf<Pair<Streamer, Job?>>()
+
+  suspend fun run() = coroutineScope {
+    // fetch all streamers from the database and start a job for each one
+    taskJobs.addAll(repo.getStreamersActive().map { it to async { downloadStreamer(it) } })
 
     launch {
       app.streamersFlow.collect { streamerList ->
@@ -97,76 +106,62 @@ class DownloadService(
         if (streamerList.isEmpty()) {
           logger.info("No streamers to download")
           // the new list is empty, cancel all jobs
-          taskJobs.forEach { it.second.cancel() }
+          taskJobs.forEach { it.second?.cancel() }
           return@collect
         }
 
-        val activeStreamers = streamerList.filter { it.isActivated }
-        val oldStreamersSet = taskJobs.map { it.first }.toMutableSet()
-        for (newStreamer in activeStreamers) {
-          val job = taskJobs.find { job -> job.first.url == newStreamer.url }
-          // job is non-null if the streamer is in the old list
-          if (job != null) {
-            val sameJob = taskJobs.find { it.first == newStreamer }
+        val oldStreamers = taskJobs.map { it.first }
+        val newStreamers = streamerList
 
-            // if [sameJob] is non-null, then the streamer is in the old list, with same info
-            // no update needed
-            if (sameJob != null) {
-              oldStreamersSet.remove(job.first)
-              continue
-            }
-            // if [sameJob] is null, then the streamer is in the old list, but with different info
-            // do nothing, the old job will be canceled and a new one will be started
+        val toCancel = oldStreamers.filter { old ->
+          newStreamers.none { new -> new.url == old.url }
+        }
+        // cancel the jobs of the streamers that are not in the new list
+        toCancel.forEach { streamer ->
+          cancelJob(streamer, "delete")?.let {
+            repo.deleteStreamer(it)
           }
-          // job is null, the streamer is not in the old list
-          // This is a new streamer (or maybe an old one but with new info), start a new job
-          try {
-            // save the streamer to the database
-            repo.insertOrUpdate(newStreamer)
-            // fetch the updated streamer from the database
-            val dbStreamer = repo.findStreamerByUrl(newStreamer.url)
-            // update id
-            newStreamer.id = dbStreamer?.id ?: 0
-          } catch (e: Exception) {
-            logger.error("Error while saving streamer ${newStreamer.name} to the database : ${e.message}")
-            continue
-          }
-
-          // start the download
-          val newJob = async {
-            downloadStreamer(newStreamer)
-          }
-          taskJobs.add(newStreamer to newJob)
-          logger.info("Download for streamer ${newStreamer.name} has been started")
         }
 
-        // Cancel the jobs for streamers that are not in the new list
-        for (oldStreamer in oldStreamersSet) {
-          val job = taskJobs.find { job -> job.first == oldStreamer }
-          job?.second?.cancel()
-          taskJobs.remove(job)
-          // check if the streamer is the new list
-          val isPresent = oldStreamer.url in streamerList.map { it.url }
-          // if not, delete the streamer from the database
-          if (!isPresent) {
-            try {
-              repo.deleteStreamer(oldStreamer)
-            } catch (e: Exception) {
-              logger.error("Error while deleting streamer ${oldStreamer.name} from the database : ${e.message}")
+        // diff the new streamers with the old ones
+        // if a streamer has the same url but different entity, cancel the old job and start a new one
+        // if a streamer is not in the old list, start a new job
+        // if a streamer is in both lists, do nothing
+        newStreamers.forEach { new ->
+          val old = oldStreamers.find { it.url == new.url }
+          if (old != null) {
+            // preserve the id
+            new.id = old.id
+            // preserve the isLive value
+            new.isLive = old.isLive
+            // if the entity is different, cancel the old job and start a new one
+            if (old != new) {
+              cancelJob(new, "entity changed")
+              // update db
+              repo.insertOrUpdate(new)
+              if (validateActivation(new)) return@forEach
+              startDownloadJob(new)
             }
+          } else {
+            // update db
+            repo.insertOrUpdate(new)
+            val id = repo.findStreamerByUrl(new.url)?.id ?: -1
+            new.id = id
+            if (validateActivation(new)) return@forEach
+            startDownloadJob(new)
           }
-          logger.info("Download for streamer ${oldStreamer.name} has been cancelled")
         }
       }
     }
   }
+
 
   private suspend fun downloadStreamer(streamer: Streamer) {
     val newJob = SupervisorJob(coroutineContext[Job])
     val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
     newScope.launch {
       if (streamer.isLive) {
-        logger.info("Streamer ${streamer.name} is already live")
+        logger.error("${streamer.name} is already live")
         return@launch
       }
       val plugin = getPlaformDownloader(streamer.platform)
@@ -177,24 +172,21 @@ class DownloadService(
       val maxRetry = app.config.maxDownloadRetries
       while (true) {
 
-        if (retryCount > maxRetry) {
+        if (retryCount >= maxRetry) {
+          retryCount = 0
+          streamer.isLive = false
+          // update db with the new isLive value
+          repo.updateStreamerLiveStatus(streamer.id, false)
           // stream is not live or without data
           if (streamDataList.isEmpty()) {
-            retryCount = 0
-            streamer.isLive = false
-            // update db with the new isLive value
-            repo.insertOrUpdate(streamer)
             continue
           }
           // stream finished with data
-          logger.error("(${streamer.name}) max retry reached")
-          logger.info("(${streamer.name}) has finished streaming")
+          logger.info("${streamer.name} stream finished")
           // call onStreamingFinished callback with the copy of the list
           launch {
             bindOnStreamingEndActions(streamer, streamDataList.toList())
           }
-          retryCount = 0
-          streamer.isLive = false
           streamDataList.clear()
           delay(1.toDuration(DurationUnit.MINUTES))
           continue
@@ -203,45 +195,77 @@ class DownloadService(
           // check if streamer is live
           plugin.shouldDownload(streamer)
         } catch (e: Exception) {
-          logger.error("Error while checking if ${streamer.name} is live : ${e.message}")
-          false
+          when (e) {
+            is IllegalArgumentException -> {
+              logger.error("${streamer.name} invalid url or invalid streamer : ${e.message}")
+              return@launch
+            }
+
+            else -> {
+              logger.error("${streamer.name} error while checking if streamer is live : ${e.message}")
+              false
+            }
+          }
         }
 
         if (isLive) {
           streamer.isLive = true
           // save streamer to the database with the new isLive value
-          repo.insertOrUpdate(streamer)
+          repo.updateStreamerLiveStatus(streamer.id, true, streamer.streamTitle)
+          if (!streamer.avatar.isNullOrEmpty())
+            repo.updateStreamerAvatar(streamer.id, streamer.avatar)
           // stream is live, start downloading
-          val streamsData = app.downloadSemaphore.withPermit {
-            try {
-              plugin.download()
-            } catch (e: Exception) {
-              logger.error("Error while getting stream data for ${streamer.name} : ${e.message}")
-              null
+          // while loop for parting the download
+          while (true) {
+            val streamsData = app.downloadSemaphore.withPermit {
+              try {
+                plugin.download()
+              } catch (e: Exception) {
+                when (e) {
+                  is IllegalArgumentException -> {
+                    logger.error("${streamer.name} invalid url or invalid streamer : ${e.message}")
+                    return@launch
+                  }
+
+                  is UnsupportedOperationException -> {
+                    logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
+                    return@launch
+                  }
+
+                  else -> {
+                    logger.error("${streamer.name} Error while getting stream data : ${e.message}")
+                    null
+                  }
+                }
+              }
             }
+            if (streamsData == null) {
+              logger.error("${streamer.name} unable to get stream data (${retryCount + 1})/$maxRetry)")
+              break
+            }
+            // save the stream data to the database
+            try {
+              streamDataRepository.saveStreamData(streamsData)
+              logger.debug("saved to db : {}", streamsData)
+            } catch (e: Exception) {
+              logger.error("${streamer.name} error while saving $streamsData : ${e.message}")
+            }
+            streamDataList.add(streamsData)
+            logger.info("${streamer.name} downloaded : $streamsData}")
+            launch { executePostPartedDownloadActions(streamer, streamsData) }
+            val platformRetryDelay = streamer.platform.platformConfig.partedDownloadRetry ?: 0
+            delay(platformRetryDelay.toDuration(DurationUnit.SECONDS))
           }
-          if (streamsData == null) {
-            retryCount++
-            logger.error("(${streamer.name}) download data not found")
-            continue
-          }
-          retryCount = 0
-          // save the stream data to the database
-          try {
-            streamsData.id = streamDataRepository.saveStreamData(streamsData)
-            logger.debug("({}) saved to db : {}", streamer.name, streamsData)
-          } catch (e: Exception) {
-            logger.error("Error while saving stream data for ${streamer.name} : ${e.message}")
-          }
-          streamDataList.add(streamsData)
-          logger.info("(${streamer.name}) downloaded : $streamsData, ${streamsData.id}")
-          launch { executePostPartedDownloadActions(streamer, streamsData) }
         } else {
-          logger.info("Streamer ${streamer.name} is not live")
+          if (streamDataList.isNotEmpty()) {
+            logger.error("${streamer.name} unable to get stream data ($retryCount/$maxRetry)")
+          } else {
+            logger.info("${streamer.name} is not live")
+          }
         }
         retryCount++
         // if a data list is not empty, then it means the stream has ended
-        // wait 30 seconds before checking again
+        // wait [retryDelay] seconds before checking again
         // otherwise wait 1 minute
         val duration = if (streamDataList.isNotEmpty()) {
           retryDelay.toDuration(DurationUnit.SECONDS)
@@ -284,7 +308,7 @@ class DownloadService(
   }
 
   private suspend fun Action.mapToAction(streamDataList: List<StreamData>) {
-    return when (this) {
+    when (this) {
       is RcloneAction -> {
         this.run {
           val finalList = streamDataList.flatMap { streamData ->
@@ -323,10 +347,14 @@ class DownloadService(
       }
 
       is CommandAction -> {
-        this.run {
+        this.apply {
           logger.info("Running command action : $this")
 
-          val downloadOutputFolder: File? = (streamDataList.first().streamer.downloadConfig?.outputFolder ?: app.config.outputFolder).let { path ->
+          val streamData = streamDataList.first()
+          val streamer = streamData.streamer
+          val downloadOutputFolder: File? = (streamer.downloadConfig?.outputFolder ?: app.config.outputFolder).let {
+            val instant = Instant.fromEpochSeconds(streamData.dateStart!!)
+            val path = it.replacePlaceholders(streamer.name, streamData.title, instant)
             Path(path).toFile().also {
               // if the folder does not exist, then it should be an error
               if (!it.exists()) {
@@ -335,10 +363,28 @@ class DownloadService(
               }
             }
           }
+          // files + danmu files
+          val finalList: String = streamDataList.flatMap { streamData ->
+            listOfNotNull(
+              streamData.outputFilePath,
+              streamData.danmuFilePath
+            )
+          }.run {
+            if (this.isEmpty()) {
+              logger.error("No files to process")
+              return@apply
+            }
+            StringBuilder().apply {
+              this.forEach {
+                append(it)
+                append("\n")
+              }
+            }.toString()
+          }
           // execute the command
           val exitCode = executeProcess(
             this.program, *this.args.toTypedArray(),
-            stdin = InputSource.fromString(streamDataList.joinToString("\n") { it.outputFilePath }),
+            stdin = InputSource.fromString(finalList),
             stdout = Redirect.CAPTURE,
             stderr = Redirect.CAPTURE,
             directory = downloadOutputFolder,
@@ -354,6 +400,48 @@ class DownloadService(
       else -> throw UnsupportedOperationException("Invalid action: $this")
     }
 
+  }
+
+  /**
+   * Starts a new download job for a given [Streamer].
+   *
+   * @param new The [Streamer] object for which to start the download job.
+   */
+  private fun CoroutineScope.startDownloadJob(new: Streamer) {
+    val newJob = async { downloadStreamer(new) }
+    taskJobs.add(new to newJob)
+    logger.info("${new.name}, ${new.url} job started")
+  }
+
+  /**
+   * Validates the activation status of a given [Streamer].
+   *
+   * @param new The [Streamer] object to validate.
+   * @return true if the [Streamer] is not activated, false otherwise.
+   */
+  private fun validateActivation(new: Streamer): Boolean {
+    if (!new.isActivated) {
+      logger.info("${new.name}, ${new.url} is not activated")
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Cancels the job of a given [Streamer].
+   *
+   * @param new The [Streamer] object for which to cancel the job.
+   * @param reason The reason for cancelling the job.
+   * @return The [Streamer] object that was cancelled.
+   */
+  private fun cancelJob(new: Streamer, reason: String = ""): Streamer? {
+    return taskJobs.find { it.first.url == new.url }?.run {
+      second?.cancel().also {
+        logger.info("${first.name}, ${first.url} job cancelled : $reason")
+      }
+      taskJobs.remove(this)
+      first
+    }
   }
 
 }

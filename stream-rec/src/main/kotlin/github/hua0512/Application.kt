@@ -29,10 +29,12 @@ package github.hua0512
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
+import ch.qos.logback.classic.filter.LevelFilter
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
+import ch.qos.logback.core.spi.FilterReply
 import ch.qos.logback.core.util.FileSize
 import github.hua0512.app.App
 import github.hua0512.app.AppComponent
@@ -44,6 +46,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.nio.file.ClosedWatchServiceException
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -67,9 +70,18 @@ class Application {
           initAppConfig(appConfigRepository, app)
         }
 
+
         val fileWatcherService = appConfigRepository.getFileWatcherService()?.also {
           launch {
-            it.watchFileFlow().debounce(500).collect {
+            try {
+              it.watchFileModifications()
+            } catch (e: ClosedWatchServiceException) {
+              logger.error("FileWatcherService was interrupted", e)
+            }
+          }
+
+          launch {
+            it.eventFlow.debounce(500).collect {
               logger.info("Config file changed, reloading")
               appConfig = initAppConfig(appConfigRepository, app)
             }
@@ -87,8 +99,13 @@ class Application {
         }
 
         Runtime.getRuntime().addShutdownHook(Thread {
-          logger.info("Shutting down")
+          logger.info("Shutting down...")
+          fileWatcherService?.close()
           cancel("Application is shutting down")
+          app.apply {
+            // release all
+            releaseAll()
+          }
           logger.info("Shutdown complete")
         })
       }
@@ -108,6 +125,12 @@ class Application {
         context = loggerContext
         name = "STDOUT"
         encoder = patternEncoder
+        addFilter(LevelFilter().apply {
+          val level = System.getenv("LOG_LEVEL")?.let { Level.valueOf(it) } ?: Level.INFO
+          setLevel(level)
+          onMatch = FilterReply.ACCEPT
+          onMismatch = FilterReply.DENY
+        })
         start()
       }
 
@@ -125,7 +148,7 @@ class Application {
         context = loggerContext
         fileNamePattern = "$logFile.%d{yyyy-MM-dd}.gz"
         maxHistory = 7
-        setTotalSizeCap(FileSize.valueOf("100MB"))
+        setTotalSizeCap(FileSize.valueOf("300MB"))
       }
       val fileAppender = RollingFileAppender<ILoggingEvent>().apply {
         context = loggerContext
@@ -137,21 +160,27 @@ class Application {
           it.setParent(this)
           it.start()
         }
+        addFilter(LevelFilter().apply {
+          setLevel(Level.DEBUG)
+          onMatch = FilterReply.ACCEPT
+          onMismatch = FilterReply.DENY
+        })
         start()
       }
 
       val rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).apply {
         addAppender(consoleAppender)
         addAppender(fileAppender)
-        level = System.getenv("LOG_LEVEL")?.let { Level.valueOf(it) } ?: Level.INFO
-        logger.info("Log level set to $level")
+        level = Level.DEBUG
       }
     }
 
     private suspend fun initAppConfig(repo: AppConfigRepository, app: App): AppConfig {
       return repo.getAppConfig().also {
-        app.config = it
-        app.downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
+        with(app) {
+          config = it
+          downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
+        }
       }
     }
 

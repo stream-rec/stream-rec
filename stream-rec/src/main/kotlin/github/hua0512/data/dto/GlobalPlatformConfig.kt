@@ -26,27 +26,10 @@
 
 package github.hua0512.data.dto
 
-import github.hua0512.data.VideoFormat
-import github.hua0512.data.config.Action
-
 /**
  * @author hua0512
- * @date : 2024/2/11 19:58
+ * @date : 2024/2/28 23:39
  */
-interface DownloadConfigDTO {
-
-  val cookies: String?
-  val danmu: Boolean?
-  val maxBitRate: Int?
-  val outputFolder: String?
-  val outputFileName: String?
-  val outputFileExtension: VideoFormat?
+interface GlobalPlatformConfig {
   val partedDownloadRetry: Int?
-
-
-  val onPartedDownload: List<Action>?
-
-
-  val onStreamingFinished: List<Action>?
-
 }

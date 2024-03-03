@@ -40,6 +40,10 @@ class StreamDataRepository(val dao: StreamDataDao) {
   suspend fun getStreamDataByStreamerId(streamerId: StreamerId) = withIOContext { dao.findStreamDataByStreamerId(streamerId) }
 
   suspend fun saveStreamData(streamData: StreamData): Long {
-    return withIOContext { dao.saveStreamData(streamData.toStreamDataEntity()) }
+    return withIOContext {
+      dao.saveStreamData(streamData.toStreamDataEntity()).also {
+        streamData.id = it
+      }
+    }
   }
 }

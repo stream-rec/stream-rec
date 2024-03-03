@@ -28,13 +28,9 @@ package github.hua0512.services
 
 import github.hua0512.logger
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.withContext
-import java.nio.file.FileSystems
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardWatchEventKinds
+import java.nio.file.*
 import kotlin.io.path.name
 
 /**
@@ -54,19 +50,20 @@ class FileWatcherService(private val filePath: String) {
   }
 
   /**
-   * Watches the specified file and emits a flow of strings whenever the file is modified.
-   * The emitted string contains a message indicating that the file has been modified.
-   *
-   * @return A flow of strings indicating file modifications.
+   * A flow that emits events when the file is modified.
    */
-  fun watchFileFlow(): Flow<String> = flow {
+  val eventFlow = MutableSharedFlow<WatchEvent.Kind<Path>>()
+
+  /**
+   * Starts watching the file for modifications.
+   */
+  suspend fun watchFileModifications() {
     val filePath = Paths.get(filePath)
     val parentPath = filePath.parent
     logger.debug("Watching file {}", filePath)
     withContext(Dispatchers.IO) {
       parentPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
     }
-
     while (true) {
       val key = withContext(Dispatchers.IO) {
         watchService.take()
@@ -74,11 +71,19 @@ class FileWatcherService(private val filePath: String) {
       key.pollEvents().forEach { event ->
         if ((event.context() as Path).name == filePath.name) {
           when (event.kind()) {
-            StandardWatchEventKinds.ENTRY_MODIFY -> emit("File $filePath has been modified")
+            StandardWatchEventKinds.ENTRY_MODIFY -> eventFlow.emit(StandardWatchEventKinds.ENTRY_MODIFY)
           }
         }
       }
       key.reset()
     }
+  }
+
+  /**
+   * Closes the WatchService.
+   */
+  fun close() {
+    eventFlow.resetReplayCache()
+    watchService.close()
   }
 }

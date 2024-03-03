@@ -30,8 +30,8 @@ import github.hua0512.dao.AppConfigDao
 import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.VideoFormat
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DouyinConfig
-import github.hua0512.data.config.HuyaConfig
+import github.hua0512.data.config.DouyinConfigGlobal
+import github.hua0512.data.config.HuyaConfigGlobal
 import github.hua0512.utils.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -50,12 +50,12 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json,
         val id = config.id
 
         val huyaConfig = config.huyaConfig?.run {
-          json.decodeFromString<HuyaConfig>(this)
-        } ?: HuyaConfig()
+          json.decodeFromString<HuyaConfigGlobal>(this)
+        } ?: HuyaConfigGlobal()
 
         val douyinConfig = config.douyinConfig?.run {
-          json.decodeFromString<DouyinConfig>(this)
-        } ?: DouyinConfig()
+          json.decodeFromString<DouyinConfigGlobal>(this)
+        } ?: DouyinConfigGlobal()
 
         val streamers = streamerDao.getAllStreamers().map { it.toStreamer(json) }
 
@@ -98,7 +98,7 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json,
           danmu.asLong,
           outputFolder,
           outputFileName,
-          outputFileFormat.extension,
+          outputFileFormat.name,
           minPartSize,
           maxPartSize,
           maxPartDuration,

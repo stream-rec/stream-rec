@@ -58,6 +58,12 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
     }
   }
 
+  suspend fun getStreamersActive(): List<Streamer> {
+    return withIOContext {
+      dao.getAllStremersActive().map { it.toStreamer(json) }
+    }
+  }
+
 
   suspend fun findStreamerByUrl(url: String): Streamer? {
     return withIOContext {
@@ -73,12 +79,14 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
       } else null
 
       dao.updateStreamer(
-        streamer.name,
-        streamer.url,
-        streamer.platform.id.toLong(),
-        streamer.isLive.asLong,
-        streamer.isActivated.asLong,
-        downloadConfig
+        name = streamer.name,
+        url = streamer.url,
+        platform = streamer.platform.id.toLong(),
+        isLive = streamer.isLive.asLong,
+        isActive = streamer.isActivated.asLong,
+        avatar = streamer.avatar,
+        description = streamer.streamTitle,
+        downloadConfig = downloadConfig
       )
       logger.debug("updatedStreamer: {}", streamer)
     }
@@ -92,12 +100,14 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
       } else null
 
       dao.insertStreamer(
-        newStreamer.name,
-        newStreamer.url,
-        newStreamer.platform.id.toLong(),
-        newStreamer.isLive.asLong,
-        newStreamer.isActivated.asLong,
-        downloadConfig
+        name = newStreamer.name,
+        url = newStreamer.url,
+        platform = newStreamer.platform.id.toLong(),
+        isLive = newStreamer.isLive.asLong,
+        isActive = newStreamer.isActivated.asLong,
+        description = newStreamer.streamTitle,
+        avatar = newStreamer.avatar,
+        downloadConfig = downloadConfig
       )
       logger.debug("saveStreamer: {}, downloadConfig: {}", newStreamer, downloadConfig)
     }
@@ -107,7 +117,24 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
     if (oldStreamer.id == 0L) throw IllegalArgumentException("Streamer id is 0")
     return withIOContext {
       dao.deleteStreamer(StreamerId(oldStreamer.id))
-      logger.debug("deleteStreamer: {}", oldStreamer)
+      logger.debug("deletedStreamer: {}", oldStreamer)
+    }
+  }
+
+  /**
+   * Change streamer active status
+   * @param id streamer id
+   * @param status true: active, false: inactive
+   */
+  suspend fun updateStreamerLiveStatus(id: Long, status: Boolean, streamTitle: String? = null) {
+    return withIOContext {
+      dao.updateStreamStatus(StreamerId(id), status.asLong, streamTitle)
+    }
+  }
+
+  suspend fun updateStreamerAvatar(id: Long, avatar: String?) {
+    return withIOContext {
+      dao.updateAvatar(StreamerId(id), avatar)
     }
   }
 
