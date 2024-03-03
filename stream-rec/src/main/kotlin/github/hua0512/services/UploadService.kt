@@ -226,7 +226,7 @@ class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
         logger.error("Invalid arguments for upload: ${file.filePath}")
         emit(
           UploadResult(
-            time = Clock.System.now().epochSeconds, isSuccess = false, message = "Invalid arguments for upload",
+            time = Clock.System.now().epochSeconds, isSuccess = false, message = "Invalid arguments for upload: ${e.message}",
             filePath = file.filePath
           ).also { it.uploadDataId = file.id }
         )
@@ -240,7 +240,7 @@ class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
             UploadResult(
               time = Clock.System.now().epochSeconds,
               isSuccess = false,
-              message = "Failed to upload file : ${e.cause}",
+              message = "Failed to upload file : $e",
               filePath = file.filePath
             ).also { it.uploadDataId = file.id })
         }

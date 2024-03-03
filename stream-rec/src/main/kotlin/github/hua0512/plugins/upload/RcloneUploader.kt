@@ -68,13 +68,15 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
     ) + uploadConfig.args
 
     logger.debug("Processing {}...", rcloneCommand.toList())
+    val errorBuilder = StringBuilder()
     // rclone "operation" <local file> <remote folder> --args
     val resultCode = executeProcess(*rcloneCommand, stdout = Redirect.SILENT, stderr = Redirect.CAPTURE, consumer = {
       logger.info(it)
+      errorBuilder.append(it)
     })
 
     if (resultCode != 0) {
-      throw UploadFailedException("rclone failed with exit code: $resultCode", uploadData.filePath)
+      throw UploadFailedException("rclone failed with exit code: $resultCode\n$errorBuilder", uploadData.filePath)
     } else {
       logger.info("rclone: ${uploadData.filePath} finished")
       UploadResult(time = Clock.System.now().epochSeconds, isSuccess = true, filePath = uploadData.filePath)
