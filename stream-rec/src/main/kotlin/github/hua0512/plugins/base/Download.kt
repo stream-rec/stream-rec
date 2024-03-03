@@ -31,7 +31,7 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.plugins.danmu.exceptions.DownloadProcesseFinishedException
+import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.NativeDownloadEngine
 import github.hua0512.utils.deleteFile
@@ -263,8 +263,9 @@ abstract class Download(val app: App, val danmu: Danmu) {
     try {
       danmu.fetchDanmu()
     } catch (e: Exception) {
-      if (e !is DownloadProcesseFinishedException || e.cause !is DownloadProcesseFinishedException)
-        logger.error("(${streamer.name}) danmuDownload failed: $e")
+      // ignore if download process is finished
+      if (e is DownloadProcessFinishedException) return
+      logger.error("(${streamer.name}) danmuDownload failed: $e")
     }
   }
 
@@ -324,7 +325,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
   private suspend fun stopDanmuJob(danmuJob: Deferred<Unit>?) {
     danmu.finish()
     try {
-      danmuJob?.cancel("Download process is finished", DownloadProcesseFinishedException())
+      danmuJob?.cancel("Download process is finished", DownloadProcessFinishedException)
       danmuJob?.join()
     } catch (e: Exception) {
       logger.error("(${streamer.name}) failed to cancel danmuJob: $e")

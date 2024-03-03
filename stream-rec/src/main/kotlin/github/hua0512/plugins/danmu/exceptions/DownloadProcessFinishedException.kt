@@ -27,8 +27,10 @@
 package github.hua0512.plugins.danmu.exceptions
 
 /**
+ * Exception to indicate that the download process has finished.
  * @author hua0512
  * @date : 2024/2/29 0:02
  */
-class DownloadProcesseFinishedException : Exception() {
+data object DownloadProcessFinishedException : Exception() {
+  private fun readResolve(): Any = DownloadProcessFinishedException
 }

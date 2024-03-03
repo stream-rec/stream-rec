@@ -30,7 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.DanmuDataWrapper
 import github.hua0512.data.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.danmu.exceptions.DownloadProcesseFinishedException
+import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.utils.withIOContext
 import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
@@ -144,7 +144,7 @@ abstract class Danmu(val app: App) {
       isInitialized.set(isEnabled)
       if (isEnabled) {
         writeChannel.invokeOnClose {
-          if (it is DownloadProcesseFinishedException) {
+          if (it is DownloadProcessFinishedException) {
             logger.info("closing danmu channel, finish writing danmu to file: {}", danmuFile.absolutePath)
           } else {
             logger.info("Danmu {} write channel closed", danmuFile.absolutePath, it)
@@ -264,9 +264,8 @@ abstract class Danmu(val app: App) {
           }
         }
         .catch { e ->
-          if (e !is DownloadProcesseFinishedException) {
-            logger.error("Error writing danmu to file {}", danmuFile.absolutePath, e)
-          }
+          if (e is DownloadProcessFinishedException) return@catch
+          logger.error("Error writing danmu to file {}", danmuFile.absolutePath, e)
         }
         .flowOn(Dispatchers.IO)
         .onCompletion {
