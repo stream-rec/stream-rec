@@ -27,16 +27,16 @@
 package github.hua0512.data
 
 
-enum class VideoFormat(val extension: String) {
+enum class VideoFormat(val ffmpegMuxer: String) {
   mp4("mp4"),
   avi("avi"),
   mov("mov"),
-  wmv("wmv3"),
-  flv("flv");
+  flv("flv"),
+  mkv("matroska");
 
   companion object {
     fun format(extension: String): VideoFormat? {
-      return entries.find { it.extension == extension }
+      return entries.find { it.name == extension }
     }
   }
 }

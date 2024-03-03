@@ -109,7 +109,8 @@ abstract class Download(val app: App, val danmu: Danmu) {
       throw IllegalArgumentException("(${streamer.name}) download config is required")
     }
 
-    val fileExtension = (downloadConfig.outputFileExtension ?: app.config.outputFileFormat).run { "${extension}.part" }
+    val fileFormat = downloadConfig.outputFileExtension ?: app.config.outputFileFormat
+    val fileExtension = fileFormat.name
     val cookie = downloadConfig.cookies ?: when (streamer.platform) {
       StreamingPlatform.HUYA -> app.config.huyaConfig.cookies
       StreamingPlatform.DOUYIN -> app.config.douyinConfig.cookies
@@ -125,7 +126,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
     // download start time
     val startTime = Clock.System.now()
     // danmu file path
-    val danmuPath = outputPath.pathString.replace(fileExtension, "xml")
+    val danmuPath = outputPath.pathString.replace("$fileExtension.part", "xml")
     // check if danmu is initialized
     val danmuJob = if (isDanmuEnabled) {
       async(Dispatchers.IO) {
@@ -163,6 +164,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
       }
       init(
         downloadUrl,
+        fileFormat,
         outputPath.pathString,
         streamData!!,
         cookie,
@@ -277,7 +279,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
     } else {
       downloadConfig.outputFileName!!
     }).run {
-      formatToFriendlyFileName(this.replacePlaceholders(streamer.name, downloadTitle, timestamp) + ".$fileExtension")
+      formatToFriendlyFileName(this.replacePlaceholders(streamer.name, downloadTitle, timestamp) + ".$fileExtension.part")
     }
 
     val outputFolder = (if (downloadConfig.outputFolder.isNullOrEmpty()) {

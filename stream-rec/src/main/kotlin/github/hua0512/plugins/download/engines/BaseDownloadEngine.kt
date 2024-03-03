@@ -27,6 +27,7 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
+import github.hua0512.data.VideoFormat
 import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
@@ -47,6 +48,7 @@ abstract class BaseDownloadEngine(
 
   protected var cookies: String? = ""
   protected var downloadUrl: String? = null
+  protected var downloadFormat: VideoFormat? = null
   protected var downloadFilePath: String = ""
   protected var headers = mutableMapOf<String, String>()
   protected var streamData: StreamData? = null
@@ -67,6 +69,7 @@ abstract class BaseDownloadEngine(
    */
   fun init(
     downloadUrl: String,
+    downloadFormat: VideoFormat,
     downloadFilePath: String,
     streamData: StreamData,
     cookies: String? = "",
@@ -75,6 +78,7 @@ abstract class BaseDownloadEngine(
     fileLimitSize: Long = 0,
   ) {
     this.downloadUrl = downloadUrl
+    this.downloadFormat = downloadFormat
     this.downloadFilePath = downloadFilePath
     this.streamData = streamData
     this.cookies = cookies
