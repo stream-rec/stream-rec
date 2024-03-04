@@ -26,15 +26,18 @@
 
 package github.hua0512.data.stats
 
+import kotlinx.serialization.Serializable
+
 /**
  * Summary stats data class
  * @author hua0512
  * @date : 2024/3/4 10:28
  */
+@Serializable
 data class SummaryStats(
-  val totalRecords: Int,
-  val previousRecords: Int,
-  val totalUploads: Int,
-  val previousUploads: Int,
+  val totalRecords: Long,
+  val previousRecords: Long,
+  val totalUploads: Long,
+  val previousUploads: Long,
   val stats: List<Stats> = emptyList(),
 )

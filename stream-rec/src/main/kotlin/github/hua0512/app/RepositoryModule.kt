@@ -36,6 +36,9 @@ import github.hua0512.dao.upload.UploadActionFilesDao
 import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.repo.*
+import github.hua0512.repo.stats.SummaryStatsRepo
+import github.hua0512.repo.stats.SummaryStatsRepoImpl
+import github.hua0512.repo.streamer.StreamerRepo
 import kotlinx.serialization.json.Json
 
 /**
@@ -49,12 +52,12 @@ class RepositoryModule {
   fun provideAppConfigRepository(
     localDataSource: LocalDataSource,
     tomlDataSource: TomlDataSource,
-    streamerRepository: StreamerRepository,
+    streamerRepository: StreamerRepo,
   ): AppConfigRepository =
     AppConfigRepository(localDataSource, tomlDataSource, streamerRepository)
 
   @Provides
-  fun provideStreamerRepository(streamerDao: StreamerDao, json: Json): StreamerRepository = StreamerRepository(streamerDao, json)
+  fun provideStreamerRepository(streamerDao: StreamerDao, json: Json): StreamerRepo = StreamerRepository(streamerDao, json)
 
   @Provides
   fun provideStreamDataRepository(streamDataDao: StreamDataDao, statsDao: StatsDao): StreamDataRepository =
@@ -70,5 +73,6 @@ class RepositoryModule {
     statsDao: StatsDao,
   ): UploadActionRepository = UploadActionRepository(json, uploadActionDao, uploadDataDao, uploadActionFilesDao, uploadResultDao, statsDao)
 
-
+  @Provides
+  fun provideStatsRepository(statsDao: StatsDao): SummaryStatsRepo = SummaryStatsRepoImpl(statsDao)
 }

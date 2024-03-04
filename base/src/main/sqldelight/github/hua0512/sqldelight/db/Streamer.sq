@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS streamer(
 -- QUERIES
 selectAll : SELECT * FROM streamer;
 selectAllActive : SELECT * FROM streamer WHERE is_active = 1;
+selectAllInactive : SELECT * FROM streamer WHERE is_active = 0;
 getStreamerById : SELECT * FROM streamer WHERE streamer_id = ?;
 getStreamerByName : SELECT * FROM streamer WHERE name = ?;
 findStreamerByUrl : SELECT * FROM streamer WHERE url = ?;

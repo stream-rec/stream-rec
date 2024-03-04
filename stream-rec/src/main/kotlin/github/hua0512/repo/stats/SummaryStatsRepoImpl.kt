@@ -29,7 +29,6 @@ package github.hua0512.repo.stats
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.data.stats.Stats
 import github.hua0512.data.stats.SummaryStats
-import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.Instant
 
 /**
@@ -38,22 +37,39 @@ import kotlinx.datetime.Instant
  */
 class SummaryStatsRepoImpl(val statsDao: StatsDao) : SummaryStatsRepo {
   override fun getSummaryStats(): SummaryStats {
-    TODO("Not yet implemented")
+    val stats = statsDao.getStats()
+    return SummaryStats(
+      stats.sumOf { it.totalStreams },
+      0,
+      stats.sumOf { it.totalUploads },
+      0,
+      stats.map { Stats(it) }
+    )
   }
 
   override fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
     val stats = statsDao.getStatsFromTo(from, to)
     val fromDate = Instant.fromEpochMilliseconds(from)
     val toDate = Instant.fromEpochMilliseconds(to)
-    return SummaryStats(0, 0, 0, 0)
+
+    val diff = toDate - fromDate
+
+    val previous = statsDao.getStatsFromTo(from - diff.inWholeDays, from)
+    return SummaryStats(
+      stats.sumOf { it.totalStreams },
+      previous.sumOf { it.totalStreams },
+      stats.sumOf { it.totalUploads },
+      previous.sumOf { it.totalUploads },
+      stats.map { Stats(it) }
+    )
   }
 
   override fun getStatsFromTo(from: Long, to: Long): List<Stats> {
-    TODO("Not yet implemented")
+    return statsDao.getStatsFromTo(from, to).map { Stats(it) }
   }
 
   override fun getStatsFrom(from: Long): List<Stats> {
-    TODO("Not yet implemented")
+    return statsDao.getStatsFrom(from).map { Stats(it) }
   }
 
 }
