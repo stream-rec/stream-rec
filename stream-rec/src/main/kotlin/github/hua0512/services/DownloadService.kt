@@ -326,7 +326,7 @@ class DownloadService(
                 UploadData(
                   streamTitle = streamData.title,
                   streamer = streamData.streamer.name,
-                  streamStartTime = streamData.dateStart,
+                  streamStartTime = streamData.dateStart!!,
                   filePath = danmu
                 ).also {
                   it.streamDataId = streamData.id

@@ -24,50 +24,40 @@
  * SOFTWARE.
  */
 
-import github.hua0512.utils.executeProcess
-import github.hua0512.utils.process.InputSource
-import github.hua0512.utils.process.Redirect
-import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertEquals
-import java.io.File
 import kotlin.test.Test
 
-class ProcessExecutorTest {
-
+class DouyinCookiesExtractor {
 
   @Test
-  fun testInputString() = runTest {
-    val files = arrayOf("inputString.mp4", "aaaaaaaa.xml")
-
-    val inputStringJoined = files.joinToString("\n")
-    val inputString = "inputString.mp4\naaaaaaaa.xml"
-
-    assertEquals(inputString, inputStringJoined)
+  fun extractCookiesFromString() {
+    val cookies =
+      "cookies"
+    val acNoncePattern = "__ac_nonce=([^;]*)".toRegex()
+    val acNonceString = acNoncePattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val ttwidPattern = "ttwid=([^;]*)".toRegex()
+    val ttwidString = ttwidPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val acSignPattern = "__ac_signature=([^;]*)".toRegex()
+    val acSignString = acSignPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val msTokenPattern = "msToken=([^;]*)".toRegex()
+    val msTokenString = msTokenPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val sessionIdPattern = "sessionId=([^;]*)".toRegex()
+    val sessionIdString = sessionIdPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    var final = ""
+    if (ttwidString.isNotEmpty()) {
+      final += "ttwid=$ttwidString; "
+    }
+    if (msTokenString.isNotEmpty()) {
+      final += "msToken=$msTokenString; "
+    }
+    if (acNonceString.isNotEmpty()) {
+      final += "__ac_nonce=$acNonceString; "
+    }
+    if (acSignString.isNotEmpty()) {
+      final += "__ac_signature=$acSignString; "
+    }
+    if (sessionIdString.isNotEmpty()) {
+      final += "sessionId=$sessionIdString; "
+    }
+    println(final)
   }
-
-//  @Test
-//  fun `test execute`() = runTest {
-//
-//    println(System.getProperty("user.dir"))
-//
-//    val file = File(System.getProperty("user.dir")).parentFile
-//    val files = arrayOf("inputString.mp4", "aaaaaaaa.xml")
-//    val stringBuffer = StringBuffer()
-//    files.forEach {
-//      stringBuffer.append(it)
-//      stringBuffer.append("\n")
-//    }
-//    val output = StringBuilder()
-//    val exitCode = executeProcess(
-//      "bash",
-//      "ls",
-//      stdin = InputSource.fromString(stringBuffer.toString()),
-//      directory = file,
-//      stdout = Redirect.CAPTURE,
-//      consumer = output::append
-//    )
-//
-//    // Assert
-//    assertEquals(0, exitCode)
-//  }
 }
