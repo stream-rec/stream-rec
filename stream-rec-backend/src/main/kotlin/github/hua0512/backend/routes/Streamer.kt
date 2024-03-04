@@ -71,7 +71,7 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest)
         return@get
       }
-      val streamer = repo.getStreamers().find { it.id == id }
+      val streamer = repo.getStreamerById(id)
       if (streamer == null) {
         call.respond(HttpStatusCode.NotFound)
         return@get
@@ -80,9 +80,17 @@ fun Route.streamerRoute(repo: StreamerRepo) {
     }
 
     post {
-      val streamer = call.receive<Streamer>()
+      val streamer: Streamer = try {
+        call.receive<Streamer>().also {
+          logger.info("Received streamer : {}", it)
+        }
+      } catch (e: Exception) {
+        logger.error("Error receiving streamer", e)
+        call.respond(HttpStatusCode.BadRequest)
+        return@post
+      }
 
-      var dbStreamer = repo.findStreamerByUrl(streamer.url)
+      val dbStreamer = repo.findStreamerByUrl(streamer.url)
       if (dbStreamer != null) {
         call.respond(HttpStatusCode.BadRequest, "Streamer already exists")
         return@post
@@ -94,12 +102,12 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest)
         return@post
       }
-      dbStreamer = repo.findStreamerByUrl(streamer.url) ?: run {
-        logger.error("Error saving streamer, not found in db")
-        call.respond(HttpStatusCode.BadRequest)
+      val newStreamer = repo.findStreamerByUrl(streamer.url) ?: run {
+        logger.error("Error saving streamer, not found in db : {}", streamer)
+        call.respond(HttpStatusCode.InternalServerError, "Streamer not found in db")
         return@post
       }
-      call.respond(dbStreamer)
+      call.respond(newStreamer)
     }
 
     put("{id}") {
@@ -113,14 +121,21 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
         return@put
       }
-      try {
-        repo.insertOrUpdate(streamer)
-      } catch (e: Exception) {
-        logger.error("Error updating streamer", e)
+      repo.findStreamerByUrl(streamer.url) ?: run {
+        logger.error("Error updating streamer, not found in db : {}", streamer)
         call.respond(HttpStatusCode.BadRequest)
         return@put
       }
+
+      try {
+        repo.insertOrUpdate(streamer)
+        call.respond(streamer)
+      } catch (e: Exception) {
+        logger.error("Error updating streamer", e)
+        call.respond(HttpStatusCode.BadRequest)
+      }
     }
+
     delete("{id}") {
       val id = call.parameters["id"]?.toLongOrNull()
       if (id == null) {

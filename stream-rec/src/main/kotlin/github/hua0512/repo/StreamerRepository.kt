@@ -29,7 +29,10 @@ package github.hua0512.repo
 import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
+import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.logger
+import github.hua0512.plugins.download.Douyin
+import github.hua0512.plugins.download.Huya
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.asLong
 import github.hua0512.utils.toStreamer
@@ -59,6 +62,12 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
     }
   }
 
+  override suspend fun getStreamerById(id: Long): Streamer? {
+    return withIOContext {
+      dao.getStreamerById(StreamerId(id))?.toStreamer(json)
+    }
+  }
+
   override suspend fun getStreamersActive(): List<Streamer> {
     return withIOContext {
       dao.getAllStremersActive().map { it.toStreamer(json) }
@@ -78,37 +87,46 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   }
 
 
-  override suspend fun insertOrUpdate(streamer: Streamer) {
-    return withIOContext {
-      val downloadConfig = if (streamer.downloadConfig != null) {
-        json.encodeToString(streamer.downloadConfig)
-      } else null
-
-      dao.updateStreamer(
-        name = streamer.name,
-        url = streamer.url,
-        platform = streamer.platform.id.toLong(),
-        isLive = streamer.isLive.asLong,
-        isActive = streamer.isActivated.asLong,
-        avatar = streamer.avatar,
-        description = streamer.streamTitle,
-        downloadConfig = downloadConfig
-      )
-      logger.debug("updatedStreamer: {}", streamer)
-    }
-  }
-
-  override suspend fun saveStreamer(newStreamer: Streamer) {
-
+  override suspend fun insertOrUpdate(newStreamer: Streamer) {
     return withIOContext {
       val downloadConfig = if (newStreamer.downloadConfig != null) {
         json.encodeToString(newStreamer.downloadConfig)
       } else null
 
+      val platform = if (newStreamer.platform == StreamingPlatform.UNKNOWN) {
+        getPlatformByUrl(newStreamer.url)
+      } else {
+        newStreamer.platform
+      }
+      dao.updateStreamer(
+        name = newStreamer.name,
+        url = newStreamer.url,
+        platform = platform.id.toLong(),
+        isLive = newStreamer.isLive.asLong,
+        isActive = newStreamer.isActivated.asLong,
+        avatar = newStreamer.avatar,
+        description = newStreamer.streamTitle,
+        downloadConfig = downloadConfig
+      )
+      logger.debug("updatedStreamer: {}", newStreamer)
+    }
+  }
+
+  override suspend fun saveStreamer(newStreamer: Streamer) {
+    return withIOContext {
+      val downloadConfig = if (newStreamer.downloadConfig != null) {
+        json.encodeToString(newStreamer.downloadConfig)
+      } else null
+
+      val platform = if (newStreamer.platform == StreamingPlatform.UNKNOWN) {
+        getPlatformByUrl(newStreamer.url)
+      } else {
+        newStreamer.platform
+      }
       dao.insertStreamer(
         name = newStreamer.name,
         url = newStreamer.url,
-        platform = newStreamer.platform.id.toLong(),
+        platform = platform.id.toLong(),
         isLive = newStreamer.isLive.asLong,
         isActive = newStreamer.isActivated.asLong,
         description = newStreamer.streamTitle,
@@ -117,6 +135,12 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
       )
       logger.debug("saveStreamer: {}, downloadConfig: {}", newStreamer, downloadConfig)
     }
+  }
+
+  private fun getPlatformByUrl(url: String): StreamingPlatform = when {
+    Huya.REGEX.toRegex().find(url) != null -> StreamingPlatform.HUYA
+    Douyin.REGEX.toRegex().find(url) != null -> StreamingPlatform.DOUYIN
+    else -> StreamingPlatform.UNKNOWN
   }
 
   override suspend fun deleteStreamer(oldStreamer: Streamer) {

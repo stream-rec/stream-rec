@@ -37,8 +37,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class Action {
 
-  var id: Long = 0
-
   var enabled: Boolean = true
 
   @Serializable

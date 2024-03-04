@@ -38,11 +38,12 @@ interface StreamerRepo {
 
   suspend fun stream(): Flow<List<Streamer>>
   suspend fun getStreamers(): List<Streamer>
+  suspend fun getStreamerById(id: Long): Streamer?
   suspend fun getStreamersActive(): List<Streamer>
   suspend fun getStreamersInactive(): List<Streamer>
 
   suspend fun findStreamerByUrl(url: String): Streamer?
-  suspend fun insertOrUpdate(streamer: Streamer)
+  suspend fun insertOrUpdate(newStreamer: Streamer)
   suspend fun saveStreamer(newStreamer: Streamer)
   suspend fun deleteStreamer(oldStreamer: Streamer)
 
