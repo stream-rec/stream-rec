@@ -44,6 +44,7 @@ import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
 import github.hua0512.repo.StreamDataRepository
 import github.hua0512.repo.StreamerRepository
+import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.InputSource
@@ -64,7 +65,7 @@ import kotlin.time.toDuration
 class DownloadService(
   private val app: App,
   private val uploadService: UploadService,
-  private val repo: StreamerRepository,
+  private val repo: StreamerRepo,
   private val streamDataRepository: StreamDataRepository,
 ) {
 

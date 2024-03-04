@@ -24,42 +24,29 @@
  * SOFTWARE.
  */
 
-package github.hua0512.dao.stream
+package github.hua0512.repo.streamer
 
-import github.hua0512.data.StreamerId
-import github.hua0512.utils.StreamerEntity
+import github.hua0512.data.stream.Streamer
 import kotlinx.coroutines.flow.Flow
 
-
 /**
+ * Streamer related actions repository
  * @author hua0512
- * @date : 2024/2/18 16:05
+ * @date : 2024/3/4 13:01
  */
-interface StreamerDao {
+interface StreamerRepo {
 
-  suspend fun stream(): Flow<List<StreamerEntity>>
-  suspend fun getAllStreamers(): List<StreamerEntity>
+  suspend fun stream(): Flow<List<Streamer>>
+  suspend fun getStreamers(): List<Streamer>
+  suspend fun getStreamersActive(): List<Streamer>
+  suspend fun getStreamersInactive(): List<Streamer>
 
-  suspend fun findStreamerByUrl(url: String): StreamerEntity?
+  suspend fun findStreamerByUrl(url: String): Streamer?
+  suspend fun insertOrUpdate(streamer: Streamer)
+  suspend fun saveStreamer(newStreamer: Streamer)
+  suspend fun deleteStreamer(oldStreamer: Streamer)
 
-  suspend fun getAllStremersActive(): List<StreamerEntity>
-
-  suspend fun getAllStremersInactive(): List<StreamerEntity>
-
-  suspend fun getStreamerById(id: StreamerId): StreamerEntity?
-  suspend fun insertStreamer(
-    name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
-    avatar: String?, downloadConfig: String?,
-  )
-
-  suspend fun updateStreamStatus(id: StreamerId, isLive: Long, streamTitle: String?)
-
-  suspend fun updateAvatar(id: StreamerId, avatar: String?)
-
-  suspend fun updateStreamer(
-    name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
-    avatar: String?, downloadConfig: String?,
-  )
-
-  suspend fun deleteStreamer(id: StreamerId)
+  suspend fun deleteStreamerById(id: Long)
+  suspend fun updateStreamerLiveStatus(id: Long, status: Boolean, streamTitle: String? = null)
+  suspend fun updateStreamerAvatar(id: Long, avatar: String?)
 }

@@ -27,6 +27,7 @@
 package github.hua0512.repo
 
 import github.hua0512.data.config.AppConfig
+import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.services.FileWatcherService
 import github.hua0512.utils.withIOContext
 import org.slf4j.Logger
@@ -39,7 +40,7 @@ import org.slf4j.LoggerFactory
 class AppConfigRepository(
   private val localDataSource: LocalDataSource,
   private val tomlDataSource: TomlDataSource,
-  private val streamersRepo: StreamerRepository,
+  private val streamersRepo: StreamerRepo,
 ) {
 
   private lateinit var fileWatcherService: FileWatcherService

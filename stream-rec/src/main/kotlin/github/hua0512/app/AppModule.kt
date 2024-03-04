@@ -31,6 +31,7 @@ import dagger.Provides
 import github.hua0512.dao.AppConfigDao
 import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.repo.*
+import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
 import kotlinx.serialization.json.Json
@@ -56,7 +57,7 @@ class AppModule {
   fun provideDownloadService(
     app: App,
     uploadService: UploadService,
-    streamerRepository: StreamerRepository,
+    streamerRepository: StreamerRepo,
     streamDataRepository: StreamDataRepository,
   ): DownloadService =
     DownloadService(app, uploadService, streamerRepository, streamDataRepository)

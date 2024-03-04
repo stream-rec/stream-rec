@@ -62,6 +62,7 @@ class NativeDownloadEngine(override val app: App) : BaseDownloadEngine(app) {
             this@NativeDownloadEngine.headers.forEach { (t, u) ->
               append(t, u)
             }
+            append("keep-alive", "true")
           }
         }.execute { response ->
           val channel: ByteReadChannel = response.bodyAsChannel()

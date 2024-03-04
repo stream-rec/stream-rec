@@ -7,6 +7,7 @@ group = "github.hua0512.streamrec"
 version = "0.5.0"
 
 dependencies {
+  implementation(project(":base"))
   implementation(libs.io.ktor.server.core.jvm)
   implementation(libs.io.ktor.server.host.common.jvm)
   api(libs.io.ktor.server.netty.jvm)

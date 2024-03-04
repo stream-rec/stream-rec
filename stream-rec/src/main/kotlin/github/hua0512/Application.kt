@@ -91,15 +91,15 @@ class Application {
         val downloadService = appComponent.getDownloadService()
         val uploadService = appComponent.getUploadService()
 
-        launch {
-          downloadService.run()
-        }
+//        launch {
+//          downloadService.run()
+//        }
         launch(Dispatchers.IO) {
           uploadService.run()
         }
 
         // start server
-        val server = backendServer().apply {
+        val server = backendServer(appComponent.getStreamerRepo(), appComponent.getStatsRepository()).apply {
           start()
         }
 

@@ -58,6 +58,10 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     return queries.selectAllActive().executeAsList()
   }
 
+  override suspend fun getAllStremersInactive(): List<StreamerEntity> {
+    return queries.selectAllInactive().executeAsList()
+  }
+
 
   override suspend fun getStreamerById(id: StreamerId): StreamerEntity? {
     val queriedStreamer = queries.getStreamerById(id.value).executeAsOneOrNull()

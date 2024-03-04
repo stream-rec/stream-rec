@@ -30,6 +30,7 @@ import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
 import github.hua0512.logger
+import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.asLong
 import github.hua0512.utils.toStreamer
 import github.hua0512.utils.withIOContext
@@ -43,36 +44,41 @@ import kotlinx.serialization.json.Json
  * @author hua0512
  * @date : 2024/2/18 13:45
  */
-class StreamerRepository(val dao: StreamerDao, val json: Json) {
+class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
 
 
-  suspend fun stream() = dao.stream()
+  override suspend fun stream() = dao.stream()
     .map { items ->
       items.map { it.toStreamer(json) }
     }
     .flowOn(Dispatchers.IO)
 
-  suspend fun getStreamers(): List<Streamer> {
+  override suspend fun getStreamers(): List<Streamer> {
     return withIOContext {
       dao.getAllStreamers().map { it.toStreamer(json) }
     }
   }
 
-  suspend fun getStreamersActive(): List<Streamer> {
+  override suspend fun getStreamersActive(): List<Streamer> {
     return withIOContext {
       dao.getAllStremersActive().map { it.toStreamer(json) }
     }
   }
 
+  override suspend fun getStreamersInactive(): List<Streamer> {
+    return withIOContext {
+      dao.getAllStremersInactive().map { it.toStreamer(json) }
+    }
+  }
 
-  suspend fun findStreamerByUrl(url: String): Streamer? {
+  override suspend fun findStreamerByUrl(url: String): Streamer? {
     return withIOContext {
       dao.findStreamerByUrl(url)?.toStreamer(json)
     }
   }
 
 
-  suspend fun insertOrUpdate(streamer: Streamer) {
+  override suspend fun insertOrUpdate(streamer: Streamer) {
     return withIOContext {
       val downloadConfig = if (streamer.downloadConfig != null) {
         json.encodeToString(streamer.downloadConfig)
@@ -92,7 +98,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
     }
   }
 
-  suspend fun saveStreamer(newStreamer: Streamer) {
+  override suspend fun saveStreamer(newStreamer: Streamer) {
 
     return withIOContext {
       val downloadConfig = if (newStreamer.downloadConfig != null) {
@@ -113,11 +119,17 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
     }
   }
 
-  suspend fun deleteStreamer(oldStreamer: Streamer) {
+  override suspend fun deleteStreamer(oldStreamer: Streamer) {
     if (oldStreamer.id == 0L) throw IllegalArgumentException("Streamer id is 0")
     return withIOContext {
       dao.deleteStreamer(StreamerId(oldStreamer.id))
       logger.debug("deletedStreamer: {}", oldStreamer)
+    }
+  }
+
+  override suspend fun deleteStreamerById(id: Long) {
+    return withIOContext {
+      dao.deleteStreamer(StreamerId(id))
     }
   }
 
@@ -126,13 +138,13 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) {
    * @param id streamer id
    * @param status true: active, false: inactive
    */
-  suspend fun updateStreamerLiveStatus(id: Long, status: Boolean, streamTitle: String? = null) {
+  override suspend fun updateStreamerLiveStatus(id: Long, status: Boolean, streamTitle: String?) {
     return withIOContext {
       dao.updateStreamStatus(StreamerId(id), status.asLong, streamTitle)
     }
   }
 
-  suspend fun updateStreamerAvatar(id: Long, avatar: String?) {
+  override suspend fun updateStreamerAvatar(id: Long, avatar: String?) {
     return withIOContext {
       dao.updateAvatar(StreamerId(id), avatar)
     }
