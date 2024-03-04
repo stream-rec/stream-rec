@@ -91,9 +91,9 @@ class Application {
         val downloadService = appComponent.getDownloadService()
         val uploadService = appComponent.getUploadService()
 
-//        launch {
-//          downloadService.run()
-//        }
+        launch {
+          downloadService.run()
+        }
         launch(Dispatchers.IO) {
           uploadService.run()
         }
