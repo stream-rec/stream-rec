@@ -39,6 +39,7 @@ import ch.qos.logback.core.util.FileSize
 import github.hua0512.app.App
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
+import github.hua0512.backend.backendServer
 import github.hua0512.data.config.AppConfig
 import github.hua0512.repo.AppConfigRepository
 import kotlinx.coroutines.*
@@ -50,7 +51,6 @@ import java.nio.file.ClosedWatchServiceException
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
-val logger: Logger = LoggerFactory.getLogger("Main")
 
 class Application {
   companion object {
@@ -98,8 +98,14 @@ class Application {
           uploadService.run()
         }
 
+        // start server
+        val server = backendServer().apply {
+          start()
+        }
+
         Runtime.getRuntime().addShutdownHook(Thread {
           logger.info("Shutting down...")
+          server.stop(1000, 1000)
           fileWatcherService?.close()
           cancel("Application is shutting down")
           app.apply {
