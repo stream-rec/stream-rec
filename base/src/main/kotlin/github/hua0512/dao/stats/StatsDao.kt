@@ -24,39 +24,30 @@
  * SOFTWARE.
  */
 
-package github.hua0512.utils
+package github.hua0512.dao.stats
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.todayIn
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.*
+import github.hua0512.utils.StatsEntity
 
 /**
  * @author hua0512
- * @date : 2024/2/11 1:56
+ * @date : 2024/3/4 10:30
  */
+interface StatsDao {
 
-fun toLocalDateTime(time: Long, pattern: String? = null): String {
-  return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), TimeZone.getDefault().toZoneId()).run {
-    if (pattern?.isEmpty()!!) {
-      this.toString()
-    } else {
-      this.format(DateTimeFormatter.ofPattern(pattern))
-    }
-  }
+  fun getStatsFromTo(from: Long, to: Long): List<StatsEntity>
+
+  fun getStatsFromToWithLimit(from: Long, to: Long, limit: Int): List<StatsEntity>
+
+  fun getStatsFrom(from: Long): List<StatsEntity>
+
+  fun getStatsTo(to: Long): List<StatsEntity>
+
+  fun getStats(): List<StatsEntity>
+
+  fun insertStats(stats: StatsEntity)
+
+  fun updateStats(stats: StatsEntity)
+
+  fun deleteStats(stats: StatsEntity)
+
 }
-
-fun getNow(): kotlinx.datetime.Instant {
-  return Clock.System.now()
-}
-
-fun getNowEpochMilli(): Long {
-  return getNow().toEpochMilliseconds()
-}
-
-fun getToday() = Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault())
-
-fun getTodayStart() = getToday().atStartOfDayIn(kotlinx.datetime.TimeZone.currentSystemDefault())

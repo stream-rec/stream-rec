@@ -215,3 +215,49 @@ getUploadResultIdByTimeAndPath : SELECT id FROM UploadResult WHERE time =  ? AND
 
 -- Deletes a record from the UploadResult table where the id matches the provided parameter.
 deleteUploadResult : DELETE FROM UploadResult WHERE id = ?;
+
+CREATE TABLE IF NOT EXISTS Stats (
+  id INTEGER PRIMARY KEY,
+  time INTEGER NOT NULL,
+  totalStreams INTEGER NOT NULL DEFAULT 0,
+  totalUploads INTEGER NOT NULL DEFAULT 0,
+  totalFailedUploads INTEGER NOT NULL DEFAULT 0
+);
+
+-- Stats Queries
+
+-- Selects all records from the Stats table and orders them by time in descending order.
+selectAllStats : SELECT * FROM Stats ORDER BY time DESC;
+
+-- Selects a record from the Stats table where the id matches the provided parameter.
+getStatsById : SELECT * FROM Stats WHERE id = ?;
+
+-- Inserts a new record into the Stats table with the provided time, totalStreams, totalUploads, and totalFailedUploads values.
+insertStats : INSERT INTO Stats(time, totalStreams, totalUploads, totalFailedUploads) VALUES(?, ?, ?, ?);
+
+-- Updates the totalStreams, totalUploads, and totalFailedUploads values of a record in the Stats table where the id matches the provided parameter.
+updateStats : UPDATE Stats SET totalStreams = ?, totalUploads = ?, totalFailedUploads = ? WHERE id = ?;
+
+-- Deletes a record from the Stats table where the id matches the provided parameter.
+deleteStats : DELETE FROM Stats WHERE id = ?;
+
+-- Get stats by time
+getStatsByTime : SELECT * FROM Stats WHERE time = ? LIMIT 1;
+
+-- Get stats by time range
+getStatsByTimeRange : SELECT * FROM Stats WHERE time >= ? AND time <= ? ORDER BY time DESC;
+
+-- Get stats by time range
+getStatsByTimeRangeWithLimit : SELECT * FROM Stats WHERE time >= ? AND time <= ? ORDER BY time DESC LIMIT ?;
+
+-- Get stats by time range
+getStatsByTimeRangeWithOffset : SELECT * FROM Stats WHERE time >= ? AND time <= ? ORDER BY time DESC LIMIT ? OFFSET ?;
+
+-- Get stats by time range
+getStatsByTimeRangeWithLimitAndOffset : SELECT * FROM Stats WHERE time >= ? AND time <= ? ORDER BY time DESC LIMIT ? OFFSET ?;
+
+-- Get stats by time range
+getStatsByTimeRangeWithLimitAndOffsetAndOrderDesc : SELECT * FROM Stats WHERE time >= ? AND time <= ? ORDER BY time DESC LIMIT ? OFFSET ?;
+
+-- Get stats by time range
+getStatsByTimeRangeWithLimitAndOffsetAndOrderAsc : SELECT * FROM Stats WHERE time >= ? AND time <= ? ORDER BY time ASC LIMIT ? OFFSET ?;

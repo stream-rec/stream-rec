@@ -28,6 +28,7 @@ package github.hua0512.app
 
 import dagger.Module
 import dagger.Provides
+import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.dao.upload.UploadActionDao
@@ -56,7 +57,8 @@ class RepositoryModule {
   fun provideStreamerRepository(streamerDao: StreamerDao, json: Json): StreamerRepository = StreamerRepository(streamerDao, json)
 
   @Provides
-  fun provideStreamDataRepository(streamDataDao: StreamDataDao): StreamDataRepository = StreamDataRepository(streamDataDao)
+  fun provideStreamDataRepository(streamDataDao: StreamDataDao, statsDao: StatsDao): StreamDataRepository =
+    StreamDataRepository(streamDataDao, statsDao)
 
   @Provides
   fun provideUploadActionRepository(
@@ -65,7 +67,8 @@ class RepositoryModule {
     uploadDataDao: UploadDataDao,
     uploadActionFilesDao: UploadActionFilesDao,
     uploadResultDao: UploadResultDao,
-  ): UploadActionRepository = UploadActionRepository(json, uploadActionDao, uploadDataDao, uploadActionFilesDao, uploadResultDao)
+    statsDao: StatsDao,
+  ): UploadActionRepository = UploadActionRepository(json, uploadActionDao, uploadDataDao, uploadActionFilesDao, uploadResultDao, statsDao)
 
 
 }
