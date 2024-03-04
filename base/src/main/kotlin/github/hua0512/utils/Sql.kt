@@ -44,6 +44,7 @@ typealias UploadResultEntity = github.hua0512.sqldelight.db.UploadResult
 typealias UploadActionEntity = github.hua0512.sqldelight.db.UploadAction
 typealias UploadDataEntity = github.hua0512.sqldelight.db.UploadData
 typealias UploadActionFilesEntity = github.hua0512.sqldelight.db.UploadActionFiles
+typealias StatsEntity = github.hua0512.sqldelight.db.Stats
 
 
 val Long.boolean: Boolean

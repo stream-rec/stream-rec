@@ -34,6 +34,8 @@ import dagger.Provides
 import github.hua0512.StreamRecDatabase
 import github.hua0512.dao.AppConfigDao
 import github.hua0512.dao.AppConfigDaoImpl
+import github.hua0512.dao.stats.StatsDao
+import github.hua0512.dao.stats.StatsDaoImpl
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamDataDaoImpl
 import github.hua0512.dao.stream.StreamerDao
@@ -100,4 +102,7 @@ class DatabaseModule {
 
   @Provides
   fun provideUploadActionFilesDao(database: StreamRecDatabase): UploadActionFilesDao = UploadActionFilesDaoImpl(database)
+
+  @Provides
+  fun provideStatsDao(database: StreamRecDatabase): StatsDao = StatsDaoImpl(database)
 }

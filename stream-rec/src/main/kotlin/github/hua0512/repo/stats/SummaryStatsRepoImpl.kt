@@ -24,39 +24,36 @@
  * SOFTWARE.
  */
 
-package github.hua0512.utils
+package github.hua0512.repo.stats
 
-import kotlinx.datetime.Clock
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.todayIn
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.*
+import github.hua0512.dao.stats.StatsDao
+import github.hua0512.data.stats.Stats
+import github.hua0512.data.stats.SummaryStats
+import kotlinx.datetime.DateTimePeriod
+import kotlinx.datetime.Instant
 
 /**
  * @author hua0512
- * @date : 2024/2/11 1:56
+ * @date : 2024/3/4 10:44
  */
-
-fun toLocalDateTime(time: Long, pattern: String? = null): String {
-  return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), TimeZone.getDefault().toZoneId()).run {
-    if (pattern?.isEmpty()!!) {
-      this.toString()
-    } else {
-      this.format(DateTimeFormatter.ofPattern(pattern))
-    }
+class SummaryStatsRepoImpl(val statsDao: StatsDao) : SummaryStatsRepo {
+  override fun getSummaryStats(): SummaryStats {
+    TODO("Not yet implemented")
   }
+
+  override fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
+    val stats = statsDao.getStatsFromTo(from, to)
+    val fromDate = Instant.fromEpochMilliseconds(from)
+    val toDate = Instant.fromEpochMilliseconds(to)
+    return SummaryStats(0, 0, 0, 0)
+  }
+
+  override fun getStatsFromTo(from: Long, to: Long): List<Stats> {
+    TODO("Not yet implemented")
+  }
+
+  override fun getStatsFrom(from: Long): List<Stats> {
+    TODO("Not yet implemented")
+  }
+
 }
-
-fun getNow(): kotlinx.datetime.Instant {
-  return Clock.System.now()
-}
-
-fun getNowEpochMilli(): Long {
-  return getNow().toEpochMilliseconds()
-}
-
-fun getToday() = Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault())
-
-fun getTodayStart() = getToday().atStartOfDayIn(kotlinx.datetime.TimeZone.currentSystemDefault())

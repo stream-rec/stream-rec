@@ -19,6 +19,8 @@ dependencies {
   api(libs.io.ktor.client.cio)
   api(libs.io.ktor.serialization.kotlinx.json)
   api(libs.io.ktor.client.logging)
+
+  testImplementation(libs.bundles.test.jvm)
 }
 
 kotlin {

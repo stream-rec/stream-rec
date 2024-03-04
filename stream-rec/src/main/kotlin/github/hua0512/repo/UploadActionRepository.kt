@@ -26,6 +26,7 @@
 
 package github.hua0512.repo
 
+import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.upload.UploadActionDao
 import github.hua0512.dao.upload.UploadActionFilesDao
 import github.hua0512.dao.upload.UploadDataDao
@@ -39,10 +40,7 @@ import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
 import github.hua0512.logger
-import github.hua0512.utils.asLong
-import github.hua0512.utils.boolean
-import github.hua0512.utils.toUploadResult
-import github.hua0512.utils.withIOContext
+import github.hua0512.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -69,6 +67,7 @@ class UploadActionRepository(
   val uploadDataDao: UploadDataDao,
   val uploadActionFilesDao: UploadActionFilesDao,
   val uploadResultDao: UploadResultDao,
+  val statsDao: StatsDao,
 ) {
 
   /**
@@ -127,6 +126,24 @@ class UploadActionRepository(
   suspend fun saveResult(uploadResult: UploadResult) {
     return withIOContext {
       uploadResultDao.saveUploadResult(uploadResult.toEntity())
+      val today = getTodayStart().toEpochMilliseconds()
+      val todayStats = statsDao.getStatsFromTo(today, today + 86400000).firstOrNull()
+
+      if (todayStats == null) {
+        if (uploadResult.isSuccess) {
+          statsDao.insertStats(StatsEntity(0, today, 0, 1, 0))
+        } else {
+          statsDao.insertStats(StatsEntity(0, today, 0, 0, 1))
+        }
+      } else {
+        if (uploadResult.isSuccess) {
+          val totalUploads = todayStats.totalUploads + 1
+          statsDao.updateStats(todayStats.copy(totalUploads = totalUploads))
+        } else {
+          val totalFailedUploads = todayStats.totalFailedUploads + 1
+          statsDao.updateStats(todayStats.copy(totalFailedUploads = totalFailedUploads))
+        }
+      }
     }
   }
 

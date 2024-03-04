@@ -67,7 +67,7 @@ import kotlin.time.toDuration
  * @author hua0512
  * @date : 2024/2/19 15:30
  */
-class UploadService(val app: App, val uploadRepo: UploadActionRepository) {
+class UploadService(val app: App, private val uploadRepo: UploadActionRepository) {
 
   /**
    * A shared flow of upload actions. This flow is used to emit upload actions to be processed.

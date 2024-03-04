@@ -26,24 +26,38 @@
 
 package github.hua0512.repo
 
+import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
+import github.hua0512.utils.StatsEntity
+import github.hua0512.utils.getTodayStart
 import github.hua0512.utils.withIOContext
 
 /**
  * @author hua0512
  * @date : 2024/2/19 10:21
  */
-class StreamDataRepository(val dao: StreamDataDao) {
+class StreamDataRepository(val dao: StreamDataDao, val statsDao: StatsDao) {
 
   suspend fun getStreamDataByStreamerId(streamerId: StreamerId) = withIOContext { dao.findStreamDataByStreamerId(streamerId) }
 
   suspend fun saveStreamData(streamData: StreamData): Long {
     return withIOContext {
-      dao.saveStreamData(streamData.toStreamDataEntity()).also {
+      val id = dao.saveStreamData(streamData.toStreamDataEntity()).also {
         streamData.id = it
       }
+
+      // get today's timestamp
+      val todayStart = getTodayStart()
+      val todayStats = statsDao.getStatsFromToWithLimit(todayStart.epochSeconds, todayStart.epochSeconds, 1).firstOrNull()
+      if (todayStats != null) {
+        val newStats = todayStats.copy(totalStreams = todayStats.totalStreams + 1)
+        statsDao.updateStats(newStats)
+      } else {
+        statsDao.insertStats(StatsEntity(0, todayStart.epochSeconds, 1, 0, 0))
+      }
+      return@withIOContext id
     }
   }
 }
