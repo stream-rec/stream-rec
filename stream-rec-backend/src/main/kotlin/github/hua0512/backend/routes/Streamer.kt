@@ -81,6 +81,12 @@ fun Route.streamerRoute(repo: StreamerRepo) {
 
     post {
       val streamer = call.receive<Streamer>()
+
+      var dbStreamer = repo.findStreamerByUrl(streamer.url)
+      if (dbStreamer != null) {
+        call.respond(HttpStatusCode.BadRequest, "Streamer already exists")
+        return@post
+      }
       try {
         repo.saveStreamer(streamer)
       } catch (e: Exception) {
@@ -88,7 +94,12 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest)
         return@post
       }
-      call.respond(HttpStatusCode.Created)
+      dbStreamer = repo.findStreamerByUrl(streamer.url) ?: run {
+        logger.error("Error saving streamer, not found in db")
+        call.respond(HttpStatusCode.BadRequest)
+        return@post
+      }
+      call.respond(dbStreamer)
     }
 
     put("{id}") {
