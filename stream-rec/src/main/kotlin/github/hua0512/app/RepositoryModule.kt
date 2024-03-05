@@ -61,8 +61,8 @@ class RepositoryModule {
   fun provideStreamerRepository(streamerDao: StreamerDao, json: Json): StreamerRepo = StreamerRepository(streamerDao, json)
 
   @Provides
-  fun provideStreamDataRepository(streamDataDao: StreamDataDao, statsDao: StatsDao): StreamDataRepo =
-    StreamDataRepository(streamDataDao, statsDao)
+  fun provideStreamDataRepository(streamDataDao: StreamDataDao, streamerDao: StreamerDao, statsDao: StatsDao, json: Json): StreamDataRepo =
+    StreamDataRepository(streamDataDao, streamerDao, statsDao, json)
 
   @Provides
   fun provideUploadActionRepository(

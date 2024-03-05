@@ -28,6 +28,7 @@ package github.hua0512.data.stream
 
 import github.hua0512.utils.StreamDataEntity
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class StreamData(
@@ -40,6 +41,15 @@ data class StreamData(
 ) {
   var id: Long = -1
 
+  var streamerName: String = ""
+    get() {
+      if (!::streamer.isInitialized) {
+        return ""
+      }
+      return streamer.name
+    }
+
+  @Transient
   lateinit var streamer: Streamer
 
   constructor(entity: StreamDataEntity) : this(

@@ -55,6 +55,7 @@ selectAllActive : SELECT * FROM streamer WHERE is_active = 1;
 selectAllInactive : SELECT * FROM streamer WHERE is_active = 0;
 getStreamerById : SELECT * FROM streamer WHERE streamer_id = ?;
 getStreamerByName : SELECT * FROM streamer WHERE name = ?;
+getStreamerNameById : SELECT name FROM streamer WHERE streamer_id = ? LIMIT 1;
 findStreamerByUrl : SELECT * FROM streamer WHERE url = ?;
 
 insertStreamer : INSERT INTO streamer(name, url, platform, is_live, is_active, description, avatar, download_config, app_config_id) VALUES(?, ?, ?,?, ?,?,?, ?, 1);

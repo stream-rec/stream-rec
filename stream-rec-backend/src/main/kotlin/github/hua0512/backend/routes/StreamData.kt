@@ -47,13 +47,14 @@ fun Route.streamsRoute(streamsRepo: StreamDataRepo) {
     }
 
     delete("{id}") {
-      val id = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond("Invalid id")
+      val id = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid id")
       try {
         streamsRepo.deleteStreamData(StreamDataId(id))
       } catch (e: Exception) {
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete stream data")
         return@delete
       }
+      call.respond(HttpStatusCode.OK, "Stream data deleted")
     }
   }
 }

@@ -40,6 +40,8 @@ interface StreamerDao {
   suspend fun stream(): Flow<List<StreamerEntity>>
   suspend fun getAllStreamers(): List<StreamerEntity>
 
+  suspend fun getStreamerNameById(id: StreamerId): String?
+
   suspend fun findStreamerByUrl(url: String): StreamerEntity?
 
   suspend fun getAllStremersActive(): List<StreamerEntity>
