@@ -28,22 +28,23 @@ package github.hua0512.backend
 
 import github.hua0512.backend.plugins.*
 import github.hua0512.repo.stats.SummaryStatsRepo
+import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
 
-fun CoroutineScope.backendServer(streamerRepo: StreamerRepo, statsRepo: SummaryStatsRepo): NettyApplicationEngine {
-  return embeddedServer(Netty, port = 12555, host = "0.0.0.0", module = { module(streamerRepo, statsRepo) })
+fun CoroutineScope.backendServer(streamerRepo: StreamerRepo, streamDataRepo: StreamDataRepo, statsRepo: SummaryStatsRepo): NettyApplicationEngine {
+  return embeddedServer(Netty, port = 12555, host = "0.0.0.0", module = { module(streamerRepo, streamDataRepo, statsRepo) })
 }
 
-fun Application.module(streamerRepo: StreamerRepo, statsRepo: SummaryStatsRepo) {
+fun Application.module(streamerRepo: StreamerRepo, streamDataRepo: StreamDataRepo, statsRepo: SummaryStatsRepo) {
 //  configureSecurity()
   configureHTTP()
   configureMonitoring()
   configureSerialization()
   configureSockets()
   configureAdministration()
-  configureRouting(streamerRepo, statsRepo)
+  configureRouting(streamerRepo, streamDataRepo, statsRepo)
 }

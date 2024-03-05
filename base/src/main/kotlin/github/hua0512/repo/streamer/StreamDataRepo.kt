@@ -24,47 +24,24 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.repo.streamer
 
-import github.hua0512.utils.StreamDataEntity
-import kotlinx.serialization.Serializable
+import github.hua0512.data.StreamDataId
+import github.hua0512.data.StreamerId
+import github.hua0512.data.stream.StreamData
 
-@Serializable
-data class StreamData(
-  val title: String,
-  val dateStart: Long? = null,
-  val dateEnd: Long? = null,
-  val outputFilePath: String,
-  val danmuFilePath: String? = null,
-  val streamerId: Long? = 0,
-) {
-  var id: Long = -1
+/**
+ * @author hua0512
+ * @date : 2024/3/5 11:59
+ */
+interface StreamDataRepo {
 
-  lateinit var streamer: Streamer
+  suspend fun getAllStreamData(): List<StreamData>
 
-  constructor(entity: StreamDataEntity) : this(
-    entity.title,
-    entity.dateStart,
-    entity.dateEnd,
-    entity.outputFilePath,
-    entity.danmuFilePath,
-    entity.streamerId
-  ) {
-    id = entity.id
-  }
+  suspend fun getStremDataPaged(page: Int, pageSize: Int): List<StreamData>
 
-  fun toStreamDataEntity() = StreamDataEntity(
-    title = title,
-    dateStart = dateStart,
-    dateEnd = dateEnd,
-    outputFilePath = outputFilePath,
-    danmuFilePath = danmuFilePath,
-    streamerId = streamerId,
-    id = id
-  )
+  suspend fun getStreamDataByStreamerId(streamerId: StreamerId): StreamData?
+  suspend fun saveStreamData(streamData: StreamData): Long
 
-  override fun toString(): String {
-    return "StreamData(id=$id, title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, streamer=$streamer)"
-  }
-
+  suspend fun deleteStreamData(id: StreamDataId)
 }

@@ -29,6 +29,7 @@ package github.hua0512.app
 import dagger.Component
 import github.hua0512.repo.AppConfigRepository
 import github.hua0512.repo.stats.SummaryStatsRepo
+import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
@@ -51,4 +52,6 @@ interface AppComponent {
   fun getStatsRepository(): SummaryStatsRepo
 
   fun getStreamerRepo(): StreamerRepo
+
+  fun getStreamDataRepo(): StreamDataRepo
 }

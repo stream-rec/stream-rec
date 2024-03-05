@@ -88,6 +88,9 @@ CREATE TABLE IF NOT EXISTS StreamData (
   FOREIGN KEY(streamerId) REFERENCES streamer(streamer_id) ON DELETE CASCADE
 );
 
+selectAllStreamDataDesc : SELECT * FROM StreamData ORDER BY dateStart DESC;
+selectAllStreamData : SELECT * FROM StreamData;
+selectAllStreamDataDescPaged : SELECT * FROM StreamData ORDER BY dateStart DESC LIMIT ? OFFSET ?;
 getStreamDataById : SELECT * FROM StreamData WHERE id = ?;
 getStreamDataIdByOutputFilePath : SELECT id FROM StreamData WHERE outputFilePath = ? LIMIT 1;
 selectAllStreamDataOfStreamer : SELECT * FROM StreamData WHERE streamerId = ? ORDER BY dateStart DESC;

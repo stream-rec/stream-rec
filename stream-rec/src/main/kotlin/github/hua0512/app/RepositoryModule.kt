@@ -38,6 +38,7 @@ import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.repo.*
 import github.hua0512.repo.stats.SummaryStatsRepo
 import github.hua0512.repo.stats.SummaryStatsRepoImpl
+import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import kotlinx.serialization.json.Json
 
@@ -60,7 +61,7 @@ class RepositoryModule {
   fun provideStreamerRepository(streamerDao: StreamerDao, json: Json): StreamerRepo = StreamerRepository(streamerDao, json)
 
   @Provides
-  fun provideStreamDataRepository(streamDataDao: StreamDataDao, statsDao: StatsDao): StreamDataRepository =
+  fun provideStreamDataRepository(streamDataDao: StreamDataDao, statsDao: StatsDao): StreamDataRepo =
     StreamDataRepository(streamDataDao, statsDao)
 
   @Provides

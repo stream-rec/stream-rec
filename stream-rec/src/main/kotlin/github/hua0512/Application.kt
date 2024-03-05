@@ -99,7 +99,11 @@ class Application {
         }
 
         // start server
-        val server = backendServer(appComponent.getStreamerRepo(), appComponent.getStatsRepository()).apply {
+        val server = backendServer(
+          appComponent.getStreamerRepo(),
+          appComponent.getStreamDataRepo(),
+          appComponent.getStatsRepository()
+        ).apply {
           start()
         }
 
@@ -174,7 +178,7 @@ class Application {
         start()
       }
 
-      val rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).apply {
+      loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).apply {
         addAppender(consoleAppender)
         addAppender(fileAppender)
         level = Level.DEBUG

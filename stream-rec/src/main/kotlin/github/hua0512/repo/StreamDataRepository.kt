@@ -28,8 +28,10 @@ package github.hua0512.repo
 
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
+import github.hua0512.data.StreamDataId
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
+import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.utils.StatsEntity
 import github.hua0512.utils.getTodayStart
 import github.hua0512.utils.withIOContext
@@ -38,11 +40,18 @@ import github.hua0512.utils.withIOContext
  * @author hua0512
  * @date : 2024/2/19 10:21
  */
-class StreamDataRepository(val dao: StreamDataDao, val statsDao: StatsDao) {
+class StreamDataRepository(val dao: StreamDataDao, val statsDao: StatsDao) : StreamDataRepo {
 
-  suspend fun getStreamDataByStreamerId(streamerId: StreamerId) = withIOContext { dao.findStreamDataByStreamerId(streamerId) }
+  override suspend fun getAllStreamData(): List<StreamData> = withIOContext { dao.getAllStreamData().map { StreamData(it) } }
+  override suspend fun getStremDataPaged(page: Int, pageSize: Int): List<StreamData> {
+    return withIOContext { dao.getAllStreamDataPaged(page, pageSize).map { StreamData(it) } }
+  }
 
-  suspend fun saveStreamData(streamData: StreamData): Long {
+  override suspend fun getStreamDataByStreamerId(streamerId: StreamerId) = withIOContext {
+    dao.findStreamDataByStreamerId(streamerId).firstOrNull()?.let { StreamData(it) }
+  }
+
+  override suspend fun saveStreamData(streamData: StreamData): Long {
     return withIOContext {
       val id = dao.saveStreamData(streamData.toStreamDataEntity()).also {
         streamData.id = it
@@ -59,5 +68,9 @@ class StreamDataRepository(val dao: StreamDataDao, val statsDao: StatsDao) {
       }
       return@withIOContext id
     }
+  }
+
+  override suspend fun deleteStreamData(id: StreamDataId) {
+    return withIOContext { dao.deleteStreamData(id) }
   }
 }

@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory
 class AppConfigRepository(
   private val localDataSource: LocalDataSource,
   private val tomlDataSource: TomlDataSource,
-  private val streamersRepo: StreamerRepo,
+  private val streamerRepo: StreamerRepo,
 ) {
 
   private lateinit var fileWatcherService: FileWatcherService
@@ -64,7 +64,7 @@ class AppConfigRepository(
           // update streamers
           val streamers = appConfig.streamers
           streamers.forEach {
-            streamersRepo.insertOrUpdate(it)
+            streamerRepo.insertOrUpdate(it)
           }
         }
       } catch (e: Exception) {
