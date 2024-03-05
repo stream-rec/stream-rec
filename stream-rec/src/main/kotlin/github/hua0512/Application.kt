@@ -26,6 +26,7 @@
 
 package github.hua0512
 
+import app.cash.sqldelight.db.SqlDriver
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
@@ -47,6 +48,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.nio.file.ClosedWatchServiceException
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
@@ -110,12 +112,10 @@ class Application {
         Runtime.getRuntime().addShutdownHook(Thread {
           logger.info("Shutting down...")
           server.stop(1000, 1000)
+          appComponent.getSqlDriver().closeDriver()
           fileWatcherService?.close()
+          app.releaseAll()
           cancel("Application is shutting down")
-          app.apply {
-            // release all
-            releaseAll()
-          }
           logger.info("Shutdown complete")
         })
       }
@@ -194,7 +194,13 @@ class Application {
       }
     }
 
-
+    private fun SqlDriver.closeDriver() {
+      try {
+        close()
+      } catch (e: IOException) {
+        logger.error("Error closing sql driver", e)
+      }
+    }
   }
 }
 
