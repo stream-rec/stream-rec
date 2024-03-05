@@ -37,6 +37,10 @@ import github.hua0512.utils.StreamDataEntity
  * @date : 2024/2/19 10:16
  */
 class StreamDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, StreamDataDao {
+  override suspend fun getStreamDataById(streamDataId: StreamDataId): StreamDataEntity? {
+    return queries.getStreamDataById(streamDataId.value).executeAsOneOrNull()
+  }
+
   override suspend fun getAllStreamData(): List<StreamDataEntity> {
     return queries.selectAllStreamDataDesc().executeAsList()
   }

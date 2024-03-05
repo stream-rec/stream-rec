@@ -104,7 +104,8 @@ class Application {
         val server = backendServer(
           appComponent.getStreamerRepo(),
           appComponent.getStreamDataRepo(),
-          appComponent.getStatsRepository()
+          appComponent.getStatsRepository(),
+          appComponent.getUploadRepo(),
         ).apply {
           start()
         }

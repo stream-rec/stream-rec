@@ -24,40 +24,25 @@
  * SOFTWARE.
  */
 
-package github.hua0512.app
+package github.hua0512.repo.uploads
 
-import app.cash.sqldelight.db.SqlDriver
-import dagger.Component
-import github.hua0512.repo.AppConfigRepository
-import github.hua0512.repo.stats.SummaryStatsRepo
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.repo.uploads.UploadRepo
-import github.hua0512.services.DownloadService
-import github.hua0512.services.UploadService
-import javax.inject.Singleton
+import github.hua0512.data.UploadActionId
+import github.hua0512.data.UploadDataId
+import github.hua0512.data.UploadResultId
+import github.hua0512.data.upload.UploadAction
+import github.hua0512.data.upload.UploadData
+import github.hua0512.data.upload.UploadResult
+import kotlinx.coroutines.flow.Flow
 
-@Singleton
-@Component(
-  modules = [AppModule::class, DatabaseModule::class, RepositoryModule::class]
-)
-interface AppComponent {
+interface UploadRepo {
+  suspend fun streamFailedUploadResults(): Flow<List<UploadResult>>
 
-  fun getSqlDriver(): SqlDriver
-
-  fun getAppConfig(): App
-
-  fun getDownloadService(): DownloadService
-
-  fun getUploadService(): UploadService
-
-  fun getAppConfigRepository(): AppConfigRepository
-
-  fun getStatsRepository(): SummaryStatsRepo
-
-  fun getStreamerRepo(): StreamerRepo
-
-  fun getStreamDataRepo(): StreamDataRepo
-
-  fun getUploadRepo(): UploadRepo
+  suspend fun getAllUploadData(): List<UploadData>
+  suspend fun getAllUploadResults(): List<UploadResult>
+  suspend fun saveAction(uploadAction: UploadAction): UploadActionId
+  suspend fun saveResult(uploadResult: UploadResult)
+  suspend fun getUploadData(uploadDataId: UploadDataId): UploadData?
+  suspend fun changeUploadDataStatus(uploadDataId: Long, status: Boolean)
+  suspend fun deleteUploadResult(id: UploadResultId)
+  suspend fun getUploadActionIdByUploadDataId(id: UploadDataId): UploadAction?
 }

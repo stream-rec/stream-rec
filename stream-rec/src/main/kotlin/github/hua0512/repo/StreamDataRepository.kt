@@ -45,23 +45,40 @@ import kotlinx.serialization.json.Json
  */
 class StreamDataRepository(val dao: StreamDataDao, private val streamerDao: StreamerDao, private val statsDao: StatsDao, private val json: Json) :
   StreamDataRepo {
-
-  override suspend fun getAllStreamData(): List<StreamData> = withIOContext {
-    dao.getAllStreamData().map { streamData ->
-      StreamData(streamData).also {
-        streamerDao.getStreamerById(StreamerId(it.streamerId!!))?.toStreamer(json)?.let { streamer ->
-          it.streamer = streamer
+  override suspend fun getStreamDataById(streamDataId: StreamDataId): StreamData? {
+    return withIOContext {
+      dao.getStreamDataById(streamDataId)?.let {
+        StreamData(it).apply {
+          populateStreamer()
         }
       }
     }
   }
 
+  override suspend fun getAllStreamData(): List<StreamData> = withIOContext {
+    dao.getAllStreamData().map { streamData ->
+      StreamData(streamData).apply {
+        populateStreamer()
+      }
+    }
+  }
+
   override suspend fun getStremDataPaged(page: Int, pageSize: Int): List<StreamData> {
-    return withIOContext { dao.getAllStreamDataPaged(page, pageSize).map { StreamData(it) } }
+    return withIOContext {
+      dao.getAllStreamDataPaged(page, pageSize).map {
+        StreamData(it).apply {
+          populateStreamer()
+        }
+      }
+    }
   }
 
   override suspend fun getStreamDataByStreamerId(streamerId: StreamerId) = withIOContext {
-    dao.findStreamDataByStreamerId(streamerId).firstOrNull()?.let { StreamData(it) }
+    dao.findStreamDataByStreamerId(streamerId).firstOrNull()?.let {
+      StreamData(it).apply {
+        populateStreamer()
+      }
+    }
   }
 
   override suspend fun saveStreamData(streamData: StreamData): Long {
@@ -86,4 +103,10 @@ class StreamDataRepository(val dao: StreamDataDao, private val streamerDao: Stre
   override suspend fun deleteStreamData(id: StreamDataId) {
     return withIOContext { dao.deleteStreamData(id) }
   }
+
+  private suspend fun StreamData.populateStreamer() {
+    streamer =
+      streamerDao.getStreamerById(StreamerId(streamerId!!))?.toStreamer(json) ?: throw IllegalStateException("Streamer not found for streamData $id")
+  }
+
 }

@@ -41,6 +41,7 @@ data class StreamData(
 ) {
   var id: Long = -1
 
+
   var streamerName: String = ""
     get() {
       if (!::streamer.isInitialized) {
@@ -74,7 +75,7 @@ data class StreamData(
   )
 
   override fun toString(): String {
-    return "StreamData(id=$id, title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, streamer=$streamer)"
+    return "StreamData(id=$id, title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, streamerId=$streamerId, streamerName=$streamerName)"
   }
 
 }

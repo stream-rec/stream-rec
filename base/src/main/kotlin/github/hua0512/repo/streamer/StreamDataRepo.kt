@@ -36,6 +36,7 @@ import github.hua0512.data.stream.StreamData
  */
 interface StreamDataRepo {
 
+  suspend fun getStreamDataById(streamDataId: StreamDataId): StreamData?
   suspend fun getAllStreamData(): List<StreamData>
 
   suspend fun getStremDataPaged(page: Int, pageSize: Int): List<StreamData>

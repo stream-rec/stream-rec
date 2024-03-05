@@ -40,6 +40,8 @@ import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
 import github.hua0512.logger
+import github.hua0512.repo.streamer.StreamDataRepo
+import github.hua0512.repo.uploads.UploadRepo
 import github.hua0512.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -63,12 +65,13 @@ import kotlinx.serialization.json.Json
  */
 class UploadActionRepository(
   val json: Json,
+  val streamsRepo: StreamDataRepo,
   val uploadActionDao: UploadActionDao,
   val uploadDataDao: UploadDataDao,
   val uploadActionFilesDao: UploadActionFilesDao,
   val uploadResultDao: UploadResultDao,
   val statsDao: StatsDao,
-) {
+) : UploadRepo {
 
   /**
    * Streams all failed upload results.
@@ -78,8 +81,48 @@ class UploadActionRepository(
    *
    * @return Flow of list of UploadResult
    */
-  suspend fun streamFailedUploadResults(): Flow<List<UploadResult>> =
-    uploadResultDao.streamAllFailedUploadResult().map { it.map { it.toUploadResult() } }.flowOn(Dispatchers.IO)
+  override suspend fun streamFailedUploadResults(): Flow<List<UploadResult>> =
+    uploadResultDao.streamAllFailedUploadResult().map {
+      it.map { result ->
+        UploadResult(result).apply {
+          populateUploadData()
+        }
+      }
+    }.flowOn(Dispatchers.IO)
+
+  override suspend fun getAllUploadData(): List<UploadData> {
+    return withIOContext {
+      uploadDataDao.getAllUploadData().map { uploadData ->
+        UploadData(
+          id = uploadData.id,
+          filePath = uploadData.filePath,
+          status = uploadData.status.boolean
+        ).apply {
+          streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
+            ?: throw IllegalStateException("Stream data not found for upload data: $this")
+        }
+      }
+    }
+  }
+
+  /**
+   * Retrieves all upload results.
+   * This function retrieves all upload results from the database and converts them to UploadResult objects.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @return List of UploadResult
+   * @throws IllegalStateException if upload data is not found for a result
+   */
+  override suspend fun getAllUploadResults(): List<UploadResult> {
+    return withIOContext {
+      uploadResultDao.getAllUploadResults().map { result ->
+        UploadResult(result).apply {
+          populateUploadData()
+        }
+      }
+    }
+  }
+
 
   /**
    * Saves an upload action.
@@ -90,7 +133,7 @@ class UploadActionRepository(
    * @param uploadAction The upload action to save
    * @return The ID of the saved upload action
    */
-  suspend fun save(uploadAction: UploadAction): UploadActionId {
+  override suspend fun saveAction(uploadAction: UploadAction): UploadActionId {
     val actionId = withIOContext {
       val uploadConfigString = json.encodeToString(UploadConfig.serializer(), uploadAction.uploadConfig)
       uploadActionDao.saveUploadAction(uploadAction.time, uploadConfigString)
@@ -100,9 +143,6 @@ class UploadActionRepository(
       uploadAction.files.forEach {
         logger.debug("Saving upload data for file: {}, {}", it, it.streamDataId)
         val uploadDataId = uploadDataDao.insertUploadData(
-          it.streamTitle,
-          it.streamer,
-          it.streamStartTime,
           it.filePath,
           StreamDataId(it.streamDataId),
           it.status.asLong
@@ -123,7 +163,7 @@ class UploadActionRepository(
    *
    * @param uploadResult The upload result to save
    */
-  suspend fun saveResult(uploadResult: UploadResult) {
+  override suspend fun saveResult(uploadResult: UploadResult) {
     return withIOContext {
       uploadResultDao.saveUploadResult(uploadResult.toEntity())
       val today = getTodayStart().epochSeconds
@@ -156,14 +196,11 @@ class UploadActionRepository(
    * @param uploadDataId The ID of the upload data
    * @return UploadData or null if no upload data with the given ID exists
    */
-  suspend fun getUploadData(uploadDataId: UploadDataId): UploadData? {
+  override suspend fun getUploadData(uploadDataId: UploadDataId): UploadData? {
     return withIOContext {
       uploadDataDao.getUploadDataById(uploadDataId)?.let { uploadData ->
         UploadData(
           id = uploadData.id,
-          streamTitle = uploadData.streamTitle,
-          streamer = uploadData.streamer,
-          streamStartTime = uploadData.streamStartTime,
           filePath = uploadData.filePath,
           status = uploadData.status.boolean
         ).also {
@@ -182,7 +219,7 @@ class UploadActionRepository(
    * @param uploadDataId The ID of the upload data to update.
    * @param status The new status to set for the upload data.
    */
-  suspend fun changeUploadDataStatus(uploadDataId: Long, status: Boolean) {
+  override suspend fun changeUploadDataStatus(uploadDataId: Long, status: Boolean) {
     return withIOContext {
       uploadDataDao.updateUploadDataStatus(UploadDataId(uploadDataId), status.asLong)
     }
@@ -196,7 +233,7 @@ class UploadActionRepository(
    *
    * @param id The ID of the upload result to delete.
    */
-  suspend fun deleteUploadResult(id: UploadResultId) {
+  override suspend fun deleteUploadResult(id: UploadResultId) {
     return withIOContext {
       uploadResultDao.deleteUploadResult(id)
     }
@@ -211,7 +248,7 @@ class UploadActionRepository(
    * @param id The ID of the upload data.
    * @return UploadAction or null if no upload action with the given upload data ID exists.
    */
-  suspend fun getUploadActionIdByUploadDataId(id: UploadDataId): UploadAction? {
+  override suspend fun getUploadActionIdByUploadDataId(id: UploadDataId): UploadAction? {
     return withIOContext {
       uploadActionFilesDao.getUploadActionByUploadDataId(id)?.let { uploadAction ->
         UploadAction(
@@ -223,5 +260,14 @@ class UploadActionRepository(
     }
   }
 
+  /**
+   * Retrieves upload data for a given upload result.
+   * This function retrieves upload data from the database using the upload data ID associated with the upload result.
+   * @return UploadData or null if no upload data with the given ID exists
+   * @throws IllegalStateException if upload data is not found for the result
+   */
+  private suspend fun UploadResult.populateUploadData() {
+    uploadData = getUploadData(UploadDataId(uploadDataId)) ?: throw IllegalStateException("Upload data not found for result: $this")
+  }
 
 }

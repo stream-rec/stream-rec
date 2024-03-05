@@ -37,13 +37,25 @@ import github.hua0512.utils.UploadDataEntity
  * @date : 2024/2/18 16:07
  */
 class UploadDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, UploadDataDao {
+  override fun getAllUploadData(): List<UploadDataEntity> {
+    return queries.selectAllUploadData().executeAsList()
+  }
+
+  override fun getAllUploadDataPaginated(page: Int, pageSize: Int): List<UploadDataEntity> {
+    return queries.selectAllUploadDataPaginated(pageSize.toLong(), (page - 1L) * pageSize).executeAsList()
+  }
+
+  override fun getUploadDatasByStatus(status: Long): List<UploadDataEntity> {
+    return queries.selectAllUploadDataByStatus(status).executeAsList()
+  }
+
   override fun getUploadDataById(id: UploadDataId): UploadDataEntity? {
     return queries.getUploadDataById(id.value).executeAsOneOrNull()
   }
 
-  override fun insertUploadData(title: String, streamer: String, startTime: Long, filePath: String, streamDataId: StreamDataId, status: Long): Long {
-    queries.insertUploadData(title, streamer, startTime, filePath, streamDataId.value, status)
-    return queries.getUploadDataIdByTimeAndPath(startTime, filePath).executeAsOne()
+  override fun insertUploadData(filePath: String, streamDataId: StreamDataId, status: Long): Long {
+    queries.insertUploadData(filePath, streamDataId.value, status)
+    return queries.getUploadDataIdByPath(filePath).executeAsOne()
   }
 
   override fun updateUploadDataStatus(id: UploadDataId, status: Long) {
