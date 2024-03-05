@@ -216,6 +216,7 @@ class Huya(app: App, danmu: HuyaDanmu) : Download(app, danmu) {
 //        println("maxBitRate : $maxBitRate")
 //        println("maxSupportedBitrate : $maxSupportedBitrate")
       downloadTitle = streamTitle
+      streamer.streamTitle = downloadTitle
       downloadUrl =
         "$sFlvUrl/$sStreamName.$sFlvUrlSuffix?wsSecret=$wsSecret&wsTime=$wsTime&seqid=$seqId&ctype=${query["ctype"]}&ver=1&fs=${query["fs"]}&u=$convertUid&t=$platformId&sv=2401090219&sdk_sid=${Clock.System.now().epochSeconds}&codec=264"
       if (maxSupportedBitrate != maxBitRate) {

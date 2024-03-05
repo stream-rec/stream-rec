@@ -40,6 +40,7 @@ import github.hua0512.plugins.download.Douyin.Companion.commonDouyinParams
 import github.hua0512.plugins.download.Douyin.Companion.extractDouyinRoomId
 import github.hua0512.plugins.download.Douyin.Companion.populateDouyinCookieMissedParams
 import github.hua0512.utils.decompressGzip
+import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -66,7 +67,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
 
     val config = streamer.downloadConfig as? DouyinDownloadConfig ?: DouyinDownloadConfig()
 
-    val cookies = (config.cookies ?: app.config.douyinConfig.cookies).let {
+    val cookies = (config.cookies?.nonEmptyOrNull() ?: app.config.douyinConfig.cookies).let {
       if (it.isNullOrEmpty()) {
         logger.error("Empty douyin cookies")
         return false
