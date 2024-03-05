@@ -28,42 +28,55 @@ package github.hua0512.dao
 
 import github.hua0512.StreamRecDatabase
 import github.hua0512.utils.AppConfigEntity
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import github.hua0512.utils.asLong
 
 /**
  * AppConfigDao implementation
  * @author hua0512
  * @date : 2024/2/19 0:13
  */
-class AppConfigDaoImpl(override val database: StreamRecDatabase, private val json: Json) : BaseDaoImpl, AppConfigDao {
+class AppConfigDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, AppConfigDao {
   override suspend fun getLatestAppConfig(): AppConfigEntity? {
     // always return the 1st streamer's config
     return queries.getAppConfigById(1).executeAsOneOrNull()
   }
 
-  override suspend fun upsert(appConfig: AppConfigEntity) {
-    return appConfig.run {
-      queries.upsertAppConfig(
-        engine,
-        danmu,
-        outputFolder,
-        outputFileName,
-        outputFileFormat,
-        minPartSize,
-        maxPartSize,
-        maxPartDuration,
-        maxDownloadRetries,
-        downloadRetryDelay,
-        maxConcurrentDownloads,
-        maxConcurrentUploads,
-        deleteFilesAfterUpload,
-        json.encodeToString(huyaConfig),
-        json.encodeToString(douyinConfig),
-        id,
-      )
-    }
+  override suspend fun upsert(
+    engine: String?,
+    danmu: Boolean?,
+    outputFolder: String?,
+    outputFileName: String?,
+    outputFileFormat: String?,
+    minPartSize: Long?,
+    maxPartSize: Long?,
+    maxPartDuration: Long?,
+    maxDownloadRetries: Long?,
+    downloadRetryDelay: Long?,
+    maxConcurrentDownloads: Long?,
+    maxConcurrentUploads: Long?,
+    deleteFilesAfterUpload: Boolean?,
+    huyaConfig: String?,
+    douyinConfig: String?,
+    id: Long,
+  ) {
+    return queries.upsertAppConfig(
+      engine = engine,
+      danmu = danmu?.asLong,
+      outputFolder = outputFolder,
+      outputFileName,
+      outputFileFormat,
+      minPartSize,
+      maxPartSize,
+      maxPartDuration,
+      maxDownloadRetries,
+      downloadRetryDelay,
+      maxConcurrentDownloads,
+      maxConcurrentUploads,
+      deleteFilesAfterUpload?.asLong,
+      huyaConfig,
+      douyinConfig,
+      id,
+    )
   }
-
 
 }

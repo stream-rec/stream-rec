@@ -43,7 +43,6 @@ import github.hua0512.dao.stream.StreamerDaoImpl
 import github.hua0512.dao.upload.*
 import github.hua0512.logger
 import github.hua0512.repo.TomlDataSource
-import kotlinx.serialization.json.Json
 import java.util.*
 import javax.inject.Singleton
 import kotlin.io.path.Path
@@ -81,7 +80,7 @@ class DatabaseModule {
 
 
   @Provides
-  fun provideAppConfigDao(database: StreamRecDatabase, json: Json): AppConfigDao = AppConfigDaoImpl(database, json)
+  fun provideAppConfigDao(database: StreamRecDatabase): AppConfigDao = AppConfigDaoImpl(database)
 
   @Provides
   fun provideStreamerDao(database: StreamRecDatabase): StreamerDao {
