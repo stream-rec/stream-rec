@@ -126,7 +126,7 @@ class UploadActionRepository(
   suspend fun saveResult(uploadResult: UploadResult) {
     return withIOContext {
       uploadResultDao.saveUploadResult(uploadResult.toEntity())
-      val today = getTodayStart().toEpochMilliseconds()
+      val today = getTodayStart().epochSeconds
       val todayStats = statsDao.getStatsFromTo(today, today + 86400000).firstOrNull()
 
       if (todayStats == null) {
