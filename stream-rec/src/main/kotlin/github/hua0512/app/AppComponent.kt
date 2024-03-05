@@ -26,6 +26,7 @@
 
 package github.hua0512.app
 
+import app.cash.sqldelight.db.SqlDriver
 import dagger.Component
 import github.hua0512.repo.AppConfigRepository
 import github.hua0512.repo.stats.SummaryStatsRepo
@@ -40,6 +41,8 @@ import javax.inject.Singleton
   modules = [AppModule::class, DatabaseModule::class, RepositoryModule::class]
 )
 interface AppComponent {
+
+  fun getSqlDriver(): SqlDriver
 
   fun getAppConfig(): App
 
