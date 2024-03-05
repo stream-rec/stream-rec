@@ -33,6 +33,7 @@ import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.repo.*
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
+import github.hua0512.repo.uploads.UploadRepo
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
 import kotlinx.serialization.json.Json
@@ -65,7 +66,7 @@ class AppModule {
 
   @Provides
   @Singleton
-  fun provideUploadService(app: App, uploadRepo: UploadActionRepository): UploadService = UploadService(app, uploadRepo)
+  fun provideUploadService(app: App, uploadRepo: UploadRepo): UploadService = UploadService(app, uploadRepo)
 
   @Provides
   fun provideLocalDataSource(appDao: AppConfigDao, json: Json, streamerDao: StreamerDao): LocalDataSource =

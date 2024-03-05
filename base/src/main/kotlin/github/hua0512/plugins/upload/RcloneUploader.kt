@@ -54,7 +54,13 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
         throw UploadInvalidArgumentsException("invalid remote path: $it")
       }
     }
-    val startInstant = Instant.fromEpochSeconds(uploadData.streamStartTime)
+
+    if (!uploadData.isStreamDataInitialized()) {
+      throw UploadInvalidArgumentsException("stream data not initialized : $uploadData")
+    }
+
+    val startInstant =
+      Instant.fromEpochSeconds(uploadData.streamStartTime ?: throw UploadInvalidArgumentsException("stream start time not initialized"))
     val streamer = uploadData.streamer
     val replacedRemote = remotePath.run {
       replacePlaceholders(streamer, uploadData.streamTitle, startInstant)
@@ -79,7 +85,9 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
       throw UploadFailedException("rclone failed with exit code: $resultCode\n$errorBuilder", uploadData.filePath)
     } else {
       logger.info("rclone: ${uploadData.filePath} finished")
-      UploadResult(time = Clock.System.now().epochSeconds, isSuccess = true, filePath = uploadData.filePath)
+      UploadResult(time = Clock.System.now().epochSeconds, isSuccess = true).also {
+        it.uploadData = uploadData
+      }
     }
   }
 }

@@ -56,6 +56,23 @@ interface UploadResultDao {
 
 
   /**
+   * Finds all upload results.
+   *
+   * @return List of UploadResultEntity
+   */
+  fun getAllUploadResults(): List<UploadResultEntity>
+
+  /**
+   * Finds all upload results paginated.
+   *
+   * @param page The page number
+   * @param pageSize The page size
+   * @return List of UploadResultEntity
+   */
+  fun getAllUploadResultsPaginated(page: Int, pageSize: Int): List<UploadResultEntity>
+
+
+  /**
    * Finds all failed upload results.
    *
    * @return List of UploadResultEntity

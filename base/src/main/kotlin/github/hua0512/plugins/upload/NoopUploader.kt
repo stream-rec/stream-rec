@@ -38,7 +38,9 @@ import kotlinx.datetime.Clock
  */
 class NoopUploader(app: App) : Upload(app, null) {
   override suspend fun upload(uploadData: UploadData): UploadResult {
-    return UploadResult(time = Clock.System.now().epochSeconds, isSuccess = true, message = "Noop upload completed", filePath = uploadData.filePath)
+    return UploadResult(time = Clock.System.now().epochSeconds, isSuccess = true, message = "Noop upload completed").also {
+      it.uploadData = uploadData
+    }
   }
 
 }

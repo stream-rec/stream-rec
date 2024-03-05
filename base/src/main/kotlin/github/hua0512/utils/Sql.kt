@@ -81,14 +81,3 @@ fun Streamer.toStreamerEntity(json: Json) = StreamerEntity(
   download_config = downloadConfig?.let { json.encodeToString<DownloadConfig>(it) },
   app_config_id = 1
 )
-
-
-fun UploadResultEntity.toUploadResult() = UploadResult(
-  id = id,
-  time = time,
-  isSuccess = isSuccess.boolean,
-  message = message,
-  filePath = filePath,
-).also {
-  it.uploadDataId = uploadDataId
-}

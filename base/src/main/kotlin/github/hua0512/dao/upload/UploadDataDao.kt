@@ -36,8 +36,11 @@ import github.hua0512.utils.UploadDataEntity
  */
 interface UploadDataDao {
 
+  fun getAllUploadData(): List<UploadDataEntity>
+  fun getAllUploadDataPaginated(page: Int, pageSize: Int): List<UploadDataEntity>
+  fun getUploadDatasByStatus(status: Long): List<UploadDataEntity>
   fun getUploadDataById(id: UploadDataId): UploadDataEntity?
-  fun insertUploadData(title: String, streamer: String, startTime: Long, filePath: String, streamDataId: StreamDataId, status: Long): Long
+  fun insertUploadData(filePath: String, streamDataId: StreamDataId, status: Long): Long
   fun updateUploadDataStatus(id: UploadDataId, status: Long)
   fun deleteUploadData(id: UploadDataId)
 }

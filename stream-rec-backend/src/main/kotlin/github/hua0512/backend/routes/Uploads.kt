@@ -24,40 +24,39 @@
  * SOFTWARE.
  */
 
-package github.hua0512.app
+package github.hua0512.backend.routes
 
-import app.cash.sqldelight.db.SqlDriver
-import dagger.Component
-import github.hua0512.repo.AppConfigRepository
-import github.hua0512.repo.stats.SummaryStatsRepo
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.streamer.StreamerRepo
+import github.hua0512.data.UploadResultId
 import github.hua0512.repo.uploads.UploadRepo
-import github.hua0512.services.DownloadService
-import github.hua0512.services.UploadService
-import javax.inject.Singleton
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 
-@Singleton
-@Component(
-  modules = [AppModule::class, DatabaseModule::class, RepositoryModule::class]
-)
-interface AppComponent {
 
-  fun getSqlDriver(): SqlDriver
+fun Route.uploadRoute(repo: UploadRepo) {
+  route("/uploads") {
+    get {
+      try {
+        call.respond(repo.getAllUploadData())
+      } catch (e: Exception) {
+        call.respond(HttpStatusCode.InternalServerError, "Failed to get upload results : ${e.message}")
+      }
+    }
 
-  fun getAppConfig(): App
-
-  fun getDownloadService(): DownloadService
-
-  fun getUploadService(): UploadService
-
-  fun getAppConfigRepository(): AppConfigRepository
-
-  fun getStatsRepository(): SummaryStatsRepo
-
-  fun getStreamerRepo(): StreamerRepo
-
-  fun getStreamDataRepo(): StreamDataRepo
-
-  fun getUploadRepo(): UploadRepo
+    delete("{id}") {
+      val id = call.parameters["id"]?.toLongOrNull()
+      if (id == null) {
+        call.respond(HttpStatusCode.BadRequest)
+        return@delete
+      }
+      try {
+        repo.deleteUploadResult(UploadResultId(id))
+      } catch (e: Exception) {
+        call.respond(HttpStatusCode.InternalServerError, "Failed to delete upload result : ${e.message}")
+        return@delete
+      }
+      call.respond(HttpStatusCode.OK)
+    }
+  }
 }

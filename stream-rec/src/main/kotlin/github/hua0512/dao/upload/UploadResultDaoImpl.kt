@@ -47,6 +47,14 @@ class UploadResultDaoImpl(override val database: StreamRecDatabase) : BaseDaoImp
     return queries.selectAllFailedUploadResult().asFlow().mapToList(Dispatchers.IO)
   }
 
+  override fun getAllUploadResults(): List<UploadResultEntity> {
+    return queries.selectAllUploadResult().executeAsList()
+  }
+
+  override fun getAllUploadResultsPaginated(page: Int, pageSize: Int): List<UploadResultEntity> {
+    return queries.selectAllUploadResultPaginated(pageSize.toLong(), (page - 1L) * pageSize).executeAsList()
+  }
+
   override fun findFailedUploadResults(): List<UploadResultEntity> {
     return queries.selectAllFailedUploadResult().executeAsList()
   }
@@ -56,8 +64,13 @@ class UploadResultDaoImpl(override val database: StreamRecDatabase) : BaseDaoImp
   }
 
   override fun saveUploadResult(uploadResult: UploadResultEntity): Long {
-    queries.insertUploadResult(uploadResult.time, uploadResult.isSuccess, uploadResult.message, uploadResult.filePath, uploadResult.uploadDataId)
-    return queries.getUploadResultIdByTimeAndPath(uploadResult.time, uploadResult.filePath).executeAsOne()
+    queries.insertUploadResult(
+      uploadResult.time,
+      uploadResult.isSuccess,
+      uploadResult.message,
+      uploadResult.uploadDataId
+    )
+    return queries.getUploadResultIdByTimeAndUploadDataId(uploadResult.time, uploadResult.uploadDataId).executeAsOne()
   }
 
   override fun deleteUploadResult(uploadResultId: UploadResultId) {

@@ -314,22 +314,17 @@ class DownloadService(
           val finalList = streamDataList.flatMap { streamData ->
             listOfNotNull(
               UploadData(
-                streamTitle = streamData.title,
-                streamer = streamData.streamer.name,
-                streamStartTime = streamData.dateStart!!,
                 filePath = streamData.outputFilePath
               ).also {
                 it.streamDataId = streamData.id
-
+                it.streamData = streamData
               },
               streamData.danmuFilePath?.let { danmu ->
                 UploadData(
-                  streamTitle = streamData.title,
-                  streamer = streamData.streamer.name,
-                  streamStartTime = streamData.dateStart!!,
                   filePath = danmu
                 ).also {
                   it.streamDataId = streamData.id
+                  it.streamData = streamData
                 }
               }
             )

@@ -28,6 +28,7 @@ package github.hua0512.data.upload
 
 import github.hua0512.utils.UploadResultEntity
 import github.hua0512.utils.asLong
+import github.hua0512.utils.boolean
 
 
 /**
@@ -39,10 +40,33 @@ data class UploadResult(
   val time: Long,
   val isSuccess: Boolean = false,
   val message: String = "",
-  val filePath: String = "",
 ) {
 
-  var uploadDataId: Long = 0
+  var uploadDataId: Long = -1
+    get() {
+      if (!isUploadDataInitialized()) {
+        return field
+      }
+      return uploadData.id
+    }
+
+  @Transient
+  lateinit var uploadData: UploadData
+
+  val filePath
+    get() = uploadData.filePath
+
+  constructor(entity: UploadResultEntity) : this(
+    entity.id,
+    entity.time,
+    entity.isSuccess.boolean,
+    entity.message.toString(),
+  ) {
+    uploadDataId = entity.uploadDataId
+  }
+
+
+  fun isUploadDataInitialized() = !::uploadData.isInitialized
 
   fun toEntity(): UploadResultEntity {
     return UploadResultEntity(
@@ -50,7 +74,6 @@ data class UploadResult(
       time = time,
       isSuccess = isSuccess.asLong,
       message = message,
-      filePath = filePath,
       uploadDataId = uploadDataId
     )
   }

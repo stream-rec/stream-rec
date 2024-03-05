@@ -26,28 +26,38 @@
 
 package github.hua0512.data.upload
 
+import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.UploadDataEntity
 import github.hua0512.utils.asLong
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class UploadData(
   var id: Long = 0,
-  val streamTitle: String,
-  val streamer: String,
-  // epoch seconds of the stream start time
-  val streamStartTime: Long,
   val filePath: String,
   var status: Boolean = false,
 ) {
   var streamDataId: Long = -1
+    get() = if (isStreamDataInitialized()) streamData.id else field
+
+  @Transient
+  lateinit var streamData: StreamData
+
+  var streamTitle = ""
+    get() = streamData.title
+
+  var streamer = ""
+    get() = streamData.streamerName
+
+  var streamStartTime: Long = 0
+    get() = streamData.dateStart!!
+
+  fun isStreamDataInitialized() = ::streamData.isInitialized
 
   fun toEntity(): UploadDataEntity {
     return UploadDataEntity(
       id = id,
-      streamTitle = streamTitle,
-      streamer = streamer,
-      streamStartTime = streamStartTime,
       filePath = filePath,
       status = status.asLong,
       streamDataId = streamDataId

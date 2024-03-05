@@ -102,9 +102,6 @@ deleteStreamData : DELETE FROM StreamData WHERE id = ?;
 
 CREATE TABLE IF NOT EXISTS UploadData (
   id INTEGER PRIMARY KEY,
-  streamTitle TEXT NOT NULL,
-  streamer TEXT NOT NULL,
-  streamStartTime INTEGER NOT NULL,
   filePath TEXT NOT NULL,
   streamDataId INTEGER,
   status INTEGER NOT NULL DEFAULT 0,
@@ -115,8 +112,7 @@ CREATE TABLE IF NOT EXISTS UploadResult (
   id INTEGER PRIMARY KEY,
   time INTEGER NOT NULL,
   isSuccess INTEGER NOT NULL DEFAULT 0,
-  message TEXT NOT NULL,
-  filePath TEXT NOT NULL,
+  message TEXT,
   uploadDataId INTEGER NOT NULL,
   FOREIGN KEY(uploadDataId) REFERENCES UploadData(id) ON DELETE CASCADE
 );
@@ -157,10 +153,11 @@ deleteUploadAction : DELETE FROM UploadAction WHERE id = ?;
 -- UploadData Queries
 
 -- Selects all records from the UploadData table and orders them by streamStartTime in descending order.
-selectAllUploadData : SELECT * FROM UploadData ORDER BY streamStartTime DESC;
+selectAllUploadData : SELECT * FROM UploadData;
 
--- Selects all records from the UploadData table where the status is 0 and orders them by streamStartTime in descending order.
-selectAllFailedUploadData : SELECT * FROM UploadData WHERE status = 0 ORDER BY streamStartTime DESC;
+selectAllUploadDataPaginated : SELECT * FROM UploadData  LIMIT ? OFFSET ?;
+
+selectAllUploadDataByStatus : SELECT * FROM UploadData WHERE status = ?;
 
 -- Selects a record from the UploadData table where the id matches the provided parameter.
 getUploadDataById : SELECT * FROM UploadData WHERE id = ?;
@@ -172,9 +169,9 @@ updateUploadDataStatus : UPDATE UploadData SET status = ? WHERE id = ?;
 deleteUploadData : DELETE FROM UploadData WHERE id = ?;
 
 -- Inserts a new record into the UploadData table with the provided streamTitle, streamer, streamStartTime, filePath, and streamDataId values.
-insertUploadData : INSERT INTO UploadData(streamTitle, streamer, streamStartTime, filePath, streamDataId, status) VALUES(?, ?, ?, ?, ?, ?);
+insertUploadData : INSERT INTO UploadData(filePath, streamDataId, status) VALUES( ?, ?, ?);
 
-getUploadDataIdByTimeAndPath : SELECT id FROM UploadData WHERE streamStartTime = ? AND filePath = ? LIMIT 1;
+getUploadDataIdByPath : SELECT id FROM UploadData WHERE filePath = ? LIMIT 1;
 
 
 -- UploadActionFiles Queries
@@ -203,20 +200,23 @@ getUploadActionByUploadDataId : SELECT * FROM UploadActionFiles LEFT JOIN Upload
 -- Selects all records from the UploadResult table and orders them by time in descending order.
 selectAllUploadResult : SELECT * FROM UploadResult ORDER BY time DESC;
 
+-- Selects all records from the UploadResult table and orders them by time in descending order with pagination.
+selectAllUploadResultPaginated : SELECT * FROM UploadResult ORDER BY time DESC LIMIT ? OFFSET ?;
+
 -- Selects all records from the UploadResult table where the isSuccess is 0 and orders them by time in descending order.
 selectAllFailedUploadResult : SELECT * FROM UploadResult WHERE isSuccess = 0 ORDER BY time DESC;
 
 -- Selects a record from the UploadResult table where the id matches the provided parameter.
 getUploadResultById : SELECT * FROM UploadResult WHERE id = ?;
 
-findResultsByFilePath : SELECT * FROM UploadResult WHERE filePath = ?;
+findResultsByFilePath : SELECT * FROM UploadResult LEFT JOIN UploadData ON UploadResult.uploadDataId = UploadData.id WHERE UploadData.filePath = ? ORDER BY time DESC;
 
 findResultsByUploadDataId : SELECT * FROM UploadResult WHERE id = ? ORDER BY time DESC;
 
 -- Inserts a new record into the UploadResult table with the provided time, isSuccess, message, and filePath values.
-insertUploadResult : INSERT INTO UploadResult(time, isSuccess, message, filePath, uploadDataId) VALUES(?, ?, ?, ?, ?);
+insertUploadResult : INSERT INTO UploadResult(time, isSuccess, message, uploadDataId) VALUES(?, ?, ?, ?);
 
-getUploadResultIdByTimeAndPath : SELECT id FROM UploadResult WHERE time =  ? AND filePath = ? LIMIT 1;
+getUploadResultIdByTimeAndUploadDataId : SELECT id FROM UploadResult WHERE time = ? AND uploadDataId = ? LIMIT 1;
 
 -- Deletes a record from the UploadResult table where the id matches the provided parameter.
 deleteUploadResult : DELETE FROM UploadResult WHERE id = ?;

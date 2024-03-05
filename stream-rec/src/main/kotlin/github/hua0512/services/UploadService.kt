@@ -39,7 +39,7 @@ import github.hua0512.plugins.base.Upload
 import github.hua0512.plugins.upload.NoopUploader
 import github.hua0512.plugins.upload.RcloneUploader
 import github.hua0512.plugins.upload.UploadInvalidArgumentsException
-import github.hua0512.repo.UploadActionRepository
+import github.hua0512.repo.uploads.UploadRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,7 +67,7 @@ import kotlin.time.toDuration
  * @author hua0512
  * @date : 2024/2/19 15:30
  */
-class UploadService(val app: App, private val uploadRepo: UploadActionRepository) {
+class UploadService(val app: App, private val uploadRepo: UploadRepo) {
 
   /**
    * A shared flow of upload actions. This flow is used to emit upload actions to be processed.
@@ -176,7 +176,7 @@ class UploadService(val app: App, private val uploadRepo: UploadActionRepository
    */
   suspend fun upload(uploadAction: UploadAction) {
     val saved = withIOContext {
-      uploadRepo.save(uploadAction)
+      uploadRepo.saveAction(uploadAction)
     }
     uploadAction.id = saved.value
     uploadActionFlow.emit(uploadAction)
@@ -227,8 +227,7 @@ class UploadService(val app: App, private val uploadRepo: UploadActionRepository
         emit(
           UploadResult(
             time = Clock.System.now().epochSeconds, isSuccess = false, message = "Invalid arguments for upload: ${e.message}",
-            filePath = file.filePath
-          ).also { it.uploadDataId = file.id }
+          ).also { it.uploadData = file }
         )
       } catch (e: Exception) {
         // other exceptions,
@@ -241,8 +240,7 @@ class UploadService(val app: App, private val uploadRepo: UploadActionRepository
               time = Clock.System.now().epochSeconds,
               isSuccess = false,
               message = "Failed to upload file : $e",
-              filePath = file.filePath
-            ).also { it.uploadDataId = file.id })
+            ).also { it.uploadData = file })
         }
       }
     }
