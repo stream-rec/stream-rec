@@ -42,7 +42,7 @@ import github.hua0512.plugins.danmu.douyin.DouyinDanmu
 import github.hua0512.plugins.danmu.huya.HuyaDanmu
 import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
-import github.hua0512.repo.StreamDataRepository
+import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
@@ -65,7 +65,7 @@ class DownloadService(
   private val app: App,
   private val uploadService: UploadService,
   private val repo: StreamerRepo,
-  private val streamDataRepository: StreamDataRepository,
+  private val streamDataRepository: StreamDataRepo,
 ) {
 
   companion object {
@@ -364,10 +364,10 @@ class DownloadService(
             }
           }
           // files + danmu files
-          val finalList: String = streamDataList.flatMap { streamData ->
+          val finalList: String = streamDataList.flatMap { stream ->
             listOfNotNull(
-              streamData.outputFilePath,
-              streamData.danmuFilePath
+              stream.outputFilePath,
+              stream.danmuFilePath
             )
           }.run {
             if (this.isEmpty()) {

@@ -36,6 +36,11 @@ import github.hua0512.utils.StreamDataEntity
  */
 interface StreamDataDao {
 
+
+  suspend fun getAllStreamData(): List<StreamDataEntity>
+
+  suspend fun getAllStreamDataPaged(page: Int, pageSize: Int): List<StreamDataEntity>
+
   suspend fun findStreamDataByStreamerId(streamerId: StreamerId): List<StreamDataEntity>
 
   suspend fun saveStreamData(streamData: StreamDataEntity): Long

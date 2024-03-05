@@ -148,11 +148,13 @@ abstract class Download(val app: App, val danmu: Danmu) {
     var pb: ProgressBar? = null
 
     var streamData: StreamData? = StreamData(
-      streamer = streamer,
       title = downloadTitle,
       outputFilePath = outputPath.pathString,
       danmuFilePath = if (isDanmuEnabled) danmuPath else null,
-    )
+      streamerId = streamer.id
+    ).also {
+      it.streamer = streamer
+    }
 
     // download engine
     val engine = getDownloadEngine().apply {

@@ -24,47 +24,36 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.backend.routes
 
-import github.hua0512.utils.StreamDataEntity
-import kotlinx.serialization.Serializable
+import github.hua0512.data.StreamDataId
+import github.hua0512.repo.streamer.StreamDataRepo
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 
-@Serializable
-data class StreamData(
-  val title: String,
-  val dateStart: Long? = null,
-  val dateEnd: Long? = null,
-  val outputFilePath: String,
-  val danmuFilePath: String? = null,
-  val streamerId: Long? = 0,
-) {
-  var id: Long = -1
+/**
+ * @author hua0512
+ * @date : 2024/3/5 11:58
+ */
 
-  lateinit var streamer: Streamer
+fun Route.streamsRoute(streamsRepo: StreamDataRepo) {
+  route("/streams") {
+    get {
+      streamsRepo.getAllStreamData().let {
+        call.respond(it)
+      }
+    }
 
-  constructor(entity: StreamDataEntity) : this(
-    entity.title,
-    entity.dateStart,
-    entity.dateEnd,
-    entity.outputFilePath,
-    entity.danmuFilePath,
-    entity.streamerId
-  ) {
-    id = entity.id
+    delete("{id}") {
+      val id = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond("Invalid id")
+      try {
+        streamsRepo.deleteStreamData(StreamDataId(id))
+      } catch (e: Exception) {
+        call.respond(HttpStatusCode.InternalServerError, "Failed to delete stream data")
+        return@delete
+      }
+    }
   }
-
-  fun toStreamDataEntity() = StreamDataEntity(
-    title = title,
-    dateStart = dateStart,
-    dateEnd = dateEnd,
-    outputFilePath = outputFilePath,
-    danmuFilePath = danmuFilePath,
-    streamerId = streamerId,
-    id = id
-  )
-
-  override fun toString(): String {
-    return "StreamData(id=$id, title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, streamer=$streamer)"
-  }
-
 }
