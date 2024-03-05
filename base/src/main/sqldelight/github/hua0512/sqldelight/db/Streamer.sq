@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS streamer(
   platform INTEGER NOT NULL,
   is_live INTEGER NOT NULL DEFAULT 0,
   is_active INTEGER NOT NULL DEFAULT 0,
---   Storing download config is a headache, but it's the easiest way to store it for now
+--   Storing download config is a headache, but storing as a string it's the easiest way to store it for now
   download_config TEXT,
   description TEXT,
   avatar TEXT,

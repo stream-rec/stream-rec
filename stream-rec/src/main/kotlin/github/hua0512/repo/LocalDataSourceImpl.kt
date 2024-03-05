@@ -32,7 +32,9 @@ import github.hua0512.data.VideoFormat
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DouyinConfigGlobal
 import github.hua0512.data.config.HuyaConfigGlobal
-import github.hua0512.utils.*
+import github.hua0512.utils.boolean
+import github.hua0512.utils.toStreamer
+import github.hua0512.utils.withIOContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.io.path.Path
@@ -92,24 +94,22 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json,
   override suspend fun saveAppConfig(appConfig: AppConfig) {
     return appConfig.run {
       dao.upsert(
-        AppConfigEntity(
-          1L,
-          engine,
-          danmu.asLong,
-          outputFolder,
-          outputFileName,
-          outputFileFormat.name,
-          minPartSize,
-          maxPartSize,
-          maxPartDuration,
-          maxDownloadRetries.toLong(),
-          downloadRetryDelay,
-          maxConcurrentDownloads.toLong(),
-          maxConcurrentUploads.toLong(),
-          deleteFilesAfterUpload.asLong,
-          json.encodeToString(huyaConfig),
-          json.encodeToString(douyinConfig),
-        )
+        engine,
+        danmu,
+        outputFolder,
+        outputFileName,
+        outputFileFormat.name,
+        minPartSize,
+        maxPartSize,
+        maxPartDuration,
+        maxDownloadRetries.toLong(),
+        downloadRetryDelay,
+        maxConcurrentDownloads.toLong(),
+        maxConcurrentUploads.toLong(),
+        deleteFilesAfterUpload,
+        json.encodeToString(huyaConfig),
+        json.encodeToString(douyinConfig),
+        1,
       )
     }
   }

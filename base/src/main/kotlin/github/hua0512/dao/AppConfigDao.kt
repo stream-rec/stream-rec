@@ -29,6 +29,7 @@ package github.hua0512.dao
 import github.hua0512.utils.AppConfigEntity
 
 /**
+ * App config dao
  * @author hua0512
  * @date : 2024/2/19 0:10
  */
@@ -37,6 +38,23 @@ interface AppConfigDao {
 
   suspend fun getLatestAppConfig(): AppConfigEntity?
 
-  suspend fun upsert(appConfig: AppConfigEntity)
+  suspend fun upsert(
+    engine: String?,
+    danmu: Boolean?,
+    outputFolder: String?,
+    outputFileName: String?,
+    outputFileFormat: String?,
+    minPartSize: Long?,
+    maxPartSize: Long?,
+    maxPartDuration: Long?,
+    maxDownloadRetries: Long?,
+    downloadRetryDelay: Long?,
+    maxConcurrentDownloads: Long?,
+    maxConcurrentUploads: Long?,
+    deleteFilesAfterUpload: Boolean?,
+    huyaConfig: String?,
+    douyinConfig: String?,
+    id: Long,
+  )
 
 }
