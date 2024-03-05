@@ -104,6 +104,7 @@ class Douyin(app: App, danmu: DouyinDanmu) : Download(app, danmu) {
       logger.debug("${streamer.name} unable to get live title")
       return false
     }
+    streamer.streamTitle = downloadTitle
 
     val status = liveData["status"]?.jsonPrimitive?.int ?: run {
       logger.debug("${streamer.name} unable to get live status")

@@ -116,23 +116,33 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id")
         return@put
       }
-      val streamer = call.receive<Streamer>()
+      val streamer: Streamer
+      try {
+        streamer = call.receive<Streamer>()
+        logger.info("server updating streamer : {}", streamer)
+      } catch (e: Exception) {
+        logger.error("Error receiving streamer", e)
+        call.respond(HttpStatusCode.BadRequest, "Invalid streamer: ${e.message}")
+        return@put
+      }
       if (streamer.id != id) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
         return@put
       }
       repo.findStreamerByUrl(streamer.url) ?: run {
         logger.error("Error updating streamer, not found in db : {}", streamer)
-        call.respond(HttpStatusCode.BadRequest)
+        call.respond(HttpStatusCode.BadRequest, "Streamer not found in db")
         return@put
       }
 
       try {
+        logger.info("server updating streamer : {}", streamer)
+        streamer.id = id
         repo.insertOrUpdate(streamer)
         call.respond(streamer)
       } catch (e: Exception) {
         logger.error("Error updating streamer", e)
-        call.respond(HttpStatusCode.BadRequest)
+        call.respond(HttpStatusCode.InternalServerError, "Error updating streamer: ${e.message}")
       }
     }
 
@@ -146,7 +156,7 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         repo.deleteStreamerById(id)
       } catch (e: Exception) {
         logger.error("Error deleting streamer", e)
-        call.respond(HttpStatusCode.BadRequest)
+        call.respond(HttpStatusCode.InternalServerError, "Error deleting streamer: ${e.message}")
         return@delete
       }
       call.respond(HttpStatusCode.OK)

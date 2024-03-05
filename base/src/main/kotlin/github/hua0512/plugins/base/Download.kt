@@ -34,10 +34,7 @@ import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.NativeDownloadEngine
-import github.hua0512.utils.deleteFile
-import github.hua0512.utils.rename
-import github.hua0512.utils.replacePlaceholders
-import github.hua0512.utils.withIORetry
+import github.hua0512.utils.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
@@ -111,7 +108,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
 
     val fileFormat = downloadConfig.outputFileExtension ?: app.config.outputFileFormat
     val fileExtension = fileFormat.name
-    val cookie = downloadConfig.cookies ?: when (streamer.platform) {
+    val cookie = downloadConfig.cookies?.nonEmptyOrNull() ?: when (streamer.platform) {
       StreamingPlatform.HUYA -> app.config.huyaConfig.cookies
       StreamingPlatform.DOUYIN -> app.config.douyinConfig.cookies
       else -> null
@@ -274,19 +271,11 @@ abstract class Download(val app: App, val danmu: Danmu) {
 
   private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String): Path {
     val timestamp = Clock.System.now()
-    val outputFileName = (if (downloadConfig.outputFileName.isNullOrEmpty()) {
-      app.config.outputFileName
-    } else {
-      downloadConfig.outputFileName!!
-    }).run {
+    val outputFileName = (downloadConfig.outputFileName?.nonEmptyOrNull() ?: app.config.outputFileName).run {
       formatToFriendlyFileName(this.replacePlaceholders(streamer.name, downloadTitle, timestamp) + ".$fileExtension.part")
     }
 
-    val outputFolder = (if (downloadConfig.outputFolder.isNullOrEmpty()) {
-      app.config.outputFolder
-    } else {
-      downloadConfig.outputFolder!!
-    }).run {
+    val outputFolder = (downloadConfig.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).run {
       val str = if (endsWith(File.separator)) this else this + File.separator
       // system file separator
       str.replacePlaceholders(streamer.name, downloadTitle, timestamp)

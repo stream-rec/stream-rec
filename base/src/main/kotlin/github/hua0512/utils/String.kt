@@ -58,3 +58,13 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant = 
     acc.replace(entry.key, entry.value)
   }
 }
+
+
+/**
+ * Extension function for the String class to check if the string is empty.
+ *
+ * @return The original string if it's not empty, or null if it is.
+ */
+fun String.nonEmptyOrNull(): String? {
+  return this.ifEmpty { null }
+}
