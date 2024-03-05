@@ -43,7 +43,6 @@ import github.hua0512.plugins.danmu.huya.HuyaDanmu
 import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
 import github.hua0512.repo.StreamDataRepository
-import github.hua0512.repo.StreamerRepository
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
@@ -241,7 +240,7 @@ class DownloadService(
               }
             }
             if (streamsData == null) {
-              logger.error("${streamer.name} unable to get stream data (${retryCount + 1})/$maxRetry)")
+              logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
               break
             }
             // save the stream data to the database
@@ -259,7 +258,7 @@ class DownloadService(
           }
         } else {
           if (streamDataList.isNotEmpty()) {
-            logger.error("${streamer.name} unable to get stream data ($retryCount/$maxRetry)")
+            logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
           } else {
             logger.info("${streamer.name} is not live")
           }
