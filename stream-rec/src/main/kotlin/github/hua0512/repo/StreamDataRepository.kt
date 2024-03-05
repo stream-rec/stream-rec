@@ -28,21 +28,34 @@ package github.hua0512.repo
 
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
+import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.StreamDataId
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.utils.StatsEntity
 import github.hua0512.utils.getTodayStart
+import github.hua0512.utils.toStreamer
 import github.hua0512.utils.withIOContext
+import kotlinx.serialization.json.Json
 
 /**
  * @author hua0512
  * @date : 2024/2/19 10:21
  */
-class StreamDataRepository(val dao: StreamDataDao, val statsDao: StatsDao) : StreamDataRepo {
+class StreamDataRepository(val dao: StreamDataDao, private val streamerDao: StreamerDao, private val statsDao: StatsDao, private val json: Json) :
+  StreamDataRepo {
 
-  override suspend fun getAllStreamData(): List<StreamData> = withIOContext { dao.getAllStreamData().map { StreamData(it) } }
+  override suspend fun getAllStreamData(): List<StreamData> = withIOContext {
+    dao.getAllStreamData().map { streamData ->
+      StreamData(streamData).also {
+        streamerDao.getStreamerById(StreamerId(it.streamerId!!))?.toStreamer(json)?.let { streamer ->
+          it.streamer = streamer
+        }
+      }
+    }
+  }
+
   override suspend fun getStremDataPaged(page: Int, pageSize: Int): List<StreamData> {
     return withIOContext { dao.getAllStreamDataPaged(page, pageSize).map { StreamData(it) } }
   }
