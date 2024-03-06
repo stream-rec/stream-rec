@@ -41,6 +41,9 @@ data class UploadData(
   var streamDataId: Long = -1
     get() = if (isStreamDataInitialized()) streamData.id else field
 
+  var streamerId: Long = -1
+    get() = if (isStreamDataInitialized()) streamData.streamerId else field
+
   @Transient
   lateinit var streamData: StreamData
 

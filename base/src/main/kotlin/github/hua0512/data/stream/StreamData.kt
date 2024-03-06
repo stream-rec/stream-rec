@@ -37,7 +37,7 @@ data class StreamData(
   val dateEnd: Long? = null,
   val outputFilePath: String,
   val danmuFilePath: String? = null,
-  val streamerId: Long? = 0,
+  val streamerId: Long = 0,
 ) {
   var id: Long = -1
 
