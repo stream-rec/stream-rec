@@ -153,7 +153,7 @@ deleteUploadAction : DELETE FROM UploadAction WHERE id = ?;
 -- UploadData Queries
 
 -- Selects all records from the UploadData table and orders them by streamStartTime in descending order.
-selectAllUploadData : SELECT * FROM UploadData;
+selectAllUploadData : SELECT * FROM UploadData ORDER BY id DESC;
 
 selectAllUploadDataPaginated : SELECT * FROM UploadData  LIMIT ? OFFSET ?;
 
