@@ -40,7 +40,8 @@ sealed class UploadConfig(
     override var rcloneOperation: String = "",
     override var remotePath: String = "",
     override var args: List<String> = emptyList(),
-  ) : UploadConfig(), RcloneConfigDTO
+  ) : UploadConfig(UploadPlatform.RCLONE), RcloneConfigDTO {
+  }
 
   @Serializable
   data object NoopConfig : UploadConfig()

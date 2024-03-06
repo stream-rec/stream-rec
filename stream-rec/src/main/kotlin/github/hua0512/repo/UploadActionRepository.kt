@@ -98,6 +98,8 @@ class UploadActionRepository(
           filePath = uploadData.filePath,
           status = uploadData.status.boolean
         ).apply {
+          uploadAction = getUploadActionIdByUploadDataId(UploadDataId(uploadData.id))
+            ?: throw IllegalStateException("Upload action not found for upload data: $this")
           streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
             ?: throw IllegalStateException("Stream data not found for upload data: $this")
         }
@@ -119,6 +121,18 @@ class UploadActionRepository(
         UploadResult(result).apply {
           populateUploadData(UploadDataId(result.uploadDataId))
         }
+      }
+    }
+  }
+
+  override suspend fun getUploadAction(id: UploadActionId): UploadAction? {
+    return withIOContext {
+      uploadActionDao.getUploadActionById(id)?.let { uploadAction ->
+        UploadAction(
+          id = uploadAction.id,
+          time = uploadAction.time,
+          uploadConfig = json.decodeFromString(UploadConfig.serializer(), uploadAction.uploadConfig)
+        )
       }
     }
   }
@@ -148,6 +162,7 @@ class UploadActionRepository(
           it.status.asLong
         )
         it.id = uploadDataId
+        it.uploadAction = uploadAction
         // insert into upload action files
         uploadActionFilesDao.insertUploadActionFiles(actionId, UploadDataId(uploadDataId))
       }
@@ -204,6 +219,8 @@ class UploadActionRepository(
           filePath = uploadData.filePath,
           status = uploadData.status.boolean
         ).also {
+          it.uploadAction =
+            getUploadActionIdByUploadDataId(uploadDataId) ?: throw IllegalStateException("Upload action not found for upload data: $this")
           it.streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
             ?: throw IllegalStateException("Stream data not found for upload data: $this")
         }

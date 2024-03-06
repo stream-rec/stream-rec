@@ -56,7 +56,21 @@ data class UploadData(
   var streamStartTime: Long = 0
     get() = streamData.dateStart!!
 
+  var uploadActionId: Long = -1
+    get() = if (isUploadActionInitialized()) uploadAction.id else field
+
+  var uploadPlatform = ""
+    get() = if (isUploadActionInitialized()) uploadAction.uploadConfig.platform.toString() else field
+
+  var uploadConfig: UploadConfig = UploadConfig.NoopConfig
+    get() = if (isUploadActionInitialized()) uploadAction.uploadConfig else field
+
+  @Transient
+  lateinit var uploadAction: UploadAction
+
   fun isStreamDataInitialized() = ::streamData.isInitialized
+
+  fun isUploadActionInitialized() = ::uploadAction.isInitialized
 
   fun toEntity(): UploadDataEntity {
     return UploadDataEntity(
