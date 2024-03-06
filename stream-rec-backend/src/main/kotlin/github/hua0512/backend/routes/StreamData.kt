@@ -46,6 +46,16 @@ fun Route.streamsRoute(streamsRepo: StreamDataRepo) {
       }
     }
 
+    get("{id}") {
+      val id = call.parameters["id"]?.toLongOrNull() ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid id")
+      val streamData = streamsRepo.getStreamDataById(StreamDataId(id))
+      if (streamData == null) {
+        call.respond(HttpStatusCode.NotFound, "Stream data not found")
+      } else {
+        call.respond(streamData)
+      }
+    }
+
     delete("{id}") {
       val id = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid id")
       try {
