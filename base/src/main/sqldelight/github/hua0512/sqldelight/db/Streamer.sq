@@ -211,7 +211,7 @@ getUploadResultById : SELECT * FROM UploadResult WHERE id = ?;
 
 findResultsByFilePath : SELECT * FROM UploadResult LEFT JOIN UploadData ON UploadResult.uploadDataId = UploadData.id WHERE UploadData.filePath = ? ORDER BY time DESC;
 
-findResultsByUploadDataId : SELECT * FROM UploadResult WHERE id = ? ORDER BY time DESC;
+findResultsByUploadDataId : SELECT * FROM UploadResult WHERE uploadDataId = ? ORDER BY time DESC;
 
 -- Inserts a new record into the UploadResult table with the provided time, isSuccess, message, and filePath values.
 insertUploadResult : INSERT INTO UploadResult(time, isSuccess, message, uploadDataId) VALUES(?, ?, ?, ?);

@@ -85,7 +85,7 @@ class UploadActionRepository(
     uploadResultDao.streamAllFailedUploadResult().map {
       it.map { result ->
         UploadResult(result).apply {
-          populateUploadData()
+          populateUploadData(UploadDataId(result.uploadDataId))
         }
       }
     }.flowOn(Dispatchers.IO)
@@ -117,7 +117,7 @@ class UploadActionRepository(
     return withIOContext {
       uploadResultDao.getAllUploadResults().map { result ->
         UploadResult(result).apply {
-          populateUploadData()
+          populateUploadData(UploadDataId(result.uploadDataId))
         }
       }
     }
@@ -204,7 +204,8 @@ class UploadActionRepository(
           filePath = uploadData.filePath,
           status = uploadData.status.boolean
         ).also {
-          it.streamDataId = it.streamDataId
+          it.streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
+            ?: throw IllegalStateException("Stream data not found for upload data: $this")
         }
       }
     }
@@ -266,14 +267,24 @@ class UploadActionRepository(
     }
   }
 
+  override suspend fun getUploadDataResults(uploadDataId: UploadDataId): List<UploadResult> {
+    return withIOContext {
+      uploadResultDao.findUploadResultByUploadId(uploadDataId).map { result ->
+        UploadResult(result).apply {
+          populateUploadData(uploadDataId)
+        }
+      }
+    }
+  }
+
   /**
    * Retrieves upload data for a given upload result.
    * This function retrieves upload data from the database using the upload data ID associated with the upload result.
    * @return UploadData or null if no upload data with the given ID exists
    * @throws IllegalStateException if upload data is not found for the result
    */
-  private suspend fun UploadResult.populateUploadData() {
-    uploadData = getUploadData(UploadDataId(uploadDataId)) ?: throw IllegalStateException("Upload data not found for result: $this")
+  private suspend fun UploadResult.populateUploadData(id: UploadDataId) {
+    uploadData = getUploadData(id) ?: throw IllegalStateException("Upload data not found for result: $this")
   }
 
 }

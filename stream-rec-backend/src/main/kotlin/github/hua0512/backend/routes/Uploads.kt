@@ -26,7 +26,7 @@
 
 package github.hua0512.backend.routes
 
-import github.hua0512.data.UploadResultId
+import github.hua0512.data.UploadDataId
 import github.hua0512.repo.uploads.UploadRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -44,6 +44,44 @@ fun Route.uploadRoute(repo: UploadRepo) {
       }
     }
 
+    get("{id}") {
+      val id = call.parameters["id"]?.toLongOrNull()
+      if (id == null) {
+        call.respond(HttpStatusCode.BadRequest, "Invalid id")
+        return@get
+      }
+      try {
+        val uploadData = repo.getUploadData(UploadDataId(id))
+        if (uploadData == null) {
+          call.respond(HttpStatusCode.NotFound, "Upload data not found")
+        } else {
+          call.respond(uploadData)
+        }
+      } catch (e: Exception) {
+        call.respond(HttpStatusCode.InternalServerError, "Failed to get upload data : ${e.message}")
+      }
+    }
+
+    get("{id}/results") {
+      val id = call.parameters["id"]?.toLongOrNull()
+      if (id == null) {
+        call.respond(HttpStatusCode.BadRequest, "Invalid id")
+        return@get
+      }
+      try {
+        val uploadData = repo.getUploadData(UploadDataId(id))
+        if (uploadData == null) {
+          call.respond(HttpStatusCode.NotFound, "Upload data not found")
+        } else {
+          val results = repo.getUploadDataResults(UploadDataId(id))
+          call.respond(results)
+        }
+      } catch (e: Exception) {
+        call.respond(HttpStatusCode.InternalServerError, "Failed to get upload results : ${e.message}")
+      }
+    }
+
+
     delete("{id}") {
       val id = call.parameters["id"]?.toLongOrNull()
       if (id == null) {
@@ -51,7 +89,7 @@ fun Route.uploadRoute(repo: UploadRepo) {
         return@delete
       }
       try {
-        repo.deleteUploadResult(UploadResultId(id))
+        repo.deleteUploadData(UploadDataId(id))
       } catch (e: Exception) {
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete upload result : ${e.message}")
         return@delete
