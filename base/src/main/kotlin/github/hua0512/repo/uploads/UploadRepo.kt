@@ -43,6 +43,7 @@ interface UploadRepo {
   suspend fun saveResult(uploadResult: UploadResult)
   suspend fun getUploadData(uploadDataId: UploadDataId): UploadData?
   suspend fun changeUploadDataStatus(uploadDataId: Long, status: Boolean)
+  suspend fun deleteUploadData(id: UploadDataId)
   suspend fun deleteUploadResult(id: UploadResultId)
   suspend fun getUploadActionIdByUploadDataId(id: UploadDataId): UploadAction?
 }

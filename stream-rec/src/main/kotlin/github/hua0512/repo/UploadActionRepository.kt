@@ -225,6 +225,12 @@ class UploadActionRepository(
     }
   }
 
+  override suspend fun deleteUploadData(id: UploadDataId) {
+    return withIOContext {
+      uploadDataDao.deleteUploadData(id)
+    }
+  }
+
   /**
    * Deletes an upload result.
    *
