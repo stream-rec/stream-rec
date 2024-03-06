@@ -49,8 +49,8 @@ class SummaryStatsRepoImpl(val statsDao: StatsDao) : SummaryStatsRepo {
 
   override fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
     val stats = statsDao.getStatsFromTo(from, to)
-    val fromDate = Instant.fromEpochMilliseconds(from)
-    val toDate = Instant.fromEpochMilliseconds(to)
+    val fromDate = Instant.fromEpochSeconds(from)
+    val toDate = Instant.fromEpochSeconds(to)
 
     val diff = toDate - fromDate
 
