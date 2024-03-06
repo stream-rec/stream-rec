@@ -28,12 +28,16 @@ package github.hua0512.repo
 
 import github.hua0512.data.config.AppConfig
 import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.services.FileWatcherService
 import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.flow.Flow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
+ * App config repository.
+ *
+ * Configuration via TOML file's been removed since 0.5.0 version.
+ * Now it's only possible to configure the app via web interface.
  * @author hua0512
  * @date : 2024/2/19 0:42
  */
@@ -41,58 +45,39 @@ class AppConfigRepository(
   private val localDataSource: LocalDataSource,
   private val tomlDataSource: TomlDataSource,
   private val streamerRepo: StreamerRepo,
-) {
-
-  private lateinit var fileWatcherService: FileWatcherService
+) : AppConfigRepo {
 
   companion object {
 
     private val logger: Logger = LoggerFactory.getLogger(AppConfigRepository::class.java)
-    var path: String = ""
   }
 
-  suspend fun getAppConfig(): AppConfig {
+  override suspend fun getAppConfig(): AppConfig {
     return withIOContext {
       try {
-        // prioritize toml data source over local data source
-        tomlDataSource.getAppConfig().also { appConfig ->
-          path = tomlDataSource.getPath()
-
-          // save to local data source
-          localDataSource.saveAppConfig(appConfig)
-
-          // update streamers
-          val streamers = appConfig.streamers
-          streamers.forEach {
-            streamerRepo.insertOrUpdate(it)
-          }
-        }
+        val streamers = streamerRepo.getStreamers()
+        localDataSource.getAppConfig().copy(streamers = streamers)
       } catch (e: Exception) {
-        logger.error("Failed to get app config from toml data source, falling back to local", e)
-        // if toml data source fails, fallback to local data source
-        val localAppConfig = localDataSource.getAppConfig()?.also {
-          path = localDataSource.getPath()
-        }
-        // if local data source fails, return a new instance of AppConfig
-        localAppConfig ?: AppConfig().also {
-          logger.warn("Failed to get app config from local data source, returning a new instance of AppConfig")
+        logger.error("Failed to get app config from local data source, falling back to default", e)
+        AppConfig()
+      }
+    }
+  }
+
+  override suspend fun saveAppConfig(appConfig: AppConfig) {
+    withIOContext {
+      localDataSource.saveAppConfig(appConfig)
+      val currentStreamers = streamerRepo.getStreamers()
+      appConfig.streamers.forEach {
+        val current = currentStreamers.find { s -> s.id == it.id }
+        if (current == null || current != it) {
+          streamerRepo.insertOrUpdate(it)
         }
       }
     }
   }
 
-  fun getFileWatcherService(): FileWatcherService? {
-    if (path.isEmpty()) {
-      logger.debug("Path is empty, probably because we are using a local data source")
-      return null
-    }
-    if (::fileWatcherService.isInitialized) {
-      return fileWatcherService
-    }
-    return FileWatcherService(path).also {
-      fileWatcherService = it
-    }
+  override suspend fun streamAppConfig(): Flow<AppConfig> {
+    return localDataSource.streamAppConfig()
   }
-
-
 }

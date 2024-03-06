@@ -28,6 +28,7 @@ package github.hua0512.app
 
 import app.cash.sqldelight.db.SqlDriver
 import dagger.Component
+import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.AppConfigRepository
 import github.hua0512.repo.stats.SummaryStatsRepo
 import github.hua0512.repo.streamer.StreamDataRepo
@@ -51,7 +52,7 @@ interface AppComponent {
 
   fun getUploadService(): UploadService
 
-  fun getAppConfigRepository(): AppConfigRepository
+  fun getAppConfigRepository(): AppConfigRepo
 
   fun getStatsRepository(): SummaryStatsRepo
 

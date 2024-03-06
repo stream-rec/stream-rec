@@ -42,14 +42,14 @@ import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
 import github.hua0512.backend.backendServer
 import github.hua0512.data.config.AppConfig
-import github.hua0512.repo.AppConfigRepository
+import github.hua0512.repo.AppConfigRepo
+import github.hua0512.repo.LocalDataSource
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.nio.file.ClosedWatchServiceException
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -60,7 +60,6 @@ class Application {
       initLogger()
     }
 
-    @OptIn(FlowPreview::class)
     @JvmStatic
     fun main(args: Array<String>) {
       runBlocking {
@@ -72,22 +71,15 @@ class Application {
           initAppConfig(appConfigRepository, app)
         }
 
-
-        val fileWatcherService = appConfigRepository.getFileWatcherService()?.also {
-          launch {
-            try {
-              it.watchFileModifications()
-            } catch (e: ClosedWatchServiceException) {
-              logger.error("FileWatcherService was interrupted", e)
+        launch {
+          appConfigRepository.streamAppConfig()
+            .flowOn(Dispatchers.IO)
+            .collect {
+              appConfig = it
+              logger.info("App config updated: $it")
+              app.config = it
+              app.downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
             }
-          }
-
-          launch {
-            it.eventFlow.debounce(500).collect {
-              logger.info("Config file changed, reloading")
-              appConfig = initAppConfig(appConfigRepository, app)
-            }
-          }
         }
 
         val downloadService = appComponent.getDownloadService()
@@ -114,7 +106,6 @@ class Application {
           logger.info("Shutting down...")
           server.stop(1000, 1000)
           appComponent.getSqlDriver().closeDriver()
-          fileWatcherService?.close()
           app.releaseAll()
           cancel("Application is shutting down")
           logger.info("Shutdown complete")
@@ -145,12 +136,8 @@ class Application {
         start()
       }
 
-      val configParentPath = System.getenv("CONFIG_PATH").run {
-        if (this != null) {
-          Path(this).parent
-        } else {
-          Path(System.getProperty("user.dir"))
-        }
+      val configParentPath = LocalDataSource.getDefaultPath().run {
+        Path(this).parent.parent
       }
       val logFile = configParentPath.resolve("logs/run.log").pathString
       println("Logging to : $logFile")
@@ -186,7 +173,7 @@ class Application {
       }
     }
 
-    private suspend fun initAppConfig(repo: AppConfigRepository, app: App): AppConfig {
+    private suspend fun initAppConfig(repo: AppConfigRepo, app: App): AppConfig {
       return repo.getAppConfig().also {
         with(app) {
           config = it

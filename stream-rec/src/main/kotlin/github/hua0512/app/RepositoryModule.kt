@@ -55,7 +55,7 @@ class RepositoryModule {
     localDataSource: LocalDataSource,
     tomlDataSource: TomlDataSource,
     streamerRepository: StreamerRepo,
-  ): AppConfigRepository =
+  ): AppConfigRepo =
     AppConfigRepository(localDataSource, tomlDataSource, streamerRepository)
 
   @Provides

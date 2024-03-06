@@ -42,7 +42,7 @@ import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.dao.stream.StreamerDaoImpl
 import github.hua0512.dao.upload.*
 import github.hua0512.logger
-import github.hua0512.repo.TomlDataSource
+import github.hua0512.repo.LocalDataSource
 import java.util.*
 import javax.inject.Singleton
 import kotlin.io.path.Path
@@ -59,9 +59,9 @@ class DatabaseModule {
   @Provides
   @Singleton
   fun provideSqlDriver(): SqlDriver {
-    val configPath = TomlDataSource.getDefaultTomlPath()
-    val path = Path(configPath).parent.resolve("db/stream-rec.db").also {
+    val path = Path(LocalDataSource.getDefaultPath()).also {
       it.createParentDirectories()
+      logger.info("Database path: ${it.pathString}")
     }
     return LogSqliteDriver(
       sqlDriver = JdbcSqliteDriver("jdbc:sqlite:${path.pathString}", Properties().apply {
