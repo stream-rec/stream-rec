@@ -27,6 +27,7 @@
 package github.hua0512.backend.routes
 
 import github.hua0512.data.UploadDataId
+import github.hua0512.logger
 import github.hua0512.repo.uploads.UploadRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -40,6 +41,7 @@ fun Route.uploadRoute(repo: UploadRepo) {
       try {
         call.respond(repo.getAllUploadData())
       } catch (e: Exception) {
+        logger.error("Failed to get upload data : ${e.message}")
         call.respond(HttpStatusCode.InternalServerError, "Failed to get upload results : ${e.message}")
       }
     }
@@ -58,6 +60,7 @@ fun Route.uploadRoute(repo: UploadRepo) {
           call.respond(uploadData)
         }
       } catch (e: Exception) {
+        logger.error("Failed to get upload data : ${e.message}")
         call.respond(HttpStatusCode.InternalServerError, "Failed to get upload data : ${e.message}")
       }
     }
@@ -77,6 +80,7 @@ fun Route.uploadRoute(repo: UploadRepo) {
           call.respond(results)
         }
       } catch (e: Exception) {
+        logger.error("Failed to get upload results : ${e.message}")
         call.respond(HttpStatusCode.InternalServerError, "Failed to get upload results : ${e.message}")
       }
     }
@@ -91,6 +95,7 @@ fun Route.uploadRoute(repo: UploadRepo) {
       try {
         repo.deleteUploadData(UploadDataId(id))
       } catch (e: Exception) {
+        logger.error("Failed to delete upload data : ${e.message}")
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete upload result : ${e.message}")
         return@delete
       }
