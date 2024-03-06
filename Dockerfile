@@ -15,4 +15,6 @@ RUN apk add --no-cache rclone
 # Install SQLite
 RUN apk add --no-cache sqlite
 
+EXPOSE 12555
+
 CMD ["java", "-jar", "app.jar"]
