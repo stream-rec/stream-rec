@@ -29,12 +29,14 @@ package github.hua0512.data.upload
 import github.hua0512.utils.UploadResultEntity
 import github.hua0512.utils.asLong
 import github.hua0512.utils.boolean
+import kotlinx.serialization.Serializable
 
 
 /**
  * @author hua0512
  * @date : 2024/2/9 19:16
  */
+@Serializable
 data class UploadResult(
   var id: Long = 0,
   val time: Long,
