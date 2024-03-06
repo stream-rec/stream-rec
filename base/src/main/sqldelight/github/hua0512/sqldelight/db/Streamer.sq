@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS StreamData (
   dateEnd INTEGER,
   outputFilePath TEXT NOT NULL,
   danmuFilePath TEXT,
-  streamerId INTEGER,
+  streamerId INTEGER NOT NULL,
   FOREIGN KEY(streamerId) REFERENCES streamer(streamer_id) ON DELETE CASCADE
 );
 
