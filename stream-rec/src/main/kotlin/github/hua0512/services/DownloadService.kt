@@ -160,10 +160,6 @@ class DownloadService(
     val newJob = SupervisorJob(coroutineContext[Job])
     val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
     newScope.launch {
-      if (streamer.isLive) {
-        logger.error("${streamer.name} is already live")
-        return@launch
-      }
       val plugin = getPlaformDownloader(streamer.platform)
 
       val streamDataList = mutableListOf<StreamData>()

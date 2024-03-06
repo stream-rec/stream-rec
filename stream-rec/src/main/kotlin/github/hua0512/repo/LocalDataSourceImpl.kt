@@ -32,63 +32,59 @@ import github.hua0512.data.VideoFormat
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DouyinConfigGlobal
 import github.hua0512.data.config.HuyaConfigGlobal
-import github.hua0512.utils.boolean
-import github.hua0512.utils.toStreamer
-import github.hua0512.utils.withIOContext
+import github.hua0512.utils.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlin.io.path.Path
-import kotlin.io.path.pathString
 
 /**
  * @author hua0512
  * @date : 2024/2/18 23:55
  */
 class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json, private val streamerDao: StreamerDao) : LocalDataSource {
+  override suspend fun streamAppConfig(): Flow<AppConfig> {
+    return dao.streamLatestAppConfig()?.map {
+      it.toAppConfig()
+    } ?: emptyFlow()
+  }
 
-  override suspend fun getAppConfig(): AppConfig? {
+  private suspend fun AppConfigEntity.toAppConfig(): AppConfig {
+    return AppConfig(
+      engine,
+      danmu.boolean,
+      outputFolder?.nonEmptyOrNull() ?: System.getProperty("user.dir"),
+      outputFileName.nonEmptyOrNull() ?: "{streamer}-{title}-%yyyy-%MM-%dd %HH:%mm:%ss",
+      VideoFormat.format(outputFileFormat) ?: VideoFormat.flv,
+      minPartSize,
+      maxPartSize,
+      maxPartDuration,
+      maxDownloadRetries.toInt(),
+      downloadRetryDelay,
+      maxConcurrentDownloads.toInt(),
+      maxConcurrentUploads.toInt(),
+      deleteFilesAfterUpload.boolean,
+      huyaConfig?.run {
+        json.decodeFromString<HuyaConfigGlobal>(this)
+      } ?: HuyaConfigGlobal(),
+      douyinConfig?.run {
+        json.decodeFromString<DouyinConfigGlobal>(this)
+      } ?: DouyinConfigGlobal(),
+      streamerDao.getAllStreamers().map { it.toStreamer(json) }
+    ).apply {
+      this.id = this@toAppConfig.id
+    }
+  }
+
+  override suspend fun getAppConfig(): AppConfig {
     return withIOContext {
-      dao.getLatestAppConfig()?.let { config ->
-        val id = config.id
-
-        val huyaConfig = config.huyaConfig?.run {
-          json.decodeFromString<HuyaConfigGlobal>(this)
-        } ?: HuyaConfigGlobal()
-
-        val douyinConfig = config.douyinConfig?.run {
-          json.decodeFromString<DouyinConfigGlobal>(this)
-        } ?: DouyinConfigGlobal()
-
-        val streamers = streamerDao.getAllStreamers().map { it.toStreamer(json) }
-
-        AppConfig(
-          config.engine ?: "ffmpeg",
-          config.danmu!!.boolean,
-          config.outputFolder!!,
-          config.outputFileName!!,
-          VideoFormat.format(config.outputFileFormat!!) ?: VideoFormat.flv,
-          config.minPartSize ?: 20000000,
-          config.maxPartSize ?: 2621440000,
-          config.maxPartDuration,
-          config.maxDownloadRetries?.toInt() ?: 3,
-          config.downloadRetryDelay ?: 10,
-          config.maxConcurrentDownloads?.toInt() ?: 5,
-          config.maxConcurrentUploads?.toInt() ?: 3,
-          config.deleteFilesAfterUpload?.boolean ?: true,
-          huyaConfig,
-          douyinConfig,
-          streamers,
-        ).also {
-          it.id = id
-        }
-      }
+      dao.getLatestAppConfig()?.toAppConfig() ?: AppConfig()
     }
   }
 
   override fun getPath(): String {
-    val configPath = TomlDataSource.getDefaultTomlPath()
-    val path = Path(configPath).parent.resolve("db/stream-rec.db")
-    return path.pathString
+    return LocalDataSource.getDefaultPath()
   }
 
   override suspend fun saveAppConfig(appConfig: AppConfig) {

@@ -24,40 +24,21 @@
  * SOFTWARE.
  */
 
-package github.hua0512.dao
+package github.hua0512.repo
 
-import github.hua0512.utils.AppConfigEntity
+import github.hua0512.data.config.AppConfig
 import kotlinx.coroutines.flow.Flow
 
+
 /**
- * App config dao
  * @author hua0512
- * @date : 2024/2/19 0:10
+ * @date : 2024/3/6 22:41
  */
-interface AppConfigDao {
+interface AppConfigRepo {
 
+  suspend fun getAppConfig(): AppConfig
 
-  suspend fun getLatestAppConfig(): AppConfigEntity?
+  suspend fun saveAppConfig(appConfig: AppConfig)
 
-  suspend fun streamLatestAppConfig(): Flow<AppConfigEntity>?
-
-  suspend fun upsert(
-    engine: String,
-    danmu: Boolean,
-    outputFolder: String,
-    outputFileName: String,
-    outputFileFormat: String,
-    minPartSize: Long,
-    maxPartSize: Long,
-    maxPartDuration: Long?,
-    maxDownloadRetries: Long,
-    downloadRetryDelay: Long,
-    maxConcurrentDownloads: Long,
-    maxConcurrentUploads: Long,
-    deleteFilesAfterUpload: Boolean,
-    huyaConfig: String?,
-    douyinConfig: String?,
-    id: Long,
-  )
-
+  suspend fun streamAppConfig(): Flow<AppConfig>
 }

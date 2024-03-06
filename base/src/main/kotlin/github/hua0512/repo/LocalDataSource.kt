@@ -27,6 +27,9 @@
 package github.hua0512.repo
 
 import github.hua0512.data.config.AppConfig
+import kotlinx.coroutines.flow.Flow
+import kotlin.io.path.Path
+import kotlin.io.path.pathString
 
 /**
  * @author hua0512
@@ -34,7 +37,18 @@ import github.hua0512.data.config.AppConfig
  */
 interface LocalDataSource {
 
-  suspend fun getAppConfig(): AppConfig?
+  companion object {
+
+    fun getDefaultPath(): String {
+      val envPath = System.getenv("DB_PATH") ?: System.getProperty("user.dir")
+      val path = Path(envPath).resolve("db/stream-rec.db")
+      return path.pathString
+    }
+  }
+
+  suspend fun streamAppConfig(): Flow<AppConfig>
+
+  suspend fun getAppConfig(): AppConfig
 
   fun getPath(): String
 
