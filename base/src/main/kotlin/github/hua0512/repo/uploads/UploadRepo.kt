@@ -39,6 +39,8 @@ interface UploadRepo {
 
   suspend fun getAllUploadData(): List<UploadData>
   suspend fun getAllUploadResults(): List<UploadResult>
+
+  suspend fun getUploadAction(id: UploadActionId): UploadAction?
   suspend fun saveAction(uploadAction: UploadAction): UploadActionId
   suspend fun saveResult(uploadResult: UploadResult)
   suspend fun getUploadData(uploadDataId: UploadDataId): UploadData?
