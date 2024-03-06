@@ -209,7 +209,9 @@ abstract class Download(val app: App, val danmu: Danmu) {
     val downloadJob = async<StreamData?> { engine.run() }
 
     try {
-      streamData = downloadJob.await()
+      streamData = downloadJob.await()?.also {
+        it.streamer = streamer
+      }
     } catch (e: Exception) {
       logger.error("(${streamer.name}) download failed: $e")
     }
