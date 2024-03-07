@@ -10,4 +10,7 @@ allprojects {
       freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
     }
   }
+  tasks.withType<JavaCompile>().configureEach {
+    options.isFork = true
+  }
 }
