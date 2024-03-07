@@ -45,7 +45,6 @@ import github.hua0512.data.config.AppConfig
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -67,18 +66,20 @@ class Application {
         val app = appComponent.getAppConfig()
         val appConfigRepository = appComponent.getAppConfigRepository()
 
-        var appConfig = withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
           initAppConfig(appConfigRepository, app)
         }
 
-        launch {
+        launch(Dispatchers.IO) {
           appConfigRepository.streamAppConfig()
-            .flowOn(Dispatchers.IO)
             .collect {
-              appConfig = it
-              logger.info("App config updated: $it")
+              val previous = app.config
               app.config = it
-              app.downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
+              // update download semaphore
+              if (previous.maxConcurrentDownloads != it.maxConcurrentDownloads) {
+                app.downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
+              }
+              logger.info("App config updated: $it")
             }
         }
 
@@ -94,6 +95,7 @@ class Application {
 
         // start server
         val server = backendServer(
+          appComponent.getAppConfigRepository(),
           appComponent.getStreamerRepo(),
           appComponent.getStreamDataRepo(),
           appComponent.getStatsRepository(),

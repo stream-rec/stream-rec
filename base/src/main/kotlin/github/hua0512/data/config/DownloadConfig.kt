@@ -41,7 +41,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
   abstract override val maxBitRate: Int?
   abstract override val outputFolder: String?
   abstract override val outputFileName: String?
-  abstract override val outputFileExtension: VideoFormat?
+  abstract override val outputFileFormat: VideoFormat?
   abstract override val onPartedDownload: List<Action>?
   abstract override val onStreamingFinished: List<Action>?
 
@@ -55,7 +55,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null
     override var outputFileName: String? = null
-    override var outputFileExtension: VideoFormat? = null
+    override var outputFileFormat: VideoFormat? = null
     override var onPartedDownload: List<Action> = emptyList()
     override var onStreamingFinished: List<Action> = emptyList()
     override val partedDownloadRetry: Int? = null
@@ -74,7 +74,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null
     override var outputFileName: String? = null
-    override var outputFileExtension: VideoFormat? = null
+    override var outputFileFormat: VideoFormat? = null
     override var onPartedDownload: List<Action> = emptyList()
     override var onStreamingFinished: List<Action> = emptyList()
     override val partedDownloadRetry: Int? = null
@@ -86,7 +86,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
         it.danmu = false
         it.maxBitRate = 10000
         it.outputFolder = ""
-        it.outputFileExtension = VideoFormat.flv
+        it.outputFileFormat = VideoFormat.flv
         it.onPartedDownload = emptyList()
         it.onStreamingFinished = emptyList()
       }

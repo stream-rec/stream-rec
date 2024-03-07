@@ -27,7 +27,6 @@
 package github.hua0512.data.config
 
 import github.hua0512.data.VideoFormat
-import github.hua0512.data.stream.Streamer
 import kotlinx.serialization.Serializable
 
 /**
@@ -50,11 +49,8 @@ data class AppConfig(
   val maxConcurrentDownloads: Int = 5,
   val maxConcurrentUploads: Int = 3,
   val deleteFilesAfterUpload: Boolean = true,
-
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
-
-  val streamers: List<Streamer> = emptyList(),
 ) {
   var id: Long = 1
 }
