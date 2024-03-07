@@ -4,7 +4,7 @@ plugins {
   id("com.google.devtools.ksp") version "1.9.22-1.0.17"
 }
 
-project.ext.set("development", true)
+project.ext.set("development", false)
 
 group = "github.hua0512.streamrec"
 version = "0.5.0"
