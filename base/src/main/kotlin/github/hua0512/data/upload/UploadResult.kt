@@ -30,6 +30,7 @@ import github.hua0512.utils.UploadResultEntity
 import github.hua0512.utils.asLong
 import github.hua0512.utils.boolean
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 
 /**
