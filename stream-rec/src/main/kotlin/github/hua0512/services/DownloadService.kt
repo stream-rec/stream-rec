@@ -50,6 +50,7 @@ import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
@@ -96,7 +97,7 @@ class DownloadService(
     taskJobs.addAll(repo.getStreamersActive().map { it to async { downloadStreamer(it) } })
 
     launch {
-      repo.stream().distinctUntilChanged().collect { streamerList ->
+      repo.stream().distinctUntilChanged().buffer().collect { streamerList ->
         logger.info("Streamers changed, reloading...")
 
         // compare the new streamers with the old ones, first by url, then by entity equals
