@@ -27,12 +27,15 @@
 package github.hua0512.repo
 
 import github.hua0512.dao.AppConfigDao
-import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.VideoFormat
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DouyinConfigGlobal
 import github.hua0512.data.config.HuyaConfigGlobal
-import github.hua0512.utils.*
+import github.hua0512.logger
+import github.hua0512.utils.AppConfigEntity
+import github.hua0512.utils.boolean
+import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
@@ -78,7 +81,11 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json)
 
   override suspend fun getAppConfig(): AppConfig {
     return withIOContext {
-      dao.getLatestAppConfig()?.toAppConfig() ?: AppConfig()
+      dao.getLatestAppConfig()?.toAppConfig() ?: AppConfig().apply {
+        logger.info("First time running the app, creating default app config")
+        id = 1
+        saveAppConfig(this)
+      }
     }
   }
 
