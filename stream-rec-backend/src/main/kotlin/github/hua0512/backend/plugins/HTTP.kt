@@ -14,7 +14,8 @@ fun Application.configureHTTP() {
     allowHeader(HttpHeaders.Authorization)
     allowHeader(HttpHeaders.ContentType)
     allowHeader(HttpHeaders.AccessControlAllowOrigin)
-    allowHost("localhost:15275", schemes = listOf("http", "https"))
+    // allow any host
+    anyHost()
     logger.info("CORS enabled for $hosts")
   }
 }
