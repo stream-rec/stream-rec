@@ -41,7 +41,7 @@ interface LocalDataSource {
 
     fun getDefaultPath(): String {
       val envPath = System.getenv("DB_PATH") ?: System.getProperty("user.dir")
-      val path = Path(envPath).resolve("db/stream-rec.db")
+      val path = Path(envPath, "db").resolve("stream-rec.db")
       return path.pathString
     }
   }
