@@ -43,8 +43,6 @@ import org.slf4j.LoggerFactory
  */
 class AppConfigRepository(
   private val localDataSource: LocalDataSource,
-  private val tomlDataSource: TomlDataSource,
-  private val streamerRepo: StreamerRepo,
 ) : AppConfigRepo {
 
   companion object {
@@ -55,8 +53,7 @@ class AppConfigRepository(
   override suspend fun getAppConfig(): AppConfig {
     return withIOContext {
       try {
-        val streamers = streamerRepo.getStreamers()
-        localDataSource.getAppConfig().copy(streamers = streamers)
+        localDataSource.getAppConfig()
       } catch (e: Exception) {
         logger.error("Failed to get app config from local data source, falling back to default", e)
         AppConfig()
@@ -67,13 +64,6 @@ class AppConfigRepository(
   override suspend fun saveAppConfig(appConfig: AppConfig) {
     withIOContext {
       localDataSource.saveAppConfig(appConfig)
-      val currentStreamers = streamerRepo.getStreamers()
-      appConfig.streamers.forEach {
-        val current = currentStreamers.find { s -> s.id == it.id }
-        if (current == null || current != it) {
-          streamerRepo.insertOrUpdate(it)
-        }
-      }
     }
   }
 

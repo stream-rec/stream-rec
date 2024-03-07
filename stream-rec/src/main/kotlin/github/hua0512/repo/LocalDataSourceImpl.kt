@@ -43,14 +43,14 @@ import kotlinx.serialization.json.Json
  * @author hua0512
  * @date : 2024/2/18 23:55
  */
-class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json, private val streamerDao: StreamerDao) : LocalDataSource {
+class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json) : LocalDataSource {
   override suspend fun streamAppConfig(): Flow<AppConfig> {
     return dao.streamLatestAppConfig()?.map {
       it.toAppConfig()
     } ?: emptyFlow()
   }
 
-  private suspend fun AppConfigEntity.toAppConfig(): AppConfig {
+  private fun AppConfigEntity.toAppConfig(): AppConfig {
     return AppConfig(
       engine,
       danmu.boolean,
@@ -71,7 +71,6 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json,
       douyinConfig?.run {
         json.decodeFromString<DouyinConfigGlobal>(this)
       } ?: DouyinConfigGlobal(),
-      streamerDao.getAllStreamers().map { it.toStreamer(json) }
     ).apply {
       this.id = this@toAppConfig.id
     }

@@ -29,8 +29,10 @@ package github.hua0512.app
 import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.AppConfigDao
-import github.hua0512.dao.stream.StreamerDao
-import github.hua0512.repo.*
+import github.hua0512.repo.LocalDataSource
+import github.hua0512.repo.LocalDataSourceImpl
+import github.hua0512.repo.TomlDataSource
+import github.hua0512.repo.TomlDataSourceImpl
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.repo.uploads.UploadRepo
@@ -69,8 +71,7 @@ class AppModule {
   fun provideUploadService(app: App, uploadRepo: UploadRepo): UploadService = UploadService(app, uploadRepo)
 
   @Provides
-  fun provideLocalDataSource(appDao: AppConfigDao, json: Json, streamerDao: StreamerDao): LocalDataSource =
-    LocalDataSourceImpl(appDao, json, streamerDao)
+  fun provideLocalDataSource(appDao: AppConfigDao, json: Json): LocalDataSource = LocalDataSourceImpl(appDao, json)
 
   @Provides
   fun provideTomlDataSource(): TomlDataSource = TomlDataSourceImpl()

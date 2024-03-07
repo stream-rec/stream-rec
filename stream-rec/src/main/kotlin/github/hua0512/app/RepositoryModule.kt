@@ -53,10 +53,8 @@ class RepositoryModule {
   @Provides
   fun provideAppConfigRepository(
     localDataSource: LocalDataSource,
-    tomlDataSource: TomlDataSource,
-    streamerRepository: StreamerRepo,
   ): AppConfigRepo =
-    AppConfigRepository(localDataSource, tomlDataSource, streamerRepository)
+    AppConfigRepository(localDataSource)
 
   @Provides
   fun provideStreamerRepository(streamerDao: StreamerDao, json: Json): StreamerRepo = StreamerRepository(streamerDao, json)

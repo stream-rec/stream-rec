@@ -106,7 +106,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
       throw IllegalArgumentException("(${streamer.name}) download config is required")
     }
 
-    val fileFormat = downloadConfig.outputFileExtension ?: app.config.outputFileFormat
+    val fileFormat = downloadConfig.outputFileFormat ?: app.config.outputFileFormat
     val fileExtension = fileFormat.name
     val cookie = downloadConfig.cookies?.nonEmptyOrNull() ?: when (streamer.platform) {
       StreamingPlatform.HUYA -> app.config.huyaConfig.cookies

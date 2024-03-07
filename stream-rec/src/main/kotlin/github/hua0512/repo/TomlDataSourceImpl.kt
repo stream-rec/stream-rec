@@ -26,12 +26,7 @@
 
 package github.hua0512.repo
 
-import github.hua0512.data.stream.Streamer
-import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DownloadConfig
-import github.hua0512.plugins.download.Douyin
-import github.hua0512.plugins.download.Huya
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
@@ -42,6 +37,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
+ * TOML data source.
+ * @deprecated Configuration via TOML file's been removed since 0.5.0 version.
  * @author hua0512
  * @date : 2024/2/18 23:51
  */
@@ -70,10 +67,11 @@ class TomlDataSourceImpl() : TomlDataSource {
     }
 
     val parsedConfig = withContext(Dispatchers.IO) {
-      toml.decodeFromString<AppConfig>(content).run {
+      toml.decodeFromString<AppConfig>(content)
+//        .run {
         // correct the streamers
-        copy(streamers = correctStreamers(this))
-      }
+//        copy(streamers = correctStreamers(this))
+//      }
     }
     return parsedConfig
   }
@@ -84,28 +82,28 @@ class TomlDataSourceImpl() : TomlDataSource {
   /**
    * TODO : Use custom serializer to handle the platform and downloadConfig
    */
-  private fun correctStreamers(appConfig: AppConfig): List<Streamer> {
-    return appConfig.streamers.map { streamer ->
-      val patterns = mapOf(
-        StreamingPlatform.HUYA to Huya.REGEX,
-        StreamingPlatform.DOUYIN to Douyin.REGEX
-      )
-      val platform = when {
-        patterns[StreamingPlatform.HUYA]!!.toRegex().matches(streamer.url) -> StreamingPlatform.HUYA
-        patterns[StreamingPlatform.DOUYIN]!!.toRegex().matches(streamer.url) -> StreamingPlatform.DOUYIN
-        else -> throw Exception("Invalid url")
-      }
-      val downloadConfig = streamer.downloadConfig ?: when (platform) {
-        StreamingPlatform.HUYA -> DownloadConfig.HuyaDownloadConfig()
-        StreamingPlatform.DOUYIN -> DownloadConfig.DouyinDownloadConfig()
-        StreamingPlatform.UNKNOWN -> TODO()
-      }
-      streamer.copy(
-        platform = platform,
-        downloadConfig = downloadConfig
-      )
-    }
-  }
+//  private fun correctStreamers(appConfig: AppConfig): List<Streamer> {
+//    return appConfig.streamers.map { streamer ->
+//      val patterns = mapOf(
+//        StreamingPlatform.HUYA to Huya.REGEX,
+//        StreamingPlatform.DOUYIN to Douyin.REGEX
+//      )
+//      val platform = when {
+//        patterns[StreamingPlatform.HUYA]!!.toRegex().matches(streamer.url) -> StreamingPlatform.HUYA
+//        patterns[StreamingPlatform.DOUYIN]!!.toRegex().matches(streamer.url) -> StreamingPlatform.DOUYIN
+//        else -> throw Exception("Invalid url")
+//      }
+//      val downloadConfig = streamer.downloadConfig ?: when (platform) {
+//        StreamingPlatform.HUYA -> DownloadConfig.HuyaDownloadConfig()
+//        StreamingPlatform.DOUYIN -> DownloadConfig.DouyinDownloadConfig()
+//        StreamingPlatform.UNKNOWN -> TODO()
+//      }
+//      streamer.copy(
+//        platform = platform,
+//        downloadConfig = downloadConfig
+//      )
+//    }
+//  }
 
 
 }

@@ -50,6 +50,7 @@ import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -95,7 +96,7 @@ class DownloadService(
     taskJobs.addAll(repo.getStreamersActive().map { it to async { downloadStreamer(it) } })
 
     launch {
-      app.streamersFlow.collect { streamerList ->
+      repo.stream().distinctUntilChanged().collect { streamerList ->
         logger.info("Streamers changed, reloading...")
 
         // compare the new streamers with the old ones, first by url, then by entity equals
@@ -111,42 +112,35 @@ class DownloadService(
         }
 
         val oldStreamers = taskJobs.map { it.first }
-        val newStreamers = streamerList
 
-        val toCancel = oldStreamers.filter { old ->
-          newStreamers.none { new -> new.url == old.url }
-        }
         // cancel the jobs of the streamers that are not in the new list
-        toCancel.forEach { streamer ->
-          cancelJob(streamer, "delete")?.let {
-            repo.deleteStreamer(it)
-          }
+        oldStreamers.filter { old ->
+          streamerList.none { new -> new.url == old.url }
+        }.forEach { streamer ->
+          cancelJob(streamer, "delete")
         }
 
         // diff the new streamers with the old ones
         // if a streamer has the same url but different entity, cancel the old job and start a new one
         // if a streamer is not in the old list, start a new job
         // if a streamer is in both lists, do nothing
-        newStreamers.forEach { new ->
+        streamerList.forEach { new ->
           val old = oldStreamers.find { it.url == new.url }
           if (old != null) {
-            // preserve the id
-            new.id = old.id
             // preserve the isLive value
             new.isLive = old.isLive
+            // preserve title
+            new.streamTitle = old.streamTitle
+            // preserve avatar
+            new.avatar = old.avatar
             // if the entity is different, cancel the old job and start a new one
             if (old != new) {
               cancelJob(new, "entity changed")
-              // update db
-              repo.insertOrUpdate(new)
               if (validateActivation(new)) return@forEach
               startDownloadJob(new)
             }
           } else {
-            // update db
-            repo.insertOrUpdate(new)
-            val id = repo.findStreamerByUrl(new.url)?.id ?: -1
-            new.id = id
+            // if the streamer is not in the old list, start a new job
             if (validateActivation(new)) return@forEach
             startDownloadJob(new)
           }

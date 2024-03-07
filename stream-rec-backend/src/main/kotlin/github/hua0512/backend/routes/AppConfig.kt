@@ -24,45 +24,43 @@
  * SOFTWARE.
  */
 
-package github.hua0512.backend
+package github.hua0512.backend.routes
 
-import github.hua0512.backend.plugins.*
+import github.hua0512.data.config.AppConfig
+import github.hua0512.logger
 import github.hua0512.repo.AppConfigRepo
-import github.hua0512.repo.stats.SummaryStatsRepo
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.repo.uploads.UploadRepo
+import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import kotlinx.coroutines.CoroutineScope
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 
-fun CoroutineScope.backendServer(
-  appConfigRepo: AppConfigRepo,
-  streamerRepo: StreamerRepo,
-  streamDataRepo: StreamDataRepo,
-  statsRepo: SummaryStatsRepo,
-  uploadRepo: UploadRepo,
-): NettyApplicationEngine {
-  return embeddedServer(
-    Netty,
-    port = 12555,
-    host = "0.0.0.0",
-    module = { module(appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo) })
-}
+/**
+ * @author hua0512
+ * @date : 2024/3/7 0:06
+ */
 
-fun Application.module(
-  appConfigRepo: AppConfigRepo,
-  streamerRepo: StreamerRepo,
-  streamDataRepo: StreamDataRepo,
-  statsRepo: SummaryStatsRepo,
-  uploadRepo: UploadRepo,
-) {
-//  configureSecurity()
-  configureHTTP()
-  configureMonitoring()
-  configureSerialization()
-  configureSockets()
-  configureAdministration()
-  configureRouting(appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo)
+fun Route.configRoute(repo: AppConfigRepo) {
+  route("/config") {
+    get {
+      try {
+        val appConfig = repo.getAppConfig()
+        call.respond(appConfig)
+      } catch (e: Exception) {
+        logger.error("Failed to get app config", e)
+        call.respond(HttpStatusCode.InternalServerError, e.message ?: "Internal server error")
+      }
+    }
+
+    put {
+      try {
+        val appConfig = call.receive<AppConfig>()
+        repo.saveAppConfig(appConfig)
+        call.respond(HttpStatusCode.OK)
+      } catch (e: Exception) {
+        logger.error("Failed to update app config", e)
+        call.respond(HttpStatusCode.InternalServerError, e.message ?: "Internal server error")
+      }
+    }
+  }
 }

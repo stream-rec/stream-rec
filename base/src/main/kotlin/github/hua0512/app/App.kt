@@ -92,9 +92,7 @@ class App(val json: Json) {
       appFlow.value = value
     }
 
-  val appFlow = MutableStateFlow<AppConfig?>(null)
-
-  val streamersFlow = appFlow.map { it?.streamers ?: emptyList() }
+  private val appFlow = MutableStateFlow<AppConfig?>(null)
 
   val ffmepgPath = (System.getenv("FFMPEG_PATH") ?: "ffmpeg").run {
     // check if is windows

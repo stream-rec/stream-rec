@@ -102,6 +102,7 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest)
         return@post
       }
+
       val newStreamer = repo.findStreamerByUrl(streamer.url) ?: run {
         logger.error("Error saving streamer, not found in db : {}", streamer)
         call.respond(HttpStatusCode.InternalServerError, "Streamer not found in db")
@@ -136,7 +137,6 @@ fun Route.streamerRoute(repo: StreamerRepo) {
       }
 
       try {
-        logger.info("server updating streamer : {}", streamer)
         streamer.id = id
         repo.insertOrUpdate(streamer)
         call.respond(streamer)

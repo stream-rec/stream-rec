@@ -40,7 +40,7 @@ interface DownloadConfigDTO {
   val maxBitRate: Int?
   val outputFolder: String?
   val outputFileName: String?
-  val outputFileExtension: VideoFormat?
+  val outputFileFormat: VideoFormat?
   val partedDownloadRetry: Int?
 
 
