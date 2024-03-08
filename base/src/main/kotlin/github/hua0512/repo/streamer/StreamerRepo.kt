@@ -51,6 +51,8 @@ interface StreamerRepo {
   suspend fun deleteStreamer(oldStreamer: Streamer)
 
   suspend fun deleteStreamerById(id: Long)
-  suspend fun updateStreamerLiveStatus(id: Long, status: Boolean, streamTitle: String? = null)
+  suspend fun updateStreamerLiveStatus(id: Long, status: Boolean)
+
+  suspend fun updateStreamerStreamTitle(id: Long, streamTitle: String?)
   suspend fun updateStreamerAvatar(id: Long, avatar: String?)
 }

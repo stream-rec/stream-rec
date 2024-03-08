@@ -59,7 +59,8 @@ interface StreamerDao {
     isTemplate: Long, templateId: Long?,
   )
 
-  suspend fun updateStreamStatus(id: StreamerId, isLive: Long, streamTitle: String?)
+  suspend fun updateStreamStatus(id: StreamerId, isLive: Long)
+  suspend fun updateStreamTitle(id: StreamerId, streamTitle: String?)
 
   suspend fun updateAvatar(id: StreamerId, avatar: String?)
 

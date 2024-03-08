@@ -74,7 +74,9 @@ upsertStreamer {
     WHERE url = : url;
 }
 
-updateStreamStatus : UPDATE streamer SET is_live = ?, description = ? WHERE streamer_id = ?;
+updateStreamStatus : UPDATE streamer SET is_live = ? WHERE streamer_id = ?;
+
+updateStreamDescription : UPDATE streamer SET description = ? WHERE streamer_id = ?;
 
 updateStreamerAvatar : UPDATE streamer SET avatar = ? WHERE streamer_id = ?;
 
