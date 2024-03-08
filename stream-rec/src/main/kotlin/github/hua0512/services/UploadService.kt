@@ -40,7 +40,6 @@ import github.hua0512.plugins.upload.NoopUploader
 import github.hua0512.plugins.upload.RcloneUploader
 import github.hua0512.plugins.upload.UploadInvalidArgumentsException
 import github.hua0512.repo.uploads.UploadRepo
-import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -50,7 +49,6 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.nio.file.Path
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -109,7 +107,6 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
                 // get the upload data and update the status
                 val uploadDataId = it.uploadDataId
                 uploadRepo.changeUploadDataStatus(uploadDataId, true)
-                Path.of(it.filePath).deleteFile()
               }
             }
           }
