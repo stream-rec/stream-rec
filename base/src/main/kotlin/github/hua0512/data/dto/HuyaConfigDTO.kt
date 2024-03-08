@@ -35,5 +35,4 @@ interface HuyaConfigDTO {
   val primaryCdn: String?
   val maxBitRate: Int?
   val cookies: String?
-  val partedDownloadRetry: Int?
 }

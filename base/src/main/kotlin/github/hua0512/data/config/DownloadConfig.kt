@@ -27,6 +27,7 @@
 package github.hua0512.data.config
 
 import github.hua0512.data.VideoFormat
+import github.hua0512.data.dto.DouyinConfigDTO
 import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.dto.HuyaConfigDTO
 import github.hua0512.data.platform.DouyinQuality
@@ -56,15 +57,14 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override val outputFileFormat: VideoFormat? = null,
     override val onPartedDownload: List<Action> = emptyList(),
     override val onStreamingFinished: List<Action> = emptyList(),
-    override val partedDownloadRetry: Int? = null,
   ) : DownloadConfig
 
   @SerialName("douyin")
   @Serializable
   data class DouyinDownloadConfig(
     override val cookies: String? = null,
-    val quality: DouyinQuality? = null,
-  ) : DownloadConfig {
+    override val quality: DouyinQuality? = null,
+  ) : DownloadConfig, DouyinConfigDTO {
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null
@@ -72,7 +72,6 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override var outputFileFormat: VideoFormat? = null
     override var onPartedDownload: List<Action> = emptyList()
     override var onStreamingFinished: List<Action> = emptyList()
-    override var partedDownloadRetry: Int? = null
   }
 
 
@@ -91,7 +90,6 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override var outputFileFormat: VideoFormat? = null
     override var onPartedDownload: List<Action> = emptyList()
     override var onStreamingFinished: List<Action> = emptyList()
-    override var partedDownloadRetry: Int? = null
 
     companion object {
       val default = HuyaDownloadConfig(
