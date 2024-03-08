@@ -32,10 +32,10 @@ import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.StreamDataId
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
+import github.hua0512.data.stream.Streamer
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.utils.StatsEntity
 import github.hua0512.utils.getTodayStart
-import github.hua0512.utils.toStreamer
 import github.hua0512.utils.withIOContext
 import kotlinx.serialization.json.Json
 
@@ -105,8 +105,8 @@ class StreamDataRepository(val dao: StreamDataDao, private val streamerDao: Stre
   }
 
   private suspend fun StreamData.populateStreamer() {
-    streamer =
-      streamerDao.getStreamerById(StreamerId(streamerId!!))?.toStreamer(json) ?: throw IllegalStateException("Streamer not found for streamData $id")
+    streamer = streamerDao.getStreamerById(StreamerId(streamerId))?.let { Streamer(it, json) }
+      ?: throw IllegalStateException("Streamer not found for streamData $id")
   }
 
 }

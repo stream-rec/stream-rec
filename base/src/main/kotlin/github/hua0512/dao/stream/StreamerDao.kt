@@ -54,7 +54,7 @@ interface StreamerDao {
 
   suspend fun getStreamerById(id: StreamerId): StreamerEntity?
   suspend fun insertStreamer(
-    name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
+    name: String, url: String, platform: Long, lastStream: Long?, isLive: Long, isActive: Long, description: String?,
     avatar: String?, downloadConfig: String?,
     isTemplate: Long, templateId: Long?,
   )
@@ -64,11 +64,14 @@ interface StreamerDao {
 
   suspend fun updateAvatar(id: StreamerId, avatar: String?)
 
+  suspend fun updateLastStream(id: StreamerId, lastStream: Long)
+
   suspend fun updateStreamer(
-    name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
+    name: String, url: String, platform: Long, lastStream: Long?, isLive: Long, isActive: Long, description: String?,
     avatar: String?, downloadConfig: String?,
     isTemplate: Long, templateId: Long?,
   )
+
 
   suspend fun deleteStreamer(id: StreamerId)
 }
