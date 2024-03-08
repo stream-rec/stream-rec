@@ -35,11 +35,14 @@ import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.asLong
-import github.hua0512.utils.toStreamer
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.periodUntil
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -52,7 +55,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   override suspend fun stream() = dao.stream()
     .map { items ->
       items.map {
-        it.toStreamer(json).apply {
+        Streamer(it, json).apply {
           populateTemplateStreamer()
         }
       }
@@ -62,7 +65,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   override suspend fun getStreamers(): List<Streamer> {
     return withIOContext {
       dao.getAllStreamers().map {
-        it.toStreamer(json).apply {
+        Streamer(it, json).apply {
           populateTemplateStreamer()
         }
       }
@@ -72,7 +75,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   override suspend fun getAllTemplateStreamers(): List<Streamer> {
     return withIOContext {
       dao.getAllTemplateStreamers().map {
-        it.toStreamer(json).apply {
+        Streamer(it, json).apply {
           populateTemplateStreamer()
         }
       }
@@ -82,7 +85,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   override suspend fun getAllNonTemplateStreamers(): List<Streamer> {
     return withIOContext {
       dao.getAllNonTemplateStreamers().map {
-        it.toStreamer(json).apply {
+        Streamer(it, json).apply {
           populateTemplateStreamer()
         }
       }
@@ -91,8 +94,10 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
 
   override suspend fun getStreamerById(id: Long): Streamer? {
     return withIOContext {
-      dao.getStreamerById(StreamerId(id))?.toStreamer(json)?.apply {
-        populateTemplateStreamer()
+      dao.getStreamerById(StreamerId(id))?.let {
+        Streamer(it, json).apply {
+          populateTemplateStreamer()
+        }
       }
     }
   }
@@ -100,7 +105,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   override suspend fun getStreamersActive(): List<Streamer> {
     return withIOContext {
       dao.getAllStremersActive().map {
-        it.toStreamer(json).apply {
+        Streamer(it, json).apply {
           populateTemplateStreamer()
         }
       }
@@ -110,7 +115,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   override suspend fun getStreamersInactive(): List<Streamer> {
     return withIOContext {
       dao.getAllStremersInactive().map {
-        it.toStreamer(json).apply {
+        Streamer(it, json).apply {
           populateTemplateStreamer()
         }
       }
@@ -119,8 +124,10 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
 
   override suspend fun findStreamerByUrl(url: String): Streamer? {
     return withIOContext {
-      dao.findStreamerByUrl(url)?.toStreamer(json)?.apply {
-        populateTemplateStreamer()
+      dao.findStreamerByUrl(url)?.let {
+        Streamer(it, json).apply {
+          populateTemplateStreamer()
+        }
       }
     }
   }
@@ -141,6 +148,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
         name = newStreamer.name,
         url = newStreamer.url,
         platform = platform.id.toLong(),
+        lastStream = newStreamer.lastLiveTime,
         isLive = newStreamer.isLive.asLong,
         isActive = newStreamer.isActivated.asLong,
         avatar = newStreamer.avatar,
@@ -168,6 +176,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
         name = newStreamer.name,
         url = newStreamer.url,
         platform = platform.id.toLong(),
+        lastStream = newStreamer.lastLiveTime,
         isLive = newStreamer.isLive.asLong,
         isActive = newStreamer.isActivated.asLong,
         description = newStreamer.streamTitle,
@@ -214,6 +223,21 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   override suspend fun updateStreamerStreamTitle(id: Long, streamTitle: String?) {
     return withIOContext {
       dao.updateStreamTitle(StreamerId(id), streamTitle)
+    }
+  }
+
+  override suspend fun shouldUpdateStreamerLastLiveTime(id: Long, lastLiveTime: Long, currentLiveTime: Long): Boolean {
+    if (lastLiveTime == 0L) return false
+    val lastStream = Instant.fromEpochSeconds(lastLiveTime).toLocalDateTime(TimeZone.currentSystemDefault())
+    val currentStream = Instant.fromEpochSeconds(currentLiveTime).toLocalDateTime(TimeZone.currentSystemDefault())
+    // if current live time is in the same day, no need to update
+    // otherwise, update the last live time
+    return lastStream.date != currentStream.date
+  }
+
+  override suspend fun updateStreamerLastLiveTime(id: Long, lastLiveTime: Long) {
+    return withIOContext {
+      dao.updateLastStream(StreamerId(id), lastLiveTime)
     }
   }
 

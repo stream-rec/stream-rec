@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS streamer(
   name TEXT NOT NULL,
   url TEXT NOT NULL UNIQUE ON CONFLICT ABORT ,
   platform INTEGER NOT NULL,
+  last_stream INTEGER,
   is_live INTEGER NOT NULL DEFAULT 0,
   is_active INTEGER NOT NULL DEFAULT 0,
   template_id INTEGER DEFAULT -1,
@@ -62,23 +63,22 @@ getStreamerByName : SELECT * FROM streamer WHERE name = ?;
 getStreamerNameById : SELECT name FROM streamer WHERE streamer_id = ? LIMIT 1;
 findStreamerByUrl : SELECT * FROM streamer WHERE url = ?;
 
-insertStreamer : INSERT INTO streamer(name, url, platform, is_live, is_active, description, avatar, template_id, is_template,  download_config, app_config_id) VALUES(?, ?, ?,?,?,?, ?,?,?, ?, 1);
+insertStreamer : INSERT INTO streamer(name, url, platform, last_stream, is_live, is_active, description, avatar, template_id, is_template,  download_config, app_config_id) VALUES(?,?, ?, ?,?,?,?, ?,?,?, ?, 1);
 
 
 
 upsertStreamer {
-    INSERT OR IGNORE INTO streamer (name, url, platform, is_live, is_active,description, is_template, template_id, avatar, download_config, app_config_id)
-    VALUES (:name, :url, :platform, :is_live, :is_active, :description, :is_template,:template_id,:avatar,:download_config, 1);
+    INSERT OR IGNORE INTO streamer (name, url, platform, last_stream, is_live, is_active,description, is_template, template_id, avatar, download_config, app_config_id)
+    VALUES (:name, :url, :platform, :last_stream, :is_live, :is_active, :description, :is_template,:template_id,:avatar,:download_config, 1);
     UPDATE streamer
-    SET name = :name, url = :url, platform = :platform, is_live = :is_live, is_active = :is_active, is_template = :is_template, template_id = :template_id, avatar = :avatar, description = :description, download_config = :download_config, app_config_id = 1
+    SET name = :name, url = :url, platform = :platform,last_stream = :last_stream, is_live = :is_live, is_active = :is_active, is_template = :is_template, template_id = :template_id, avatar = :avatar, description = :description, download_config = :download_config, app_config_id = 1
     WHERE url = : url;
 }
 
 updateStreamStatus : UPDATE streamer SET is_live = ? WHERE streamer_id = ?;
-
 updateStreamDescription : UPDATE streamer SET description = ? WHERE streamer_id = ?;
-
 updateStreamerAvatar : UPDATE streamer SET avatar = ? WHERE streamer_id = ?;
+updateStreamerLastStream : UPDATE streamer SET last_stream = ? WHERE streamer_id = ?;
 
 deleteStreamer : DELETE FROM streamer WHERE streamer_id = ?;
 

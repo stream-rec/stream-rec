@@ -37,6 +37,7 @@ interface StreamerDTO {
   val name: String
   val url: String
   val platform: StreamingPlatform
+  var lastLiveTime: Long?
   var isLive: Boolean
   var isActivated: Boolean
   var avatar: String?

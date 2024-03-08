@@ -85,6 +85,7 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     name: String,
     url: String,
     platform: Long,
+    lastStream: Long?,
     isLive: Long,
     isActive: Long,
     description: String?,
@@ -96,6 +97,7 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     return queries.insertStreamer(
       name = name,
       url = url,
+      last_stream = lastStream,
       platform = platform,
       is_live = isLive,
       is_active = isActive,
@@ -122,6 +124,7 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     name: String,
     url: String,
     platform: Long,
+    lastStream: Long?,
     isLive: Long,
     isActive: Long,
     description: String?,
@@ -134,6 +137,7 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
       name = name,
       url = url,
       platform = platform,
+      last_stream = lastStream,
       is_live = isLive,
       is_active = isActive,
       description = description,
@@ -146,6 +150,10 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
 
   override suspend fun updateAvatar(id: StreamerId, avatar: String?) {
     return queries.updateStreamerAvatar(avatar, id.value)
+  }
+
+  override suspend fun updateLastStream(id: StreamerId, lastStream: Long) {
+    return queries.updateStreamerLastStream(lastStream, id.value)
   }
 
   override suspend fun deleteStreamer(id: StreamerId) {
