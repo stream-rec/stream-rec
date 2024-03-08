@@ -178,9 +178,9 @@ class DownloadService(
 
         if (retryCount >= maxRetry) {
           retryCount = 0
-          streamer.isLive = false
           // update db with the new isLive value
-          repo.updateStreamerLiveStatus(streamer.id, false)
+          if (streamer.isLive) repo.updateStreamerLiveStatus(streamer.id, false)
+          streamer.isLive = false
           // stream is not live or without data
           if (streamDataList.isEmpty()) {
             continue
@@ -195,6 +195,7 @@ class DownloadService(
           delay(1.toDuration(DurationUnit.MINUTES))
           continue
         }
+        val oldStreamer = streamer.copy()
         val isLive = try {
           // check if streamer is live
           plugin.shouldDownload(streamer)
@@ -213,10 +214,17 @@ class DownloadService(
         }
 
         if (isLive) {
-          streamer.isLive = true
           // save streamer to the database with the new isLive value
-          repo.updateStreamerLiveStatus(streamer.id, true, streamer.streamTitle)
-          if (!streamer.avatar.isNullOrEmpty())
+          if (!streamer.isLive) {
+            repo.updateStreamerLiveStatus(streamer.id, true)
+          }
+          if (oldStreamer.streamTitle != streamer.streamTitle) {
+            repo.updateStreamerStreamTitle(streamer.id, streamer.streamTitle)
+          }
+          streamer.isLive = true
+
+          // update avatar if it has changed
+          if (!streamer.avatar.isNullOrEmpty() && oldStreamer.avatar != streamer.avatar)
             repo.updateStreamerAvatar(streamer.id, streamer.avatar)
           // stream is live, start downloading
           // while loop for parting the download

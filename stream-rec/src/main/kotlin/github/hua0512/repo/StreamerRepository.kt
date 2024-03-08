@@ -205,9 +205,15 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
    * @param id streamer id
    * @param status true: active, false: inactive
    */
-  override suspend fun updateStreamerLiveStatus(id: Long, status: Boolean, streamTitle: String?) {
+  override suspend fun updateStreamerLiveStatus(id: Long, status: Boolean) {
     return withIOContext {
-      dao.updateStreamStatus(StreamerId(id), status.asLong, streamTitle)
+      dao.updateStreamStatus(StreamerId(id), status.asLong)
+    }
+  }
+
+  override suspend fun updateStreamerStreamTitle(id: Long, streamTitle: String?) {
+    return withIOContext {
+      dao.updateStreamTitle(StreamerId(id), streamTitle)
     }
   }
 
