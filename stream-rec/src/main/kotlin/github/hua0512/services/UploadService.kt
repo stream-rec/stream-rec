@@ -98,22 +98,18 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
           val uploader = provideUploader(action.uploadConfig)
           val results = parallelUpload(action.files, uploader)
 
-          // delete files after upload
-          if (app.config.deleteFilesAfterUpload) {
-            results.forEach {
-              // save the result
-              uploadRepo.saveResult(it)
-              if (it.isSuccess) {
-                // get the upload data and update the status
-                val uploadDataId = it.uploadDataId
-                uploadRepo.changeUploadDataStatus(uploadDataId, true)
-              }
-            }
-          }
-
           // ignore saving if its [NoopUploader]
           if (uploader is NoopUploader) {
             return@onEach
+          }
+          results.forEach {
+            // save the result
+            uploadRepo.saveResult(it)
+            if (it.isSuccess && !it.uploadData.status) {
+              // get the upload data and update the status
+              val uploadDataId = it.uploadDataId
+              uploadRepo.changeUploadDataStatus(uploadDataId, true)
+            }
           }
           logger.debug("Upload results: {}", results)
         }
