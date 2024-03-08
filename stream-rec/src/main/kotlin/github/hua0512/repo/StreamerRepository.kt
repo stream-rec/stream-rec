@@ -49,40 +49,79 @@ import kotlinx.serialization.json.Json
  */
 class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
 
-
   override suspend fun stream() = dao.stream()
     .map { items ->
-      items.map { it.toStreamer(json) }
+      items.map {
+        it.toStreamer(json).apply {
+          populateTemplateStreamer()
+        }
+      }
     }
     .flowOn(Dispatchers.IO)
 
   override suspend fun getStreamers(): List<Streamer> {
     return withIOContext {
-      dao.getAllStreamers().map { it.toStreamer(json) }
+      dao.getAllStreamers().map {
+        it.toStreamer(json).apply {
+          populateTemplateStreamer()
+        }
+      }
+    }
+  }
+
+  override suspend fun getAllTemplateStreamers(): List<Streamer> {
+    return withIOContext {
+      dao.getAllTemplateStreamers().map {
+        it.toStreamer(json).apply {
+          populateTemplateStreamer()
+        }
+      }
+    }
+  }
+
+  override suspend fun getAllNonTemplateStreamers(): List<Streamer> {
+    return withIOContext {
+      dao.getAllNonTemplateStreamers().map {
+        it.toStreamer(json).apply {
+          populateTemplateStreamer()
+        }
+      }
     }
   }
 
   override suspend fun getStreamerById(id: Long): Streamer? {
     return withIOContext {
-      dao.getStreamerById(StreamerId(id))?.toStreamer(json)
+      dao.getStreamerById(StreamerId(id))?.toStreamer(json)?.apply {
+        populateTemplateStreamer()
+      }
     }
   }
 
   override suspend fun getStreamersActive(): List<Streamer> {
     return withIOContext {
-      dao.getAllStremersActive().map { it.toStreamer(json) }
+      dao.getAllStremersActive().map {
+        it.toStreamer(json).apply {
+          populateTemplateStreamer()
+        }
+      }
     }
   }
 
   override suspend fun getStreamersInactive(): List<Streamer> {
     return withIOContext {
-      dao.getAllStremersInactive().map { it.toStreamer(json) }
+      dao.getAllStremersInactive().map {
+        it.toStreamer(json).apply {
+          populateTemplateStreamer()
+        }
+      }
     }
   }
 
   override suspend fun findStreamerByUrl(url: String): Streamer? {
     return withIOContext {
-      dao.findStreamerByUrl(url)?.toStreamer(json)
+      dao.findStreamerByUrl(url)?.toStreamer(json)?.apply {
+        populateTemplateStreamer()
+      }
     }
   }
 
@@ -106,6 +145,8 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
         isActive = newStreamer.isActivated.asLong,
         avatar = newStreamer.avatar,
         description = newStreamer.streamTitle,
+        isTemplate = newStreamer.isTemplate.asLong,
+        templateId = newStreamer.templateId,
         downloadConfig = downloadConfig
       )
       logger.debug("updatedStreamer: {}", newStreamer)
@@ -131,6 +172,8 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
         isActive = newStreamer.isActivated.asLong,
         description = newStreamer.streamTitle,
         avatar = newStreamer.avatar,
+        isTemplate = newStreamer.isTemplate.asLong,
+        templateId = newStreamer.templateId,
         downloadConfig = downloadConfig
       )
       logger.debug("saveStreamer: {}, downloadConfig: {}", newStreamer, downloadConfig)
@@ -174,5 +217,9 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
     }
   }
 
-
+  private suspend fun Streamer.populateTemplateStreamer() {
+    if (!isTemplate && templateId != null && templateId != -1L) {
+      templateStreamer = getStreamerById(templateId!!)
+    }
+  }
 }

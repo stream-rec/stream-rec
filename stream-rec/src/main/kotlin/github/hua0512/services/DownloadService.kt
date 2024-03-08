@@ -46,6 +46,7 @@ import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
+import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
@@ -114,9 +115,10 @@ class DownloadService(
 
         val oldStreamers = taskJobs.map { it.first }
 
+        val newStreamers = streamerList.filterNot { it.isTemplate }
         // cancel the jobs of the streamers that are not in the new list
         oldStreamers.filter { old ->
-          streamerList.none { new -> new.url == old.url }
+          newStreamers.none { new -> new.url == old.url }
         }.forEach { streamer ->
           cancelJob(streamer, "delete")
         }
@@ -125,7 +127,7 @@ class DownloadService(
         // if a streamer has the same url but different entity, cancel the old job and start a new one
         // if a streamer is not in the old list, start a new job
         // if a streamer is in both lists, do nothing
-        streamerList.forEach { new ->
+        newStreamers.forEach { new ->
           val old = oldStreamers.find { it.url == new.url }
           if (old != null) {
             // preserve the isLive value
@@ -136,7 +138,18 @@ class DownloadService(
             new.avatar = old.avatar
             // if the entity is different, cancel the old job and start a new one
             if (old != new) {
-              cancelJob(new, "entity changed")
+              logger.debug("Detected entity change for {}, {}", new, old)
+              // find the change reason
+              if (old.isActivated != new.isActivated) cancelJob(new, "activation changed")
+              if (old.url != new.url) cancelJob(new, "url changed")
+              if (old.platform != new.platform) cancelJob(new, "platform changed")
+              if (old.name != new.name) cancelJob(new, "name changed")
+              if (old.templateStreamer?.id != new.templateStreamer?.id) cancelJob(new, "template changed")
+              if (old.downloadConfig != new.downloadConfig) cancelJob(new, "download config changed")
+              if (old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig) cancelJob(new, "template download config changed")
+              if (old.downloadConfig != new.downloadConfig) cancelJob(new, "download config changed")
+              if (old.avatar != new.avatar) cancelJob(new, "avatar changed")
+              if (old.isActivated != new.isActivated) cancelJob(new, "activation changed")
               if (validateActivation(new)) return@forEach
               startDownloadJob(new)
             }
@@ -269,7 +282,7 @@ class DownloadService(
   }
 
   private suspend fun bindOnStreamingEndActions(streamer: Streamer, streamDataList: List<StreamData>) {
-    val downloadConfig = streamer.downloadConfig
+    val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
     val onStreamFinishedActions = downloadConfig?.onStreamingFinished
     if (!onStreamFinishedActions.isNullOrEmpty()) {
       onStreamFinishedActions
@@ -288,7 +301,8 @@ class DownloadService(
   }
 
   private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
-    val partedActions = streamer.downloadConfig?.onPartedDownload
+    val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
+    val partedActions = downloadConfig?.onPartedDownload
     if (!partedActions.isNullOrEmpty()) {
       partedActions
         .filter { it.enabled }
@@ -338,7 +352,8 @@ class DownloadService(
 
           val streamData = streamDataList.first()
           val streamer = streamData.streamer
-          val downloadOutputFolder: File? = (streamer.downloadConfig?.outputFolder ?: app.config.outputFolder).let {
+          val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
+          val downloadOutputFolder: File? = (downloadConfig?.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).let {
             val instant = Instant.fromEpochSeconds(streamData.dateStart!!)
             val path = it.replacePlaceholders(streamer.name, streamData.title, instant)
             Path(path).toFile().also {

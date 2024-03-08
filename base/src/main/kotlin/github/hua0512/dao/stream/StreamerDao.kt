@@ -48,10 +48,15 @@ interface StreamerDao {
 
   suspend fun getAllStremersInactive(): List<StreamerEntity>
 
+  suspend fun getAllTemplateStreamers(): List<StreamerEntity>
+
+  suspend fun getAllNonTemplateStreamers(): List<StreamerEntity>
+
   suspend fun getStreamerById(id: StreamerId): StreamerEntity?
   suspend fun insertStreamer(
     name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
     avatar: String?, downloadConfig: String?,
+    isTemplate: Long, templateId: Long?,
   )
 
   suspend fun updateStreamStatus(id: StreamerId, isLive: Long, streamTitle: String?)
@@ -61,6 +66,7 @@ interface StreamerDao {
   suspend fun updateStreamer(
     name: String, url: String, platform: Long, isLive: Long, isActive: Long, description: String?,
     avatar: String?, downloadConfig: String?,
+    isTemplate: Long, templateId: Long?,
   )
 
   suspend fun deleteStreamer(id: StreamerId)

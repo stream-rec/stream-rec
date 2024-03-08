@@ -60,12 +60,14 @@ fun StreamerEntity.toStreamer(json: Json) = Streamer(
   isLive = is_live.boolean,
   isActivated = is_active.boolean,
   avatar = avatar,
+  isTemplate = is_template.boolean,
   streamTitle = description,
   downloadConfig = if (download_config != null) {
     json.decodeFromString<DownloadConfig>(download_config)
   } else null
 ).also {
   it.id = streamer_id
+  it.templateId = template_id
 }
 
 
@@ -78,6 +80,8 @@ fun Streamer.toStreamerEntity(json: Json) = StreamerEntity(
   is_active = isActivated.asLong,
   description = streamTitle,
   avatar = avatar,
+  is_template = isTemplate.asLong,
+  template_id = templateId,
   download_config = downloadConfig?.let { json.encodeToString<DownloadConfig>(it) },
   app_config_id = 1
 )

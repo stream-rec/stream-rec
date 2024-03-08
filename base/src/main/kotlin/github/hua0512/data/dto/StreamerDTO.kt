@@ -41,5 +41,8 @@ interface StreamerDTO {
   var isActivated: Boolean
   var avatar: String?
   var streamTitle: String?
+  val templateStreamer: StreamerDTO?
   val downloadConfig: DownloadConfig?
+  val isTemplate: Boolean
+  val templateId: Long?
 }

@@ -66,6 +66,14 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     return queries.selectAllInactive().executeAsList()
   }
 
+  override suspend fun getAllTemplateStreamers(): List<StreamerEntity> {
+    return queries.selectAllTemplates().executeAsList()
+  }
+
+  override suspend fun getAllNonTemplateStreamers(): List<StreamerEntity> {
+    return queries.selectAllNonTemplates().executeAsList()
+  }
+
 
   override suspend fun getStreamerById(id: StreamerId): StreamerEntity? {
     val queriedStreamer = queries.getStreamerById(id.value).executeAsOneOrNull()
@@ -82,6 +90,8 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     description: String?,
     avatar: String?,
     downloadConfig: String?,
+    isTemplate: Long,
+    templateId: Long?,
   ) {
     return queries.insertStreamer(
       name = name,
@@ -91,6 +101,8 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
       is_active = isActive,
       description = description,
       avatar = avatar,
+      is_template = isTemplate,
+      template_id = templateId,
       download_config = downloadConfig
     )
   }
@@ -111,6 +123,8 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     description: String?,
     avatar: String?,
     downloadConfig: String?,
+    isTemplate: Long,
+    templateId: Long?,
   ) {
     return queries.upsertStreamer(
       name = name,
@@ -119,6 +133,8 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
       is_live = isLive,
       is_active = isActive,
       description = description,
+      is_template = isTemplate,
+      template_id = templateId,
       avatar = avatar,
       download_config = downloadConfig,
     )
