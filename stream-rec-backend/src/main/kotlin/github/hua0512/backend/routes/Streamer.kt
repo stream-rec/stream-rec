@@ -59,6 +59,16 @@ fun Route.streamerRoute(repo: StreamerRepo) {
           call.respond(streamers)
         }
 
+        "template" -> {
+          val streamers = repo.getAllTemplateStreamers()
+          call.respond(streamers)
+        }
+
+        "non-template" -> {
+          val streamers = repo.getAllNonTemplateStreamers()
+          call.respond(streamers)
+        }
+
         else -> {
           call.respondText("Invalid filter", status = HttpStatusCode.BadRequest)
         }
@@ -96,6 +106,11 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         return@post
       }
       try {
+        val isTemplate = streamer.isTemplate
+        if (isTemplate && streamer.downloadConfig == null) {
+          call.respond(HttpStatusCode.BadRequest, "Template streamer must have download config")
+          return@post
+        }
         repo.saveStreamer(streamer)
       } catch (e: Exception) {
         logger.error("Error saving streamer", e)

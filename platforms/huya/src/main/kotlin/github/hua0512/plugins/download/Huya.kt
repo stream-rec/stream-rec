@@ -142,7 +142,24 @@ class Huya(app: App, danmu: HuyaDanmu) : Download(app, danmu) {
         return@withContext false
       }
 
-      val userConfig = streamer.downloadConfig as? HuyaDownloadConfig ?: HuyaDownloadConfig()
+      val userConfig: HuyaDownloadConfig = if (streamer.templateStreamer != null) {
+        streamer.templateStreamer!!.downloadConfig?.run {
+          HuyaDownloadConfig(
+            primaryCdn = app.config.huyaConfig.primaryCdn
+          ).also {
+            it.danmu = this.danmu
+            it.maxBitRate = this.maxBitRate
+            it.outputFileFormat = this.outputFileFormat
+            it.outputFileName = this.outputFileName
+            it.outputFolder = this.outputFolder
+            it.onPartedDownload = this.onPartedDownload ?: emptyList()
+            it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
+            it.partedDownloadRetry = this.partedDownloadRetry
+          }
+        } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config")
+      } else {
+        streamer.downloadConfig as? HuyaDownloadConfig ?: HuyaDownloadConfig()
+      }
 
       // default max bit rate
       val maxBitRate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0

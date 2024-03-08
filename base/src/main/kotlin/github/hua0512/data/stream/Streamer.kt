@@ -29,6 +29,7 @@ package github.hua0512.data.stream
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.StreamerDTO
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 
 @Serializable
@@ -41,12 +42,13 @@ data class Streamer(
   override var avatar: String? = null,
   override var streamTitle: String? = null,
   override val downloadConfig: DownloadConfig? = null,
+  override val isTemplate: Boolean = false,
 ) : StreamerDTO {
 
   var id: Long = -1
-  override fun toString(): String {
-    return "Streamer(id=$id, name='$name', url='$url', platform=$platform, isLive=$isLive, isActivated=$isActivated, downloadConfig=$downloadConfig)"
-  }
 
+  @Transient
+  override var templateStreamer: Streamer? = null
 
+  override var templateId: Long? = -1
 }

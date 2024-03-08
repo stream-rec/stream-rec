@@ -38,6 +38,9 @@ interface StreamerRepo {
 
   suspend fun stream(): Flow<List<Streamer>>
   suspend fun getStreamers(): List<Streamer>
+  suspend fun getAllTemplateStreamers(): List<Streamer>
+
+  suspend fun getAllNonTemplateStreamers(): List<Streamer>
   suspend fun getStreamerById(id: Long): Streamer?
   suspend fun getStreamersActive(): List<Streamer>
   suspend fun getStreamersInactive(): List<Streamer>

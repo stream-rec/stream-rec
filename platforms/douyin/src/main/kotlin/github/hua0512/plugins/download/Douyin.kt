@@ -27,6 +27,7 @@
 package github.hua0512.plugins.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.platform.DouyinQuality
 import github.hua0512.data.stream.Streamer
@@ -64,7 +65,28 @@ class Douyin(app: App, danmu: DouyinDanmu) : Download(app, danmu) {
 
     val roomId = extractDouyinRoomId(streamer.url) ?: false
 
-    val config = streamer.downloadConfig as? DouyinDownloadConfig ?: DouyinDownloadConfig()
+    val config: DouyinDownloadConfig = if (streamer.templateStreamer != null) {
+      /**
+       * template config uses basic config [DefaultDownloadConfig], build a new douyin config using global platform values
+       */
+      streamer.templateStreamer?.downloadConfig?.run {
+        DouyinDownloadConfig(
+          quality = app.config.douyinConfig.quality,
+          cookies = app.config.douyinConfig.cookies
+        ).also {
+          it.danmu = this.danmu
+          it.maxBitRate = this.maxBitRate
+          it.outputFileFormat = this.outputFileFormat
+          it.outputFileName = this.outputFileName
+          it.outputFolder = this.outputFolder
+          it.onPartedDownload = this.onPartedDownload ?: emptyList()
+          it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
+          it.partedDownloadRetry = this.partedDownloadRetry
+        }
+      } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config") // should not happen
+    } else {
+      streamer.downloadConfig as? DouyinDownloadConfig ?: DouyinDownloadConfig()
+    }
 
     val cookies = (config.cookies ?: app.config.douyinConfig.cookies).let {
       if (it.isNullOrEmpty()) {
