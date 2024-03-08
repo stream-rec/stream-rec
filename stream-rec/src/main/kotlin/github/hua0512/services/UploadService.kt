@@ -105,7 +105,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
           results.forEach {
             // save the result
             uploadRepo.saveResult(it)
-            if (it.isSuccess && !it.uploadData.status) {
+            if (it.isSuccess) {
               // get the upload data and update the status
               val uploadDataId = it.uploadDataId
               uploadRepo.changeUploadDataStatus(uploadDataId, true)
