@@ -83,7 +83,6 @@ class DouyinDanmu(app: App) : Danmu(app) {
           it.outputFolder = this.outputFolder
           it.onPartedDownload = this.onPartedDownload ?: emptyList()
           it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
-          it.partedDownloadRetry = this.partedDownloadRetry
         }
       } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config") // should not happen
     } else {

@@ -41,7 +41,6 @@ interface DownloadConfigDTO {
   val outputFolder: String?
   val outputFileName: String?
   val outputFileFormat: VideoFormat?
-  val partedDownloadRetry: Int?
 
 
   val onPartedDownload: List<Action>?
