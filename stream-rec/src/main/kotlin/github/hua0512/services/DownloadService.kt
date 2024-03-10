@@ -185,7 +185,7 @@ class DownloadService(
           // stream finished with data
           logger.info("${streamer.name} stream finished")
           // call onStreamingFinished callback with the copy of the list
-          launch {
+          newScope.launch {
             bindOnStreamingEndActions(streamer, streamDataList.toList())
           }
           streamDataList.clear()
@@ -268,7 +268,7 @@ class DownloadService(
             }
             streamDataList.add(streamsData)
             logger.info("${streamer.name} downloaded : $streamsData}")
-            launch { executePostPartedDownloadActions(streamer, streamsData) }
+            newScope.launch { executePostPartedDownloadActions(streamer, streamsData) }
             val platformRetryDelay = streamer.platform.platformConfig.partedDownloadRetry ?: 0
             delay(platformRetryDelay.toDuration(DurationUnit.SECONDS))
           }
