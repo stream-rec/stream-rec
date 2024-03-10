@@ -43,6 +43,8 @@ interface StreamerDao {
   suspend fun getStreamerNameById(id: StreamerId): String?
 
   suspend fun findStreamerByUrl(url: String): StreamerEntity?
+  suspend fun findStreamersUsingTemplate(templateId: Long): List<StreamerEntity>
+  suspend fun countStreamersUsingTemplate(templateId: Long): Long
 
   suspend fun getAllStremersActive(): List<StreamerEntity>
 

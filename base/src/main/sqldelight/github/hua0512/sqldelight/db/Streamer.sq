@@ -62,7 +62,8 @@ getStreamerById : SELECT * FROM streamer WHERE streamer_id = ?;
 getStreamerByName : SELECT * FROM streamer WHERE name = ?;
 getStreamerNameById : SELECT name FROM streamer WHERE streamer_id = ? LIMIT 1;
 findStreamerByUrl : SELECT * FROM streamer WHERE url = ?;
-
+findStreamerByTemplateId : SELECT * FROM streamer WHERE template_id = ?;
+countStreamersUsingTemplate : SELECT COUNT(*) FROM streamer WHERE template_id = ?;
 insertStreamer : INSERT INTO streamer(name, url, platform, last_stream, is_live, is_active, description, avatar, template_id, is_template,  download_config, app_config_id) VALUES(?,?, ?, ?,?,?,?, ?,?,?, ?, 1);
 
 

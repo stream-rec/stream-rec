@@ -41,7 +41,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.periodUntil
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -129,6 +128,22 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
           populateTemplateStreamer()
         }
       }
+    }
+  }
+
+  override suspend fun findStreamersUsingTemplate(templateId: Long): List<Streamer> {
+    return withIOContext {
+      dao.findStreamersUsingTemplate(templateId).map {
+        Streamer(it, json).apply {
+          populateTemplateStreamer()
+        }
+      }
+    }
+  }
+
+  override suspend fun countStreamersUsingTemplate(templateId: Long): Long {
+    return withIOContext {
+      dao.countStreamersUsingTemplate(templateId)
     }
   }
 
