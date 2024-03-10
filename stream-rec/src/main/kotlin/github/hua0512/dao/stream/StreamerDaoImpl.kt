@@ -58,6 +58,14 @@ class StreamerDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, S
     return queries.findStreamerByUrl(url).executeAsOneOrNull()
   }
 
+  override suspend fun findStreamersUsingTemplate(templateId: Long): List<StreamerEntity> {
+    return queries.findStreamerByTemplateId(templateId).executeAsList()
+  }
+
+  override suspend fun countStreamersUsingTemplate(templateId: Long): Long {
+    return queries.countStreamersUsingTemplate(templateId).executeAsOne()
+  }
+
   override suspend fun getAllStremersActive(): List<StreamerEntity> {
     return queries.selectAllActive().executeAsList()
   }

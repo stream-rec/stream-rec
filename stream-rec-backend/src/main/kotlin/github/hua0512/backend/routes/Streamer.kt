@@ -168,6 +168,18 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         return@delete
       }
       try {
+        val streamer = repo.getStreamerById(id) ?: run {
+          call.respond(HttpStatusCode.NotFound, "Streamer not found")
+          return@delete
+        }
+
+        if (streamer.isTemplate) {
+          val count = repo.countStreamersUsingTemplate(id)
+          if (count > 0) {
+            call.respond(HttpStatusCode.BadRequest, "Template streamer is used by $count streamers")
+            return@delete
+          }
+        }
         repo.deleteStreamerById(id)
       } catch (e: Exception) {
         logger.error("Error deleting streamer", e)
