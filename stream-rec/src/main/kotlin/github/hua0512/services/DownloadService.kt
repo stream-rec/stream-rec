@@ -44,12 +44,9 @@ import github.hua0512.plugins.download.Douyin
 import github.hua0512.plugins.download.Huya
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.utils.deleteFile
-import github.hua0512.utils.executeProcess
-import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.*
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
-import github.hua0512.utils.replacePlaceholders
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -297,33 +294,40 @@ class DownloadService(
   }
 
   private suspend fun bindOnStreamingEndActions(streamer: Streamer, streamDataList: List<StreamData>) {
-    val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
-    val onStreamFinishedActions = downloadConfig?.onStreamingFinished
-    if (!onStreamFinishedActions.isNullOrEmpty()) {
-      onStreamFinishedActions
-        .filter { it.enabled }
-        .forEach {
-          it.mapToAction(streamDataList)
-        }
-    } else {
-      // delete files if both onStreamFinished and onPartedDownload are empty
-      if (downloadConfig?.onPartedDownload.isNullOrEmpty() && app.config.deleteFilesAfterUpload) {
-        streamDataList.forEach {
-          Path(it.outputFilePath).deleteFile()
+    val actions = streamer.templateStreamer?.downloadConfig?.onStreamingFinished ?: streamer.downloadConfig?.onStreamingFinished
+    actions?.let {
+      runActions(streamDataList, it)
+    } ?: run {
+      // check if on parted download is also empty
+      val partedActions = streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
+      if (partedActions.isNullOrEmpty()) {
+        // delete files if both onStreamFinished and onPartedDownload are empty
+        if (app.config.deleteFilesAfterUpload) {
+          streamDataList.forEach { Path(it.outputFilePath).deleteFile() }
         }
       }
     }
   }
 
   private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
-    val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
-    val partedActions = downloadConfig?.onPartedDownload
-    if (!partedActions.isNullOrEmpty()) {
-      partedActions
-        .filter { it.enabled }
-        .forEach { action: Action ->
-          action.mapToAction(listOf(streamData))
-        }
+    val actions = streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
+    actions?.let {
+      runActions(listOf(streamData), it)
+    }
+  }
+
+  private suspend fun runActions(streamDataList: List<StreamData>, actions: List<Action>) = withIOContext {
+    actions.filter {
+      it.enabled
+    }.forEach { action ->
+      val job = async {
+        action.mapToAction(streamDataList)
+      }
+      try {
+        job.await()
+      } catch (e: Exception) {
+        logger.error("Error while executing action $action : ${e.message}")
+      }
     }
   }
 
@@ -371,9 +375,9 @@ class DownloadService(
           val downloadOutputFolder: File? = (downloadConfig?.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).let {
             val instant = Instant.fromEpochSeconds(streamData.dateStart!!)
             val path = it.replacePlaceholders(streamer.name, streamData.title, instant)
-            Path(path).toFile().also {
+            Path(path).toFile().also { file ->
               // if the folder does not exist, then it should be an error
-              if (!it.exists()) {
+              if (!file.exists()) {
                 logger.error("Output folder $this does not exist")
                 return@let null
               }
@@ -388,7 +392,7 @@ class DownloadService(
           }.run {
             if (this.isEmpty()) {
               logger.error("No files to process")
-              return@apply
+              throw IllegalStateException("No files to process for action $this for streamer $streamer")
             }
             StringBuilder().apply {
               this.forEach {
