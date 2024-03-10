@@ -41,11 +41,10 @@ import github.hua0512.plugins.upload.RcloneUploader
 import github.hua0512.plugins.upload.UploadInvalidArgumentsException
 import github.hua0512.repo.uploads.UploadRepo
 import github.hua0512.utils.withIOContext
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -68,12 +67,6 @@ import kotlin.time.toDuration
 class UploadService(val app: App, private val uploadRepo: UploadRepo) {
 
   /**
-   * A shared flow of upload actions. This flow is used to emit upload actions to be processed.
-   */
-  private val uploadActionFlow = MutableSharedFlow<UploadAction>(replay = 1)
-
-
-  /**
    * A map to keep track of failed uploads and the number of times they failed.
    * The key is the ID of the upload data and the value is the number of times the upload has failed.
    */
@@ -88,37 +81,15 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
   }
 
   /**
+   * A semaphore to limit the number of concurrent uploads.
+   */
+  private val uploadSemaphore: Semaphore by lazy { Semaphore(app.config.maxConcurrentUploads) }
+
+  /**
    * Runs the upload service.
    * This function launches two coroutines. One for processing upload actions and another for handling failed uploads.
    */
   suspend fun run() = coroutineScope {
-    launch {
-      uploadActionFlow
-        .onEach { action ->
-          val uploader = provideUploader(action.uploadConfig)
-          val results = parallelUpload(action.files, uploader)
-
-          // ignore saving if its [NoopUploader]
-          if (uploader is NoopUploader) {
-            return@onEach
-          }
-          results.forEach {
-            // save the result
-            uploadRepo.saveResult(it)
-            if (it.isSuccess) {
-              // get the upload data and update the status
-              val uploadDataId = it.uploadDataId
-              uploadRepo.changeUploadDataStatus(uploadDataId, true)
-            }
-          }
-          logger.debug("Upload results: {}", results)
-        }
-        .catch {
-          logger.error("Error in upload action flow", it)
-        }
-        .collect()
-    }
-
     // launch a coroutine scanning for failed uploads
     launch {
       uploadRepo.streamFailedUploadResults().onEach { failedResults ->
@@ -149,7 +120,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
             val delayInMinutes = (count + 1) * 2 * 10
             delay(duration = delayInMinutes.toDuration(DurationUnit.MINUTES))
             // emit the same upload action with the failed upload data
-            uploadActionFlow.emit(uploadAction.copy(files = setOf(uploadData)))
+            upload(uploadAction.copy(files = setOf(uploadData)))
             // increment the count
             shouldNotRetryMap[uploadDataId] = count + 1
           }
@@ -158,7 +129,6 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
         logger.error("Error in failed upload results flow", it)
       }.collect()
     }
-
   }
 
   /**
@@ -172,7 +142,27 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
       uploadRepo.saveAction(uploadAction)
     }
     uploadAction.id = saved.value
-    uploadActionFlow.emit(uploadAction)
+    val uploader = provideUploader(uploadAction.uploadConfig)
+    if (uploader is NoopUploader) {
+      return
+    }
+    val deferredResults = CompletableDeferred<List<UploadResult>>()
+    withIOContext {
+      val results = parallelUpload(uploadAction.files, uploader)
+      results.forEach {
+        // save the result
+        uploadRepo.saveResult(it)
+        if (it.isSuccess) {
+          // get the upload data and update the status
+          val uploadDataId = it.uploadDataId
+          uploadRepo.changeUploadDataStatus(uploadDataId, true)
+        }
+      }
+      logger.debug("Upload results: {}", results)
+      deferredResults.complete(results)
+    }
+
+    deferredResults.await()
   }
 
 
@@ -209,12 +199,14 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
     while (attempts < 3 && !success) {
       try {
         // upload the file
-        val status = plugin.upload(file)
-        file.status = status.isSuccess
-        status.uploadDataId = file.id
-        success = true
-        logger.info("Successfully uploaded file: ${file.filePath}")
-        emit(status)
+        uploadSemaphore.withPermit {
+          val status = plugin.upload(file)
+          file.status = status.isSuccess
+          status.uploadDataId = file.id
+          success = true
+          logger.info("Successfully uploaded file: ${file.filePath}")
+          emit(status)
+        }
       } catch (e: UploadInvalidArgumentsException) {
         logger.error("Invalid arguments for upload: ${file.filePath}")
         emit(
