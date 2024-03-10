@@ -70,9 +70,7 @@ class FFmpegDownloadEngine(
       addAll(
         arrayOf(
           "-bsf:a",
-          "aac_adtstoasc",
-          "-fflags",
-          "+discardcorrupt",
+          "aac_adtstoasc"
         )
       )
       // segment the file, according to the maxPartDuration
