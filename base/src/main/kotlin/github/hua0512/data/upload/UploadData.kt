@@ -62,6 +62,9 @@ data class UploadData(
   var uploadPlatform = ""
     get() = if (isUploadActionInitialized()) uploadAction.uploadConfig.platform.toString() else field
 
+  var uploadTime: Long = 0
+    get() = if (isUploadActionInitialized()) uploadAction.time else field
+
   var uploadConfig: UploadConfig = UploadConfig.NoopConfig
     get() = if (isUploadActionInitialized()) uploadAction.uploadConfig else field
 

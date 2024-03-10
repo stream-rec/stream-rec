@@ -227,9 +227,11 @@ class DownloadService(
           if (!streamer.avatar.isNullOrEmpty() && oldStreamer.avatar != streamer.avatar) {
             repo.updateStreamerAvatar(streamer.id, streamer.avatar)
           }
+          val now = Clock.System.now()
           // update last live time
-          if (repo.shouldUpdateStreamerLastLiveTime(streamer.id, oldStreamer.lastLiveTime ?: 0, Clock.System.now().epochSeconds)) {
-            repo.updateStreamerLastLiveTime(streamer.id, Clock.System.now().epochSeconds)
+          if (repo.shouldUpdateStreamerLastLiveTime(streamer.id, streamer.lastLiveTime ?: 0, now.epochSeconds)) {
+            repo.updateStreamerLastLiveTime(streamer.id, now.epochSeconds)
+            streamer.lastLiveTime = now.epochSeconds
           }
           // stream is live, start downloading
           // while loop for parting the download

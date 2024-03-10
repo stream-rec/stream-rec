@@ -227,7 +227,7 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   }
 
   override suspend fun shouldUpdateStreamerLastLiveTime(id: Long, lastLiveTime: Long, currentLiveTime: Long): Boolean {
-    if (lastLiveTime == 0L) return false
+    if (lastLiveTime == 0L) return true
     val lastStream = Instant.fromEpochSeconds(lastLiveTime).toLocalDateTime(TimeZone.currentSystemDefault())
     val currentStream = Instant.fromEpochSeconds(currentLiveTime).toLocalDateTime(TimeZone.currentSystemDefault())
     // if current live time is in the same day, no need to update
