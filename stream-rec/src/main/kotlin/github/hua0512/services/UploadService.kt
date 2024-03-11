@@ -194,18 +194,18 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
    */
   private fun uploadFileFlow(file: UploadData, plugin: Upload): Flow<UploadResult> = flow {
     var attempts = 0
-    var success = false
     // Retry logic
-    while (attempts < 3 && !success) {
+    while (attempts < 3) {
       try {
         // upload the file
         uploadSemaphore.withPermit {
-          val status = plugin.upload(file)
+          val status = plugin.upload(file).apply {
+            uploadData = file
+          }
           file.status = status.isSuccess
-          status.uploadDataId = file.id
-          success = true
           logger.info("Successfully uploaded file: ${file.filePath}")
           emit(status)
+          attempts = 3
         }
       } catch (e: UploadInvalidArgumentsException) {
         logger.error("Invalid arguments for upload: ${file.filePath}")
