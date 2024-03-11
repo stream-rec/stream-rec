@@ -322,7 +322,8 @@ class DownloadService(
       try {
         job.await()
       } catch (e: Exception) {
-        logger.error("Error while executing action $action : ${e.message}")
+        logger.error("$streamDataList, error while executing action $action : ${e.message}")
+        return@forEach
       }
     }
   }
