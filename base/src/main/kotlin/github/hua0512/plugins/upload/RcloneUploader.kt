@@ -85,9 +85,7 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
       throw UploadFailedException("rclone failed with exit code: $resultCode\n$errorBuilder", uploadData.filePath)
     } else {
       logger.info("rclone: ${uploadData.filePath} finished")
-      UploadResult(time = Clock.System.now().epochSeconds, isSuccess = true).also {
-        it.uploadData = uploadData
-      }
+      UploadResult(time = Clock.System.now().epochSeconds, isSuccess = true)
     }
   }
 }
