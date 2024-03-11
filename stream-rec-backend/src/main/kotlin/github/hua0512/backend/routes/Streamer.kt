@@ -145,10 +145,24 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
         return@put
       }
-      repo.findStreamerByUrl(streamer.url) ?: run {
+      val old = repo.findStreamerByUrl(streamer.url) ?: run {
         logger.error("Error updating streamer, not found in db : {}", streamer)
         call.respond(HttpStatusCode.BadRequest, "Streamer not found in db")
         return@put
+      }
+      if (old.id != id) {
+        call.respond(HttpStatusCode.BadRequest, "Streamer url already exists")
+        return@put
+      }
+
+      // do not allow converting a template streamer to a non-template streamer when it is used by other streamers
+      if (old.isTemplate && !streamer.isTemplate) {
+        val count = repo.countStreamersUsingTemplate(id)
+        if (count > 0) {
+          logger.error("Template streamer is used by $count streamers")
+          call.respond(HttpStatusCode.BadRequest, "Template streamer is used by $count streamers")
+          return@put
+        }
       }
 
       try {
