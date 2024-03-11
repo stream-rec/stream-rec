@@ -215,6 +215,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
       }
     } catch (e: Exception) {
       logger.error("(${streamer.name}) download failed: $e")
+      pb?.close()
     }
 
     // stop danmu job
