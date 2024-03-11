@@ -127,26 +127,22 @@ class DownloadService(
         newStreamers.forEach { new ->
           val old = oldStreamers.find { it.url == new.url }
           if (old != null) {
-            // preserve the isLive value
-            new.isLive = old.isLive
-            // preserve title
-            new.streamTitle = old.streamTitle
-            // preserve avatar
-            new.avatar = old.avatar
             // if the entity is different, cancel the old job and start a new one
             if (old != new) {
-              logger.debug("Detected entity change for {}, {}", new, old)
               // find the change reason
-              if (old.isActivated != new.isActivated) cancelJob(new, "activation changed")
-              if (old.url != new.url) cancelJob(new, "url changed")
-              if (old.platform != new.platform) cancelJob(new, "platform changed")
-              if (old.name != new.name) cancelJob(new, "name changed")
-              if (old.templateStreamer?.id != new.templateStreamer?.id) cancelJob(new, "template changed")
-              if (old.downloadConfig != new.downloadConfig) cancelJob(new, "download config changed")
-              if (old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig) cancelJob(new, "template download config changed")
-              if (old.downloadConfig != new.downloadConfig) cancelJob(new, "download config changed")
-              if (old.avatar != new.avatar) cancelJob(new, "avatar changed")
-              if (old.isActivated != new.isActivated) cancelJob(new, "activation changed")
+              val reason = when {
+                old.isActivated != new.isActivated -> "activation"
+                old.url != new.url -> "url"
+                old.downloadConfig != new.downloadConfig -> "download config"
+                old.platform != new.platform -> "platform"
+                old.name != new.name -> "name"
+                old.templateStreamer?.id != new.templateStreamer?.id -> "template"
+                old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template download config"
+                // other changes are ignored
+                else -> return@forEach
+              }
+              logger.debug("Detected entity change for {}, {}", new, old)
+              cancelJob(new, "entity changed : $reason")
               if (validateActivation(new)) return@forEach
               startDownloadJob(new)
             }
