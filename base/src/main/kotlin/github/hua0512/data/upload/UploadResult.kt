@@ -69,7 +69,7 @@ data class UploadResult(
   }
 
 
-  fun isUploadDataInitialized() = !::uploadData.isInitialized
+  fun isUploadDataInitialized() = ::uploadData.isInitialized
 
   fun toEntity(): UploadResultEntity {
     return UploadResultEntity(
