@@ -88,11 +88,14 @@ class DownloadService(
       }
     }
 
-  private val taskJobs = mutableSetOf<Pair<Streamer, Job?>>()
+  private val taskJobs = mutableMapOf<Streamer, Job?>()
 
   suspend fun run() = coroutineScope {
     // fetch all streamers from the database and start a job for each one
-    taskJobs.addAll(repo.getStreamersActive().map { it to async { downloadStreamer(it) } })
+    repo.getStreamersActive().forEach { streamer ->
+      taskJobs[streamer] = async { downloadStreamer(streamer) }
+    }
+
 
     launch {
       repo.stream().distinctUntilChanged().buffer().collect { streamerList ->
@@ -106,11 +109,11 @@ class DownloadService(
         if (streamerList.isEmpty()) {
           logger.info("No streamers to download")
           // the new list is empty, cancel all jobs
-          taskJobs.forEach { it.second?.cancel() }
+          taskJobs.values.forEach { it?.cancel() }
           return@collect
         }
 
-        val oldStreamers = taskJobs.map { it.first }
+        val oldStreamers = taskJobs.keys.map { it }
 
         val newStreamers = streamerList.filterNot { it.isTemplate }
         // cancel the jobs of the streamers that are not in the new list
@@ -142,7 +145,7 @@ class DownloadService(
                 else -> return@forEach
               }
               logger.debug("Detected entity change for {}, {}", new, old)
-              cancelJob(new, "entity changed : $reason")
+              cancelJob(old, "entity changed : $reason")
               if (validateActivation(new)) return@forEach
               startDownloadJob(new)
             }
@@ -422,12 +425,12 @@ class DownloadService(
   /**
    * Starts a new download job for a given [Streamer].
    *
-   * @param new The [Streamer] object for which to start the download job.
+   * @param streamer The [Streamer] object for which to start the download job.
    */
-  private fun CoroutineScope.startDownloadJob(new: Streamer) {
-    val newJob = async { downloadStreamer(new) }
-    taskJobs.add(new to newJob)
-    logger.info("${new.name}, ${new.url} job started")
+  private fun CoroutineScope.startDownloadJob(streamer: Streamer) {
+    val newJob = async { downloadStreamer(streamer) }
+    taskJobs[streamer] = newJob
+    logger.info("${streamer.name}, ${streamer.url} job started")
   }
 
   /**
@@ -447,17 +450,17 @@ class DownloadService(
   /**
    * Cancels the job of a given [Streamer].
    *
-   * @param new The [Streamer] object for which to cancel the job.
+   * @param streamer The [Streamer] object for which to cancel the job.
    * @param reason The reason for cancelling the job.
    * @return The [Streamer] object that was cancelled.
    */
-  private fun cancelJob(new: Streamer, reason: String = ""): Streamer? {
-    return taskJobs.find { it.first.url == new.url }?.run {
-      second?.cancel().also {
-        logger.info("${first.name}, ${first.url} job cancelled : $reason")
+  private fun cancelJob(streamer: Streamer, reason: String = ""): Streamer? {
+    return taskJobs.keys.find { it.url == streamer.url }?.apply {
+      val job = taskJobs[this]
+      job?.cancel().also {
+        logger.info("${this.name}, ${this.url} job cancelled : $reason")
       }
       taskJobs.remove(this)
-      first
     }
   }
 
