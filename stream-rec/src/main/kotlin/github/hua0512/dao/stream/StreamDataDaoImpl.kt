@@ -126,16 +126,19 @@ class StreamDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl,
   }
 
   override suspend fun saveStreamData(streamData: StreamDataEntity): Long {
-    queries.insertStreamData(
-      streamData.title,
-      streamData.dateStart,
-      streamData.dateEnd,
-      streamData.outputFilePath,
-      streamData.danmuFilePath,
-      streamData.streamerId
-    )
-    // get the last inserted id
-    return queries.getStreamDataIdByOutputFilePath(streamData.outputFilePath).executeAsOne()
+    return queries.transactionWithResult {
+      queries.insertStreamData(
+        streamData.title,
+        streamData.dateStart,
+        streamData.dateEnd,
+        streamData.outputFilePath,
+        streamData.danmuFilePath,
+        streamData.outputFileSize,
+        streamData.streamerId
+      )
+      // get the last inserted id
+      queries.getStreamDataIdByOutputFilePath(streamData.outputFilePath).executeAsOne()
+    }
   }
 
   override suspend fun deleteStreamData(streamData: StreamDataEntity) {

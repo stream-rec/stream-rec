@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS StreamData (
   dateEnd INTEGER,
   outputFilePath TEXT NOT NULL,
   danmuFilePath TEXT,
+  outputFileSize INTEGER NOT NULL DEFAULT 0,
   streamerId INTEGER NOT NULL,
   FOREIGN KEY(streamerId) REFERENCES streamer(streamer_id) ON DELETE CASCADE
 );
@@ -112,6 +113,7 @@ ORDER BY CASE
              WHEN :sortColumn = 'title' THEN title
              WHEN :sortColumn = 'dateStart' THEN dateStart
              WHEN :sortColumn = 'dateEnd' THEN dateEnd
+             WHEN :sortColumn = 'outputFileSize' THEN outputFileSize
              ELSE dateStart
              END ASC
 LIMIT :limit OFFSET :offset;
@@ -130,6 +132,7 @@ ORDER BY CASE
              WHEN :sortColumn = 'title' THEN title
              WHEN :sortColumn = 'dateStart' THEN dateStart
              WHEN :sortColumn = 'dateEnd' THEN dateEnd
+             WHEN :sortColumn = 'outputFileSize' THEN outputFileSize
              ELSE dateStart
              END DESC
 LIMIT :limit OFFSET :offset;
@@ -147,8 +150,8 @@ AND (:dateEnd IS NULL OR dateEnd <= :dateEnd);
 getStreamDataById : SELECT * FROM StreamData WHERE id = ?;
 getStreamDataIdByOutputFilePath : SELECT id FROM StreamData WHERE outputFilePath = ? LIMIT 1;
 selectAllStreamDataOfStreamer : SELECT * FROM StreamData WHERE streamerId = ? ORDER BY dateStart DESC;
-insertStreamData : INSERT INTO StreamData(title, dateStart, dateEnd, outputFilePath, danmuFilePath, streamerId) VALUES(?, ?, ?, ?, ?, ?);
-updateStreamData : UPDATE StreamData SET title = ?, dateStart = ?, dateEnd = ?, outputFilePath = ?, danmuFilePath = ?, streamerId = ? WHERE id = ?;
+insertStreamData : INSERT INTO StreamData(title, dateStart, dateEnd, outputFilePath, danmuFilePath, outputFileSize,  streamerId) VALUES(?, ?, ?, ?, ?,?, ?);
+updateStreamData : UPDATE StreamData SET title = ?, dateStart = ?, dateEnd = ?, outputFilePath = ?, danmuFilePath = ?, outputFileSize =?, streamerId = ? WHERE id = ?;
 deleteStreamData : DELETE FROM StreamData WHERE id = ?;
 
 
