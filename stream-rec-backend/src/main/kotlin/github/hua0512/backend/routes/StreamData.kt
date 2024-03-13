@@ -64,7 +64,9 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
       val order = call.request.queryParameters["order"]?.uppercase()
 
       try {
-        val count = streamsRepo.countStreamData(streamers, filter, dateStart, dateEnd)
+        val count = streamsRepo.countStreamData(streamers, filter, dateStart, dateEnd).run {
+          (this + pageSize - 1) / pageSize
+        }
         val results = streamsRepo.getStreamDataPaged(page, pageSize, streamers, filter, dateStart, dateEnd, sortColumn, order)
 
         val body = buildJsonObject {

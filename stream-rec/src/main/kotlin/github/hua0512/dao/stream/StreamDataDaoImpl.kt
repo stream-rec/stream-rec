@@ -67,7 +67,7 @@ class StreamDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl,
     val sortOrder = sortOrder.uppercase()
     validateSortOrder(sortOrder)
 
-    val showAllStreamers = allStreamers ?: true
+    val showAllStreamers = allStreamers ?: streamerIds.isNullOrEmpty()
 
     val query = when (sortOrder) {
       "ASC" -> queries.selectAllStreamDataPagedAsc(
@@ -109,7 +109,7 @@ class StreamDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl,
     dateStart: Long?,
     dateEnd: Long?,
   ): Long {
-    val showAllStreamers = allStreamers ?: false
+    val showAllStreamers = allStreamers ?: streamerIds.isNullOrEmpty()
     return queries.countAllStreamData(
       allStreamers = showAllStreamers,
       streamerIds = streamerIds?.map { it.value } ?: emptyList(),
