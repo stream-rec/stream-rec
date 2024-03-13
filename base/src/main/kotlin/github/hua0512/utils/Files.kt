@@ -42,8 +42,8 @@ import java.util.zip.GZIPInputStream
 
 fun Path.deleteFile(): Boolean = try {
   Files.deleteIfExists(this).also {
-    if (it) logger.debug("File deleted: {}", this)
-    else logger.debug("File not found: {}", this)
+    if (it) logger.info("File deleted: {}", this)
+    else logger.error("File not found: {}", this)
   }
 } catch (e: Exception) {
   logger.error("Could not delete file: $this")
@@ -55,8 +55,8 @@ fun File.deleteFile(): Boolean = toPath().deleteFile()
 fun Path.rename(newPath: Path, vararg options: CopyOption): Boolean = try {
   Files.move(this, newPath, *options)
   newPath.toFile().exists().also {
-    if (it) logger.debug("File renamed: {} to {}", this, newPath)
-    else logger.debug("File not renamed: {} to {}", this, newPath)
+    if (it) logger.info("File renamed: {} to {}", this, newPath)
+    else logger.error("File not renamed: {} to {}", this, newPath)
   }
 } catch (e: Exception) {
   logger.error("Could not rename file: $this to $newPath")
