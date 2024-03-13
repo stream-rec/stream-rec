@@ -128,26 +128,25 @@ class DownloadService(
         // if a streamer is in both lists, do nothing
         newStreamers.forEach { new ->
           val old = oldStreamers.find { it.url == new.url }
-          if (old != null) {
+          if (old != null && old != new) {
             // if the entity is different, cancel the old job and start a new one
-            if (old != new) {
-              // find the change reason
-              val reason = when {
-                old.isActivated != new.isActivated -> "activation"
-                old.url != new.url -> "url"
-                old.downloadConfig != new.downloadConfig -> "download config"
-                old.platform != new.platform -> "platform"
-                old.name != new.name -> "name"
-                old.templateStreamer?.id != new.templateStreamer?.id -> "template"
-                old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template download config"
-                // other changes are ignored
-                else -> return@forEach
-              }
-              logger.debug("Detected entity change for {}, {}", new, old)
-              cancelJob(old, "entity changed : $reason")
-              if (validateActivation(new)) return@forEach
-              startDownloadJob(new)
+            // find the change reason
+            val reason = when {
+              old.isActivated != new.isActivated -> "activation"
+              old.url != new.url -> "url"
+              old.downloadConfig != new.downloadConfig -> "download config"
+              old.platform != new.platform -> "platform"
+              old.name != new.name -> "name"
+              old.isTemplate != new.isTemplate -> "as template"
+              old.templateStreamer?.id != new.templateStreamer?.id -> "template"
+              old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template download config"
+              // other changes are ignored
+              else -> return@forEach
             }
+            logger.debug("Detected entity change for {}, {}", new, old)
+            cancelJob(old, "entity changed : $reason")
+            if (validateActivation(new)) return@forEach
+            startDownloadJob(new)
           } else {
             // if the streamer is not in the old list, start a new job
             if (validateActivation(new)) return@forEach
@@ -485,14 +484,12 @@ class DownloadService(
    * @param reason The reason for cancelling the job.
    * @return The [Streamer] object that was cancelled.
    */
-  private fun cancelJob(streamer: Streamer, reason: String = ""): Streamer? {
-    return taskJobs.keys.find { it.url == streamer.url }?.apply {
-      val job = taskJobs[this]
-      job?.cancel().also {
-        logger.info("${this.name}, ${this.url} job cancelled : $reason")
-      }
-      taskJobs.remove(this)
+  private fun cancelJob(streamer: Streamer, reason: String = ""): Streamer {
+    taskJobs[streamer]?.cancel(reason)?.also {
+      logger.info("${streamer.name}, ${streamer.url} job cancelled : $reason")
     }
+    taskJobs.remove(streamer)
+    return streamer
   }
 
 }
