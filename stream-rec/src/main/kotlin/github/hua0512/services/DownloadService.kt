@@ -28,8 +28,7 @@ package github.hua0512.services
 
 import github.hua0512.app.App
 import github.hua0512.data.config.Action
-import github.hua0512.data.config.Action.CommandAction
-import github.hua0512.data.config.Action.RcloneAction
+import github.hua0512.data.config.Action.*
 import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
@@ -58,6 +57,9 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import kotlin.coroutines.coroutineContext
 import kotlin.io.path.Path
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.moveTo
+import kotlin.io.path.name
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -414,6 +416,35 @@ class DownloadService(
             }
           )
           logger.info("Command action $this finished with exit code $exitCode")
+        }
+      }
+
+      is MoveAction -> {
+        val dest = Path(this.destination)
+        streamDataList.flatMap {
+          listOfNotNull(
+            it.outputFilePath,
+            it.danmuFilePath
+          )
+        }.forEach { filePath ->
+          val file = Path(filePath)
+          val destFile = dest.resolve(file.name).apply {
+            createParentDirectories()
+          }
+          file.moveTo(destFile)
+          logger.info("Moved $file to $destFile")
+        }
+      }
+
+      is RemoveAction -> {
+        streamDataList.flatMap {
+          listOfNotNull(
+            it.outputFilePath,
+            it.danmuFilePath
+          )
+        }.forEach { filePath ->
+          val file = Path(filePath)
+          file.deleteFile()
         }
       }
 
