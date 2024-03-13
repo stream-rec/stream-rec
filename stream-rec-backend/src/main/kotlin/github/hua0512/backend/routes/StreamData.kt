@@ -47,10 +47,6 @@ import kotlinx.serialization.json.put
 fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
   route("/streams") {
     get {
-
-      call.request.queryParameters.forEach { s, strings ->
-        logger.debug("{}: {}", s, strings)
-      }
       val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 0
       val pageSize = call.request.queryParameters["per_page"]?.toIntOrNull() ?: 10
       val filter = call.request.queryParameters["filter"]
@@ -68,17 +64,6 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
       val order = call.request.queryParameters["order"]?.uppercase()
 
       try {
-        logger.debug(
-          "page: {}, pageSize: {}, filter: {}, streamers: {}, dateStart: {}, dateEnd: {}, sortColumn: {}, order: {}",
-          page,
-          pageSize,
-          filter,
-          streamers,
-          dateStart,
-          dateEnd,
-          sortColumn,
-          order
-        )
         val count = streamsRepo.countStreamData(streamers, filter, dateStart, dateEnd)
         val results = streamsRepo.getStreamDataPaged(page, pageSize, streamers, filter, dateStart, dateEnd, sortColumn, order)
 
