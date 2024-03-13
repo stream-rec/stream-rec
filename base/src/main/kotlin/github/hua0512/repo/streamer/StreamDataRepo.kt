@@ -39,7 +39,23 @@ interface StreamDataRepo {
   suspend fun getStreamDataById(streamDataId: StreamDataId): StreamData?
   suspend fun getAllStreamData(): List<StreamData>
 
-  suspend fun getStremDataPaged(page: Int, pageSize: Int): List<StreamData>
+  suspend fun getStreamDataPaged(
+    page: Int,
+    pageSize: Int,
+    streamers: List<StreamerId>?,
+    filter: String?,
+    dateStart: Long?,
+    dateEnd: Long?,
+    sortColumn: String?,
+    sortOrder: String?,
+  ): List<StreamData>
+
+  suspend fun countStreamData(
+    streamers: List<StreamerId>?,
+    filter: String?,
+    dateStart: Long?,
+    dateEnd: Long?,
+  ): Long
 
   suspend fun getStreamDataByStreamerId(streamerId: StreamerId): StreamData?
   suspend fun saveStreamData(streamData: StreamData): Long

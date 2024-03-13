@@ -27,22 +27,69 @@
 package github.hua0512.backend.routes
 
 import github.hua0512.data.StreamDataId
+import github.hua0512.data.StreamerId
+import github.hua0512.logger
 import github.hua0512.repo.streamer.StreamDataRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
 
 /**
  * @author hua0512
  * @date : 2024/3/5 11:58
  */
 
-fun Route.streamsRoute(streamsRepo: StreamDataRepo) {
+fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
   route("/streams") {
     get {
-      streamsRepo.getAllStreamData().let {
-        call.respond(it)
+
+      call.request.queryParameters.forEach { s, strings ->
+        logger.debug("{}: {}", s, strings)
+      }
+      val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 0
+      val pageSize = call.request.queryParameters["per_page"]?.toIntOrNull() ?: 10
+      val filter = call.request.queryParameters["filter"]
+      val streamers = call.request.queryParameters.getAll("streamer")?.run {
+        mapNotNull {
+          it.toLongOrNull()?.let { StreamerId(it) } ?: run {
+            logger.warn("Invalid streamer id: $it")
+            null
+          }
+        }
+      }
+      val dateStart = call.request.queryParameters["date_start"]?.toLongOrNull()
+      val dateEnd = call.request.queryParameters["date_end"]?.toLongOrNull()
+      val sortColumn = call.request.queryParameters["sort"]
+      val order = call.request.queryParameters["order"]?.uppercase()
+
+      try {
+        logger.debug(
+          "page: {}, pageSize: {}, filter: {}, streamers: {}, dateStart: {}, dateEnd: {}, sortColumn: {}, order: {}",
+          page,
+          pageSize,
+          filter,
+          streamers,
+          dateStart,
+          dateEnd,
+          sortColumn,
+          order
+        )
+        val count = streamsRepo.countStreamData(streamers, filter, dateStart, dateEnd)
+        val results = streamsRepo.getStreamDataPaged(page, pageSize, streamers, filter, dateStart, dateEnd, sortColumn, order)
+
+        val body = buildJsonObject {
+          put("pages", count)
+          put("data", json.encodeToJsonElement(results))
+        }
+        call.respond(HttpStatusCode.OK, body)
+      } catch (e: Exception) {
+        logger.error("Failed to get stream data", e)
+        call.respond(HttpStatusCode.InternalServerError, "Failed to get stream data")
       }
     }
 

@@ -42,11 +42,83 @@ class StreamDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl,
   }
 
   override suspend fun getAllStreamData(): List<StreamDataEntity> {
-    return queries.selectAllStreamDataDesc().executeAsList()
+    return queries.selectAllStreamData().executeAsList()
   }
 
-  override suspend fun getAllStreamDataPaged(page: Int, pageSize: Int): List<StreamDataEntity> {
-    return queries.selectAllStreamDataDescPaged(pageSize.toLong(), ((page - 1) * pageSize).toLong()).executeAsList()
+
+  private fun validateSortOrder(sortOrder: String) {
+    val sortOrder = sortOrder.uppercase()
+    if (sortOrder != "ASC" && sortOrder != "DESC") {
+      throw IllegalArgumentException("Invalid sortOrder: $sortOrder")
+    }
+  }
+
+  override suspend fun getAllStreamDataPaged(
+    page: Int,
+    pageSize: Int,
+    filter: String?,
+    streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean?,
+    dateStart: Long?,
+    dateEnd: Long?,
+    sortColumn: String,
+    sortOrder: String,
+  ): List<StreamDataEntity> {
+    val sortOrder = sortOrder.uppercase()
+    validateSortOrder(sortOrder)
+
+    val showAllStreamers = allStreamers ?: true
+
+    val query = when (sortOrder) {
+      "ASC" -> queries.selectAllStreamDataPagedAsc(
+        offset = ((page - 1) * pageSize).toLong(),
+        limit = pageSize.toLong(),
+        allStreamers = showAllStreamers,
+        streamerIds = streamerIds?.map { it.value } ?: emptyList(),
+        title = filter,
+        danmuFilePath = filter,
+        outputFilePath = filter,
+        sortColumn = sortColumn,
+        dateStart = dateStart,
+        dateEnd = dateEnd
+      )
+
+      "DESC" -> queries.selectAllStreamDataPagedDesc(
+        offset = ((page - 1) * pageSize).toLong(),
+        limit = pageSize.toLong(),
+        allStreamers = showAllStreamers,
+        streamerIds = streamerIds?.map { it.value } ?: emptyList(),
+        title = filter,
+        danmuFilePath = filter,
+        outputFilePath = filter,
+        sortColumn = sortColumn,
+        dateStart = dateStart,
+        dateEnd = dateEnd
+      )
+
+      else -> throw IllegalArgumentException("Invalid sortOrder: $sortOrder")
+    }
+
+    return query.executeAsList()
+  }
+
+  override suspend fun countAllStreamData(
+    filter: String?,
+    streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean?,
+    dateStart: Long?,
+    dateEnd: Long?,
+  ): Long {
+    val showAllStreamers = allStreamers ?: false
+    return queries.countAllStreamData(
+      allStreamers = showAllStreamers,
+      streamerIds = streamerIds?.map { it.value } ?: emptyList(),
+      title = filter,
+      danmuFilePath = filter,
+      outputFilePath = filter,
+      dateStart = dateStart,
+      dateEnd = dateEnd
+    ).executeAsOne()
   }
 
   override suspend fun findStreamDataByStreamerId(streamerId: StreamerId): List<StreamDataEntity> {

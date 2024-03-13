@@ -41,7 +41,22 @@ interface StreamDataDao {
 
   suspend fun getAllStreamData(): List<StreamDataEntity>
 
-  suspend fun getAllStreamDataPaged(page: Int, pageSize: Int): List<StreamDataEntity>
+  suspend fun getAllStreamDataPaged(
+    page: Int, pageSize: Int, filter: String?, streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean?,
+    dateStart: Long?,
+    dateEnd: Long?,
+    sortColumn: String,
+    sortOrder: String,
+  ): List<StreamDataEntity>
+
+  suspend fun countAllStreamData(
+    filter: String?,
+    streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean?,
+    dateStart: Long?,
+    dateEnd: Long?,
+  ): Long
 
   suspend fun findStreamDataByStreamerId(streamerId: StreamerId): List<StreamDataEntity>
 

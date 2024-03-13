@@ -34,7 +34,7 @@ fun Application.configureRouting(
       configRoute(appConfigRepo)
       statsRoute(statsRepo)
       streamerRoute(streamerRepo)
-      streamsRoute(streamDataRepo)
+      streamsRoute(json, streamDataRepo)
       uploadRoute(json, uploadRepo)
     }
   }
