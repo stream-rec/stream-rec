@@ -37,6 +37,7 @@ data class StreamData(
   val dateEnd: Long? = null,
   val outputFilePath: String,
   val danmuFilePath: String? = null,
+  var outputFileSize: Long = 0,
   val streamerId: Long = 0,
 ) {
   var id: Long = -1
@@ -59,6 +60,7 @@ data class StreamData(
     entity.dateEnd,
     entity.outputFilePath,
     entity.danmuFilePath,
+    entity.outputFileSize,
     entity.streamerId
   ) {
     id = entity.id
@@ -71,11 +73,12 @@ data class StreamData(
     outputFilePath = outputFilePath,
     danmuFilePath = danmuFilePath,
     streamerId = streamerId,
+    outputFileSize = outputFileSize,
     id = id
   )
 
   override fun toString(): String {
-    return "StreamData(id=$id, title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, streamerId=$streamerId, streamerName=$streamerName)"
+    return "StreamData(title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, outputFileSize=$outputFileSize, streamerId=$streamerId, id=$id, streamerName='$streamerName', streamer=$streamer)"
   }
 
 }

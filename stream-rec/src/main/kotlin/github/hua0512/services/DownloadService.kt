@@ -56,10 +56,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import kotlin.coroutines.coroutineContext
-import kotlin.io.path.Path
-import kotlin.io.path.createParentDirectories
-import kotlin.io.path.moveTo
-import kotlin.io.path.name
+import kotlin.io.path.*
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -262,6 +259,9 @@ class DownloadService(
             }
             // save the stream data to the database
             try {
+              // get file size
+              val fileSize = Path(streamsData.outputFilePath).fileSize()
+              streamsData.outputFileSize = fileSize
               streamDataRepository.saveStreamData(streamsData)
               logger.debug("saved to db : {}", streamsData)
             } catch (e: Exception) {
