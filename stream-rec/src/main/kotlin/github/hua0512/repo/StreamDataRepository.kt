@@ -63,15 +63,42 @@ class StreamDataRepository(val dao: StreamDataDao, private val streamerDao: Stre
     }
   }
 
-  override suspend fun getStremDataPaged(page: Int, pageSize: Int): List<StreamData> {
+  override suspend fun getStreamDataPaged(
+    page: Int,
+    pageSize: Int,
+    streamers: List<StreamerId>?,
+    filter: String?,
+    dateStart: Long?,
+    dateEnd: Long?,
+    sortColumn: String?,
+    sortOrder: String?,
+  ): List<StreamData> {
     return withIOContext {
-      dao.getAllStreamDataPaged(page, pageSize).map {
-        StreamData(it).apply {
-          populateStreamer()
+      dao.getAllStreamDataPaged(
+        page,
+        pageSize,
+        filter,
+        streamers,
+        streamers?.isEmpty() ?: true,
+        dateStart,
+        dateEnd,
+        sortColumn ?: "dateStart",
+        sortOrder ?: "DESC"
+      )
+        .map {
+          StreamData(it).apply {
+            populateStreamer()
+          }
         }
-      }
     }
   }
+
+  override suspend fun countStreamData(streamers: List<StreamerId>?, filter: String?, dateStart: Long?, dateEnd: Long?): Long {
+    return withIOContext {
+      dao.countAllStreamData(filter, streamers, streamers?.isEmpty(), dateStart, dateEnd)
+    }
+  }
+
 
   override suspend fun getStreamDataByStreamerId(streamerId: StreamerId) = withIOContext {
     dao.findStreamDataByStreamerId(streamerId).firstOrNull()?.let {

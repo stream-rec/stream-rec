@@ -96,9 +96,54 @@ CREATE TABLE IF NOT EXISTS StreamData (
   FOREIGN KEY(streamerId) REFERENCES streamer(streamer_id) ON DELETE CASCADE
 );
 
-selectAllStreamDataDesc : SELECT * FROM StreamData ORDER BY dateStart DESC;
 selectAllStreamData : SELECT * FROM StreamData;
-selectAllStreamDataDescPaged : SELECT * FROM StreamData ORDER BY dateStart DESC LIMIT ? OFFSET ?;
+
+selectAllStreamDataPagedAsc:
+SELECT * FROM StreamData
+WHERE (:allStreamers OR streamerId IN :streamerIds)
+AND (:title IS NULL OR title LIKE :title || '%'
+    OR outputFilePath LIKE :outputFilePath || '%' OR :outputFilePath IS NULL
+    OR danmuFilePath LIKE :danmuFilePath || '%' OR :danmuFilePath IS NULL
+)
+AND (:dateStart IS NULL OR dateStart >= :dateStart )
+AND (:dateEnd IS NULL OR dateEnd <= :dateEnd )
+ORDER BY CASE
+             WHEN :sortColumn = 'id' THEN id
+             WHEN :sortColumn = 'title' THEN title
+             WHEN :sortColumn = 'dateStart' THEN dateStart
+             WHEN :sortColumn = 'dateEnd' THEN dateEnd
+             ELSE dateStart
+             END ASC
+LIMIT :limit OFFSET :offset;
+
+selectAllStreamDataPagedDesc:
+SELECT * FROM StreamData
+WHERE (:allStreamers OR streamerId IN :streamerIds)
+AND (:title IS NULL OR title LIKE :title || '%'
+    OR outputFilePath LIKE :outputFilePath || '%' OR :outputFilePath IS NULL
+    OR danmuFilePath LIKE :danmuFilePath || '%' OR :danmuFilePath IS NULL
+)
+AND (:dateStart IS NULL OR dateStart >= :dateStart )
+AND (:dateEnd IS NULL OR dateEnd <= :dateEnd )
+ORDER BY CASE
+             WHEN :sortColumn = 'id' THEN id
+             WHEN :sortColumn = 'title' THEN title
+             WHEN :sortColumn = 'dateStart' THEN dateStart
+             WHEN :sortColumn = 'dateEnd' THEN dateEnd
+             ELSE dateStart
+             END DESC
+LIMIT :limit OFFSET :offset;
+
+countAllStreamData:
+SELECT COUNT(*) FROM StreamData
+WHERE (:allStreamers OR streamerId IN :streamerIds)
+AND (:title IS NULL OR title LIKE :title || '%'
+    OR outputFilePath LIKE :outputFilePath || '%' OR :outputFilePath IS NULL
+    OR danmuFilePath LIKE :danmuFilePath || '%' OR :danmuFilePath IS NULL
+)
+AND (:dateStart IS NULL OR dateStart >= :dateStart)
+AND (:dateEnd IS NULL OR dateEnd <= :dateEnd);
+
 getStreamDataById : SELECT * FROM StreamData WHERE id = ?;
 getStreamDataIdByOutputFilePath : SELECT id FROM StreamData WHERE outputFilePath = ? LIMIT 1;
 selectAllStreamDataOfStreamer : SELECT * FROM StreamData WHERE streamerId = ? ORDER BY dateStart DESC;
