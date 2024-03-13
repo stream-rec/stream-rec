@@ -91,4 +91,38 @@ data class Streamer(
     download_config = downloadConfig?.let { json.encodeToString<DownloadConfig>(it) },
     app_config_id = 1
   )
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as Streamer
+
+    if (name != other.name) return false
+    if (url != other.url) return false
+    if (platform != other.platform) return false
+    if (isActivated != other.isActivated) return false
+    if (downloadConfig != other.downloadConfig) return false
+    if (isTemplate != other.isTemplate) return false
+    if (id != other.id) return false
+    if (templateStreamer != other.templateStreamer) return false
+    if (templateId != other.templateId) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = name.hashCode()
+    result = 31 * result + url.hashCode()
+    result = 31 * result + platform.hashCode()
+    result = 31 * result + isActivated.hashCode()
+    result = 31 * result + (downloadConfig?.hashCode() ?: 0)
+    result = 31 * result + isTemplate.hashCode()
+    result = 31 * result + id.hashCode()
+    result = 31 * result + (templateStreamer?.hashCode() ?: 0)
+    result = 31 * result + (templateId?.hashCode() ?: 0)
+    return result
+  }
+
+
 }
