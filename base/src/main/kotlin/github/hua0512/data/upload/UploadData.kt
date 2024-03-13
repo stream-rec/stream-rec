@@ -28,7 +28,7 @@ package github.hua0512.data.upload
 
 import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.UploadDataEntity
-import github.hua0512.utils.asLong
+import kotlinx.serialization.Required
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -36,7 +36,8 @@ import kotlinx.serialization.Transient
 data class UploadData(
   var id: Long = 0,
   val filePath: String,
-  var status: Boolean = false,
+  @Required
+  var status: UploadState = UploadState.NOT_STARTED,
 ) {
   var streamDataId: Long = -1
     get() = if (isStreamDataInitialized()) streamData.id else field
@@ -62,8 +63,8 @@ data class UploadData(
   var uploadPlatform = ""
     get() = if (isUploadActionInitialized()) uploadAction.uploadConfig.platform.toString() else field
 
-  var uploadTime: Long = 0
-    get() = if (isUploadActionInitialized()) uploadAction.time else field
+  @Transient
+  var uploadResults = mutableListOf<UploadResult>()
 
   var uploadConfig: UploadConfig = UploadConfig.NoopConfig
     get() = if (isUploadActionInitialized()) uploadAction.uploadConfig else field
@@ -79,7 +80,7 @@ data class UploadData(
     return UploadDataEntity(
       id = id,
       filePath = filePath,
-      status = status.asLong,
+      status = status.value.toLong(),
       streamDataId = streamDataId
     )
   }

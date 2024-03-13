@@ -26,25 +26,39 @@
 
 package github.hua0512.repo.uploads
 
+import github.hua0512.data.StreamerId
 import github.hua0512.data.UploadActionId
 import github.hua0512.data.UploadDataId
 import github.hua0512.data.UploadResultId
 import github.hua0512.data.upload.UploadAction
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
+import github.hua0512.data.upload.UploadState
 import kotlinx.coroutines.flow.Flow
 
 interface UploadRepo {
   suspend fun streamFailedUploadResults(): Flow<List<UploadResult>>
 
   suspend fun getAllUploadData(): List<UploadData>
+  suspend fun getAllUploadDataPaginated(
+    page: Int,
+    pageSize: Int,
+    status: List<Long>?,
+    filter: String?,
+    streamers: List<StreamerId>?,
+    sortColumn: String?,
+    sortOrder: String?,
+  ): List<UploadData>
+
+  suspend fun countAllUploadData(status: List<Long>?, filter: String?, streamerId: Collection<StreamerId>?): Long
+
   suspend fun getAllUploadResults(): List<UploadResult>
 
   suspend fun getUploadAction(id: UploadActionId): UploadAction?
   suspend fun saveAction(uploadAction: UploadAction): UploadActionId
   suspend fun saveResult(uploadResult: UploadResult)
   suspend fun getUploadData(uploadDataId: UploadDataId): UploadData?
-  suspend fun changeUploadDataStatus(uploadDataId: Long, status: Boolean)
+  suspend fun changeUploadDataStatus(uploadDataId: Long, status: UploadState)
   suspend fun deleteUploadData(id: UploadDataId)
   suspend fun deleteUploadResult(id: UploadResultId)
   suspend fun getUploadActionIdByUploadDataId(id: UploadDataId): UploadAction?

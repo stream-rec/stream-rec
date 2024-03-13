@@ -29,12 +29,9 @@ package github.hua0512.services
 import github.hua0512.app.App
 import github.hua0512.data.UploadDataId
 import github.hua0512.data.UploadResultId
-import github.hua0512.data.upload.UploadAction
-import github.hua0512.data.upload.UploadConfig
+import github.hua0512.data.upload.*
 import github.hua0512.data.upload.UploadConfig.NoopConfig
 import github.hua0512.data.upload.UploadConfig.RcloneConfig
-import github.hua0512.data.upload.UploadData
-import github.hua0512.data.upload.UploadResult
 import github.hua0512.plugins.base.Upload
 import github.hua0512.plugins.upload.NoopUploader
 import github.hua0512.plugins.upload.RcloneUploader
@@ -149,15 +146,6 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
     val deferredResults = CompletableDeferred<List<UploadResult>>()
     withIOContext {
       val results = parallelUpload(uploadAction.files, uploader)
-      results.forEach {
-        // save the result
-        uploadRepo.saveResult(it)
-        if (it.isSuccess) {
-          // get the upload data and update the status
-          val uploadDataId = it.uploadDataId
-          uploadRepo.changeUploadDataStatus(uploadDataId, true)
-        }
-      }
       logger.debug("Upload results: {}", results)
       deferredResults.complete(results)
     }
@@ -181,6 +169,10 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
       .flatMapMerge(concurrency = app.config.maxConcurrentUploads) { file ->
         uploadFileFlow(file, plugin)
       }
+      .onEach {
+        uploadRepo.saveResult(it)
+      }
+      .flowOn(Dispatchers.IO)
       .toList()
   }
 
@@ -194,15 +186,27 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
    */
   private fun uploadFileFlow(file: UploadData, plugin: Upload): Flow<UploadResult> = flow {
     var attempts = 0
+    // change the status to UPLOADING
+    file.status = UploadState.UPLOADING
+    uploadRepo.changeUploadDataStatus(file.id, file.status)
     // Retry logic
     while (attempts < 3) {
       try {
+        if (attempts > 0 && file.status != UploadState.REUPLOADING) {
+          // change the status to REUPLOADING if the upload is being retried
+          file.status = UploadState.REUPLOADING
+          uploadRepo.changeUploadDataStatus(file.id, file.status)
+        }
+
         // upload the file
         uploadSemaphore.withPermit {
           val status = plugin.upload(file).apply {
             uploadData = file
           }
-          file.status = status.isSuccess
+          // change the status to UPLOADED if the upload is successful
+          file.status = if (status.isSuccess) UploadState.UPLOADED else UploadState.FAILED
+          file.uploadResults.add(status)
+          uploadRepo.changeUploadDataStatus(file.id, file.status)
           logger.info("Successfully uploaded file: ${file.filePath}")
           emit(status)
           attempts = 3
@@ -211,9 +215,15 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
         logger.error("Invalid arguments for upload: ${file.filePath}")
         emit(
           UploadResult(
-            time = Clock.System.now().epochSeconds, isSuccess = false, message = "Invalid arguments for upload: ${e.message}",
-          ).also { it.uploadData = file }
+            startTime = Clock.System.now().epochSeconds, isSuccess = false, message = "Invalid arguments for upload: ${e.message}",
+          ).apply {
+            uploadData = file
+            file.status = UploadState.FAILED
+            file.uploadResults.add(this)
+            uploadRepo.changeUploadDataStatus(file.id, file.status)
+          }
         )
+        attempts = 3
       } catch (e: Exception) {
         // other exceptions,
         // most likely network issues or an UploadFailedException
@@ -222,10 +232,15 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
         if (attempts >= 3) {
           emit(
             UploadResult(
-              time = Clock.System.now().epochSeconds,
+              startTime = Clock.System.now().epochSeconds,
               isSuccess = false,
               message = "Failed to upload file : $e",
-            ).also { it.uploadData = file })
+            ).apply {
+              uploadData = file
+              file.status = UploadState.FAILED
+              file.uploadResults.add(this)
+              uploadRepo.changeUploadDataStatus(file.id, file.status)
+            })
         }
       }
     }

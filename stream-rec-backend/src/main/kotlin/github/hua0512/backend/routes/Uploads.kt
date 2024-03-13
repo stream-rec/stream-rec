@@ -26,23 +26,60 @@
 
 package github.hua0512.backend.routes
 
+import github.hua0512.data.StreamerId
 import github.hua0512.data.UploadDataId
+import github.hua0512.data.upload.UploadState
 import github.hua0512.logger
 import github.hua0512.repo.uploads.UploadRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
 
 
-fun Route.uploadRoute(repo: UploadRepo) {
+fun Route.uploadRoute(json: Json, repo: UploadRepo) {
   route("/uploads") {
     get {
+      val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 0
+      val pageSize = call.request.queryParameters["per_page"]?.toIntOrNull() ?: 10
+      val status = call.request.queryParameters.getAll("status")?.run {
+        mapNotNull {
+          UploadState.entries.find { state -> state.name == it }?.value?.toLong() ?: run {
+            logger.warn("Invalid status: $it")
+            null
+          }
+        }
+      } ?: UploadState.entries.map { it.value.toLong() }
+      val filter = call.request.queryParameters["filter"]
+      val streamers = call.request.queryParameters.getAll("streamer")?.run {
+        mapNotNull {
+          it.toLongOrNull()?.let { StreamerId(it) } ?: run {
+            logger.warn("Invalid streamer id: $it")
+            null
+          }
+        }
+      }
+      val sortColumn = call.request.queryParameters["sort"]
+      val order = call.request.queryParameters["order"]?.uppercase()
       try {
-        call.respond(repo.getAllUploadData())
+        val count = repo.countAllUploadData(status, filter, streamers).run {
+          if (this % pageSize == 0L) this / pageSize else this / pageSize + 1
+        }
+        val results = repo.getAllUploadDataPaginated(page, pageSize, status, filter, streamers, sortColumn, order)
+
+        val body = buildJsonObject {
+          put("pages", count)
+          put("data", json.encodeToJsonElement(results))
+        }
+        call.respond(HttpStatusCode.OK, body)
       } catch (e: Exception) {
         logger.error("Failed to get upload data : ${e.message}")
-        call.respond(HttpStatusCode.InternalServerError, "Failed to get upload results : ${e.message}")
+        call.respond(HttpStatusCode.InternalServerError, "Failed to get upload data : ${e.message}")
+        return@get
       }
     }
 

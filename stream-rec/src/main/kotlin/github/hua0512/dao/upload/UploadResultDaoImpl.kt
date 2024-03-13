@@ -36,7 +36,6 @@ import github.hua0512.sqldelight.db.UploadResult
 import github.hua0512.utils.UploadResultEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
 
 class UploadResultDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, UploadResultDao {
   override fun streamUploadResults(): Flow<List<UploadResult>> {
@@ -65,12 +64,13 @@ class UploadResultDaoImpl(override val database: StreamRecDatabase) : BaseDaoImp
 
   override fun saveUploadResult(uploadResult: UploadResultEntity): Long {
     queries.insertUploadResult(
-      uploadResult.time,
+      uploadResult.startTime,
+      uploadResult.endTime,
       uploadResult.isSuccess,
       uploadResult.message,
       uploadResult.uploadDataId
     )
-    return queries.getUploadResultIdByTimeAndUploadDataId(uploadResult.time, uploadResult.uploadDataId).executeAsOne()
+    return queries.getUploadResultIdByTimeAndUploadDataId(uploadResult.startTime, uploadResult.uploadDataId).executeAsOne()
   }
 
   override fun deleteUploadResult(uploadResultId: UploadResultId) {
