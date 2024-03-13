@@ -31,18 +31,15 @@ import github.hua0512.dao.upload.UploadActionDao
 import github.hua0512.dao.upload.UploadActionFilesDao
 import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
-import github.hua0512.data.StreamDataId
-import github.hua0512.data.UploadActionId
-import github.hua0512.data.UploadDataId
-import github.hua0512.data.UploadResultId
-import github.hua0512.data.upload.UploadAction
-import github.hua0512.data.upload.UploadConfig
-import github.hua0512.data.upload.UploadData
-import github.hua0512.data.upload.UploadResult
+import github.hua0512.data.*
+import github.hua0512.data.upload.*
 import github.hua0512.logger
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.uploads.UploadRepo
-import github.hua0512.utils.*
+import github.hua0512.utils.StatsEntity
+import github.hua0512.utils.UploadDataEntity
+import github.hua0512.utils.getTodayStart
+import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -92,18 +89,58 @@ class UploadActionRepository(
 
   override suspend fun getAllUploadData(): List<UploadData> {
     return withIOContext {
-      uploadDataDao.getAllUploadData().map { uploadData ->
-        UploadData(
-          id = uploadData.id,
-          filePath = uploadData.filePath,
-          status = uploadData.status.boolean
-        ).apply {
-          uploadAction = getUploadActionIdByUploadDataId(UploadDataId(uploadData.id))
-            ?: throw IllegalStateException("Upload action not found for upload data: $this")
-          streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
-            ?: throw IllegalStateException("Stream data not found for upload data: $this")
-        }
-      }
+      uploadDataDao.getAllUploadData().mapToUploadData()
+    }
+  }
+
+  override suspend fun getAllUploadDataPaginated(
+    page: Int,
+    pageSize: Int,
+    status: List<Long>?,
+    filter: String?,
+    streamers: List<StreamerId>?,
+    sortColumn: String?,
+    sortOrder: String?,
+  ): List<UploadData> {
+    val sortColumn = sortColumn ?: "id"
+    val sortOrder = sortOrder ?: "DESC"
+
+    return withIOContext {
+      uploadDataDao.getAllUploadDataPaginated(
+        page,
+        pageSize,
+        filter ?: "",
+        status = status ?: UploadState.entries.map { it.value.toLong() },
+        streamers,
+        streamers?.isEmpty() ?: true,
+        sortColumn,
+        sortOrder
+      )
+        .mapToUploadData()
+    }
+  }
+
+  override suspend fun countAllUploadData(status: List<Long>?, filter: String?, streamerId: Collection<StreamerId>?): Long {
+    return withIOContext {
+      uploadDataDao.countAllUploadData(
+        status ?: UploadState.entries.map { it.value.toLong() },
+        filter ?: "",
+        streamerId
+      )
+    }
+  }
+
+  private suspend fun List<UploadDataEntity>.mapToUploadData() = this.map { uploadData ->
+    UploadData(
+      id = uploadData.id,
+      filePath = uploadData.filePath,
+      status = UploadState.fromValue(uploadData.status.toInt())
+    ).apply {
+      streamDataId = uploadData.streamDataId ?: -1
+      uploadAction = getUploadActionIdByUploadDataId(UploadDataId(uploadData.id))
+        ?: throw IllegalStateException("Upload action not found for upload data: $this")
+      streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
+        ?: throw IllegalStateException("Stream data not found for upload data: $this")
     }
   }
 
@@ -159,7 +196,7 @@ class UploadActionRepository(
         val uploadDataId = uploadDataDao.insertUploadData(
           it.filePath,
           StreamDataId(it.streamDataId),
-          it.status.asLong
+          it.status.value.toLong()
         )
         it.id = uploadDataId
         it.uploadAction = uploadAction
@@ -217,7 +254,7 @@ class UploadActionRepository(
         UploadData(
           id = uploadData.id,
           filePath = uploadData.filePath,
-          status = uploadData.status.boolean
+          status = UploadState.fromValue(uploadData.status.toInt())
         ).also {
           it.uploadAction =
             getUploadActionIdByUploadDataId(uploadDataId) ?: throw IllegalStateException("Upload action not found for upload data: $this")
@@ -237,9 +274,9 @@ class UploadActionRepository(
    * @param uploadDataId The ID of the upload data to update.
    * @param status The new status to set for the upload data.
    */
-  override suspend fun changeUploadDataStatus(uploadDataId: Long, status: Boolean) {
+  override suspend fun changeUploadDataStatus(uploadDataId: Long, status: UploadState) {
     return withIOContext {
-      uploadDataDao.updateUploadDataStatus(UploadDataId(uploadDataId), status.asLong)
+      uploadDataDao.updateUploadDataStatus(UploadDataId(uploadDataId), status.value.toLong())
     }
   }
 

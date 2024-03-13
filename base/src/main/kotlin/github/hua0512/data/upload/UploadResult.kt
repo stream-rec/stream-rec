@@ -40,7 +40,8 @@ import kotlinx.serialization.Transient
 @Serializable
 data class UploadResult(
   var id: Long = 0,
-  val time: Long,
+  val startTime: Long,
+  val endTime: Long = 0,
   val isSuccess: Boolean = false,
   val message: String = "",
 ) {
@@ -61,7 +62,8 @@ data class UploadResult(
 
   constructor(entity: UploadResultEntity) : this(
     entity.id,
-    entity.time,
+    entity.startTime,
+    entity.endTime,
     entity.isSuccess.boolean,
     entity.message.toString(),
   ) {
@@ -74,7 +76,8 @@ data class UploadResult(
   fun toEntity(): UploadResultEntity {
     return UploadResultEntity(
       id = id,
-      time = time,
+      startTime = startTime,
+      endTime = endTime,
       isSuccess = isSuccess.asLong,
       message = message,
       uploadDataId = uploadDataId

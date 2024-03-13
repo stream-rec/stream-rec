@@ -95,6 +95,7 @@ class Application {
 
         // start server
         val server = backendServer(
+          json = appComponent.getJson(),
           appComponent.getAppConfigRepository(),
           appComponent.getStreamerRepo(),
           appComponent.getStreamDataRepo(),

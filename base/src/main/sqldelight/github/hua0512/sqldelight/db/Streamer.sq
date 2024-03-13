@@ -117,7 +117,8 @@ CREATE TABLE IF NOT EXISTS UploadData (
 
 CREATE TABLE IF NOT EXISTS UploadResult (
   id INTEGER PRIMARY KEY,
-  time INTEGER NOT NULL,
+  startTime INTEGER NOT NULL DEFAULT 0,
+  endTime INTEGER NOT NULL DEFAULT 0,
   isSuccess INTEGER NOT NULL DEFAULT 0,
   message TEXT,
   uploadDataId INTEGER NOT NULL,
@@ -160,9 +161,48 @@ deleteUploadAction : DELETE FROM UploadAction WHERE id = ?;
 -- UploadData Queries
 
 -- Selects all records from the UploadData table and orders them by streamStartTime in descending order.
+
 selectAllUploadData : SELECT * FROM UploadData ORDER BY id DESC;
 
-selectAllUploadDataPaginated : SELECT * FROM UploadData  LIMIT ? OFFSET ?;
+selectAllUploadDataPaginatedAsc:
+SELECT UploadData.id, UploadData.filePath, UploadData.status, StreamData.id AS streamDataId
+FROM UploadData JOIN StreamData ON UploadData.streamDataId = StreamData.id
+WHERE (UploadData.status IN :status)
+ AND ( :allStreamers OR StreamData.streamerId IN :streamers)
+  AND (StreamData.title LIKE :title OR :title IS NULL
+    OR UploadData.filePath LIKE '%' || :filePath || '%')
+ORDER BY CASE
+             WHEN :sortColumn = 'id' THEN UploadData.id
+             WHEN :sortColumn = 'filePath' THEN UploadData.filePath
+             WHEN :sortColumn = 'title' THEN StreamData.title
+             ELSE UploadData.id
+             END ASC
+LIMIT :limit OFFSET :offset;
+
+selectAllUploadDataPaginatedDesc:
+SELECT UploadData.id, UploadData.filePath, UploadData.status, StreamData.id AS streamDataId
+FROM UploadData
+         JOIN StreamData ON UploadData.streamDataId = StreamData.id
+WHERE (UploadData.status IN :status)
+  AND ( :allStreamers OR StreamData.streamerId IN :streamers)
+  AND (StreamData.title LIKE :title OR :title IS NULL
+    OR UploadData.filePath LIKE '%' || :filePath || '%')
+ORDER BY CASE
+             WHEN :sortColumn = 'id' THEN UploadData.id
+             WHEN :sortColumn = 'filePath' THEN UploadData.filePath
+             WHEN :sortColumn = 'title' THEN StreamData.title
+             ELSE UploadData.id
+             END DESC
+LIMIT :limit OFFSET :offset;
+
+countAllUploadData:
+SELECT COUNT(*) FROM UploadData
+         JOIN StreamData ON UploadData.streamDataId = StreamData.id
+WHERE (UploadData.status IN :status)
+  AND (:allStreamers OR StreamData.streamerId IN :streamers)
+  AND (StreamData.title LIKE :title OR :title IS NULL
+  OR UploadData.filePath LIKE '%' || :filePath || '%');
+
 
 selectAllUploadDataByStatus : SELECT * FROM UploadData WHERE status = ?;
 
@@ -205,25 +245,25 @@ getUploadActionByUploadDataId : SELECT * FROM UploadActionFiles LEFT JOIN Upload
 -- UploadResult Queries
 
 -- Selects all records from the UploadResult table and orders them by time in descending order.
-selectAllUploadResult : SELECT * FROM UploadResult ORDER BY time DESC;
+selectAllUploadResult : SELECT * FROM UploadResult ORDER BY startTime DESC;
 
 -- Selects all records from the UploadResult table and orders them by time in descending order with pagination.
-selectAllUploadResultPaginated : SELECT * FROM UploadResult ORDER BY time DESC LIMIT ? OFFSET ?;
+selectAllUploadResultPaginated : SELECT * FROM UploadResult ORDER BY startTime DESC LIMIT ? OFFSET ?;
 
 -- Selects all records from the UploadResult table where the isSuccess is 0 and orders them by time in descending order.
-selectAllFailedUploadResult : SELECT * FROM UploadResult WHERE isSuccess = 0 ORDER BY time DESC;
+selectAllFailedUploadResult : SELECT * FROM UploadResult WHERE isSuccess = 0 ORDER BY startTime DESC;
 
 -- Selects a record from the UploadResult table where the id matches the provided parameter.
 getUploadResultById : SELECT * FROM UploadResult WHERE id = ?;
 
-findResultsByFilePath : SELECT * FROM UploadResult LEFT JOIN UploadData ON UploadResult.uploadDataId = UploadData.id WHERE UploadData.filePath = ? ORDER BY time DESC;
+findResultsByFilePath : SELECT * FROM UploadResult LEFT JOIN UploadData ON UploadResult.uploadDataId = UploadData.id WHERE UploadData.filePath = ? ORDER BY startTime DESC;
 
-findResultsByUploadDataId : SELECT * FROM UploadResult WHERE uploadDataId = ? ORDER BY time DESC;
+findResultsByUploadDataId : SELECT * FROM UploadResult WHERE uploadDataId = ? ORDER BY startTime DESC;
 
 -- Inserts a new record into the UploadResult table with the provided time, isSuccess, message, and filePath values.
-insertUploadResult : INSERT INTO UploadResult(time, isSuccess, message, uploadDataId) VALUES(?, ?, ?, ?);
+insertUploadResult : INSERT INTO UploadResult(startTime, endTime, isSuccess, message, uploadDataId) VALUES(?, ?,?, ?, ?);
 
-getUploadResultIdByTimeAndUploadDataId : SELECT id FROM UploadResult WHERE time = ? AND uploadDataId = ? LIMIT 1;
+getUploadResultIdByTimeAndUploadDataId : SELECT id FROM UploadResult WHERE startTime = ? AND uploadDataId = ? LIMIT 1;
 
 -- Deletes a record from the UploadResult table where the id matches the provided parameter.
 deleteUploadResult : DELETE FROM UploadResult WHERE id = ?;

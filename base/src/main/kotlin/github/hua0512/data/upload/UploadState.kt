@@ -24,23 +24,30 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.upload
-
-import github.hua0512.app.App
-import github.hua0512.data.upload.UploadData
-import github.hua0512.data.upload.UploadResult
-import github.hua0512.plugins.base.Upload
-import kotlinx.datetime.Clock
+package github.hua0512.data.upload
 
 /**
- * An uploader that does nothing.
+ * Upload result state
  * @author hua0512
- * @date : 2024/2/9 2:41
+ * @date : 2024/3/12 11:16
  */
-class NoopUploader(app: App) : Upload(app, null) {
-  override suspend fun upload(uploadData: UploadData): UploadResult {
-    val startTime = Clock.System.now().epochSeconds
-    return UploadResult(startTime = startTime, endTime = startTime, isSuccess = true, message = "Noop upload completed")
-  }
+enum class UploadState(val value: Int) {
+  NOT_STARTED(0),
+  UPLOADING(1),
+  UPLOADED(2),
+  FAILED(3),
+  REUPLOADING(4);
 
+  companion object {
+
+    fun fromValue(value: Int): UploadState {
+      return when (value) {
+        0 -> NOT_STARTED
+        1 -> UPLOADING
+        2 -> UPLOADED
+        3 -> FAILED
+        else -> throw IllegalArgumentException("Invalid value for UploadState: $value")
+      }
+    }
+  }
 }

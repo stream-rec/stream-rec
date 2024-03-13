@@ -29,6 +29,7 @@ package github.hua0512.dao.upload
 import github.hua0512.StreamRecDatabase
 import github.hua0512.dao.BaseDaoImpl
 import github.hua0512.data.StreamDataId
+import github.hua0512.data.StreamerId
 import github.hua0512.data.UploadDataId
 import github.hua0512.utils.UploadDataEntity
 
@@ -41,9 +42,81 @@ class UploadDataDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl,
     return queries.selectAllUploadData().executeAsList()
   }
 
-  override fun getAllUploadDataPaginated(page: Int, pageSize: Int): List<UploadDataEntity> {
-    return queries.selectAllUploadDataPaginated(pageSize.toLong(), (page - 1L) * pageSize).executeAsList()
+  override fun getAllUploadDataPaginated(
+    page: Int,
+    pageSize: Int,
+    filter: String,
+    status: Collection<Long>?,
+    streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean?,
+    sortColumn: String,
+    sortOrder: String,
+  ): List<UploadDataEntity> {
+
+    val sortOrder = sortOrder.uppercase()
+    if (sortOrder != "ASC" && sortOrder != "DESC") {
+      throw IllegalArgumentException("Invalid sortOrder: $sortOrder")
+    }
+
+    val showAllStreamers = allStreamers ?: false
+
+    val query = when (sortOrder) {
+      "ASC" -> {
+        queries.selectAllUploadDataPaginatedAsc(
+          allStreamers = showAllStreamers,
+          streamers = streamerIds?.map { it.value } ?: emptyList(),
+          status = status ?: emptyList(),
+          title = filter,
+          filePath = filter,
+          offset = (page - 1L) * pageSize,
+          limit = pageSize.toLong(),
+          sortColumn = sortColumn,
+          mapper = { id, filePath, uploadStatus, streamDataId ->
+            UploadDataEntity(
+              id,
+              filePath,
+              streamDataId,
+              uploadStatus,
+            )
+          })
+      }
+
+      "DESC" -> {
+        queries.selectAllUploadDataPaginatedDesc(
+          allStreamers = showAllStreamers,
+          streamers = streamerIds?.map { it.value } ?: emptyList(),
+          status = status ?: emptyList(),
+          title = filter,
+          filePath = filter,
+          offset = (page - 1L) * pageSize,
+          limit = pageSize.toLong(),
+          sortColumn = sortColumn,
+          mapper = { id, filePath, uploadStatus, streamDataId ->
+            UploadDataEntity(
+              id,
+              filePath,
+              streamDataId,
+              uploadStatus,
+            )
+          })
+      }
+
+      else -> throw IllegalArgumentException("Invalid sortOrder: $sortOrder")
+    }
+    return query.executeAsList()
   }
+
+  override fun countAllUploadData(status: Collection<Long>?, filter: String, streamerIds: Collection<StreamerId>?): Long {
+    return queries.countAllUploadData(
+      status = status ?: emptyList(),
+      allStreamers = streamerIds.isNullOrEmpty(),
+      streamers = streamerIds?.map { it.value } ?: emptyList(),
+      title = filter,
+      filePath = filter
+    )
+      .executeAsOneOrNull() ?: 0
+  }
+
 
   override fun getUploadDatasByStatus(status: Long): List<UploadDataEntity> {
     return queries.selectAllUploadDataByStatus(status).executeAsList()

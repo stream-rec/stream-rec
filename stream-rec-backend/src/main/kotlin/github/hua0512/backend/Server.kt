@@ -36,8 +36,10 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.serialization.json.Json
 
 fun CoroutineScope.backendServer(
+  json: Json,
   appConfigRepo: AppConfigRepo,
   streamerRepo: StreamerRepo,
   streamDataRepo: StreamDataRepo,
@@ -48,10 +50,11 @@ fun CoroutineScope.backendServer(
     Netty,
     port = 12555,
     host = "0.0.0.0",
-    module = { module(appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo) })
+    module = { module(json, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo) })
 }
 
 fun Application.module(
+  json: Json,
   appConfigRepo: AppConfigRepo,
   streamerRepo: StreamerRepo,
   streamDataRepo: StreamDataRepo,
@@ -64,5 +67,5 @@ fun Application.module(
   configureSerialization()
   configureSockets()
   configureAdministration()
-  configureRouting(appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo)
+  configureRouting(json, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo)
 }

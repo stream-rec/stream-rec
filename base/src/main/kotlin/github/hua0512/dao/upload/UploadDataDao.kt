@@ -27,6 +27,7 @@
 package github.hua0512.dao.upload
 
 import github.hua0512.data.StreamDataId
+import github.hua0512.data.StreamerId
 import github.hua0512.data.UploadDataId
 import github.hua0512.utils.UploadDataEntity
 
@@ -37,7 +38,19 @@ import github.hua0512.utils.UploadDataEntity
 interface UploadDataDao {
 
   fun getAllUploadData(): List<UploadDataEntity>
-  fun getAllUploadDataPaginated(page: Int, pageSize: Int): List<UploadDataEntity>
+  fun getAllUploadDataPaginated(
+    page: Int,
+    pageSize: Int,
+    filter: String,
+    status: Collection<Long>?,
+    streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean?,
+    sortColumn: String,
+    sortOrder: String,
+  ): List<UploadDataEntity>
+
+  fun countAllUploadData(status: Collection<Long>?, filter: String, streamerIds: Collection<StreamerId>?): Long
+
   fun getUploadDatasByStatus(status: Long): List<UploadDataEntity>
   fun getUploadDataById(id: UploadDataId): UploadDataEntity?
   fun insertUploadData(filePath: String, streamDataId: StreamDataId, status: Long): Long
