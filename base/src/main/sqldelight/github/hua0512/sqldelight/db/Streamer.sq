@@ -1,3 +1,18 @@
+CREATE TABLE IF NOT EXISTS user(
+  id INTEGER PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user'
+);
+
+getAllUsers : SELECT * FROM user;
+getUserById : SELECT * FROM user WHERE id = ?;
+getUserByUsername : SELECT * FROM user WHERE username = ?;
+insertUser : INSERT INTO user(username, password, role) VALUES(?, ?, ?);
+deleteUser : DELETE FROM user WHERE id = ?;
+updateUser : UPDATE user SET username = ?, password = ?, role = ? WHERE id = ?;
+getLastUserId : SELECT id FROM user ORDER BY id DESC LIMIT 1;
+
 CREATE TABLE IF NOT EXISTS app_config(
   id INTEGER PRIMARY KEY,
    engine TEXT NOT NULL DEFAULT 'ffmpeg',

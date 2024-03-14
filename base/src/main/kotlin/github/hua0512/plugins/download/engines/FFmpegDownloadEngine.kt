@@ -93,7 +93,7 @@ class FFmpegDownloadEngine(
       onDownloadStarted()
       // last size of the file
       var lastSize = 0L
-      val exitCode = executeProcess(app.ffmepgPath, *cmds, stdout = Redirect.CAPTURE, stderr = Redirect.CAPTURE, destroyForcibly = true) { line ->
+      val exitCode = executeProcess(App.ffmpegPath, *cmds, stdout = Redirect.CAPTURE, stderr = Redirect.CAPTURE, destroyForcibly = true) { line ->
         if (!line.startsWith("size="))
           logger.info("${streamer.name} - $line")
         else {

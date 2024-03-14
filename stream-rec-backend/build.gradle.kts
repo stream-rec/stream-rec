@@ -8,6 +8,7 @@ version = "0.5.0"
 
 dependencies {
   implementation(project(":base"))
+  implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.io.ktor.server.core.jvm)
   implementation(libs.io.ktor.server.host.common.jvm)
   api(libs.io.ktor.server.netty.jvm)

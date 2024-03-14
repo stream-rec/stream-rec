@@ -24,59 +24,48 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data
+package github.hua0512.repo
+
+import github.hua0512.dao.UserDao
+import github.hua0512.data.User
+import github.hua0512.data.UserId
+import github.hua0512.utils.withIOContext
 
 /**
+ * Repository for User
  * @author hua0512
- * @date : 2024/2/18 22:53
+ * @date : 2024/3/14 18:57
  */
 
-
-@JvmInline
-value class AppConfigId(val value: Long) {
-  companion object {
-    val INVALID = AppConfigId(-1)
+class UserRepository(val dao: UserDao) : UserRepo {
+  override suspend fun getUserById(id: UserId): User? {
+    return withIOContext {
+      dao.getUserById(id)?.let { User(it) }
+    }
   }
-}
 
-@JvmInline
-value class StreamerId(val value: Long) {
-  companion object {
-    val INVALID = StreamerId(-1)
+  override suspend fun getUserByName(name: String): User? {
+    return withIOContext {
+      dao.getUserByUsername(name)?.let { User(it) }
+    }
   }
-}
 
-@JvmInline
-value class StreamDataId(val value: Long) {
-  companion object {
-    val INVALID = StreamDataId(-1)
+  override suspend fun createUser(newUser: User): User {
+    return withIOContext {
+      val user = dao.createUser(newUser.toEntity())
+      newUser.copy(id = user.id.toInt())
+    }
   }
-}
 
-@JvmInline
-value class UploadActionId(val value: Long) {
-  companion object {
-    val INVALID = UploadActionId(-1)
+  override suspend fun deleteUser(id: UserId): Boolean {
+    return withIOContext {
+      dao.deleteUser(id)
+    }
   }
-}
 
-@JvmInline
-value class UploadDataId(val value: Long) {
-  companion object {
-    val INVALID = UploadDataId(-1)
-  }
-}
-
-@JvmInline
-value class UploadResultId(val value: Long) {
-  companion object {
-    val INVALID = UploadResultId(-1)
-  }
-}
-
-@JvmInline
-value class UserId(val value: Long) {
-  companion object {
-    val INVALID = UserId(-1)
+  override suspend fun updateUser(user: User) {
+    return withIOContext {
+      dao.updateUser(user.toEntity())
+    }
   }
 }

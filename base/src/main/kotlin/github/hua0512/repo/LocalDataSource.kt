@@ -38,11 +38,15 @@ import kotlin.io.path.pathString
 interface LocalDataSource {
 
   companion object {
-
     fun getDefaultPath(): String {
       val envPath = System.getenv("DB_PATH") ?: System.getProperty("user.dir")
       val path = Path(envPath, "db").resolve("stream-rec.db")
       return path.pathString
+    }
+
+    fun getJwtSecret(): String {
+      val envKey = System.getenv("JWT_SECRET")
+      return envKey ?: "n6hCG9eSwj6foa3MhubtBBJbF1rxYt2rUlC2jOllrg1zquvmU9Fg6auCDfZy3l83"
     }
   }
 

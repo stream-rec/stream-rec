@@ -27,15 +27,13 @@
 package github.hua0512.repo
 
 import github.hua0512.dao.AppConfigDao
+import github.hua0512.dao.UserDao
 import github.hua0512.data.VideoFormat
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DouyinConfigGlobal
 import github.hua0512.data.config.HuyaConfigGlobal
 import github.hua0512.logger
-import github.hua0512.utils.AppConfigEntity
-import github.hua0512.utils.boolean
-import github.hua0512.utils.nonEmptyOrNull
-import github.hua0512.utils.withIOContext
+import github.hua0512.utils.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
@@ -46,7 +44,7 @@ import kotlinx.serialization.json.Json
  * @author hua0512
  * @date : 2024/2/18 23:55
  */
-class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json) : LocalDataSource {
+class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: UserDao, private val json: Json) : LocalDataSource {
   override suspend fun streamAppConfig(): Flow<AppConfig> {
     return dao.streamLatestAppConfig()?.map {
       it.toAppConfig()
@@ -84,6 +82,8 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val json: Json)
       dao.getLatestAppConfig()?.toAppConfig() ?: AppConfig().apply {
         logger.info("First time running the app, creating default app config")
         id = 1
+        val user = UserEntity(1, "stream-rec", "stream-rec", "ADMIN")
+        userDao.createUser(user)
         saveAppConfig(this)
       }
     }

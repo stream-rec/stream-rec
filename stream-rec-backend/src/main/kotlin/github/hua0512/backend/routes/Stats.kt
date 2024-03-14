@@ -17,11 +17,10 @@ fun Route.statsRoute(statsRepo: SummaryStatsRepo) {
 
     try {
       val stats = statsRepo.getSummaryStatsFromTo(dateStartEpoch, dateEndEpoch)
-      logger.info("Stats: $stats")
       call.respond(stats)
     } catch (e: Exception) {
       logger.error("Failed to get stats", e)
-      call.respond("Failed to get stats")
+      call.respond("Failed to get stats, error: ${e.message}")
       return@get
     }
   }

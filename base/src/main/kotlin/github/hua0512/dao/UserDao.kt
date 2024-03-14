@@ -24,59 +24,25 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data
+package github.hua0512.dao
+
+import github.hua0512.data.UserId
+import github.hua0512.utils.UserEntity
 
 /**
+ * User related CRUD operations
  * @author hua0512
- * @date : 2024/2/18 22:53
+ * @date : 2024/3/14 18:41
  */
+interface UserDao {
 
+  fun getUserById(id: UserId): UserEntity?
 
-@JvmInline
-value class AppConfigId(val value: Long) {
-  companion object {
-    val INVALID = AppConfigId(-1)
-  }
-}
+  fun getUserByUsername(username: String): UserEntity?
 
-@JvmInline
-value class StreamerId(val value: Long) {
-  companion object {
-    val INVALID = StreamerId(-1)
-  }
-}
+  fun createUser(user: UserEntity): UserEntity
 
-@JvmInline
-value class StreamDataId(val value: Long) {
-  companion object {
-    val INVALID = StreamDataId(-1)
-  }
-}
+  fun updateUser(user: UserEntity): UserEntity
 
-@JvmInline
-value class UploadActionId(val value: Long) {
-  companion object {
-    val INVALID = UploadActionId(-1)
-  }
-}
-
-@JvmInline
-value class UploadDataId(val value: Long) {
-  companion object {
-    val INVALID = UploadDataId(-1)
-  }
-}
-
-@JvmInline
-value class UploadResultId(val value: Long) {
-  companion object {
-    val INVALID = UploadResultId(-1)
-  }
-}
-
-@JvmInline
-value class UserId(val value: Long) {
-  companion object {
-    val INVALID = UserId(-1)
-  }
+  fun deleteUser(id: UserId): Boolean
 }

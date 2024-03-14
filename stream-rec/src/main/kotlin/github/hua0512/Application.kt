@@ -44,8 +44,9 @@ import github.hua0512.backend.backendServer
 import github.hua0512.data.config.AppConfig
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
+import github.hua0512.services.DownloadService
+import io.ktor.server.netty.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -62,57 +63,63 @@ class Application {
     @JvmStatic
     fun main(args: Array<String>) {
       runBlocking {
+        var server: NettyApplicationEngine? = null
         val appComponent: AppComponent = DaggerAppComponent.create()
         val app = appComponent.getAppConfig()
         val appConfigRepository = appComponent.getAppConfigRepository()
-
-        withContext(Dispatchers.IO) {
-          initAppConfig(appConfigRepository, app)
-        }
-
-        launch(Dispatchers.IO) {
-          appConfigRepository.streamAppConfig()
-            .collect {
-              val previous = app.config
-              app.config = it
-              // update download semaphore
-              if (previous.maxConcurrentDownloads != it.maxConcurrentDownloads) {
-                app.downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
-              }
-              logger.info("App config updated: $it")
-            }
-        }
-
         val downloadService = appComponent.getDownloadService()
         val uploadService = appComponent.getUploadService()
 
-        launch {
-          downloadService.run()
-        }
-        launch(Dispatchers.IO) {
-          uploadService.run()
-        }
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob()).apply {
+          val config = withContext(Dispatchers.IO) {
+            initAppConfig(appConfigRepository, app, downloadService)
+          }
+          launch(Dispatchers.IO) {
+            appConfigRepository.streamAppConfig()
+              .collect {
+                val previous = app.config
+                app.updateConfig(it)
+                // update download semaphore
+                if (previous.maxConcurrentDownloads != it.maxConcurrentDownloads) {
+                  downloadService.updateMaxConcurrentDownloads(it.maxConcurrentDownloads)
+                }
+              }
+          }
+          launch {
+            downloadService.run()
+          }
+          launch(Dispatchers.IO) {
+            uploadService.run()
+          }
 
-        // start server
-        val server = backendServer(
-          json = appComponent.getJson(),
-          appComponent.getAppConfigRepository(),
-          appComponent.getStreamerRepo(),
-          appComponent.getStreamDataRepo(),
-          appComponent.getStatsRepository(),
-          appComponent.getUploadRepo(),
-        ).apply {
-          start()
+          launch {
+            // start server
+            server = backendServer(
+              json = appComponent.getJson(),
+              appComponent.getUserRepo(),
+              appComponent.getAppConfigRepository(),
+              appComponent.getStreamerRepo(),
+              appComponent.getStreamDataRepo(),
+              appComponent.getStatsRepository(),
+              appComponent.getUploadRepo(),
+            ).apply {
+              start()
+            }
+          }
+
         }
 
         Runtime.getRuntime().addShutdownHook(Thread {
           logger.info("Shutting down...")
-          server.stop(1000, 1000)
+          server?.stop(1000, 1000)
           appComponent.getSqlDriver().closeDriver()
           app.releaseAll()
-          cancel("Application is shutting down")
+          scope.cancel("Application is shutting down")
           logger.info("Shutdown complete")
         })
+
+        // suspend until scope is cancelled
+        scope.coroutineContext[Job]!!.join()
       }
     }
 
@@ -176,12 +183,10 @@ class Application {
       }
     }
 
-    private suspend fun initAppConfig(repo: AppConfigRepo, app: App): AppConfig {
+    private suspend fun initAppConfig(repo: AppConfigRepo, app: App, downloadService: DownloadService): AppConfig {
       return repo.getAppConfig().also {
-        with(app) {
-          config = it
-          downloadSemaphore = Semaphore(it.maxConcurrentDownloads)
-        }
+        app.updateConfig(it)
+        downloadService.updateMaxConcurrentDownloads(it.maxConcurrentDownloads)
       }
     }
 

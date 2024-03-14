@@ -24,59 +24,19 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data
+package github.hua0512.repo
+
+import github.hua0512.data.User
+import github.hua0512.data.UserId
 
 /**
  * @author hua0512
- * @date : 2024/2/18 22:53
+ * @date : 2024/3/14 18:41
  */
-
-
-@JvmInline
-value class AppConfigId(val value: Long) {
-  companion object {
-    val INVALID = AppConfigId(-1)
-  }
-}
-
-@JvmInline
-value class StreamerId(val value: Long) {
-  companion object {
-    val INVALID = StreamerId(-1)
-  }
-}
-
-@JvmInline
-value class StreamDataId(val value: Long) {
-  companion object {
-    val INVALID = StreamDataId(-1)
-  }
-}
-
-@JvmInline
-value class UploadActionId(val value: Long) {
-  companion object {
-    val INVALID = UploadActionId(-1)
-  }
-}
-
-@JvmInline
-value class UploadDataId(val value: Long) {
-  companion object {
-    val INVALID = UploadDataId(-1)
-  }
-}
-
-@JvmInline
-value class UploadResultId(val value: Long) {
-  companion object {
-    val INVALID = UploadResultId(-1)
-  }
-}
-
-@JvmInline
-value class UserId(val value: Long) {
-  companion object {
-    val INVALID = UserId(-1)
-  }
+interface UserRepo {
+  suspend fun getUserById(id: UserId): User?
+  suspend fun getUserByName(name: String): User?
+  suspend fun createUser(newUser: User): User
+  suspend fun deleteUser(id: UserId): Boolean
+  suspend fun updateUser(user: User)
 }

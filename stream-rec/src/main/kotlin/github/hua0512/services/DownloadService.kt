@@ -49,6 +49,7 @@ import github.hua0512.utils.process.Redirect
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -72,6 +73,9 @@ class DownloadService(
     private val logger: Logger = LoggerFactory.getLogger(DownloadService::class.java)
   }
 
+  // semaphore to limit the number of concurrent downloads
+  private var downloadSemaphore: Semaphore? = null
+
   private fun getPlaformDownloader(platform: StreamingPlatform): Download = when (platform) {
     StreamingPlatform.HUYA -> Huya(app, HuyaDanmu(app))
     StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app))
@@ -90,11 +94,11 @@ class DownloadService(
   private val taskJobs = mutableMapOf<Streamer, Job?>()
 
   suspend fun run() = coroutineScope {
+    downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
     // fetch all streamers from the database and start a job for each one
     repo.getStreamersActive().forEach { streamer ->
       startDownloadJob(streamer)
     }
-
 
     launch {
       repo.stream().distinctUntilChanged().buffer().collect { streamerList ->
@@ -229,7 +233,7 @@ class DownloadService(
           // stream is live, start downloading
           // while loop for parting the download
           while (true) {
-            val streamsData = app.downloadSemaphore.withPermit {
+            val streamsData = downloadSemaphore!!.withPermit {
               try {
                 plugin.download()
               } catch (e: Exception) {
@@ -491,4 +495,7 @@ class DownloadService(
     return streamer
   }
 
+  fun updateMaxConcurrentDownloads(max: Int) {
+    downloadSemaphore = Semaphore(max)
+  }
 }

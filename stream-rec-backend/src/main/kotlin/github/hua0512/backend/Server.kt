@@ -28,6 +28,7 @@ package github.hua0512.backend
 
 import github.hua0512.backend.plugins.*
 import github.hua0512.repo.AppConfigRepo
+import github.hua0512.repo.UserRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
@@ -40,6 +41,7 @@ import kotlinx.serialization.json.Json
 
 fun CoroutineScope.backendServer(
   json: Json,
+  userRepo: UserRepo,
   appConfigRepo: AppConfigRepo,
   streamerRepo: StreamerRepo,
   streamDataRepo: StreamDataRepo,
@@ -50,22 +52,23 @@ fun CoroutineScope.backendServer(
     Netty,
     port = 12555,
     host = "0.0.0.0",
-    module = { module(json, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo) })
+    module = { module(json, userRepo, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo) })
 }
 
 fun Application.module(
   json: Json,
+  userRepo: UserRepo,
   appConfigRepo: AppConfigRepo,
   streamerRepo: StreamerRepo,
   streamDataRepo: StreamDataRepo,
   statsRepo: SummaryStatsRepo,
   uploadRepo: UploadRepo,
 ) {
-//  configureSecurity()
+  configureSecurity()
   configureHTTP()
   configureMonitoring()
   configureSerialization()
   configureSockets()
   configureAdministration()
-  configureRouting(json, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo)
+  configureRouting(json, userRepo, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo)
 }

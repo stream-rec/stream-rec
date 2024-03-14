@@ -26,57 +26,33 @@
 
 package github.hua0512.data
 
+import github.hua0512.utils.UserEntity
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+
 /**
  * @author hua0512
- * @date : 2024/2/18 22:53
+ * @date : 2024/3/14 18:39
  */
+@Serializable
+data class User(
+  val id: Int = 0,
+  val username: String,
+  val password: String,
+  val role: String = "user",
+) {
 
+  constructor(entity: UserEntity) : this(
+    id = entity.id.toInt(),
+    username = entity.username,
+    password = entity.password,
+    role = entity.role
+  )
 
-@JvmInline
-value class AppConfigId(val value: Long) {
-  companion object {
-    val INVALID = AppConfigId(-1)
-  }
-}
-
-@JvmInline
-value class StreamerId(val value: Long) {
-  companion object {
-    val INVALID = StreamerId(-1)
-  }
-}
-
-@JvmInline
-value class StreamDataId(val value: Long) {
-  companion object {
-    val INVALID = StreamDataId(-1)
-  }
-}
-
-@JvmInline
-value class UploadActionId(val value: Long) {
-  companion object {
-    val INVALID = UploadActionId(-1)
-  }
-}
-
-@JvmInline
-value class UploadDataId(val value: Long) {
-  companion object {
-    val INVALID = UploadDataId(-1)
-  }
-}
-
-@JvmInline
-value class UploadResultId(val value: Long) {
-  companion object {
-    val INVALID = UploadResultId(-1)
-  }
-}
-
-@JvmInline
-value class UserId(val value: Long) {
-  companion object {
-    val INVALID = UserId(-1)
-  }
+  fun toEntity() = UserEntity(
+    id = id.toLong(),
+    username = username,
+    password = password,
+    role = role
+  )
 }
