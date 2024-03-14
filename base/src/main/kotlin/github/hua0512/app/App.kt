@@ -33,8 +33,6 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import kotlin.time.DurationUnit
@@ -45,10 +43,17 @@ class App(val json: Json) {
 
   companion object {
     @JvmStatic
-    val logger = LoggerFactory.getLogger(App::class.java)
+    val logger: org.slf4j.Logger = LoggerFactory.getLogger(App::class.java)
 
     @JvmStatic
-    var isDbEnabled = true
+    val ffmpegPath = (System.getenv("FFMPEG_PATH") ?: "ffmpeg").run {
+      // check if is windows
+      if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
+        "$this.exe"
+      } else {
+        this
+      }
+    }
   }
 
   val client by lazy {
@@ -81,53 +86,24 @@ class App(val json: Json) {
     }
   }
 
-  var config: AppConfig
+  val config: AppConfig
     get() = appFlow.value ?: throw Exception("App config not initialized")
-    set(value) {
-      val previous = appFlow.value
-      val isChanged = previous != value
-      if (isChanged) {
-        logger.info("App config changed : {}", value)
-      }
-      appFlow.value = value
-    }
 
   private val appFlow = MutableStateFlow<AppConfig?>(null)
 
-  val ffmepgPath = (System.getenv("FFMPEG_PATH") ?: "ffmpeg").run {
-    // check if is windows
-    if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
-      "$this.exe"
-    } else {
-      this
+  fun updateConfig(config: AppConfig) {
+    val previous = appFlow.value
+    val isChanged = previous != config
+    if (isChanged) {
+      logger.info("App config changed : {}", config)
     }
-  }
-
-  // semaphore to limit the number of concurrent downloads
-  lateinit var downloadSemaphore: Semaphore
-
-
-  /**
-   * Releases the download semaphore if it has been initialized and the number of available permits
-   * is not equal to the maximum concurrent downloads.
-   */
-  fun releaseSemaphore() {
-    if (::downloadSemaphore.isInitialized) {
-      try {
-        if (downloadSemaphore.availablePermits != config.maxConcurrentDownloads) {
-          downloadSemaphore.release()
-        }
-      } catch (e: IllegalStateException) {
-        // ignore
-      }
-    }
+    this.appFlow.value = config
   }
 
   /**
-   * Releases the download semaphore and closes the HTTP client.
+   * Closes the HTTP client.
    */
   fun releaseAll() {
     client.close()
-    releaseSemaphore()
   }
 }

@@ -28,6 +28,7 @@ package github.hua0512.app
 
 import dagger.Module
 import dagger.Provides
+import github.hua0512.dao.UserDao
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao
@@ -49,6 +50,9 @@ import kotlinx.serialization.json.Json
  */
 @Module
 class RepositoryModule {
+
+  @Provides
+  fun provideUserRepository(userDao: UserDao, json: Json): UserRepo = UserRepository(userDao)
 
   @Provides
   fun provideAppConfigRepository(

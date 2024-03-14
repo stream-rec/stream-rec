@@ -24,59 +24,44 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data
+package github.hua0512.dao
+
+import github.hua0512.StreamRecDatabase
+import github.hua0512.data.UserId
+import github.hua0512.utils.UserEntity
 
 /**
  * @author hua0512
- * @date : 2024/2/18 22:53
+ * @date : 2024/3/14 18:49
  */
-
-
-@JvmInline
-value class AppConfigId(val value: Long) {
-  companion object {
-    val INVALID = AppConfigId(-1)
+class UserDaoImpl(override val database: StreamRecDatabase) : UserDao, BaseDaoImpl {
+  override fun getUserById(id: UserId): UserEntity? {
+    return queries.getUserById(id.value).executeAsOneOrNull()
   }
-}
 
-@JvmInline
-value class StreamerId(val value: Long) {
-  companion object {
-    val INVALID = StreamerId(-1)
+  override fun getUserByUsername(username: String): UserEntity? {
+    return queries.getUserByUsername(username).executeAsOneOrNull()
   }
-}
 
-@JvmInline
-value class StreamDataId(val value: Long) {
-  companion object {
-    val INVALID = StreamDataId(-1)
+  override fun createUser(user: UserEntity): UserEntity {
+    return user.run {
+      queries.insertUser(user.username, user.password, user.role)
+      val id = queries.getLastUserId().executeAsOne()
+      user.copy(id = id)
+    }
   }
-}
 
-@JvmInline
-value class UploadActionId(val value: Long) {
-  companion object {
-    val INVALID = UploadActionId(-1)
+  override fun updateUser(user: UserEntity): UserEntity {
+    return user.run {
+      queries.updateUser(user.username, user.password, user.role, user.id)
+      user
+    }
   }
-}
 
-@JvmInline
-value class UploadDataId(val value: Long) {
-  companion object {
-    val INVALID = UploadDataId(-1)
-  }
-}
-
-@JvmInline
-value class UploadResultId(val value: Long) {
-  companion object {
-    val INVALID = UploadResultId(-1)
-  }
-}
-
-@JvmInline
-value class UserId(val value: Long) {
-  companion object {
-    val INVALID = UserId(-1)
+  override fun deleteUser(id: UserId): Boolean {
+    return queries.run {
+      deleteUser(id.value)
+      getUserById(id.value).executeAsOneOrNull() == null
+    }
   }
 }

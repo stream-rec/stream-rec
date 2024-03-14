@@ -34,6 +34,8 @@ import dagger.Provides
 import github.hua0512.StreamRecDatabase
 import github.hua0512.dao.AppConfigDao
 import github.hua0512.dao.AppConfigDaoImpl
+import github.hua0512.dao.UserDao
+import github.hua0512.dao.UserDaoImpl
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stats.StatsDaoImpl
 import github.hua0512.dao.stream.StreamDataDao
@@ -78,6 +80,8 @@ class DatabaseModule {
     return StreamRecDatabase(driver = sqlDriver)
   }
 
+  @Provides
+  fun provideUserDao(database: StreamRecDatabase): UserDao = UserDaoImpl(database)
 
   @Provides
   fun provideAppConfigDao(database: StreamRecDatabase): AppConfigDao = AppConfigDaoImpl(database)

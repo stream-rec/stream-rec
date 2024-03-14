@@ -29,6 +29,7 @@ package github.hua0512.app
 import app.cash.sqldelight.db.SqlDriver
 import dagger.Component
 import github.hua0512.repo.AppConfigRepo
+import github.hua0512.repo.UserRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
@@ -49,6 +50,7 @@ interface AppComponent {
   fun getJson(): Json
 
   fun getAppConfig(): App
+  fun getUserRepo(): UserRepo
 
   fun getDownloadService(): DownloadService
 
