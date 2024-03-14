@@ -92,7 +92,7 @@ class DownloadService(
   suspend fun run() = coroutineScope {
     // fetch all streamers from the database and start a job for each one
     repo.getStreamersActive().forEach { streamer ->
-      taskJobs[streamer] = async { downloadStreamer(streamer) }
+      startDownloadJob(streamer)
     }
 
 
@@ -127,10 +127,14 @@ class DownloadService(
         // if a streamer is not in the old list, start a new job
         // if a streamer is in both lists, do nothing
         newStreamers.forEach { new ->
-          val old = oldStreamers.find { it.url == new.url }
-          if (old != null && old != new) {
-            // if the entity is different, cancel the old job and start a new one
-            // find the change reason
+          val old = oldStreamers.find { it.url == new.url } ?: run {
+            if (validateActivation(new)) return@forEach
+            startDownloadJob(new)
+            return@forEach
+          }
+          // if the entity is different, cancel the old job and start a new one
+          // find the change reason
+          if (old != new) {
             val reason = when {
               old.isActivated != new.isActivated -> "activation"
               old.url != new.url -> "url"
@@ -138,17 +142,13 @@ class DownloadService(
               old.platform != new.platform -> "platform"
               old.name != new.name -> "name"
               old.isTemplate != new.isTemplate -> "as template"
-              old.templateStreamer?.id != new.templateStreamer?.id -> "template"
+              old.templateId != new.templateId -> "template id"
               old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template download config"
               // other changes are ignored
               else -> return@forEach
             }
             logger.debug("Detected entity change for {}, {}", new, old)
             cancelJob(old, "entity changed : $reason")
-            if (validateActivation(new)) return@forEach
-            startDownloadJob(new)
-          } else {
-            // if the streamer is not in the old list, start a new job
             if (validateActivation(new)) return@forEach
             startDownloadJob(new)
           }
