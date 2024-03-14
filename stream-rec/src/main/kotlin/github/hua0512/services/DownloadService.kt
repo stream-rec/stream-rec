@@ -143,7 +143,6 @@ class DownloadService(
               old.name != new.name -> "name"
               old.isTemplate != new.isTemplate -> "as template"
               old.templateId != new.templateId -> "template id"
-              old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template download config"
               // other changes are ignored
               else -> return@forEach
             }
