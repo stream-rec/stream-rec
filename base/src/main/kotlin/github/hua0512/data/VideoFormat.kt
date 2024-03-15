@@ -32,7 +32,8 @@ enum class VideoFormat(val ffmpegMuxer: String) {
   avi("avi"),
   mov("mov"),
   flv("flv"),
-  mkv("matroska");
+  mkv("matroska"),
+  ts("mpegts");
 
   companion object {
     fun format(extension: String): VideoFormat? {
