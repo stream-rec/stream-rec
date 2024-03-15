@@ -1,13 +1,24 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
   alias(libs.plugins.kotlin.jvm)
 }
 
-
 allprojects {
-  tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+  tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+      val arguments = mutableListOf<String>()
+      // https://kotlinlang.org/docs/compiler-reference.html#progressive
+      arguments += "-progressive"
+      // Generate smaller bytecode by not generating runtime not-null assertions.
+      arguments += "-Xno-call-assertions"
+      arguments += "-Xno-param-assertions"
+      arguments += "-Xno-receiver-assertions"
+      arguments += "-opt-in=kotlin.RequiresOptIn"
+      freeCompilerArgs.addAll(arguments)
+    }
     kotlinOptions {
       jvmTarget = JavaVersion.VERSION_17.toString()
-      freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn")
     }
   }
   tasks.withType<JavaCompile>().configureEach {
