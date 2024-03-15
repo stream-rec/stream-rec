@@ -30,7 +30,6 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToOneNotNull
 import github.hua0512.StreamRecDatabase
 import github.hua0512.utils.AppConfigEntity
-import github.hua0512.utils.asLong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 
@@ -49,42 +48,28 @@ class AppConfigDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, 
     return queries.getAppConfigById(1).asFlow().mapToOneNotNull(Dispatchers.IO)
   }
 
-  override suspend fun upsert(
-    engine: String,
-    danmu: Boolean,
-    outputFolder: String,
-    outputFileName: String,
-    outputFileFormat: String,
-    minPartSize: Long,
-    maxPartSize: Long,
-    maxPartDuration: Long?,
-    maxDownloadRetries: Long,
-    downloadRetryDelay: Long,
-    maxConcurrentDownloads: Long,
-    maxConcurrentUploads: Long,
-    deleteFilesAfterUpload: Boolean,
-    huyaConfig: String?,
-    douyinConfig: String?,
-    id: Long,
-  ) {
-    return queries.upsertAppConfig(
-      engine = engine,
-      danmu = danmu.asLong,
-      outputFolder = outputFolder,
-      outputFileName,
-      outputFileFormat,
-      minPartSize,
-      maxPartSize,
-      maxPartDuration,
-      maxDownloadRetries,
-      downloadRetryDelay,
-      maxConcurrentDownloads,
-      maxConcurrentUploads,
-      deleteFilesAfterUpload.asLong,
-      huyaConfig,
-      douyinConfig,
-      id,
-    )
+  override suspend fun upsert(config: AppConfigEntity) {
+    config.apply {
+      queries.upsertAppConfig(
+        engine = engine,
+        danmu = danmu,
+        outputFolder = outputFolder,
+        outputFileName = outputFileName,
+        outputFileFormat = outputFileFormat,
+        minPartSize = minPartSize,
+        maxPartSize = maxPartSize,
+        maxPartDuration = maxPartDuration,
+        maxDownloadRetries = maxDownloadRetries,
+        downloadRetryDelay = downloadRetryDelay,
+        downloadCheckInterval = downloadCheckInterval,
+        maxConcurrentDownloads = maxConcurrentDownloads,
+        maxConcurrentUploads = maxConcurrentUploads,
+        deleteFilesAfterUpload = deleteFilesAfterUpload,
+        huyaConfig = huyaConfig,
+        douyinConfig = douyinConfig,
+        id = id,
+      )
+    }
   }
 
 }

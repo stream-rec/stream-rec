@@ -283,13 +283,14 @@ class DownloadService(
           }
         }
         retryCount++
-        // if a data list is not empty, then it means the stream has ended
-        // wait [retryDelay] seconds before checking again
-        // otherwise wait 1 minute
+        /* if a data list is not empty, then it means the stream has ended
+         * wait [retryDelay] seconds before checking again
+         * otherwise wait [app.config.downloadCheckInterval] seconds
+         */
         val duration = if (streamDataList.isNotEmpty()) {
           retryDelay.toDuration(DurationUnit.SECONDS)
         } else {
-          1.toDuration(DurationUnit.MINUTES)
+          app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
         }
         delay(duration)
       }
