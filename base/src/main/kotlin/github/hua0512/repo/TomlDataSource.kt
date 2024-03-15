@@ -33,6 +33,7 @@ import github.hua0512.data.config.AppConfig
  * TOML (Tom's Obvious, Minimal Language) is a configuration file format that's easy to read due to its clear syntax.
  * This interface provides methods to retrieve the application configuration and the path of the default TOML file.
  *
+ * @deprecated Configuration via TOML file's been removed since 0.5.0 version.
  * @author hua0512
  * @date : 2024/2/18 23:49
  */

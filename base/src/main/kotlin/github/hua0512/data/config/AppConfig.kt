@@ -27,7 +27,13 @@
 package github.hua0512.data.config
 
 import github.hua0512.data.VideoFormat
+import github.hua0512.utils.AppConfigEntity
+import github.hua0512.utils.asLong
+import github.hua0512.utils.boolean
+import github.hua0512.utils.nonEmptyOrNull
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Application configuration data class
@@ -46,6 +52,7 @@ data class AppConfig(
   val maxPartDuration: Long? = null,
   val maxDownloadRetries: Int = 3,
   val downloadRetryDelay: Long = 10,
+  val downloadCheckInterval: Long = 60,
   val maxConcurrentDownloads: Int = 5,
   val maxConcurrentUploads: Int = 3,
   val deleteFilesAfterUpload: Boolean = true,
@@ -53,4 +60,53 @@ data class AppConfig(
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
 ) {
   var id: Long = 1
+
+
+  constructor(entity: AppConfigEntity, json: Json) : this(
+    entity.engine,
+    entity.danmu.boolean,
+    entity.outputFolder?.nonEmptyOrNull() ?: System.getProperty("user.dir"),
+    entity.outputFileName.nonEmptyOrNull() ?: "{streamer}-{title}-%yyyy-%MM-%dd %HH:%mm:%ss",
+    VideoFormat.format(entity.outputFileFormat) ?: VideoFormat.flv,
+    entity.minPartSize,
+    entity.maxPartSize,
+    entity.maxPartDuration,
+    entity.maxDownloadRetries.toInt(),
+    entity.downloadRetryDelay,
+    entity.downloadCheckInterval,
+    entity.maxConcurrentDownloads.toInt(),
+    entity.maxConcurrentUploads.toInt(),
+    entity.deleteFilesAfterUpload.boolean,
+    entity.huyaConfig?.run {
+      json.decodeFromString<HuyaConfigGlobal>(this)
+    } ?: HuyaConfigGlobal(),
+    entity.douyinConfig?.run {
+      json.decodeFromString<DouyinConfigGlobal>(this)
+    } ?: DouyinConfigGlobal(),
+  ) {
+    this.id = entity.id
+  }
+
+
+  fun toEntity(json: Json): AppConfigEntity {
+    return AppConfigEntity(
+      id,
+      engine,
+      danmu.asLong,
+      outputFolder,
+      outputFileName,
+      outputFileFormat.name,
+      minPartSize,
+      maxPartSize,
+      maxPartDuration,
+      maxDownloadRetries.toLong(),
+      downloadRetryDelay,
+      downloadCheckInterval,
+      maxConcurrentDownloads.toLong(),
+      maxConcurrentUploads.toLong(),
+      deleteFilesAfterUpload.asLong,
+      json.encodeToString(huyaConfig),
+      json.encodeToString(douyinConfig),
+    )
+  }
 }

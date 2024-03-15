@@ -41,23 +41,6 @@ interface AppConfigDao {
 
   suspend fun streamLatestAppConfig(): Flow<AppConfigEntity>?
 
-  suspend fun upsert(
-    engine: String,
-    danmu: Boolean,
-    outputFolder: String,
-    outputFileName: String,
-    outputFileFormat: String,
-    minPartSize: Long,
-    maxPartSize: Long,
-    maxPartDuration: Long?,
-    maxDownloadRetries: Long,
-    downloadRetryDelay: Long,
-    maxConcurrentDownloads: Long,
-    maxConcurrentUploads: Long,
-    deleteFilesAfterUpload: Boolean,
-    huyaConfig: String?,
-    douyinConfig: String?,
-    id: Long,
-  )
+  suspend fun upsert(config: AppConfigEntity)
 
 }
