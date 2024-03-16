@@ -24,25 +24,30 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.danmu.huya.msg
+package github.hua0512.data.media
 
-import com.qq.tars.protocol.tars.TarsInputStream
-import com.qq.tars.protocol.tars.TarsOutputStream
-import com.qq.tars.protocol.tars.TarsStructBase
+import github.hua0512.data.stream.StreamInfo
 
-data class HuyaUidNickName(
-  var lUid: Long = 0,
-  var sNickName: String = "",
-) : TarsStructBase() {
-  override fun writeTo(os: TarsOutputStream) {
-    os.write(this.lUid, 0)
-    os.write(this.sNickName, 1)
-  }
-
-  override fun readFrom(`is`: TarsInputStream) {
-    this.lUid = `is`.read(this.lUid, 0, true)
-    this.sNickName = `is`.read(this.sNickName, 1, true)
-  }
-
-  override fun newInit(): TarsStructBase = this
-}
+/**
+ * A data class representing the media information
+ * @property site the site where the media is from
+ * @property title the title of the media
+ * @property artist the artist of the media
+ * @property coverUrl the cover image url of the media
+ * @property artistImageUrl the artist image url of the media
+ * @property live whether the media is live
+ * @property streams the list of stream information
+ * @property extras the extra information
+ * @author hua0512
+ * @date : 2024/3/15 20:29
+ */
+data class MediaInfo(
+  val site: String,
+  val title: String,
+  val artist: String,
+  val coverUrl: String,
+  val artistImageUrl: String,
+  val live: Boolean = false,
+  val streams: List<StreamInfo> = emptyList(),
+  val extras: Map<String, String> = emptyMap(),
+)

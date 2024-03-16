@@ -31,8 +31,10 @@ import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.logger
-import github.hua0512.plugins.download.Douyin
-import github.hua0512.plugins.download.Huya
+import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.douyin.download.DouyinExtractor
+import github.hua0512.plugins.huya.download.Huya
+import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.asLong
 import github.hua0512.utils.withIOContext
@@ -205,8 +207,8 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
   }
 
   private fun getPlatformByUrl(url: String): StreamingPlatform = when {
-    Huya.REGEX.toRegex().find(url) != null -> StreamingPlatform.HUYA
-    Douyin.REGEX.toRegex().find(url) != null -> StreamingPlatform.DOUYIN
+    HuyaExtractor.URL_REGEX.toRegex().find(url) != null -> StreamingPlatform.HUYA
+    DouyinExtractor.URL_REGEX.toRegex().find(url) != null -> StreamingPlatform.DOUYIN
     else -> StreamingPlatform.UNKNOWN
   }
 

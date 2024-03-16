@@ -24,22 +24,23 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.danmu.douyin
+package github.hua0512.plugins.douyin.danmu
 
 import com.google.protobuf.ByteString
 import douyin.Dy
 import douyin.Dy.PushFrame
 import github.hua0512.app.App
-import github.hua0512.data.DanmuDataWrapper
-import github.hua0512.data.DanmuDataWrapper.DanmuData
 import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
+import github.hua0512.data.media.DanmuDataWrapper
+import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.base.Danmu
-import github.hua0512.plugins.base.Download
-import github.hua0512.plugins.download.Douyin.Companion.commonDouyinParams
-import github.hua0512.plugins.download.Douyin.Companion.extractDouyinRoomId
-import github.hua0512.plugins.download.Douyin.Companion.populateDouyinCookieMissedParams
+import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.douyin.download.DouyinExtractor
+import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.commonDouyinParams
+import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.extractDouyinRoomId
+import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.populateDouyinCookieMissedParams
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
@@ -89,24 +90,20 @@ class DouyinDanmu(app: App) : Danmu(app) {
       streamer.downloadConfig as? DouyinDownloadConfig ?: DouyinDownloadConfig()
     }
 
-    val cookies = (config.cookies?.nonEmptyOrNull() ?: app.config.douyinConfig.cookies).let {
-      if (it.isNullOrEmpty()) {
-        logger.error("Empty douyin cookies")
-        return false
-      }
-      try {
-        populateDouyinCookieMissedParams(it, app.client)
-      } catch (e: Exception) {
-        logger.error("Failed to populate douyin cookie missed params", e)
-        return false
-      }
+    var cookies = (config.cookies?.nonEmptyOrNull() ?: app.config.douyinConfig.cookies)?.nonEmptyOrNull() ?: ""
+
+    try {
+      cookies = populateDouyinCookieMissedParams(cookies, app.client)
+    } catch (e: Exception) {
+      logger.error("Failed to populate douyin cookie missed params", e)
+      return false
     }
 
     val response = withIOContext {
       app.client.get("https://live.douyin.com/webcast/room/web/enter/") {
         headers {
-          Download.commonHeaders.forEach { append(it.first, it.second) }
-          append(HttpHeaders.Referrer, "https://live.douyin.com")
+          Extractor.commonHeaders.forEach { append(it.first, it.second) }
+          append(HttpHeaders.Referrer, DouyinExtractor.LIVE_DOUYIN_URL)
           append(HttpHeaders.Cookie, cookies)
         }
         commonDouyinParams.forEach { (t, u) ->
@@ -128,7 +125,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
       logger.error("Failed to get douyin room id_str")
       return false
     }
-    logger.info("(${streamer.name}) Douyin room id_str: $trueRoomId")
+    logger.info("(${streamer.name}) douyin room id_str: $trueRoomId")
     commonDouyinParams.forEach { (t, u) ->
       requestParams[t] = u
     }

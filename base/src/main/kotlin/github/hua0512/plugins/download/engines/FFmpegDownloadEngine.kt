@@ -27,7 +27,7 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
-import github.hua0512.data.VideoFormat
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
@@ -67,12 +67,6 @@ class FFmpegDownloadEngine(
         add("-bsf:v")
         add("h264_mp4toannexb")
       }
-      addAll(
-        arrayOf(
-          "-bsf:a",
-          "aac_adtstoasc"
-        )
-      )
       // segment the file, according to the maxPartDuration
       if (segmentTime != null) {
         add("-to")

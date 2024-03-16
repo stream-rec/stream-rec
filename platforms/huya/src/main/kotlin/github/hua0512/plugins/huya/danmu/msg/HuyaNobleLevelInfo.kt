@@ -24,20 +24,27 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data
+package github.hua0512.plugins.huya.danmu.msg
 
+import com.qq.tars.protocol.tars.TarsInputStream
+import com.qq.tars.protocol.tars.TarsOutputStream
+import com.qq.tars.protocol.tars.TarsStructBase
 
-enum class VideoFormat(val ffmpegMuxer: String) {
-  mp4("mp4"),
-  avi("avi"),
-  mov("mov"),
-  flv("flv"),
-  mkv("matroska"),
-  ts("mpegts");
+data class HuyaNobleLevelInfo(
+  var iNobleLevel: Int = 0,
+  var iAttrType: Int = 0,
+) : TarsStructBase() {
+  override fun writeTo(os: TarsOutputStream) {
+    os.write(this.iNobleLevel, 0)
+    os.write(this.iAttrType, 1)
+  }
 
-  companion object {
-    fun format(extension: String): VideoFormat? {
-      return entries.find { it.name == extension }
-    }
+  override fun readFrom(`is`: TarsInputStream) {
+    this.iNobleLevel = `is`.read(this.iNobleLevel, 0, true)
+    this.iAttrType = `is`.read(this.iAttrType, 1, true)
+  }
+
+  override fun newInit(): TarsStructBase {
+    return this
   }
 }

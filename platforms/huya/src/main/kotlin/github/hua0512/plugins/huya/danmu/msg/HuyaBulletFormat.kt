@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.danmu.huya.msg
+package github.hua0512.plugins.huya.danmu.msg
 
 import com.qq.tars.protocol.tars.TarsInputStream
 import com.qq.tars.protocol.tars.TarsOutputStream

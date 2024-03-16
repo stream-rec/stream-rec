@@ -24,24 +24,26 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.danmu.huya
+package github.hua0512.plugins.huya.danmu
 
 import com.qq.tars.protocol.tars.TarsInputStream
 import com.qq.tars.protocol.tars.TarsOutputStream
 import github.hua0512.app.App
-import github.hua0512.data.DanmuDataWrapper
+import github.hua0512.data.media.DanmuDataWrapper
+import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.base.Danmu
-import github.hua0512.plugins.danmu.huya.msg.HuyaMessageNotice
-import github.hua0512.plugins.danmu.huya.msg.HuyaPushMessage
-import github.hua0512.plugins.danmu.huya.msg.HuyaSocketCommand
-import github.hua0512.plugins.danmu.huya.msg.HuyaUserInfo
-import github.hua0512.plugins.danmu.huya.msg.data.HuyaCmds
-import github.hua0512.plugins.danmu.huya.msg.data.HuyaOperations
-import github.hua0512.plugins.download.Huya
+import github.hua0512.plugins.huya.danmu.msg.HuyaMessageNotice
+import github.hua0512.plugins.huya.danmu.msg.HuyaPushMessage
+import github.hua0512.plugins.huya.danmu.msg.HuyaSocketCommand
+import github.hua0512.plugins.huya.danmu.msg.HuyaUserInfo
+import github.hua0512.plugins.huya.danmu.msg.data.HuyaCmds
+import github.hua0512.plugins.huya.danmu.msg.data.HuyaOperations
+import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.utils.withIOContext
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
+import io.ktor.client.request.headers
 import io.ktor.client.statement.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -72,16 +74,16 @@ class HuyaDanmu(app: App) : Danmu(app) {
     // check if streamer url is empty
     if (streamer.url.isEmpty()) return false
     val roomId = try {
-      val matchResult = Huya.REGEX.toRegex().find(streamer.url) ?: return false
+      val matchResult = HuyaExtractor.URL_REGEX.toRegex().find(streamer.url) ?: return false
       matchResult.groupValues.last()
     } catch (e: Exception) {
       logger.error("Failed to get huya room id: $e")
       return false
     }
     val response = withIOContext {
-      app.client.get(Huya.BASE_URL + "/$roomId") {
+      app.client.get(HuyaExtractor.BASE_URL + "/$roomId") {
         headers {
-          Huya.platformHeaders.forEach { append(it.first, it.second) }
+          HuyaExtractor.requestHeaders.forEach { append(it.first, it.second) }
         }
       }
     }
@@ -156,7 +158,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
           val time = if (huyaSocketCommand.lTime == 0L) Clock.System.now().toEpochMilliseconds() else huyaSocketCommand.lTime
           // huya danmu contains only one danmu
           return listOf(
-            DanmuDataWrapper.DanmuData(
+            DanmuData(
               msgNotice.senderInfo.sNickName,
               color = msgNotice.tBulletFormat.iFontColor,
               content = content,

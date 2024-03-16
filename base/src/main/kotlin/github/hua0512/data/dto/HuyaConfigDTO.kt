@@ -26,6 +26,8 @@
 
 package github.hua0512.data.dto
 
+import github.hua0512.data.media.VideoFormat
+
 /**
  * @author hua0512
  * @date : 2024/2/11 19:56
@@ -35,4 +37,5 @@ interface HuyaConfigDTO {
   val primaryCdn: String?
   val maxBitRate: Int?
   val cookies: String?
+  val sourceFormat: VideoFormat?
 }

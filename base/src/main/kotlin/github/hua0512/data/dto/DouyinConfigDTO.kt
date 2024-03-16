@@ -26,6 +26,7 @@
 
 package github.hua0512.data.dto
 
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
 
 /**
@@ -35,5 +36,6 @@ import github.hua0512.data.platform.DouyinQuality
 interface DouyinConfigDTO {
 
   val quality: DouyinQuality?
+  val sourceFormat: VideoFormat?
   val cookies: String?
 }

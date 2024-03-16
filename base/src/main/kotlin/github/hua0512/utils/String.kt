@@ -27,6 +27,8 @@
 package github.hua0512.utils
 
 import kotlinx.datetime.*
+import kotlinx.datetime.TimeZone
+import java.util.*
 
 
 /**
@@ -71,12 +73,22 @@ fun String.nonEmptyOrNull(): String? {
 
 
 /**
+ * Generates a random string of specified length.
  *
- *
+ * @param length The length of the string to be generated.
+ * @return A random string of the specified length.
  */
 fun generateRandomString(length: Int): String {
   val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
   return (1..length)
     .map { allowedChars.random() }
     .joinToString("")
+}
+
+/**
+ * Extension function for the String class to decode a base64-encoded string.
+ * @return The decoded string.
+ */
+fun String.decodeBase64(): String {
+  return String(Base64.getDecoder().decode(this))
 }
