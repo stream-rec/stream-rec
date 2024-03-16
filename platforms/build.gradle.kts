@@ -8,6 +8,7 @@ version = "0.5.0"
 
 dependencies {
   implementation(project(":base"))
+  implementation("com.tencent.tars:tars-core:1.7.3")
   implementation(libs.com.google.protobuf.javalite)
   implementation(libs.com.google.protobuf.protobuf.java.util)
   implementation(libs.com.google.protobuf.protobuf.kotlin.lite)
@@ -15,12 +16,6 @@ dependencies {
   testImplementation(libs.bundles.test.jvm)
 }
 
-tasks.test {
-  useJUnitPlatform()
-}
-kotlin {
-  jvmToolchain(17)
-}
 
 // disable protoc plugin because we have the generated files
 //protobuf {
