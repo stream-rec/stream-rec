@@ -27,7 +27,9 @@
 package github.hua0512.plugins.huya.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.base.Download
@@ -37,13 +39,12 @@ import kotlinx.coroutines.withContext
 
 class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download(app, danmu, extractor) {
 
-  override suspend fun shouldDownload(streamer: Streamer): Boolean {
-    this.streamer = streamer
-
-    val userConfig: HuyaDownloadConfig = if (streamer.templateStreamer != null) {
+  private val config by lazy {
+    if (streamer.templateStreamer != null) {
       streamer.templateStreamer!!.downloadConfig?.run {
         HuyaDownloadConfig(
-          primaryCdn = app.config.huyaConfig.primaryCdn
+          primaryCdn = app.config.huyaConfig.primaryCdn,
+          sourceFormat = app.config.huyaConfig.sourceFormat,
         ).also {
           it.danmu = this.danmu
           it.maxBitRate = this.maxBitRate
@@ -58,7 +59,12 @@ class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download(app,
       streamer.downloadConfig as? HuyaDownloadConfig ?: HuyaDownloadConfig()
     }
 
-    val cookies = (userConfig.cookies ?: app.config.huyaConfig.cookies)?.also {
+  }
+
+  override suspend fun shouldDownload(streamer: Streamer): Boolean {
+    this.streamer = streamer
+
+    (config.cookies ?: app.config.huyaConfig.cookies)?.also {
       extractor.cookies = it
     }
 
@@ -71,41 +77,32 @@ class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download(app,
       return false
     }
 
-    if (mediaInfo.artistImageUrl != streamer.avatar) {
-      streamer.avatar = mediaInfo.artistImageUrl
-    }
+    // update streamer info
+    return getStreamInfo(mediaInfo, streamer, config)
+  }
 
-    downloadTitle = mediaInfo.title
-
-    if (mediaInfo.title != streamer.streamTitle) {
-      streamer.streamTitle = mediaInfo.title
-    }
-
-    if (!mediaInfo.live) return false
-
-    if (mediaInfo.streams.isEmpty()) {
-      logger.info("${streamer.name} has no streams")
-      return false
-    }
+  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
+    this as HuyaDownloadConfig
     // user defined source format
-    val userPreferredFormat = (userConfig.sourceFormat ?: app.config.huyaConfig.sourceFormat).apply {
-      if (this !in mediaInfo.streams.map { it.format }) {
+    val userPreferredFormat = (sourceFormat ?: app.config.huyaConfig.sourceFormat).apply {
+      if (this !in streams.map { it.format }) {
         logger.info("${streamer.name} defined source format $this is not available, choosing the best available")
       }
     }
     // user defined max bit rate
-    val maxUserBitRate = (userConfig.maxBitRate ?: app.config.huyaConfig.maxBitRate) ?: 10000
+    val maxUserBitRate = (maxBitRate ?: app.config.huyaConfig.maxBitRate) ?: 10000
     // user selected cdn
-    var preselectedCdn = userConfig.primaryCdn ?: app.config.huyaConfig.primaryCdn
+    var preselectedCdn = primaryCdn ?: app.config.huyaConfig.primaryCdn
     preselectedCdn = preselectedCdn.uppercase()
 
     // drop all streams with bit rate higher than user defined max bit rate
     val selectedCdnStreams = withContext(Dispatchers.Default) {
-      mediaInfo.streams.filter {
+      streams.filter {
         it.bitrate <= maxUserBitRate
       }.groupBy {
         it.extras["cdn"]
       }.run {
+        @Suppress("UNCHECKED_CAST")
         this as Map<String, List<StreamInfo>>
 
         if (preselectedCdn !in this) {
@@ -118,21 +115,15 @@ class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download(app,
           logger.info("${streamer.name} best available cdn is $bestCdn")
           bestCdn
         } else {
-          this[preselectedCdn] ?: throw IllegalArgumentException("${streamer.name} no streams found")
+          this[preselectedCdn] ?: throw IllegalStateException("${streamer.name} no streams found")
         }
       }.sortedByDescending { it.bitrate }
     }
 
-
-    // check if has more than one stream
-    val finalStreamInfo = selectedCdnStreams.maxByOrNull { it.format == userPreferredFormat }
-      ?: selectedCdnStreams.firstOrNull().also {
-        logger.info("${streamer.name} no streams found for $userPreferredFormat, choosing the best available")
-      }
+    // prioritize flv format if user defined source format is not available
+    return selectedCdnStreams.maxByOrNull { it.format == userPreferredFormat }
+      ?: selectedCdnStreams.filter { it.format == VideoFormat.flv }.maxByOrNull { it.bitrate }
       ?: throw IllegalStateException("${streamer.name} no streams found")
-    downloadFileFormat = finalStreamInfo.format
-    downloadUrl = finalStreamInfo.url
-    return true
   }
 }
 
