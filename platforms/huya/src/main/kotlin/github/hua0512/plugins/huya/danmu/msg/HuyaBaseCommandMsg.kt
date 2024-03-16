@@ -24,35 +24,15 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data
+package github.hua0512.plugins.huya.danmu.msg
+
+import com.qq.tars.protocol.tars.TarsStructBase
 
 /**
- * This is a sealed class that represents a wrapper for Danmu data.
- * A sealed class is used here to represent a restricted class hierarchy.
- *
  * @author hua0512
- * @date : 2024/2/11 1:21
+ * @date : 2024/2/10 19:32
  */
-sealed class DanmuDataWrapper {
+abstract class HuyaBaseCommandMsg : TarsStructBase() {
 
-  /**
-   * This data class represents the actual Danmu data.
-   * It contains information about the sender, color, content, font size, server time, and client time.
-   *
-   * @property sender The name of the sender of the Danmu.
-   * @property color The color of the Danmu.
-   * @property content The content of the Danmu.
-   * @property fontSize The font size of the Danmu.
-   * @property serverTime The time when the server received the Danmu.
-   * @property clientTime The time when the client sent the Danmu. This is optional.
-   */
-  data class DanmuData(
-    val sender: String,
-    val color: Int,
-    val content: String,
-    val fontSize: Int,
-    val serverTime: Long,
-    val clientTime: Double? = null,
-  ) : DanmuDataWrapper()
-
+  var lUri: Long = 0
 }

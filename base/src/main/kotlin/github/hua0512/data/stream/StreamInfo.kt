@@ -24,23 +24,25 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.config
+package github.hua0512.data.stream
 
-import github.hua0512.data.dto.GlobalPlatformConfig
-import github.hua0512.data.dto.HuyaConfigDTO
 import github.hua0512.data.media.VideoFormat
-import kotlinx.serialization.Serializable
 
 /**
- * Huya configuration data class
+ * A data class representing the stream information
+ * @param url the stream url
+ * @param format the stream format
+ * @param quality the stream quality
+ * @param bitrate the stream bitrate
+ * @param priority the stream priority
  * @author hua0512
- * @date : 2024/2/11 13:28
+ * @date : 2024/3/15 20:37
  */
-@Serializable
-data class HuyaConfigGlobal(
-  override val primaryCdn: String = "AL",
-  override val maxBitRate: Int? = 10000,
-  override val cookies: String? = null,
-  override val partedDownloadRetry: Int? = 15,
-  override val sourceFormat: VideoFormat? = VideoFormat.flv,
-) : GlobalPlatformConfig, HuyaConfigDTO
+data class StreamInfo(
+  val url: String,
+  val format: VideoFormat,
+  val quality: String,
+  val bitrate: Int,
+  val priority: Int = 0,
+  val extras: Map<String, Any> = emptyMap(),
+)

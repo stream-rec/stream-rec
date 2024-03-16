@@ -24,15 +24,21 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.danmu.huya.msg
+package github.hua0512.data.media
 
-import com.qq.tars.protocol.tars.TarsStructBase
 
-/**
- * @author hua0512
- * @date : 2024/2/10 19:32
- */
-abstract class HuyaBaseCommandMsg : TarsStructBase() {
+enum class VideoFormat(val ffmpegMuxer: String) {
+  mp4("mp4"),
+  avi("avi"),
+  mov("mov"),
+  flv("flv"),
+  hls("hls"),
+  mkv("matroska"),
+  ts("mpegts");
 
-  var lUri: Long = 0
+  companion object {
+    fun format(extension: String): VideoFormat? {
+      return entries.find { it.name == extension }
+    }
+  }
 }

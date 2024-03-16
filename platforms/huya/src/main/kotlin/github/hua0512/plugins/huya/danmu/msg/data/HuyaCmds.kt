@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.danmu.huya.msg.data
+package github.hua0512.plugins.huya.danmu.msg.data
 
 enum class HuyaCmds(val code: Long) {
   NobleNotice(1001),

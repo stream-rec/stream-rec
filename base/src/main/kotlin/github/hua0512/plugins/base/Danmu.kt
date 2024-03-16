@@ -27,8 +27,8 @@
 package github.hua0512.plugins.base
 
 import github.hua0512.app.App
-import github.hua0512.data.DanmuDataWrapper
-import github.hua0512.data.DanmuDataWrapper.DanmuData
+import github.hua0512.data.media.DanmuDataWrapper
+import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.utils.withIOContext

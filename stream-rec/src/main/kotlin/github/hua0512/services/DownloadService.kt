@@ -37,10 +37,12 @@ import github.hua0512.data.upload.UploadAction
 import github.hua0512.data.upload.UploadConfig.RcloneConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.plugins.base.Download
-import github.hua0512.plugins.danmu.douyin.DouyinDanmu
-import github.hua0512.plugins.danmu.huya.HuyaDanmu
-import github.hua0512.plugins.download.Douyin
-import github.hua0512.plugins.download.Huya
+import github.hua0512.plugins.douyin.danmu.DouyinDanmu
+import github.hua0512.plugins.douyin.download.Douyin
+import github.hua0512.plugins.douyin.download.DouyinExtractor
+import github.hua0512.plugins.huya.danmu.HuyaDanmu
+import github.hua0512.plugins.huya.download.Huya
+import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.*
@@ -76,9 +78,9 @@ class DownloadService(
   // semaphore to limit the number of concurrent downloads
   private var downloadSemaphore: Semaphore? = null
 
-  private fun getPlaformDownloader(platform: StreamingPlatform): Download = when (platform) {
-    StreamingPlatform.HUYA -> Huya(app, HuyaDanmu(app))
-    StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app))
+  private fun getPlaformDownloader(platform: StreamingPlatform, url: String) = when (platform) {
+    StreamingPlatform.HUYA -> Huya(app, HuyaDanmu(app), HuyaExtractor(app.client, app.json, url))
+    StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app), DouyinExtractor(app.client, app.json, url))
     else -> throw Exception("Platform not supported")
   }
 
@@ -165,7 +167,12 @@ class DownloadService(
     val newJob = SupervisorJob(coroutineContext[Job])
     val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
     newScope.launch {
-      val plugin = getPlaformDownloader(streamer.platform)
+      val plugin: Download = try {
+        getPlaformDownloader(streamer.platform, streamer.url)
+      } catch (e: Exception) {
+        logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
+        return@launch
+      }
 
       val streamDataList = mutableListOf<StreamData>()
       var retryCount = 0

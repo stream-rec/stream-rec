@@ -27,7 +27,7 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
-import github.hua0512.data.VideoFormat
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock

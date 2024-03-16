@@ -28,6 +28,7 @@ package github.hua0512.plugins.base
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
@@ -53,18 +54,11 @@ import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-abstract class Download(val app: App, val danmu: Danmu) {
+abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor) {
 
   companion object {
     @JvmStatic
     protected val logger: Logger = LoggerFactory.getLogger(this::class.java)
-
-    val commonHeaders = arrayOf(
-      HttpHeaders.Accept to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      HttpHeaders.AcceptLanguage to "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
-      HttpHeaders.UserAgent to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.3029.110 Safari/537.36"
-    )
-
   }
 
   // downloadUrl is the url of the stream to be downloaded
@@ -76,14 +70,16 @@ abstract class Download(val app: App, val danmu: Danmu) {
       field = formatToFriendlyFileName(value)
     }
 
-  // current attached streamer
-  protected lateinit var streamer: Streamer
+  /**
+   * The format of the downloaded file
+   * @return a [VideoFormat] instance
+   */
+  protected lateinit var downloadFileFormat: VideoFormat
 
   /**
-   * The regex pattern to be used to match the streamer url
+   * Current attached streamer to this download process
    */
-  abstract val regexPattern: String
-
+  protected lateinit var streamer: Streamer
 
   /**
    * Check if the stream should be downloaded
@@ -168,7 +164,7 @@ abstract class Download(val app: App, val danmu: Danmu) {
         outputPath.pathString,
         streamData!!,
         cookie,
-        commonHeaders.toMap(),
+        Extractor.commonHeaders.toMap(),
         startTime,
         fileLimitSize = app.config.maxPartSize
       )

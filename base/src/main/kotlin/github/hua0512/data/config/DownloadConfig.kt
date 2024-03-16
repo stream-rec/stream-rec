@@ -26,10 +26,10 @@
 
 package github.hua0512.data.config
 
-import github.hua0512.data.VideoFormat
 import github.hua0512.data.dto.DouyinConfigDTO
 import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.dto.HuyaConfigDTO
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -64,6 +64,7 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   data class DouyinDownloadConfig(
     override val cookies: String? = null,
     override val quality: DouyinQuality? = null,
+    override val sourceFormat: VideoFormat? = null,
   ) : DownloadConfig, DouyinConfigDTO {
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
@@ -79,8 +80,8 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   @SerialName("huya")
   data class HuyaDownloadConfig(
     override val primaryCdn: String? = null,
-
-    ) : DownloadConfig, HuyaConfigDTO {
+    override val sourceFormat: VideoFormat? = null,
+  ) : DownloadConfig, HuyaConfigDTO {
 
 
     override var danmu: Boolean? = null

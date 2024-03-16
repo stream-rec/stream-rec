@@ -1,7 +1,12 @@
-import github.hua0512.plugins.download.Douyin
+import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
+import github.hua0512.plugins.douyin.download.Douyin
+import github.hua0512.plugins.douyin.download.DouyinExtractor
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlin.test.DefaultAsserter.assertEquals
+import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 /*
  * MIT License
@@ -35,8 +40,8 @@ class DouyinTest {
   @Test
   fun testUrl() = runTest {
     val url = "https://live.douyin.com/217536353956?123112321321"
-    val matchResult = Douyin.REGEX.toRegex().find(url) ?: throw IllegalArgumentException("Invalid url")
-    assertEquals(matchResult.groupValues.last(), "217536353956")
+    val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url) ?: throw IllegalArgumentException("Invalid url")
+    assertEquals("failed to match id", matchResult.groupValues.last(), "217536353956")
   }
 
   @Test
@@ -47,8 +52,20 @@ class DouyinTest {
 
     val matchResult = Douyin.AVATAR_REGEX.toRegex().find(content) ?: throw IllegalArgumentException("Invalid content")
     assertEquals(
+      "failed to match avatar url",
       matchResult.groupValues.last(),
       "https://p26.douyinpic.com/aweme/100x100/aweme-avatar/tos-cn-avt-0015_91c6d02d076a3943c80db5664c9541bb.jpeg?from=3067671334"
     )
+  }
+
+  @Test
+  fun testLive() = runTest {
+    val app = App(Json).apply {
+      updateConfig(AppConfig())
+    }
+    val extractor = DouyinExtractor(app.client, app.json, "https://live.douyin.com/557481980778")
+    val info = extractor.extract()
+    println(info)
+    assertNotNull("failed to extract", info)
   }
 }

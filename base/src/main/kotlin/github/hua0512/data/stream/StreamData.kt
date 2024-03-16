@@ -76,9 +76,4 @@ data class StreamData(
     outputFileSize = outputFileSize,
     id = id
   )
-
-  override fun toString(): String {
-    return "StreamData(title='$title', dateStart=$dateStart, dateEnd=$dateEnd, outputFilePath='$outputFilePath', danmuFilePath=$danmuFilePath, outputFileSize=$outputFileSize, streamerId=$streamerId, id=$id, streamerName='$streamerName', streamer=$streamer)"
-  }
-
 }

@@ -28,6 +28,7 @@ package github.hua0512.data.config
 
 import github.hua0512.data.dto.DouyinConfigDTO
 import github.hua0512.data.dto.GlobalPlatformConfig
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
 import kotlinx.serialization.Serializable
 
@@ -36,4 +37,5 @@ data class DouyinConfigGlobal(
   override val cookies: String? = null,
   override val quality: DouyinQuality = DouyinQuality.origin,
   override val partedDownloadRetry: Int? = 5,
+  override val sourceFormat: VideoFormat? = VideoFormat.flv,
 ) : GlobalPlatformConfig, DouyinConfigDTO

@@ -26,7 +26,7 @@
 
 package github.hua0512.data.dto
 
-import github.hua0512.data.VideoFormat
+import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.config.Action
 
 /**
