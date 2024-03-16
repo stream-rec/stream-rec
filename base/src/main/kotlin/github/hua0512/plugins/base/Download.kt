@@ -28,15 +28,16 @@ package github.hua0512.plugins.base
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamData
+import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.NativeDownloadEngine
 import github.hua0512.utils.*
-import io.ktor.http.*
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -327,5 +328,52 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
 
   protected fun formatToFriendlyFileName(fileName: String): String {
     return fileName.replace(Regex("[/\n\r\t\u0000\u000c`?*\\\\<>|\":]"), "_")
+  }
+
+  /**
+   * Apply filters to the list of [StreamInfo]
+   * @param streams the list of [StreamInfo] to be filtered
+   * @return a [StreamInfo] instance
+   */
+  abstract suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo
+
+
+  /**
+   * Get the preferred stream info by applying filters of the user config
+   * @param mediaInfo the [MediaInfo] instance
+   * @param streamer the [Streamer] instance
+   * @param userConfig the [DownloadConfig] instance
+   * @return true if the stream info is available, false otherwise
+   */
+  protected suspend fun getStreamInfo(
+    mediaInfo: MediaInfo,
+    streamer: Streamer,
+    userConfig: DownloadConfig,
+  ): Boolean {
+    updateStreamerInfo(mediaInfo, streamer)
+    if (!mediaInfo.live) return false
+    if (mediaInfo.streams.isEmpty()) {
+      logger.info("${streamer.name} has no streams")
+      return false
+    }
+    val finalStreamInfo = userConfig.applyFilters(mediaInfo.streams)
+    downloadFileFormat = finalStreamInfo.format
+    downloadUrl = finalStreamInfo.url
+    return true
+  }
+
+  /**
+   * Update streamer info
+   * @param mediaInfo the [MediaInfo] instance
+   * @param streamer the [Streamer] instance
+   */
+  protected fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
+    if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
+      streamer.avatar = mediaInfo.artistImageUrl
+    }
+    if (mediaInfo.title != streamer.streamTitle) {
+      streamer.streamTitle = mediaInfo.title
+    }
+    downloadTitle = mediaInfo.title
   }
 }

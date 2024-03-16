@@ -38,7 +38,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
-import java.util.*
 
 /**
  *
@@ -95,8 +94,8 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
     val title = liveData["title"]!!.jsonPrimitive.content
     val owner = liveData["owner"]
-    val nickname = owner!!.jsonObject["nickname"]!!.jsonPrimitive.content
-    val avatar = owner.jsonObject["avatar_thumb"]!!.jsonObject["url_list"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.content ?: run {
+    val nickname = owner?.jsonObject?.get("nickname")?.jsonPrimitive?.content ?: ""
+    val avatar = owner?.jsonObject?.get("avatar_thumb")?.jsonObject?.get("url_list")?.jsonArray?.getOrNull(0)?.jsonPrimitive?.content ?: run {
       logger.debug("$url unable to get avatar")
       ""
     }
@@ -148,14 +147,11 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   companion object {
     const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9]+)"
-
     const val LIVE_DOUYIN_URL = "https://live.douyin.com"
 
-    const val SCRIPT_REGEX = """self.__pace_f.push\(\[\d,("[a-z]:.+?")\]\)</script>"""
-
+    // cookie parameters
     private var NONCE: String? = null
-
-    private var TTWIDTH: String? = null
+    private var TT_WID: String? = null
     private var MS_TOKEN: String? = null
 
     /**
@@ -235,10 +231,10 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
      * @param client The HTTP client to use for making requests
      * @return The `ttwid` parameter from the Douyin cookies
      */
-    private suspend fun getDouyinTTwid(httpClient: HttpClient): String {
-      if (TTWIDTH != null) return TTWIDTH!!
+    private suspend fun getDouyinTTwid(client: HttpClient): String {
+      if (TT_WID != null) return TT_WID!!
       val response = withIOContext {
-        httpClient.get("${LIVE_DOUYIN_URL}/1-2-3-4-5-6-7-8-9-0") {
+        client.get("${LIVE_DOUYIN_URL}/1-2-3-4-5-6-7-8-9-0") {
           commonDouyinParams.forEach { (key, value) ->
             parameter(key, value)
           }
@@ -255,8 +251,8 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
         throw Exception("Failed to get ttwid from cookies")
       }
       synchronized(this) {
-        if (TTWIDTH == null) {
-          TTWIDTH = ttwid
+        if (TT_WID == null) {
+          TT_WID = ttwid
           logger.info("got douyin ttwid: $ttwid")
         }
       }
