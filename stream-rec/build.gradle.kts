@@ -31,8 +31,7 @@ dependencies {
   implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(project(":base"))
-  implementation(project(":platforms:douyin"))
-  implementation(project(":platforms:huya"))
+  implementation(project(":platforms"))
   implementation(project(":stream-rec-backend"))
 
   ksp(libs.com.google.dagger.dagger.compiler)
