@@ -32,6 +32,8 @@ import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlin.io.path.Path
+import kotlin.io.path.fileSize
 
 /**
  * Base download engine
@@ -44,7 +46,7 @@ abstract class BaseDownloadEngine(
 
   protected var onDownloadStarted: () -> Unit = {}
   protected var onDownloadProgress: (diff: Long, bitrate: String) -> Unit = { _, _ -> }
-  protected var onDownloadFinished: (StreamData?) -> Unit = {}
+  protected var onDownloadFinished: (StreamData) -> Unit = {}
 
   protected var cookies: String? = ""
   protected var downloadUrl: String? = null
@@ -98,7 +100,10 @@ abstract class BaseDownloadEngine(
       throw IllegalStateException("Engine is not initialized")
     }
     return withIOContext {
-      startDownload().also {
+      startDownload()?.also {
+        // get file size
+        val fileSize = Path(it.outputFilePath).fileSize()
+        it.outputFileSize = fileSize
         onDownloadFinished(it)
       }
     }
@@ -134,7 +139,7 @@ abstract class BaseDownloadEngine(
    *
    * @param callback The callback to be executed when the download finishes.
    */
-  fun onDownloadFinished(callback: (StreamData?) -> Unit) {
+  fun onDownloadFinished(callback: (StreamData) -> Unit) {
     onDownloadFinished = callback
   }
 }

@@ -42,6 +42,7 @@ import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
 import github.hua0512.backend.backendServer
 import github.hua0512.data.config.AppConfig
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.services.DownloadService
@@ -93,6 +94,10 @@ class Application {
           }
 
           launch {
+            EventCenter.run()
+          }
+
+          launch {
             // start server
             server = backendServer(
               json = appComponent.getJson(),
@@ -114,6 +119,7 @@ class Application {
           server?.stop(1000, 1000)
           appComponent.getSqlDriver().closeDriver()
           app.releaseAll()
+          EventCenter.stop()
           scope.cancel("Application is shutting down")
           logger.info("Shutdown complete")
         })

@@ -60,8 +60,8 @@ data class UploadData(
   var uploadActionId: Long = -1
     get() = if (isUploadActionInitialized()) uploadAction.id else field
 
-  var uploadPlatform = ""
-    get() = if (isUploadActionInitialized()) uploadAction.uploadConfig.platform.toString() else field
+  var uploadPlatform = UploadPlatform.NONE
+    get() = if (isUploadActionInitialized()) uploadAction.uploadConfig.platform else field
 
   @Transient
   var uploadResults = mutableListOf<UploadResult>()

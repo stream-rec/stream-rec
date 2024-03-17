@@ -28,10 +28,11 @@ package github.hua0512.services
 
 import github.hua0512.app.App
 import github.hua0512.data.dto.GlobalPlatformConfig
+import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.plugins.base.Download
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.Douyin
 import github.hua0512.plugins.douyin.download.DouyinExtractor
@@ -51,7 +52,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.coroutineContext
 import kotlin.io.path.Path
-import kotlin.io.path.fileSize
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -70,7 +70,7 @@ class DownloadService(
   // semaphore to limit the number of concurrent downloads
   private var downloadSemaphore: Semaphore? = null
 
-  private fun getPlaformDownloader(platform: StreamingPlatform, url: String) = when (platform) {
+  private fun getPlatformDownloader(platform: StreamingPlatform, url: String) = when (platform) {
     StreamingPlatform.HUYA -> Huya(app, HuyaDanmu(app), HuyaExtractor(app.client, app.json, url))
     StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app), DouyinExtractor(app.client, app.json, url))
     else -> throw Exception("Platform not supported")
@@ -159,13 +159,13 @@ class DownloadService(
     val newJob = SupervisorJob(coroutineContext[Job])
     val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
     newScope.launch {
-      val plugin: Download = try {
-        getPlaformDownloader(streamer.platform, streamer.url)
+      val plugin = try {
+        getPlatformDownloader(streamer.platform, streamer.url)
       } catch (e: Exception) {
         logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
+        EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
         return@launch
       }
-
       val streamDataList = mutableListOf<StreamData>()
       var retryCount = 0
       val retryDelay = app.config.downloadRetryDelay
@@ -183,6 +183,7 @@ class DownloadService(
           }
           // stream finished with data
           logger.info("${streamer.name} stream finished")
+          EventCenter.sendEvent(StreamerOffline(streamer.name, streamer.url, streamer.platform, Clock.System.now(), streamDataList.toList()))
           // call onStreamingFinished callback with the copy of the list
           newScope.launch {
             bindOnStreamingEndActions(streamer, streamDataList.toList())
@@ -212,6 +213,7 @@ class DownloadService(
         if (isLive) {
           // save streamer to the database with the new isLive value
           if (!streamer.isLive) {
+            EventCenter.sendEvent(StreamerOnline(streamer.name, streamer.url, streamer.platform, streamer.streamTitle ?: "", Clock.System.now()))
             repo.updateStreamerLiveStatus(streamer.id, true)
           }
           if (oldStreamer.streamTitle != streamer.streamTitle) {
@@ -236,6 +238,7 @@ class DownloadService(
               try {
                 plugin.download()
               } catch (e: Exception) {
+                EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
                 when (e) {
                   is IllegalArgumentException -> {
                     logger.error("${streamer.name} invalid url or invalid streamer : ${e.message}")
@@ -260,9 +263,6 @@ class DownloadService(
             }
             // save the stream data to the database
             try {
-              // get file size
-              val fileSize = Path(streamsData.outputFilePath).fileSize()
-              streamsData.outputFileSize = fileSize
               streamDataRepository.saveStreamData(streamsData)
               logger.debug("saved to db : {}", streamsData)
             } catch (e: Exception) {
@@ -355,6 +355,15 @@ class DownloadService(
   private fun cancelJob(streamer: Streamer, reason: String = ""): Streamer {
     taskJobs[streamer]?.cancel(reason)?.also {
       logger.info("${streamer.name}, ${streamer.url} job cancelled : $reason")
+      EventCenter.sendEvent(
+        StreamerRecordStop(
+          streamer.name,
+          streamer.url,
+          streamer.platform,
+          Clock.System.now(),
+          reason = CancellationException(reason)
+        )
+      )
     }
     taskJobs.remove(streamer)
     return streamer
