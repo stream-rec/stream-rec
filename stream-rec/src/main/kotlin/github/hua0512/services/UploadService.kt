@@ -29,9 +29,11 @@ package github.hua0512.services
 import github.hua0512.app.App
 import github.hua0512.data.UploadDataId
 import github.hua0512.data.UploadResultId
+import github.hua0512.data.event.UploadEvent
 import github.hua0512.data.upload.*
 import github.hua0512.data.upload.UploadConfig.NoopConfig
 import github.hua0512.data.upload.UploadConfig.RcloneConfig
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.base.Upload
 import github.hua0512.plugins.upload.NoopUploader
 import github.hua0512.plugins.upload.RcloneUploader
@@ -189,6 +191,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
     // change the status to UPLOADING
     file.status = UploadState.UPLOADING
     uploadRepo.changeUploadDataStatus(file.id, file.status)
+    EventCenter.sendEvent(UploadEvent.UploadStart(file.filePath, file.uploadPlatform, Clock.System.now()))
     // Retry logic
     while (attempts < 3) {
       try {
@@ -196,6 +199,9 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
           // change the status to REUPLOADING if the upload is being retried
           file.status = UploadState.REUPLOADING
           uploadRepo.changeUploadDataStatus(file.id, file.status)
+          EventCenter.sendEvent(UploadEvent.UploadRetry(file.filePath, file.uploadPlatform, Clock.System.now(), attempts))
+        } else if (attempts > 0 && file.status == UploadState.REUPLOADING) {
+          EventCenter.sendEvent(UploadEvent.UploadRetry(file.filePath, file.uploadPlatform, Clock.System.now(), attempts))
         }
 
         // upload the file
@@ -207,12 +213,14 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
           file.status = if (status.isSuccess) UploadState.UPLOADED else UploadState.FAILED
           file.uploadResults.add(status)
           uploadRepo.changeUploadDataStatus(file.id, file.status)
+          EventCenter.sendEvent(UploadEvent.UploadSuccess(file.filePath, file.uploadPlatform, Clock.System.now()))
           logger.info("Successfully uploaded file: ${file.filePath}")
           emit(status)
           attempts = 3
         }
       } catch (e: UploadInvalidArgumentsException) {
         logger.error("Invalid arguments for upload: ${file.filePath}")
+        EventCenter.sendEvent(UploadEvent.UploadFailure(file.filePath, file.uploadPlatform, Clock.System.now(), e))
         emit(
           UploadResult(
             startTime = Clock.System.now().epochSeconds, isSuccess = false, message = "Invalid arguments for upload: ${e.message}",
@@ -229,6 +237,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
         // most likely network issues or an UploadFailedException
         attempts++
         logger.error("Failed to upload file: ${file.filePath}, attempt: $attempts", e)
+        EventCenter.sendEvent(UploadEvent.UploadFailure(file.filePath, file.uploadPlatform, Clock.System.now(), e))
         if (attempts >= 3) {
           emit(
             UploadResult(

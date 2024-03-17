@@ -28,6 +28,7 @@ package github.hua0512.plugins.base
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamData
@@ -37,6 +38,7 @@ import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.NativeDownloadEngine
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.*
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
@@ -192,15 +194,51 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
           .hideEta()
           .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
           .build()
+        EventCenter.sendEvent(
+          DownloadEvent.DownloadStart(
+            filePath = outputPath.pathString,
+            url = downloadUrl,
+            platform = streamer.platform
+          )
+        )
       }
       onDownloadProgress { size, bitrate ->
         pb?.let {
           it.stepBy(size)
           it.extraMessage = if (bitrate.isEmpty()) "Downloading..." else "bitrate: $bitrate"
+          // extract numbers from string
+          if (bitrate.isNotEmpty()) {
+            val bitrateValue = try {
+              bitrate.substring(0, bitrate.indexOf("k")).toDouble()
+            } catch (e: Exception) {
+              0.0
+            }
+            EventCenter.sendEvent(
+              DownloadEvent.DownloadStateUpdate(
+                filePath = outputPath.pathString,
+                url = downloadUrl,
+                platform = streamer.platform,
+                duration = it.totalElapsed.toSeconds(),
+                speed = 0.0,
+                bitrate = bitrateValue,
+                fileSize = it.current,
+                streamerId = streamer.id
+              )
+            )
+          }
         }
       }
       onDownloadFinished {
         pb?.close()
+        EventCenter.sendEvent(
+          DownloadEvent.DownloadSuccess(
+            filePath = outputPath.pathString.removeSuffix(".part"),
+            url = downloadUrl,
+            platform = streamer.platform,
+            data = it,
+            time = Clock.System.now()
+          )
+        )
       }
     }
 
@@ -212,9 +250,16 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
       }
     } catch (e: Exception) {
       logger.error("(${streamer.name}) download failed: $e")
-      pb?.close()
+      EventCenter.sendEvent(
+        DownloadEvent.DownloadError(
+          filePath = outputPath.pathString,
+          url = downloadUrl,
+          platform = streamer.platform,
+          error = e
+        )
+      )
     }
-
+    pb?.close()
     // stop danmu job
     if (isDanmuEnabled) {
       stopDanmuJob(danmuJob)

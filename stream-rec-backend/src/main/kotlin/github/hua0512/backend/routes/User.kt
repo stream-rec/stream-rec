@@ -32,7 +32,9 @@ import github.hua0512.backend.plugins.jwtAudience
 import github.hua0512.backend.plugins.jwtDomain
 import github.hua0512.backend.plugins.jwtSecret
 import github.hua0512.data.User
+import github.hua0512.data.event.UserEvent.UserLogin
 import github.hua0512.logger
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.UserRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -77,6 +79,7 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
           put("validTo", validTo.toKotlinInstant().toEpochMilliseconds())
         }
         call.respond(HttpStatusCode.OK, responseBody)
+        EventCenter.sendEvent(UserLogin(user.username, Clock.System.now()))
       } catch (e: Exception) {
         logger.error("Failed to login", e)
         call.respond(HttpStatusCode.BadRequest, "Failed to get user")
