@@ -27,15 +27,10 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
-import github.hua0512.data.config.Action
-import github.hua0512.data.config.Action.*
 import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.data.upload.UploadAction
-import github.hua0512.data.upload.UploadConfig.RcloneConfig
-import github.hua0512.data.upload.UploadData
 import github.hua0512.plugins.base.Download
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.Douyin
@@ -45,27 +40,24 @@ import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.utils.*
-import github.hua0512.utils.process.InputSource
-import github.hua0512.utils.process.Redirect
+import github.hua0512.utils.deleteFile
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.File
 import kotlin.coroutines.coroutineContext
-import kotlin.io.path.*
+import kotlin.io.path.Path
+import kotlin.io.path.fileSize
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 class DownloadService(
   private val app: App,
-  private val uploadService: UploadService,
+  private val actionService: ActionService,
   private val repo: StreamerRepo,
   private val streamDataRepository: StreamDataRepo,
 ) {
@@ -307,7 +299,7 @@ class DownloadService(
   private suspend fun bindOnStreamingEndActions(streamer: Streamer, streamDataList: List<StreamData>) {
     val actions = streamer.templateStreamer?.downloadConfig?.onStreamingFinished ?: streamer.downloadConfig?.onStreamingFinished
     actions?.let {
-      runActions(streamDataList, it)
+      actionService.runActions(streamDataList, it)
     } ?: run {
       // check if on parted download is also empty
       val partedActions = streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
@@ -323,145 +315,10 @@ class DownloadService(
   private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
     val actions = streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
     actions?.let {
-      runActions(listOf(streamData), it)
+      actionService.runActions(listOf(streamData), it)
     }
   }
 
-  private suspend fun runActions(streamDataList: List<StreamData>, actions: List<Action>) = withIOContext {
-    actions.filter {
-      it.enabled
-    }.forEach { action ->
-      val job = async {
-        action.mapToAction(streamDataList)
-      }
-      try {
-        job.await()
-      } catch (e: Exception) {
-        logger.error("$streamDataList, error while executing action $action : ${e.message}")
-        return@forEach
-      }
-    }
-  }
-
-  private suspend fun Action.mapToAction(streamDataList: List<StreamData>) {
-    when (this) {
-      is RcloneAction -> {
-        this.run {
-          val finalList = streamDataList.flatMap { streamData ->
-            listOfNotNull(
-              UploadData(
-                filePath = streamData.outputFilePath
-              ).also {
-                it.streamDataId = streamData.id
-                it.streamData = streamData
-              },
-              streamData.danmuFilePath?.let { danmu ->
-                UploadData(
-                  filePath = danmu
-                ).also {
-                  it.streamDataId = streamData.id
-                  it.streamData = streamData
-                }
-              }
-            )
-          }
-          UploadAction(
-            time = Clock.System.now().toEpochMilliseconds(),
-            files = finalList.toSet(),
-            uploadConfig = RcloneConfig(
-              rcloneOperation = this.rcloneOperation,
-              remotePath = this.remotePath,
-              args = this.args
-            )
-          ).let { uploadService.upload(it) }
-        }
-      }
-
-      is CommandAction -> {
-        this.apply {
-          logger.info("Running command action : $this")
-
-          val streamData = streamDataList.first()
-          val streamer = streamData.streamer
-          val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
-          val downloadOutputFolder: File? = (downloadConfig?.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).let {
-            val instant = Instant.fromEpochSeconds(streamData.dateStart!!)
-            val path = it.replacePlaceholders(streamer.name, streamData.title, instant)
-            Path(path).toFile().also { file ->
-              // if the folder does not exist, then it should be an error
-              if (!file.exists()) {
-                logger.error("Output folder $this does not exist")
-                return@let null
-              }
-            }
-          }
-          // files + danmu files
-          val finalList: String = streamDataList.flatMap { stream ->
-            listOfNotNull(
-              stream.outputFilePath,
-              stream.danmuFilePath
-            )
-          }.run {
-            if (this.isEmpty()) {
-              logger.error("No files to process")
-              throw IllegalStateException("No files to process for action $this for streamer $streamer")
-            }
-            StringBuilder().apply {
-              this.forEach {
-                append(it)
-                append("\n")
-              }
-            }.toString()
-          }
-          // execute the command
-          val exitCode = executeProcess(
-            this.program, *this.args.toTypedArray(),
-            stdin = InputSource.fromString(finalList),
-            stdout = Redirect.CAPTURE,
-            stderr = Redirect.CAPTURE,
-            directory = downloadOutputFolder,
-            destroyForcibly = true,
-            consumer = { line ->
-              logger.info(line)
-            }
-          )
-          logger.info("Command action $this finished with exit code $exitCode")
-        }
-      }
-
-      is MoveAction -> {
-        val dest = Path(this.destination)
-        streamDataList.flatMap {
-          listOfNotNull(
-            it.outputFilePath,
-            it.danmuFilePath
-          )
-        }.forEach { filePath ->
-          val file = Path(filePath)
-          val destFile = dest.resolve(file.name).apply {
-            createParentDirectories()
-          }
-          file.moveTo(destFile)
-          logger.info("Moved $file to $destFile")
-        }
-      }
-
-      is RemoveAction -> {
-        streamDataList.flatMap {
-          listOfNotNull(
-            it.outputFilePath,
-            it.danmuFilePath
-          )
-        }.forEach { filePath ->
-          val file = Path(filePath)
-          file.deleteFile()
-        }
-      }
-
-      else -> throw UnsupportedOperationException("Invalid action: $this")
-    }
-
-  }
 
   /**
    * Starts a new download job for a given [Streamer].

@@ -37,6 +37,7 @@ import github.hua0512.repo.TomlDataSourceImpl
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.repo.uploads.UploadRepo
+import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
 import kotlinx.serialization.json.Json
@@ -59,13 +60,17 @@ class AppModule {
 
   @Provides
   @Singleton
+  fun provideActionService(app: App, uploadService: UploadService): ActionService = ActionService(app, uploadService)
+
+  @Provides
+  @Singleton
   fun provideDownloadService(
     app: App,
-    uploadService: UploadService,
+    actionService: ActionService,
     streamerRepository: StreamerRepo,
     streamDataRepository: StreamDataRepo,
   ): DownloadService =
-    DownloadService(app, uploadService, streamerRepository, streamDataRepository)
+    DownloadService(app, actionService, streamerRepository, streamDataRepository)
 
   @Provides
   @Singleton
