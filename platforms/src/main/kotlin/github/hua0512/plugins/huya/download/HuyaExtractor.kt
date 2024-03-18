@@ -56,7 +56,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
     const val ROOM_DATA_REGEX = "var TT_ROOM_DATA = (.*?);"
     const val AVATAR_REGEX = """avatar"\s*:\s*"([^"]+)"""
     const val STATE_REGEX = """"state"\s*:\s*"(\w+)""""
-    const val LIVE_CHANNEL_REGEX = """"liveChannel"\s*:\s*(\d+)"""
+    const val LIVE_CHANNEL_REGEX = """"liveChannel":"([^"]+)""""
     const val STREAM_REGEX = "stream: (\\{.+)\\n.*?};"
     const val NICK_REGEX = """nick"\s*:\s*"([^"]+)"""
     const val INTRODUCTION_REGEX = """introduction"\s*:\s*"([^"]+)"""
