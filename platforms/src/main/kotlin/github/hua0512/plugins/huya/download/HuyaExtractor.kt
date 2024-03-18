@@ -121,14 +121,12 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
         throw IllegalStateException("Empty TT_ROOM_DATA content from $url")
       }
     }
-
     val stateRegex = STATE_REGEX.toRegex()
     val state = stateRegex.find(matchJson)?.groupValues?.get(1) ?: ""
     if (state.isEmpty()) {
       throw IllegalStateException("Unable to extract state from $url")
     }
-    val liveChannel = LIVE_CHANNEL_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
-    return state == "ON" && liveChannel != 0L
+    return state == "ON"
   }
 
   override suspend fun extract(): MediaInfo {

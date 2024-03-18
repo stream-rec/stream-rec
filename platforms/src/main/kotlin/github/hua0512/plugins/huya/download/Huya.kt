@@ -34,6 +34,7 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.base.Download
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
+import github.hua0512.utils.nonEmptyOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -64,7 +65,7 @@ class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download(app,
   override suspend fun shouldDownload(streamer: Streamer): Boolean {
     this.streamer = streamer
 
-    (config.cookies ?: app.config.huyaConfig.cookies)?.also {
+    (config.cookies ?: app.config.huyaConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
 
