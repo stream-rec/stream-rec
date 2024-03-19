@@ -68,7 +68,7 @@ fun Application.module(
   configureHTTP()
   configureMonitoring()
   configureSerialization()
-  configureSockets()
+  configureSockets(json)
   configureAdministration()
   configureRouting(json, userRepo, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo)
 }
