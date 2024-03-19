@@ -53,6 +53,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.fileSize
 import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -278,10 +279,11 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
     } else {
       logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
       if (app.config.minPartSize > 0) {
-        val fileSize = outputPath.toFile().length()
+        val outputFile = Path(streamData.outputFilePath)
+        val fileSize = outputFile.fileSize()
         if (fileSize < app.config.minPartSize) {
           logger.error("(${streamer.name}) file size too small: $fileSize")
-          deleteOutputs(outputPath, isDanmuEnabled, Path(danmuPath))
+          deleteOutputs(outputFile, isDanmuEnabled, Path(danmuPath))
           return@supervisorScope null
         }
       }
