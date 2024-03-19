@@ -9,13 +9,12 @@ import io.ktor.server.routing.*
 
 fun Route.statsRoute(statsRepo: SummaryStatsRepo) {
   get("/stats") {
-    val dateStartString = call.request.queryParameters["dateStart"]
-    val dateEndString = call.request.queryParameters["dateEnd"]
-
-    val dateStartEpoch = dateStartString?.toLong() ?: 0
-    val dateEndEpoch = dateEndString?.toLong() ?: Long.MAX_VALUE
-
     try {
+      val dateStartString = call.request.queryParameters["dateStart"]
+      val dateEndString = call.request.queryParameters["dateEnd"]
+
+      val dateStartEpoch = dateStartString?.toLong() ?: 0
+      val dateEndEpoch = dateEndString?.toLong() ?: Long.MAX_VALUE
       val stats = statsRepo.getSummaryStatsFromTo(dateStartEpoch, dateEndEpoch)
       call.respond(stats)
     } catch (e: Exception) {
