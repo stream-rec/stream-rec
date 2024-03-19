@@ -29,11 +29,13 @@ package github.hua0512.plugins.download.engines
 import github.hua0512.app.App
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamData
+import github.hua0512.utils.rename
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlin.io.path.Path
 import kotlin.io.path.fileSize
+import kotlin.io.path.pathString
 
 /**
  * Base download engine
@@ -100,11 +102,19 @@ abstract class BaseDownloadEngine(
       throw IllegalStateException("Engine is not initialized")
     }
     return withIOContext {
-      startDownload()?.also {
+      startDownload()?.let { data ->
+        val filePath = Path(data.outputFilePath).run {
+          // remove .part suffix
+          val withoutPart = pathString.removeSuffix(".part")
+          rename(Path(withoutPart))
+          Path(withoutPart)
+        }
         // get file size
-        val fileSize = Path(it.outputFilePath).fileSize()
-        it.outputFileSize = fileSize
-        onDownloadFinished(it)
+        val fileSize = filePath.fileSize()
+        data.outputFileSize = fileSize
+        data.copy(outputFilePath = filePath.pathString).also {
+          onDownloadFinished(it)
+        }
       }
     }
   }

@@ -111,7 +111,7 @@ class FFmpegDownloadEngine(
         streamData!!.copy(
           dateStart = startTime.epochSeconds,
           dateEnd = Clock.System.now().epochSeconds,
-          outputFilePath = downloadFilePath.removeSuffix(".part"),
+          outputFilePath = downloadFilePath,
         )
       }
     }

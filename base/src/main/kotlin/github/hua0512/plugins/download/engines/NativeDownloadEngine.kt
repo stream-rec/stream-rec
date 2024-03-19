@@ -80,7 +80,7 @@ class NativeDownloadEngine(override val app: App) : BaseDownloadEngine(app) {
       streamData?.copy(
         dateStart = startTime.epochSeconds,
         dateEnd = Clock.System.now().epochSeconds,
-        outputFilePath = downloadFilePath.removeSuffix(".part"),
+        outputFilePath = downloadFilePath,
       )
     } catch (e: Exception) {
       logger.error("Error downloading stream", e)

@@ -232,7 +232,7 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
         pb?.close()
         EventCenter.sendEvent(
           DownloadEvent.DownloadSuccess(
-            filePath = outputPath.pathString.removeSuffix(".part"),
+            filePath = outputPath.pathString,
             url = downloadUrl,
             platform = streamer.platform,
             data = it,
@@ -285,7 +285,6 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
           return@supervisorScope null
         }
       }
-      outputPath.rename(Path(outputPath.pathString.removeSuffix(".part")))
     }
 
     logger.debug("(${streamer.name}) finished parted download")
