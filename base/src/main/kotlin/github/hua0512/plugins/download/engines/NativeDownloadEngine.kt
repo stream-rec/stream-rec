@@ -26,12 +26,13 @@
 
 package github.hua0512.plugins.download.engines
 
-import github.hua0512.app.App
 import github.hua0512.data.stream.StreamData
 import github.hua0512.logger
 import github.hua0512.utils.withIOContext
+import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.datetime.Clock
@@ -44,7 +45,7 @@ import java.nio.file.StandardOpenOption
  * @author hua0512
  * @date : 2024/2/12 18:45
  */
-class NativeDownloadEngine(override val app: App) : BaseDownloadEngine(app) {
+class NativeDownloadEngine(val client: HttpClient) : BaseDownloadEngine() {
 
   override suspend fun startDownload(): StreamData? {
     val outputFile = Path.of(downloadFilePath).toFile()
@@ -55,7 +56,7 @@ class NativeDownloadEngine(override val app: App) : BaseDownloadEngine(app) {
       }
 
       withIOContext {
-        app.client.prepareGet(downloadUrl!!) {
+        client.prepareGet(downloadUrl!!) {
           headers {
             this@NativeDownloadEngine.headers.forEach { (t, u) ->
               append(t, u)

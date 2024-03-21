@@ -36,10 +36,15 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
+import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.NativeDownloadEngine
+import github.hua0512.plugins.download.engines.StreamlinkDownloadEngine
 import github.hua0512.plugins.event.EventCenter
-import github.hua0512.utils.*
+import github.hua0512.utils.deleteFile
+import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.withIORetry
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -66,7 +71,7 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
   }
 
   // downloadUrl is the url of the stream to be downloaded
-  protected lateinit var downloadUrl: String
+  open lateinit var downloadUrl: String
 
   // downloadTitle is the title of the stream to be downloaded
   protected var downloadTitle: String = ""
@@ -127,15 +132,16 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
     val danmuPath = outputPath.pathString.replace("$fileExtension.part", "xml")
     // check if danmu is initialized
     val danmuJob = if (isDanmuEnabled) {
+      danmu.filePath = danmuPath
       async(Dispatchers.IO) {
         val status: Boolean = withIORetry(
           maxRetries = 5,
           maxDelayMillis = 30000,
-          onError = { e, count -> logger.error("(${streamer.name}) Danmu failed to initialize($count): $e") }) {
-          initDanmu(streamer, startTime, danmuPath)
+          onError = { e, count -> logger.error("(${streamer.name}) danmu failed to initialize($count): $e") }) {
+          initDanmu(streamer, startTime)
         }
         if (!status) {
-          logger.error("(${streamer.name}) Danmu failed to initialize")
+          logger.error("(${streamer.name}) danmu failed to initialize")
           return@async
         }
         // download danmu
@@ -158,10 +164,7 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
     }
 
     // download engine
-    val engine = getDownloadEngine().apply {
-      if (fileExtension.contains("mp4") && this is NativeDownloadEngine) {
-        throw UnsupportedOperationException("NativeEngine does not support mp4 format")
-      }
+    val engine = selectDownloadEngine().apply {
       init(
         downloadUrl,
         fileFormat,
@@ -170,7 +173,10 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
         cookie,
         Extractor.commonHeaders.toMap(),
         startTime,
-        fileLimitSize = app.config.maxPartSize
+        fileLimitSize = app.config.maxPartSize.run {
+          if (this > 0) this else 2621440000
+        },
+        fileLimitDuration = app.config.maxPartDuration
       )
       onDownloadStarted {
         danmu.videoStartTime = Clock.System.now()
@@ -259,38 +265,36 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
           error = e
         )
       )
-    }
-    pb?.close()
-    // stop danmu job
-    if (isDanmuEnabled) {
-      stopDanmuJob(danmuJob)
-      // check if download is initialized
-      if (!danmu.isInitialized.get()) {
-        streamData = streamData?.copy(danmuFilePath = null)
+      streamData = null
+      // ignore other exceptions
+      if (e is UnsupportedOperationException || e is IllegalArgumentException) throw e
+    } finally {
+      pb?.close()
+      // stop danmu job
+      if (isDanmuEnabled) {
+        stopDanmuJob(danmuJob)
+        // check if download is initialized
+        if (!danmu.isInitialized.get()) {
+          streamData = streamData?.copy(danmuFilePath = null)
+        }
       }
-    }
-
-    logger.debug("({}) streamData: {}", streamer.name, streamData)
-    if (streamData == null) {
-      logger.error("(${streamer.name}) could not download stream")
-      // delete files if download failed
-      deleteOutputs(outputPath, isDanmuEnabled, Path(danmuPath))
-      return@supervisorScope null
-    } else {
-      logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
-      if (app.config.minPartSize > 0) {
-        val outputFile = Path(streamData.outputFilePath)
-        val fileSize = outputFile.fileSize()
-        if (fileSize < app.config.minPartSize) {
-          logger.error("(${streamer.name}) file size too small: $fileSize")
-          deleteOutputs(outputFile, isDanmuEnabled, Path(danmuPath))
-          return@supervisorScope null
+      logger.debug("({}) streamData: {}", streamer.name, streamData)
+      if (streamData == null) {
+        logger.error("(${streamer.name}) could not download stream")
+        // delete files if download failed
+        deleteOutputs(outputPath, isDanmuEnabled, Path(danmuPath))
+      } else {
+        logger.debug("(${streamer.name}) downloaded: ${streamData.outputFilePath}")
+        if (app.config.minPartSize > 0) {
+          val outputFile = Path(streamData.outputFilePath)
+          val fileSize = outputFile.fileSize()
+          if (fileSize < app.config.minPartSize) {
+            logger.error("(${streamer.name}) file size too small: $fileSize")
+            deleteOutputs(outputFile, isDanmuEnabled, Path(danmuPath))
+          }
         }
       }
     }
-
-    logger.debug("(${streamer.name}) finished parted download")
-
     return@supervisorScope streamData
   }
 
@@ -300,10 +304,33 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
   }
 
 
-  private fun getDownloadEngine() = when (app.config.engine) {
-    "ffmpeg" -> FFmpegDownloadEngine(app)
-    "native" -> NativeDownloadEngine(app)
-    else -> throw Exception("Engine not supported")
+  /**
+   * Get the download engine based on type
+   * @param type the type of the download engine
+   * @return a [BaseDownloadEngine] instance
+   */
+  private fun getDownloadEngine(type: String): BaseDownloadEngine {
+    // user selected engine
+    return when (type) {
+      "ffmpeg" -> FFmpegDownloadEngine()
+      "streamlink" -> StreamlinkDownloadEngine()
+      "native" -> NativeDownloadEngine(app.client)
+      else -> throw UnsupportedOperationException("$type download engine not supported")
+    }
+  }
+
+  /**
+   * Select the download engine based on the stream type
+   * @return a [BaseDownloadEngine] instance
+   */
+  private fun selectDownloadEngine(): BaseDownloadEngine {
+    val userSelectedEngine = getDownloadEngine(app.config.engine)
+    if (!downloadUrl.contains("m3u8") && userSelectedEngine is StreamlinkDownloadEngine) {
+      // fallback to ffmpeg if the stream is not HLS
+      logger.warn("(${streamer.name}) stream is not HLS, fallback to ffmpeg")
+      return getDownloadEngine("ffmpeg")
+    }
+    return userSelectedEngine
   }
 
   private suspend fun danmuDownload() {
@@ -352,14 +379,12 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
   }
 
 
-  protected suspend fun initDanmu(streamer: Streamer, startTime: Instant, filePath: String): Boolean = danmu.init(streamer, startTime).run {
-    if (this) {
-      logger.info("(${streamer.name}) Danmu initialized")
-      danmu.filePath = filePath
-    } else {
-      logger.error("${streamer.name}) Danmu failed to initialize")
+  protected suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean = danmu.run {
+    init(streamer, startTime).also {
+      if (!it) {
+        logger.error("(${streamer.name}) failed to initialize danmu")
+      }
     }
-    this
   }
 
   private suspend fun stopDanmuJob(danmuJob: Deferred<Unit>?) {
