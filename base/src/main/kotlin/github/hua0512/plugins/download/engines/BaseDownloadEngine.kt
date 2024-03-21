@@ -26,13 +26,14 @@
 
 package github.hua0512.plugins.download.engines
 
-import github.hua0512.app.App
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamData
+import github.hua0512.logger
 import github.hua0512.utils.rename
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import java.util.*
 import kotlin.io.path.Path
 import kotlin.io.path.fileSize
 import kotlin.io.path.pathString
@@ -42,9 +43,7 @@ import kotlin.io.path.pathString
  * @author hua0512
  * @date : 2024/2/12 18:22
  */
-abstract class BaseDownloadEngine(
-  open val app: App,
-) {
+abstract class BaseDownloadEngine() {
 
   protected var onDownloadStarted: () -> Unit = {}
   protected var onDownloadProgress: (diff: Long, bitrate: String) -> Unit = { _, _ -> }
@@ -57,6 +56,7 @@ abstract class BaseDownloadEngine(
   protected var headers = mutableMapOf<String, String>()
   protected var streamData: StreamData? = null
   protected var startTime: Instant = Instant.DISTANT_PAST
+  protected var fileLimitDuration: Long? = null
   protected var fileLimitSize: Long = 0
   protected var isInitialized = false
 
@@ -80,7 +80,11 @@ abstract class BaseDownloadEngine(
     headers: Map<String, String>,
     startTime: Instant = Clock.System.now(),
     fileLimitSize: Long = 0,
+    fileLimitDuration: Long? = null,
   ) {
+    if (downloadUrl.isBlank() || downloadFilePath.isBlank()) {
+      throw IllegalArgumentException("downloadUrl or downloadFilePath is blank")
+    }
     this.downloadUrl = downloadUrl
     this.downloadFormat = downloadFormat
     this.downloadFilePath = downloadFilePath
@@ -89,6 +93,7 @@ abstract class BaseDownloadEngine(
     this.headers = headers.toMutableMap()
     this.startTime = startTime
     this.fileLimitSize = fileLimitSize
+    this.fileLimitDuration = fileLimitDuration
     isInitialized = true
   }
 
@@ -102,6 +107,9 @@ abstract class BaseDownloadEngine(
       throw IllegalStateException("Engine is not initialized")
     }
     return withIOContext {
+      ensureDownloadUrl()
+      ensureDownloadFormat()
+      logger.info("Starting download: $downloadUrl, format: $downloadFormat, path: $downloadFilePath")
       startDownload()?.let { data ->
         val filePath = Path(data.outputFilePath).run {
           // remove .part suffix
@@ -151,5 +159,32 @@ abstract class BaseDownloadEngine(
    */
   fun onDownloadFinished(callback: (StreamData) -> Unit) {
     onDownloadFinished = callback
+  }
+
+  private fun extractFormatFromPath(downloadFilePath: String): VideoFormat? {
+    val extension = downloadFilePath.removeSuffix(".part").substringAfterLast(".").lowercase(Locale.getDefault())
+    return VideoFormat.format(extension)
+  }
+
+  /**
+   * Ensures that the download format is not null.
+   * If it is null, it tries to extract it from the download file path.
+   * If it is still null, it throws an exception.
+   * @throws IllegalArgumentException If the download format is null.
+   */
+  private fun ensureDownloadFormat() {
+    downloadFormat = downloadFormat ?: extractFormatFromPath(downloadFilePath) ?: throw IllegalArgumentException("downloadFormat is null")
+  }
+
+  /**
+   * Ensures that the download URL is not null.
+   * @throws IllegalArgumentException If the download URL is null.
+   */
+  private fun ensureDownloadUrl() {
+    downloadUrl?.let {
+      if (it.isBlank()) {
+        throw IllegalArgumentException("downloadUrl is blank")
+      }
+    } ?: throw IllegalArgumentException("downloadUrl is null")
   }
 }

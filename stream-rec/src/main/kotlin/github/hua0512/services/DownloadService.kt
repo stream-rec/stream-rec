@@ -32,10 +32,10 @@ import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.Douyin
 import github.hua0512.plugins.douyin.download.DouyinExtractor
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
@@ -234,18 +234,22 @@ class DownloadService(
           // stream is live, start downloading
           // while loop for parting the download
           while (true) {
-            val streamsData = downloadSemaphore!!.withPermit {
+            val stream = downloadSemaphore!!.withPermit {
               try {
                 plugin.download()
               } catch (e: Exception) {
                 EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
                 when (e) {
                   is IllegalArgumentException -> {
+                    streamer.isLive = false
+                    repo.updateStreamerLiveStatus(streamer.id, false)
                     logger.error("${streamer.name} invalid url or invalid streamer : ${e.message}")
                     return@launch
                   }
 
                   is UnsupportedOperationException -> {
+                    streamer.isLive = false
+                    repo.updateStreamerLiveStatus(streamer.id, false)
                     logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
                     return@launch
                   }
@@ -257,20 +261,20 @@ class DownloadService(
                 }
               }
             }
-            if (streamsData == null) {
+            if (stream == null) {
               logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
               break
             }
             // save the stream data to the database
             try {
-              streamDataRepository.saveStreamData(streamsData)
-              logger.debug("saved to db : {}", streamsData)
+              streamDataRepository.saveStreamData(stream)
+              logger.debug("saved to db : {}", stream)
             } catch (e: Exception) {
-              logger.error("${streamer.name} error while saving $streamsData : ${e.message}")
+              logger.error("${streamer.name} error while saving $stream : ${e.message}")
             }
-            streamDataList.add(streamsData)
-            logger.info("${streamer.name} downloaded : $streamsData}")
-            newScope.launch { executePostPartedDownloadActions(streamer, streamsData) }
+            streamDataList.add(stream)
+            logger.info("${streamer.name} downloaded : $stream}")
+            newScope.launch { executePostPartedDownloadActions(streamer, stream) }
             val platformRetryDelay = streamer.platform.platformConfig.partedDownloadRetry ?: 0
             delay(platformRetryDelay.toDuration(DurationUnit.SECONDS))
           }

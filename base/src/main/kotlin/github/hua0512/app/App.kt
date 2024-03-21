@@ -54,6 +54,16 @@ class App(val json: Json) {
         this
       }
     }
+
+    @JvmStatic
+    val streamLinkPath = (System.getenv("STREAMLINK_PATH") ?: "streamlink").run {
+      // check if is windows
+      if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
+        "$this.exe"
+      } else {
+        this
+      }
+    }
   }
 
   val client by lazy {

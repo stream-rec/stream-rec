@@ -95,14 +95,16 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     val title = liveData["title"]!!.jsonPrimitive.content
     val owner = liveData["owner"]
     val nickname = owner?.jsonObject?.get("nickname")?.jsonPrimitive?.content ?: ""
+
+    val mediaInfo = MediaInfo(LIVE_DOUYIN_URL, title, nickname, "", "", isLive)
+    // if not live, return basic media info
+    if (!isLive) return mediaInfo
+
+    // avatar is not available when not live
     val avatar = owner?.jsonObject?.get("avatar_thumb")?.jsonObject?.get("url_list")?.jsonArray?.getOrNull(0)?.jsonPrimitive?.content ?: run {
       logger.debug("$url unable to get avatar")
       ""
     }
-
-    val mediaInfo = MediaInfo(LIVE_DOUYIN_URL, title, nickname, "", avatar, isLive)
-    // if not live, return basic media info
-    if (!isLive) return mediaInfo
 
     val cover = liveData["cover"]!!.jsonObject["url_list"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.content ?: run {
       logger.debug("$url unable to get cover")
@@ -142,7 +144,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       listOfNotNull(flvInfo, hlsInfo)
     } ?: emptyList()
 
-    return mediaInfo.copy(coverUrl = cover, streams = streams)
+    return mediaInfo.copy(artistImageUrl = avatar, coverUrl = cover, streams = streams)
   }
 
   companion object {
