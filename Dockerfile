@@ -12,7 +12,7 @@ RUN apk add --no-cache ffmpeg
 # Install Rclone
 RUN apk add --no-cache rclone
 # Install Streamlink
-RUN apk add --no-cache streamlink
+RUN apk add --no-cache streamlink --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
 
 # Install SQLite
 RUN apk add --no-cache sqlite
