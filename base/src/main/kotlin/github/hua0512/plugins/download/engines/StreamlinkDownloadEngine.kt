@@ -30,10 +30,8 @@ import github.hua0512.app.App
 import github.hua0512.data.stream.StreamData
 import github.hua0512.logger
 import github.hua0512.utils.withIOContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 
 /**
@@ -54,7 +52,7 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
   override suspend fun startDownload(): StreamData? {
     // ensure download url is HLS
     ensureHlsUrl(downloadUrl!!)
-    val streamlinkInputArgs = arrayOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "3")
+    val streamlinkInputArgs = arrayOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1")
     // streamlink headers
     val headersArray = headers.map {
       val (key, value) = it
@@ -70,7 +68,7 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
     // streamlink args
     val streamlinkArgs = streamlinkInputArgs + headers + arrayOf(downloadUrl!!, "best", "-O")
     logger.info("Streamlink args: ${streamlinkArgs.joinToString(" ")}")
-    val ffmpegCmdArgs = buildFFMpegCmd(emptyMap(), null, "-", downloadFormat!!, fileLimitSize, fileLimitDuration, downloadFilePath)
+    val ffmpegCmdArgs = buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, downloadFilePath)
     logger.info("FFmpeg input args: ${ffmpegCmdArgs.joinToString(" ")}")
 
     // streamlink process builder
@@ -87,9 +85,16 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
     return try {
       withIOContext {
         coroutineScope {
-          val streamLinkProcess = withContext(Dispatchers.IO) {
-            streamLinkBuilder.start()
+          val pipeList = withIOContext {
+            ProcessBuilder.startPipeline(
+              listOf(
+                streamLinkBuilder,
+                ffmpegBuilder,
+              )
+            )
           }
+          val streamLinkProcess = pipeList[0]
+          val ffmpegProcess = pipeList[1]
           // collect streamlink output
           launch {
             streamLinkProcess.errorStream.bufferedReader().forEachLine {
@@ -98,15 +103,6 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
                 onDownloadStarted()
               }
               logger.info(it)
-            }
-          }
-          val ffmpegProcess = withContext(Dispatchers.IO) {
-            ffmpegBuilder.start()
-          }
-          // pipe streamlink output to ffmpeg input
-          launch {
-            while (streamLinkProcess.isAlive) {
-              streamLinkProcess.inputStream.copyTo(ffmpegProcess.outputStream)
             }
           }
           // collect ffmpeg output
@@ -120,22 +116,18 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
             }
           }
 
-          val streamLinkExitCode = streamLinkProcess.waitFor()
-          if (streamLinkExitCode == 0) {
-            // wait for ffmpeg process to finish
-            val exitCode = ffmpegProcess.waitFor()
-            if (exitCode == 0) {
-              streamData!!.copy(
-                dateStart = startTime.epochSeconds,
-                dateEnd = Clock.System.now().epochSeconds,
-                outputFilePath = downloadFilePath,
-              )
-            } else {
-              logger.error("FFmpeg process exited with code $exitCode")
-              null
-            }
+          // wait for ffmpeg process to finish
+          val exitCode = ffmpegProcess.waitFor()
+          streamLinkProcess.destroy()
+          streamLinkProcess.waitFor()
+          if (exitCode == 0) {
+            streamData!!.copy(
+              dateStart = startTime.epochSeconds,
+              dateEnd = Clock.System.now().epochSeconds,
+              outputFilePath = downloadFilePath,
+            )
           } else {
-            logger.error("Streamlink process exited with code $streamLinkExitCode")
+            logger.error("Download failed: FFmpeg process exited with code $exitCode")
             null
           }
         }
