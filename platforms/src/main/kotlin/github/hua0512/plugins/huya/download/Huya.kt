@@ -31,40 +31,21 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.base.Download
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.utils.nonEmptyOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download(app, danmu, extractor) {
-
-  private val config by lazy {
-    if (streamer.templateStreamer != null) {
-      streamer.templateStreamer!!.downloadConfig?.run {
-        HuyaDownloadConfig(
-          primaryCdn = app.config.huyaConfig.primaryCdn,
-          sourceFormat = app.config.huyaConfig.sourceFormat,
-        ).also {
-          it.danmu = this.danmu
-          it.maxBitRate = this.maxBitRate
-          it.outputFileFormat = this.outputFileFormat
-          it.outputFileName = this.outputFileName
-          it.outputFolder = this.outputFolder
-          it.onPartedDownload = this.onPartedDownload ?: emptyList()
-          it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
-        }
-      } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config")
-    } else {
-      streamer.downloadConfig as? HuyaDownloadConfig ?: HuyaDownloadConfig()
-    }
-
+class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download<HuyaDownloadConfig>(app, danmu, extractor) {
+  override fun createDownloadConfig(): HuyaDownloadConfig {
+    return HuyaDownloadConfig(
+      primaryCdn = app.config.huyaConfig.primaryCdn,
+      sourceFormat = app.config.huyaConfig.sourceFormat,
+    )
   }
 
-  override suspend fun shouldDownload(streamer: Streamer): Boolean {
-    this.streamer = streamer
-
+  override suspend fun shouldDownload(): Boolean {
     (config.cookies ?: app.config.huyaConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }

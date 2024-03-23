@@ -24,40 +24,63 @@
  * SOFTWARE.
  */
 
+package douyu
+
+import github.hua0512.plugins.douyu.danmu.DouyuPacket
+import github.hua0512.plugins.douyu.danmu.DouyuSTT
 import kotlin.test.Test
 
-class DouyinCookiesExtractor {
+/**
+ * @author hua0512
+ * @date : 2024/3/23 13:45
+ */
+class DouyuPacketTest {
+
 
   @Test
-  fun extractCookiesFromString() {
-    val cookies =
-      "cookies"
-    val acNoncePattern = "__ac_nonce=([^;]*)".toRegex()
-    val acNonceString = acNoncePattern.find(cookies)?.groupValues?.get(1) ?: ""
-    val ttwidPattern = "ttwid=([^;]*)".toRegex()
-    val ttwidString = ttwidPattern.find(cookies)?.groupValues?.get(1) ?: ""
-    val acSignPattern = "__ac_signature=([^;]*)".toRegex()
-    val acSignString = acSignPattern.find(cookies)?.groupValues?.get(1) ?: ""
-    val msTokenPattern = "msToken=([^;]*)".toRegex()
-    val msTokenString = msTokenPattern.find(cookies)?.groupValues?.get(1) ?: ""
-    val sessionIdPattern = "sessionId=([^;]*)".toRegex()
-    val sessionIdString = sessionIdPattern.find(cookies)?.groupValues?.get(1) ?: ""
-    var final = ""
-    if (ttwidString.isNotEmpty()) {
-      final += "ttwid=$ttwidString; "
-    }
-    if (msTokenString.isNotEmpty()) {
-      final += "msToken=$msTokenString; "
-    }
-    if (acNonceString.isNotEmpty()) {
-      final += "__ac_nonce=$acNonceString; "
-    }
-    if (acSignString.isNotEmpty()) {
-      final += "__ac_signature=$acSignString; "
-    }
-    if (sessionIdString.isNotEmpty()) {
-      final += "sessionId=$sessionIdString; "
-    }
-    println(final)
+  fun testConcat() {
+    val result = DouyuPacket.concat(byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6))
+    assert(result.contentEquals(byteArrayOf(1, 2, 3, 4, 5, 6)))
   }
+
+  private val heartbeat = byteArrayOf(
+    0x14,
+    0x00,
+    0x00,
+    0x00,
+    0x14,
+    0x00,
+    0x00,
+    0x00,
+    0xb1.toByte(),
+    0x02,
+    0x00,
+    0x00,
+    0x74,
+    0x79,
+    0x70,
+    0x65,
+    0x40,
+    0x3d,
+    0x6d,
+    0x72,
+    0x6b,
+    0x6c,
+    0x2f,
+    0x00
+  )
+
+  @Test
+  fun testEncode() {
+    val result = DouyuPacket.encode(DouyuSTT.serialize(mapOf("type" to "mrkl")))
+    assert(result.contentEquals(heartbeat))
+  }
+
+  @Test
+  fun testDecode() {
+    val result = DouyuPacket.decode(heartbeat)
+    assert(result.size == 1)
+    assert(result.first() == "type@=mrkl/")
+  }
+
 }

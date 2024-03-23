@@ -62,7 +62,7 @@ class HuyaTest {
     assertEquals(matchResult.groupValues.last(), "https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310")
   }
 
-  private val streamingUrl = "https://www.huya.com/222523"
+  private val streamingUrl = "https://www.huya.com/970311"
 
   private val app = App(Json).apply {
     updateConfig(AppConfig(huyaConfig = HuyaConfigGlobal(sourceFormat = VideoFormat.hls, primaryCdn = "HW")))
@@ -79,9 +79,23 @@ class HuyaTest {
   fun testFlv() = runTest {
     val client = app.client
     val extractor = HuyaExtractor(client, app.json, streamingUrl)
-    val downloader = Huya(app, HuyaDanmu(app), extractor)
-    val streamInfo = downloader.shouldDownload(Streamer("test", streamingUrl))
+    val downloader = Huya(app, HuyaDanmu(app), extractor).apply {
+      init(Streamer("test", streamingUrl))
+    }
+    val streamInfo = downloader.shouldDownload()
     println(streamInfo)
+    println(downloader.downloadUrl)
     assertNotNull(streamInfo)
+  }
+
+  @Test
+  fun testDanmu() = runTest {
+    val danmu = HuyaDanmu(app).apply {
+      enableWrite = false
+      filePath = "huya_danmu.txt"
+    }
+    val init = danmu.init(Streamer("test", streamingUrl))
+    danmu.fetchDanmu()
+    assertNotNull(danmu)
   }
 }

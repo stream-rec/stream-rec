@@ -26,6 +26,7 @@
 
 package github.hua0512.data.config
 
+import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.utils.AppConfigEntity
 import github.hua0512.utils.asLong
@@ -58,6 +59,7 @@ data class AppConfig(
   val deleteFilesAfterUpload: Boolean = true,
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
+  val douyuDownloadConfig: DouyuDownloadConfig = DouyuDownloadConfig(),
 ) {
   var id: Long = 1
 
@@ -83,6 +85,9 @@ data class AppConfig(
     entity.douyinConfig?.run {
       json.decodeFromString<DouyinConfigGlobal>(this)
     } ?: DouyinConfigGlobal(),
+    entity.douyuConfig?.run {
+      json.decodeFromString<DouyuDownloadConfig>(this)
+    } ?: DouyuDownloadConfig(),
   ) {
     this.id = entity.id
   }
@@ -107,6 +112,7 @@ data class AppConfig(
       deleteFilesAfterUpload.asLong,
       json.encodeToString(huyaConfig),
       json.encodeToString(douyinConfig),
+      json.encodeToString(douyuDownloadConfig),
     )
   }
 }

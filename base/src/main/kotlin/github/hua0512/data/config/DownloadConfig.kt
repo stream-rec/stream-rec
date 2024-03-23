@@ -27,10 +27,13 @@
 package github.hua0512.data.config
 
 import github.hua0512.data.dto.DouyinConfigDTO
+import github.hua0512.data.dto.DouyuConfigDTO
 import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.dto.HuyaConfigDTO
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
+import github.hua0512.data.platform.DouyuQuality
+import github.hua0512.data.platform.DouyuQualitySerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -38,25 +41,25 @@ import kotlinx.serialization.Serializable
 sealed interface DownloadConfig : DownloadConfigDTO {
 
   abstract override val cookies: String?
-  abstract override val danmu: Boolean?
-  abstract override val maxBitRate: Int?
-  abstract override val outputFolder: String?
-  abstract override val outputFileName: String?
-  abstract override val outputFileFormat: VideoFormat?
-  abstract override val onPartedDownload: List<Action>?
-  abstract override val onStreamingFinished: List<Action>?
+  abstract override var danmu: Boolean?
+  abstract override var maxBitRate: Int?
+  abstract override var outputFolder: String?
+  abstract override var outputFileName: String?
+  abstract override var outputFileFormat: VideoFormat?
+  abstract override var onPartedDownload: List<Action>?
+  abstract override var onStreamingFinished: List<Action>?
 
   @Serializable
   @SerialName("template")
   data class DefaultDownloadConfig(
     override val cookies: String? = null,
-    override val danmu: Boolean? = null,
-    override val maxBitRate: Int? = null,
-    override val outputFolder: String? = null,
-    override val outputFileName: String? = null,
-    override val outputFileFormat: VideoFormat? = null,
-    override val onPartedDownload: List<Action> = emptyList(),
-    override val onStreamingFinished: List<Action> = emptyList(),
+    override var danmu: Boolean? = null,
+    override var maxBitRate: Int? = null,
+    override var outputFolder: String? = null,
+    override var outputFileName: String? = null,
+    override var outputFileFormat: VideoFormat? = null,
+    override var onPartedDownload: List<Action>? = emptyList(),
+    override var onStreamingFinished: List<Action>? = emptyList(),
   ) : DownloadConfig
 
   @SerialName("douyin")
@@ -71,8 +74,8 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override var outputFolder: String? = null
     override var outputFileName: String? = null
     override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action> = emptyList()
-    override var onStreamingFinished: List<Action> = emptyList()
+    override var onPartedDownload: List<Action>? = emptyList()
+    override var onStreamingFinished: List<Action>? = emptyList()
   }
 
 
@@ -89,8 +92,8 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override var outputFolder: String? = null
     override var outputFileName: String? = null
     override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action> = emptyList()
-    override var onStreamingFinished: List<Action> = emptyList()
+    override var onPartedDownload: List<Action>? = emptyList()
+    override var onStreamingFinished: List<Action>? = emptyList()
 
     companion object {
       val default = HuyaDownloadConfig(
@@ -106,5 +109,24 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     }
 
     override var cookies: String? = null
+  }
+
+
+  @Serializable
+  @SerialName("douyu")
+  data class DouyuDownloadConfig(
+    override val cdn: String? = null,
+    @Serializable(with = DouyuQualitySerializer::class)
+    override val quality: DouyuQuality? = null,
+  ) : DownloadConfig, DouyuConfigDTO {
+
+    override var cookies: String? = null
+    override var danmu: Boolean? = null
+    override var maxBitRate: Int? = null
+    override var outputFolder: String? = null
+    override var outputFileName: String? = null
+    override var outputFileFormat: VideoFormat? = null
+    override var onPartedDownload: List<Action>? = emptyList()
+    override var onStreamingFinished: List<Action>? = emptyList()
   }
 }

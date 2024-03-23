@@ -30,6 +30,8 @@ import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.AppConfigDao
 import github.hua0512.dao.UserDao
+import github.hua0512.data.platform.DouyuQuality
+import github.hua0512.data.platform.DouyuQualitySerializer
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.repo.LocalDataSourceImpl
 import github.hua0512.repo.TomlDataSource
@@ -41,6 +43,7 @@ import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
 import javax.inject.Singleton
 
 @Module
@@ -52,6 +55,9 @@ class AppModule {
     ignoreUnknownKeys = true
     isLenient = true
     encodeDefaults = false
+    serializersModule = SerializersModule {
+      contextual(DouyuQuality::class, DouyuQualitySerializer)
+    }
   }
 
   @Provides

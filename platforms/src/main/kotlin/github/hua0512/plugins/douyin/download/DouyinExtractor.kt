@@ -54,7 +54,6 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   private lateinit var jsonData: JsonElement
 
   init {
-    require(match()) { "Invalid url: $url" }
     platformHeaders[HttpHeaders.Referrer] = LIVE_DOUYIN_URL
     commonDouyinParams.forEach { (key, value) ->
       platformParams[key] = value
@@ -171,8 +170,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
           return null
         }
       } catch (e: Exception) {
-        logger.error("Failed to get douyin room id from url: $url", e)
-        null
+        throw IllegalArgumentException("Failed to get douyin room id from url: $url")
       }
     }
 
