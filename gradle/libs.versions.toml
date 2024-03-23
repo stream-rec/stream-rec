@@ -5,7 +5,7 @@ kotlin-coroutines = "1.8.0"
 logback = "1.4.14"
 dagger = "2.50"
 sqldelight = "2.0.1"
-protobuf = "3.25.2"
+protobuf = "4.26.0"
 
 [libraries]
 app-cash-sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
