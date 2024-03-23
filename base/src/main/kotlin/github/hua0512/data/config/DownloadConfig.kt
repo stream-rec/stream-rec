@@ -115,7 +115,7 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   @Serializable
   @SerialName("douyu")
   data class DouyuDownloadConfig(
-    override val cdn: String? = "tct-h5",
+    override val cdn: String? = null,
     @Serializable(with = DouyuQualitySerializer::class)
     override val quality: DouyuQuality? = null,
   ) : DownloadConfig, DouyuConfigDTO {
