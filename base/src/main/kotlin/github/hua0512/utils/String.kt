@@ -76,10 +76,13 @@ fun String.nonEmptyOrNull(): String? {
  * Generates a random string of specified length.
  *
  * @param length The length of the string to be generated.
+ * @param noNumeric A flag to indicate whether the string should not contain numeric characters. Defaults to true.
  * @return A random string of the specified length.
  */
-fun generateRandomString(length: Int): String {
-  val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
+fun generateRandomString(length: Int, noNumeric: Boolean = true): String {
+  val allowedChars = ('A'..'Z') + ('a'..'z').run {
+    if (noNumeric) this else this + ('0'..'9')
+  }
   return (1..length)
     .map { allowedChars.random() }
     .joinToString("")

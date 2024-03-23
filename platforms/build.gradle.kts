@@ -13,6 +13,7 @@ dependencies {
   implementation(libs.com.google.protobuf.protobuf.java.util)
   implementation(libs.com.google.protobuf.protobuf.kotlin.lite)
   implementation(libs.org.jetbrains.kotlinx.datetime)
+  implementation(libs.org.openjdk.nashorn.nashorn.core)
   testImplementation(libs.bundles.test.jvm)
 }
 

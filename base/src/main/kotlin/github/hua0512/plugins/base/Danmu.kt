@@ -34,7 +34,9 @@ import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.utils.withIOContext
 import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.plugins.websocket.cio.*
 import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -57,7 +59,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @author hua0512
  * @date : 2024/2/9 13:31
  */
-abstract class Danmu(val app: App) {
+abstract class Danmu(val app: App, val enablePing: Boolean = false) {
 
   companion object {
     @JvmStatic
@@ -137,7 +139,7 @@ abstract class Danmu(val app: App) {
    * @param startTime start time
    * @return true if initialized successfully
    */
-  suspend fun init(streamer: Streamer, startTime: Instant): Boolean {
+  suspend fun init(streamer: Streamer, startTime: Instant = Clock.System.now()): Boolean {
     this.videoStartTime = startTime
     writeChannel = Channel(BUFFERED, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     return initDanmu(streamer, startTime).also { isEnabled ->
@@ -155,7 +157,7 @@ abstract class Danmu(val app: App) {
     }
   }
 
-  abstract suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean
+  protected abstract suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean
 
   /**
    * Send one hello
@@ -190,56 +192,77 @@ abstract class Danmu(val app: App) {
             logger.error("Error fetching danmu: $danmuFile, retry count: $retryCount", e)
           }
         ) {
-          app.client.webSocket(websocketUrl, request = {
-            requestParams.forEach { (k, v) ->
-              parameter(k, v)
+          // determine if ping is enabled
+          if (enablePing) {
+            app.client.webSocket(websocketUrl, request = {
+              fillRequest()
+            }) {
+              processSession()
             }
-            headersMap.forEach { (k, v) ->
-              header(k, v)
-            }
-          }) {
-            // make an initial hello
-            sendHello(this)
-            // launch a coroutine to send heart beat
-            launchHeartBeatJob(this)
-            while (true) {
-              // received socket frame
-              when (val frame = incoming.receive()) {
-                is Frame.Binary -> {
-                  val data = frame.readBytes()
-                  // decode danmu
-                  try {
-                    decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
-                      // danmu server time
-                      val serverTime = it.serverTime
-                      // danmu process start time
-                      val danmuStartTime = videoStartTime.toEpochMilliseconds()
-                      // danmu in video time
-                      val danmuInVideoTime = (serverTime - danmuStartTime).run {
-                        val time = if (this < 0) 0 else this
-                        String.format("%.3f", time / 1000.0).toDouble()
-                      }
-                      // emit danmu to write to file
-                      writeChannel.send(it.copy(clientTime = danmuInVideoTime))
-                    }
-                  } catch (e: Exception) {
-                    logger.error("Error decoding danmu: $e")
-                  }
-                }
-
-                is Frame.Close -> {
-                  logger.info("Danmu connection closed")
-                  break
-                }
-                // ignore other frames
-                else -> {}
+          } else {
+            val urlBuilder = URLBuilder(websocketUrl)
+            logger.trace("Connecting to danmu server: {}", urlBuilder)
+            if (urlBuilder.protocol.isSecure()) {
+              app.client.wssRaw(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
+                fillRequest()
+              }) {
+                processSession()
+              }
+            } else {
+              app.client.wsRaw(host = urlBuilder.host, port = urlBuilder.port, request = {
+                fillRequest()
+              }) {
+                processSession()
               }
             }
           }
+
         }
       }
     }
   }
+
+  private fun HttpRequestBuilder.fillRequest() {
+    requestParams.forEach { (k, v) ->
+      parameter(k, v)
+    }
+    headersMap.forEach { (k, v) ->
+      header(k, v)
+    }
+  }
+
+  /**
+   * Process websocket session
+   */
+  private suspend fun WebSocketSession.processSession() {
+    // make an initial hello
+    sendHello(this)
+    // launch a coroutine to send heart beat
+    launchHeartBeatJob(this)
+    incoming.receiveAsFlow()
+      .collect { frame ->
+        val data = frame.data
+        try {
+          // decode danmu
+          decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
+            // danmu server time
+            val serverTime = it.serverTime
+            // danmu process start time
+            val danmuStartTime = videoStartTime.toEpochMilliseconds()
+            // danmu in video time
+            val danmuInVideoTime = (serverTime - danmuStartTime).run {
+              val time = if (this < 0) 0 else this
+              String.format("%.3f", time / 1000.0).toDouble()
+            }
+            // emit danmu to write to file
+            writeChannel.send(it.copy(clientTime = danmuInVideoTime))
+          }
+        } catch (e: Exception) {
+          logger.error("$websocketUrl error decoding danmu: $e")
+        }
+      }
+  }
+
 
   /**
    * Launches a coroutine to perform an IO task to write danmu to file.
@@ -275,8 +298,14 @@ abstract class Danmu(val app: App) {
     }
   }
 
-  protected suspend fun sendHello(session: DefaultClientWebSocketSession) {
+  /**
+   * Sends a hello message to the given WebSocket session.
+   *
+   * @param session The WebSocket session to which the hello message will be sent.
+   */
+  protected open suspend fun sendHello(session: WebSocketSession) {
     session.send(oneHello())
+    logger.trace("$websocketUrl hello sent")
   }
 
   /**
@@ -299,12 +328,13 @@ abstract class Danmu(val app: App) {
   /**
    * Launches a coroutine to send heartbeats on the given WebSocket session.
    */
-  protected open fun launchHeartBeatJob(session: DefaultClientWebSocketSession) {
+  protected open fun launchHeartBeatJob(session: WebSocketSession) {
     with(session) {
       launch {
         while (true) {
           // send heart beat with delay
           send(heartBeatPack)
+          logger.trace("$websocketUrl heart beat sent")
           delay(heartBeatDelay)
         }
       }
@@ -318,7 +348,7 @@ abstract class Danmu(val app: App) {
    * @param data The byte array to be decoded.
    * @return A list of [DanmuData] objects decoded from the given byte array.
    */
-  abstract suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper?>
+  abstract suspend fun decodeDanmu(session: WebSocketSession, data: ByteArray): List<DanmuDataWrapper?>
 
   /**
    * Finish writting danmu to file

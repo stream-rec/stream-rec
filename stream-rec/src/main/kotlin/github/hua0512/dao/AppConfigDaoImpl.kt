@@ -67,6 +67,7 @@ class AppConfigDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, 
         deleteFilesAfterUpload = deleteFilesAfterUpload,
         huyaConfig = huyaConfig,
         douyinConfig = douyinConfig,
+        douyuConfig = douyuConfig,
         id = id,
       )
     }

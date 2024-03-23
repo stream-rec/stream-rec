@@ -41,10 +41,9 @@ import github.hua0512.plugins.huya.danmu.msg.data.HuyaCmds
 import github.hua0512.plugins.huya.danmu.msg.data.HuyaOperations
 import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.utils.withIOContext
-import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
-import io.ktor.client.request.headers
 import io.ktor.client.statement.*
+import io.ktor.websocket.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import java.nio.charset.StandardCharsets
@@ -56,7 +55,7 @@ import kotlin.time.toDuration
  * @author hua0512
  * @date : 2024/2/9 13:44
  */
-class HuyaDanmu(app: App) : Danmu(app) {
+class HuyaDanmu(app: App) : Danmu(app, enablePing = false) {
 
   override var websocketUrl: String = "wss://cdnws.api.huya.com:443"
   override val heartBeatDelay: Long = 60.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
@@ -132,7 +131,7 @@ class HuyaDanmu(app: App) : Danmu(app) {
     }
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper> {
+  override suspend fun decodeDanmu(session: WebSocketSession, data: ByteArray): List<DanmuDataWrapper?> {
     val huyaSocketCommand = HuyaSocketCommand().apply {
       readFrom(TarsInputStream(data))
     }

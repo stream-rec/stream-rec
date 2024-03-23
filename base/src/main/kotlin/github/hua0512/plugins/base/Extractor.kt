@@ -104,10 +104,21 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
   abstract val url: String
 
   /**
+   * Initialize the extractor
+   */
+  open suspend fun prepare() {
+    if (!match()) {
+      throw IllegalArgumentException("The url $url does not match the pattern")
+    }
+  }
+
+  /**
    * Function to match the url with the regex pattern
    * @return a boolean value
    */
-  abstract fun match(): Boolean
+  open fun match(): Boolean {
+    return regexPattern.matches(url)
+  }
 
   /**
    * Function to check if the stream is live
@@ -134,17 +145,41 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    */
   suspend fun getResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = withIOContext {
     http.get(url) {
-      headers {
-        commonHeaders.forEach { append(it.first, it.second) }
-        platformHeaders.forEach { append(it.key, it.value) }
-        if (cookies.isNotEmpty()) {
-          append(HttpHeaders.Cookie, cookies)
-        }
-      }
-      platformParams.forEach { (t, u) ->
-        parameter(t, u)
-      }
+      populateCommons()
       request()
+    }
+  }
+
+  /**
+   * post the response from the input url
+   * request uses predefined headers and params:
+   * [commonHeaders], [platformHeaders], [platformParams]
+   * @param url the input url
+   * @param request the request builder
+   * @return a [HttpResponse] object
+   */
+  suspend fun postResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = withIOContext {
+    http.post(url) {
+      populateCommons()
+      request()
+    }
+  }
+
+  /**
+   * populate the common headers and params
+   * @receiver the request builder
+   * @see HttpRequestBuilder
+   */
+  private fun HttpRequestBuilder.populateCommons() {
+    headers {
+      commonHeaders.forEach { append(it.first, it.second) }
+      platformHeaders.forEach { append(it.key, it.value) }
+      if (cookies.isNotEmpty()) {
+        append(HttpHeaders.Cookie, cookies)
+      }
+    }
+    platformParams.forEach { (t, u) ->
+      parameter(t, u)
     }
   }
 }

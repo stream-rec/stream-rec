@@ -44,7 +44,6 @@ import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.populate
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
-import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -55,11 +54,11 @@ import kotlinx.datetime.Instant
  * @author hua0512
  * @date : 2024/2/9 13:48
  */
-class DouyinDanmu(app: App) : Danmu(app) {
+class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
 
   override var websocketUrl: String = "wss://webcast3-ws-web-lf.douyin.com:443/webcast/im/push/v2/"
 
-  override val heartBeatDelay: Long = 10
+  override val heartBeatDelay: Long = 10000
 
   override val heartBeatPack: ByteArray = byteArrayOf()
 
@@ -135,7 +134,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
     return true
   }
 
-  override fun launchHeartBeatJob(session: DefaultClientWebSocketSession) {
+  override fun launchHeartBeatJob(session: WebSocketSession) {
     // Douyin does not use heart beat
   }
 
@@ -144,7 +143,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
     return byteArrayOf()
   }
 
-  override suspend fun decodeDanmu(session: DefaultClientWebSocketSession, data: ByteArray): List<DanmuDataWrapper?> {
+  override suspend fun decodeDanmu(session: WebSocketSession, data: ByteArray): List<DanmuDataWrapper?> {
     val pushFrame = PushFrame.parseFrom(data)
     val logId = pushFrame.logId
     val payload = pushFrame.payload.toByteArray()
@@ -184,7 +183,7 @@ class DouyinDanmu(app: App) : Danmu(app) {
   }
 
 
-  private suspend fun sendAck(session: DefaultClientWebSocketSession, logId: Long, internalExt: ByteString) {
+  private suspend fun sendAck(session: WebSocketSession, logId: Long, internalExt: ByteString) {
 //    logger.debug("Sending ack for logId: $logId")
     val pushFrame = PushFrame.newBuilder()
       .setPayloadType("ack")

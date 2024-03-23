@@ -48,36 +48,15 @@ import github.hua0512.utils.withIOContext
  * @property downloadTitle The title of the downloaded video.
  * @property downloadUrl The URL of the video to be downloaded.
  */
-class Douyin(app: App, danmu: DouyinDanmu, extractor: DouyinExtractor) : Download(app, danmu, extractor) {
+class Douyin(app: App, danmu: DouyinDanmu, extractor: DouyinExtractor) : Download<DouyinDownloadConfig>(app, danmu, extractor) {
+  override fun createDownloadConfig(): DouyinDownloadConfig = DouyinDownloadConfig(
+    quality = app.config.douyinConfig.quality,
+    sourceFormat = app.config.douyinConfig.sourceFormat,
+    cookies = app.config.douyinConfig.cookies
+  )
 
-  private val config by lazy {
-    if (streamer.templateStreamer != null) {
-      /**
-       * template config uses basic config [DefaultDownloadConfig], build a new douyin config using global platform values
-       */
-      streamer.templateStreamer?.downloadConfig?.run {
-        DouyinDownloadConfig(
-          quality = app.config.douyinConfig.quality,
-          cookies = app.config.douyinConfig.cookies,
-          sourceFormat = app.config.douyinConfig.sourceFormat
-        ).also {
-          it.danmu = this.danmu
-          it.maxBitRate = this.maxBitRate
-          it.outputFileFormat = this.outputFileFormat
-          it.outputFileName = this.outputFileName
-          it.outputFolder = this.outputFolder
-          it.onPartedDownload = this.onPartedDownload ?: emptyList()
-          it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
-        }
-      } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config") // should not happen
-    } else {
-      streamer.downloadConfig as? DouyinDownloadConfig ?: DouyinDownloadConfig()
-    }
-  }
 
-  override suspend fun shouldDownload(streamer: Streamer): Boolean {
-    this.streamer = streamer
-
+  override suspend fun shouldDownload(): Boolean {
     (config.cookies ?: app.config.douyinConfig.cookies)?.also {
       extractor.cookies = it
     }

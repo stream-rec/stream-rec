@@ -1,0 +1,63 @@
+package douyin/*
+ * MIT License
+ *
+ * Stream-rec  https://github.com/hua0512/stream-rec
+ *
+ * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+import kotlin.test.Test
+
+class DouyinCookiesExtractor {
+
+  @Test
+  fun extractCookiesFromString() {
+    val cookies =
+      "cookies"
+    val acNoncePattern = "__ac_nonce=([^;]*)".toRegex()
+    val acNonceString = acNoncePattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val ttwidPattern = "ttwid=([^;]*)".toRegex()
+    val ttwidString = ttwidPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val acSignPattern = "__ac_signature=([^;]*)".toRegex()
+    val acSignString = acSignPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val msTokenPattern = "msToken=([^;]*)".toRegex()
+    val msTokenString = msTokenPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    val sessionIdPattern = "sessionId=([^;]*)".toRegex()
+    val sessionIdString = sessionIdPattern.find(cookies)?.groupValues?.get(1) ?: ""
+    var final = ""
+    if (ttwidString.isNotEmpty()) {
+      final += "ttwid=$ttwidString; "
+    }
+    if (msTokenString.isNotEmpty()) {
+      final += "msToken=$msTokenString; "
+    }
+    if (acNonceString.isNotEmpty()) {
+      final += "__ac_nonce=$acNonceString; "
+    }
+    if (acSignString.isNotEmpty()) {
+      final += "__ac_signature=$acSignString; "
+    }
+    if (sessionIdString.isNotEmpty()) {
+      final += "sessionId=$sessionIdString; "
+    }
+    println(final)
+  }
+}

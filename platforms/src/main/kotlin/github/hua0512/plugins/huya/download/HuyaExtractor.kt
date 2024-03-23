@@ -76,8 +76,6 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
   private lateinit var htmlResponseBody: String
 
   init {
-    // check if the url is a valid huya url
-    match()
     requestHeaders.forEach {
       platformHeaders[it.first] = it.second
     }

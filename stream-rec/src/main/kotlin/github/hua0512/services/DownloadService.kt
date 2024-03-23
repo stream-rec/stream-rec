@@ -166,6 +166,7 @@ class DownloadService(
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
         return@launch
       }
+      plugin.init(streamer)
       val streamDataList = mutableListOf<StreamData>()
       var retryCount = 0
       val retryDelay = app.config.downloadRetryDelay
@@ -195,7 +196,7 @@ class DownloadService(
         val oldStreamer = streamer.copy()
         val isLive = try {
           // check if streamer is live
-          plugin.shouldDownload(streamer)
+          plugin.shouldDownload()
         } catch (e: Exception) {
           when (e) {
             is IllegalArgumentException -> {

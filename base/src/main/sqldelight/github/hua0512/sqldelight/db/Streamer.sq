@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS app_config(
    maxConcurrentUploads INTEGER NOT NULL DEFAULT 3,
    deleteFilesAfterUpload INTEGER NOT NULL DEFAULT 1,
    huyaConfig TEXT,
-   douyinConfig TEXT
+   douyinConfig TEXT,
+   douyuConfig TEXT
 );
 
 -- QUERIES
@@ -40,11 +41,27 @@ getAppConfigById : SELECT * FROM app_config WHERE id = ?;
 
 upsertAppConfig{
     UPDATE app_config
-    SET engine = :engine, danmu = :danmu, outputFolder = :outputFolder, outputFileName = :outputFileName, outputFileFormat = :outputFileFormat, minPartSize = :minPartSize, maxPartSize = :maxPartSize, maxPartDuration = :maxPartDuration, maxDownloadRetries = :maxDownloadRetries, downloadRetryDelay = :downloadRetryDelay, downloadCheckInterval=:downloadCheckInterval, maxConcurrentDownloads = :maxConcurrentDownloads, maxConcurrentUploads = :maxConcurrentUploads, deleteFilesAfterUpload = :deleteFilesAfterUpload, huyaConfig = :huyaConfig, douyinConfig = :douyinConfig
+    SET engine = :engine,
+    danmu = :danmu,
+    outputFolder = :outputFolder,
+    outputFileName = :outputFileName,
+    outputFileFormat = :outputFileFormat,
+    minPartSize = :minPartSize,
+    maxPartSize = :maxPartSize,
+    maxPartDuration = :maxPartDuration,
+    maxDownloadRetries = :maxDownloadRetries,
+    downloadRetryDelay = :downloadRetryDelay,
+    downloadCheckInterval=:downloadCheckInterval,
+    maxConcurrentDownloads = :maxConcurrentDownloads,
+    maxConcurrentUploads = :maxConcurrentUploads,
+    deleteFilesAfterUpload = :deleteFilesAfterUpload,
+    huyaConfig = :huyaConfig,
+    douyinConfig = :douyinConfig,
+    douyuConfig = :douyuConfig
     WHERE id = :id;
 
-    INSERT OR IGNORE INTO app_config ( id, engine, danmu, outputFolder, outputFileName, outputFileFormat, minPartSize, maxPartSize, maxPartDuration, maxDownloadRetries, downloadRetryDelay, downloadCheckInterval, maxConcurrentDownloads, maxConcurrentUploads, deleteFilesAfterUpload, huyaConfig, douyinConfig)
-    VALUES ( :id, :engine, :danmu, :outputFolder, :outputFileName, :outputFileFormat, :minPartSize, :maxPartSize, :maxPartDuration, :maxDownloadRetries, :downloadRetryDelay,  :downloadCheckInterval,:maxConcurrentDownloads, :maxConcurrentUploads, :deleteFilesAfterUpload, :huyaConfig, :douyinConfig);
+    INSERT OR IGNORE INTO app_config ( id, engine, danmu, outputFolder, outputFileName, outputFileFormat, minPartSize, maxPartSize, maxPartDuration, maxDownloadRetries, downloadRetryDelay, downloadCheckInterval, maxConcurrentDownloads, maxConcurrentUploads, deleteFilesAfterUpload, huyaConfig, douyinConfig, douyuConfig)
+    VALUES ( :id, :engine, :danmu, :outputFolder, :outputFileName, :outputFileFormat, :minPartSize, :maxPartSize, :maxPartDuration, :maxDownloadRetries, :downloadRetryDelay,  :downloadCheckInterval,:maxConcurrentDownloads, :maxConcurrentUploads, :deleteFilesAfterUpload, :huyaConfig, :douyinConfig, :douyuConfig);
     }
 deleteAppConfig : DELETE FROM app_config WHERE id = ?;
 

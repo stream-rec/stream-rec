@@ -28,6 +28,7 @@ package github.hua0512.plugins.base
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
 import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
@@ -63,7 +64,7 @@ import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor) {
+abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, val extractor: Extractor) {
 
   companion object {
     @JvmStatic
@@ -90,12 +91,43 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
    */
   protected lateinit var streamer: Streamer
 
+  suspend fun init(streamer: Streamer) {
+    this.streamer = streamer
+    extractor.prepare()
+  }
+
+  protected val config by lazy {
+    if (streamer.templateStreamer != null) {
+      /**
+       * template config uses basic config [DefaultDownloadConfig]
+       */
+      streamer.templateStreamer!!.downloadConfig?.run {
+        // build a new config using global platform values
+        createDownloadConfig().also {
+          it.danmu = this.danmu
+          it.maxBitRate = this.maxBitRate
+          it.outputFileFormat = this.outputFileFormat
+          it.outputFileName = this.outputFileName
+          it.outputFolder = this.outputFolder
+          it.onPartedDownload = this.onPartedDownload ?: emptyList()
+          it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
+        }
+      } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config")
+    } else {
+      @Suppress("UNCHECKED_CAST")
+      streamer.downloadConfig as? T ?: createDownloadConfig()
+    }
+  }
+
+  abstract fun createDownloadConfig(): T
+
+
   /**
    * Check if the stream should be downloaded
    * @param streamer the streamer to be checked
    * @return true if the stream should be downloaded, false otherwise
    */
-  abstract suspend fun shouldDownload(streamer: Streamer): Boolean
+  abstract suspend fun shouldDownload(): Boolean
 
   /**
    * Download the stream
@@ -442,7 +474,7 @@ abstract class Download(val app: App, val danmu: Danmu, val extractor: Extractor
     if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
       streamer.avatar = mediaInfo.artistImageUrl
     }
-    if (mediaInfo.title != streamer.streamTitle) {
+    if (mediaInfo.title.isNotEmpty() && mediaInfo.title != streamer.streamTitle) {
       streamer.streamTitle = mediaInfo.title
     }
     downloadTitle = mediaInfo.title
