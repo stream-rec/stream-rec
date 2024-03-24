@@ -53,8 +53,7 @@ class SummaryStatsRepoImpl(val statsDao: StatsDao) : SummaryStatsRepo {
     val toDate = Instant.fromEpochSeconds(to)
 
     val diff = toDate - fromDate
-
-    val previous = statsDao.getStatsFromTo(from - diff.inWholeDays, from)
+    val previous = statsDao.getStatsFromTo(from - diff.inWholeSeconds, to - diff.inWholeSeconds)
     return SummaryStats(
       stats.sumOf { it.totalStreams },
       previous.sumOf { it.totalStreams },
