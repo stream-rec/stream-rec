@@ -51,6 +51,7 @@ class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<D
     (config.cookies ?: app.config.douyuConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
+    (extractor as DouyuExtractor).selectedCdn = (config.cdn ?: app.config.douyuConfig.cdn) ?: "tct-h5"
     val mediaInfo = try {
       extractor.extract()
     } catch (e: Exception) {
@@ -73,7 +74,7 @@ class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<D
     }
     val group = streams.groupBy { it.extras["cdn"] }
     val cdnStreams = group[selectedCdn] ?: group.values.flatten().also { logger.warn("$streamer CDN $selectedCdn not found, using random") }
-    val qualityStreams = cdnStreams.firstOrNull { it.extras["quality"] == selectedQuality } ?: cdnStreams.firstOrNull()
+    val qualityStreams = cdnStreams.firstOrNull { it.extras["rate"] == selectedQuality } ?: cdnStreams.firstOrNull()
       .also { logger.warn("$streamer quality $selectedQuality not found, using first one available") }
     return qualityStreams ?: streams.first()
   }

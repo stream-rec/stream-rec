@@ -81,6 +81,12 @@ class DouyuTest {
   }
 
   @Test
+  fun testVideoLoopRegex() {
+    val match = Regex(""""videoLoop":\s*(\d+)""").find("""{"videoLoop":1,"tencentIdent":0,"clubOrgName":"壹花一海",}""")
+    assert(match?.groupValues?.get(1) == "1")
+  }
+
+  @Test
   fun testLive() = runTest {
     val extractor = DouyuExtractor(app.client, app.json, testUrl).apply {
       prepare()

@@ -57,6 +57,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     private const val TITLE_REGEX = """Title-head\w*">([^<]+)<"""
     private const val ARTIST_REGEX = """Title-anchorName\w*" title="([^"]+)""""
     private const val LIVE_STATUS_REGEX = "\\\$ROOM\\.show_status\\s*=\\s*(\\d+);"
+    private const val VIDEO_LOOP_REGEX = """"videoLoop":\s*(\d+)"""
 
     internal val midPatterns = listOf(
       """\${'$'}ROOM\.room_id\s*=\s*(\d+)""",
@@ -69,6 +70,9 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
   // DOUYU rid
   internal lateinit var rid: String
+
+  // DOUYU user preferred cdn
+  internal var selectedCdn: String = ""
   private lateinit var htmlText: String
 
   init {
@@ -102,7 +106,10 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     logger.debug("$url mid: $rid")
     if (rid == "房间已被关闭") return false
     // check if the stream is live
-    return LIVE_STATUS_REGEX.toRegex().find(htmlText)?.groupValues?.get(1)?.toInt() == 1
+    val liveStatus = LIVE_STATUS_REGEX.toRegex().find(htmlText)?.groupValues?.get(1)?.toInt()
+    // check if the stream is a video loop
+    val videoLoop = VIDEO_LOOP_REGEX.toRegex().find(htmlText)?.groupValues?.get(1)?.toInt()
+    return liveStatus == 1 && videoLoop == 0
   }
 
   override suspend fun extract(): MediaInfo {
@@ -144,14 +151,14 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     val paramsMap = withContext(Dispatchers.Default) { ub98484234(jsEnc, rid) }
     val streams = mutableListOf<StreamInfo>()
 
-    val (streamInfo, multirates) = getStreamInfo(encMap = paramsMap)
+    val (streamInfo, multirates) = getStreamInfo(selectedCdn = selectedCdn, encMap = paramsMap)
     streams.add(streamInfo)
 
     // get the rest of the stream info
     // exclude the first one
     for (i in 1 until multirates.size) {
       val rateInfo = getRateInfo(multirates[i].jsonObject)
-      val (stream, _) = getStreamInfo(selectedRate = rateInfo["rate"]!!, encMap = paramsMap)
+      val (stream, _) = getStreamInfo(selectedCdn = selectedCdn, selectedRate = rateInfo["rate"]!!, encMap = paramsMap)
       streams.add(stream)
     }
     logger.debug("Streams: {}", streams)
