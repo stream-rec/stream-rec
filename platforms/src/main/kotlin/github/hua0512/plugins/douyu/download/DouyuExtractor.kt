@@ -112,7 +112,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     var artist = Regex(ARTIST_REGEX).find(htmlText)?.groupValues?.get(1) ?: ""
     var avatar = ""
     var cover = ""
-    val mediaInfo = MediaInfo(DOUYU_URL, title, artist, cover, avatar)
+    val mediaInfo = MediaInfo(DOUYU_URL, title, artist, cover, avatar, live = isLive)
 
     if (!isLive) return mediaInfo
 
