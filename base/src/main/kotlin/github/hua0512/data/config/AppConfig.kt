@@ -59,7 +59,7 @@ data class AppConfig(
   val deleteFilesAfterUpload: Boolean = true,
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
-  val douyuDownloadConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
+  val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
 ) {
   var id: Long = 1
 
@@ -112,7 +112,7 @@ data class AppConfig(
       deleteFilesAfterUpload.asLong,
       json.encodeToString(huyaConfig),
       json.encodeToString(douyinConfig),
-      json.encodeToString(douyuDownloadConfig),
+      json.encodeToString(douyuConfig),
     )
   }
 }
