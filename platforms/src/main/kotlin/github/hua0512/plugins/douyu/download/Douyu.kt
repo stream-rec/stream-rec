@@ -42,13 +42,13 @@ import github.hua0512.utils.nonEmptyOrNull
 class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<DouyuDownloadConfig>(app, danmu = danmu, extractor = extractor) {
   override fun createDownloadConfig(): DouyuDownloadConfig {
     return DouyuDownloadConfig(
-      app.config.douyuDownloadConfig.cdn,
-      app.config.douyuDownloadConfig.quality
+      app.config.douyuConfig.cdn,
+      app.config.douyuConfig.quality
     )
   }
 
   override suspend fun shouldDownload(): Boolean {
-    (config.cookies ?: app.config.douyuDownloadConfig.cookies)?.nonEmptyOrNull()?.also {
+    (config.cookies ?: app.config.douyuConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
     val mediaInfo = try {
@@ -66,8 +66,8 @@ class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<D
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyuDownloadConfig
-    val selectedCdn = cdn ?: app.config.douyuDownloadConfig.cdn
-    val selectedQuality = quality ?: app.config.douyuDownloadConfig.quality
+    val selectedCdn = cdn ?: app.config.douyuConfig.cdn
+    val selectedQuality = quality ?: app.config.douyuConfig.quality
     if (streams.isEmpty()) {
       throw IllegalStateException("$streamer no stream found")
     }
