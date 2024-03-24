@@ -4,8 +4,11 @@ plugins {
   alias(libs.plugins.app.cash.sqldelight)
 }
 
-group = "github.hua0512.streamrec"
-version = "0.5.0"
+// read the version from the gradle.properties file
+val versionName: String by project
+val groupName: String by project
+group = groupName
+version = versionName
 
 dependencies {
   implementation(libs.ch.qos.logback.classic)
@@ -17,6 +20,8 @@ dependencies {
   implementation(libs.me.tongfei.progressbar)
   api(libs.io.ktor.client.core)
   api(libs.io.ktor.client.cio)
+  api(libs.io.ktor.client.java)
+  api(libs.io.ktor.client.okhttp)
   api(libs.io.ktor.serialization.kotlinx.json)
   api(libs.io.ktor.client.logging)
 

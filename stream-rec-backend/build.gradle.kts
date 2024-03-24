@@ -3,8 +3,11 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
 }
 
-group = "github.hua0512.streamrec"
-version = "0.5.0"
+// read the version from the gradle.properties file
+val versionName: String by project
+val groupName: String by project
+group = groupName
+version = versionName
 
 dependencies {
   implementation(project(":base"))
