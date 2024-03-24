@@ -148,7 +148,7 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
             color = 0,
             content = decoded["txt"] as String,
             fontSize = 0,
-            serverTime = (decoded["cst"] as? String)?.toLong() ?: Clock.System.now().toEpochMilliseconds(),
+            serverTime = Clock.System.now().toEpochMilliseconds(),
           )
         } else {
           // decode danmu using regex
