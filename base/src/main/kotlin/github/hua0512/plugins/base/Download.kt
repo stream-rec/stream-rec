@@ -323,6 +323,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
           if (fileSize < app.config.minPartSize) {
             logger.error("(${streamer.name}) file size too small: $fileSize")
             deleteOutputs(outputFile, isDanmuEnabled, Path(danmuPath))
+            streamData = null
           }
         }
       }
