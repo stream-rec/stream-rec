@@ -85,7 +85,7 @@ class DownloadService(
       return when (this) {
         StreamingPlatform.HUYA -> app.config.huyaConfig
         StreamingPlatform.DOUYIN -> app.config.douyinConfig
-        StreamingPlatform.DOUYU -> app.config.douyuDownloadConfig
+        StreamingPlatform.DOUYU -> app.config.douyuConfig
         else -> throw UnsupportedOperationException("Platform not supported")
       }
     }
