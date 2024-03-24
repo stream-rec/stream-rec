@@ -6,8 +6,11 @@ plugins {
 
 project.ext.set("development", false)
 
-group = "github.hua0512.streamrec"
-version = "0.5.0"
+// read the version from the gradle.properties file
+val versionName: String by project
+val groupName: String by project
+group = groupName
+version = versionName
 
 application {
   mainClass.set("github.hua0512.Application")
