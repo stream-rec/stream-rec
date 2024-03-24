@@ -1,5 +1,5 @@
 [versions]
-ktor = "2.3.8"
+ktor = "2.3.9"
 kotlin = "1.9.22"
 kotlin-coroutines = "1.8.0"
 logback = "1.4.14"
