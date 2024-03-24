@@ -59,7 +59,7 @@ data class AppConfig(
   val deleteFilesAfterUpload: Boolean = true,
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
-  val douyuDownloadConfig: DouyuDownloadConfig = DouyuDownloadConfig(),
+  val douyuDownloadConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
 ) {
   var id: Long = 1
 
@@ -86,8 +86,8 @@ data class AppConfig(
       json.decodeFromString<DouyinConfigGlobal>(this)
     } ?: DouyinConfigGlobal(),
     entity.douyuConfig?.run {
-      json.decodeFromString<DouyuDownloadConfig>(this)
-    } ?: DouyuDownloadConfig(),
+      json.decodeFromString<DouyuConfigGlobal>(this)
+    } ?: DouyuConfigGlobal(),
   ) {
     this.id = entity.id
   }
