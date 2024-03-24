@@ -29,7 +29,13 @@ package github.hua0512.data.event
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.StreamingPlatform
 import kotlinx.datetime.Instant
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 
 /**
@@ -69,11 +75,13 @@ sealed class StreamerEvent : Event {
    * @property streamerPlatform The platform of the streamer.
    * @property time The time when the record stopped.
    */
+  @Serializable
   data class StreamerRecordStop(
     override val streamer: String,
     override val streamerUrl: String,
     override val streamerPlatform: StreamingPlatform,
     val time: Instant,
+    @Serializable(with = ExceptionSerializer::class)
     val reason: Exception?,
   ) : StreamerEvent()
 
@@ -94,12 +102,27 @@ sealed class StreamerEvent : Event {
    * @property time The time when the exception occurred.
    * @property exception The exception that occurred.
    */
+  @Serializable
   data class StreamerException(
     override val streamer: String,
     override val streamerUrl: String,
     override val streamerPlatform: StreamingPlatform,
     val time: Instant,
+    @Serializable(with = ExceptionSerializer::class)
     val exception: Exception,
   ) : StreamerEvent()
 
+}
+
+
+internal object ExceptionSerializer : KSerializer<Exception> {
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Exception", PrimitiveKind.STRING)
+
+  override fun deserialize(decoder: Decoder): Exception {
+    return Exception(decoder.decodeString())
+  }
+
+  override fun serialize(encoder: Encoder, value: Exception) {
+    encoder.encodeString(value.message ?: "")
+  }
 }
