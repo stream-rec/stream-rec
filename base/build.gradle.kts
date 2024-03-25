@@ -20,8 +20,6 @@ dependencies {
   implementation(libs.me.tongfei.progressbar)
   api(libs.io.ktor.client.core)
   api(libs.io.ktor.client.cio)
-  api(libs.io.ktor.client.java)
-  api(libs.io.ktor.client.okhttp)
   api(libs.io.ktor.serialization.kotlinx.json)
   api(libs.io.ktor.client.logging)
 
