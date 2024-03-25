@@ -222,6 +222,7 @@ class DownloadService(
             EventCenter.sendEvent(StreamerOnline(streamer.name, streamer.url, streamer.platform, streamer.streamTitle ?: "", Clock.System.now()))
             repo.updateStreamerLiveStatus(streamer.id, true)
           }
+          logger.debug("checking is need to update stream title : {} != {}", oldStreamer.streamTitle, streamer.streamTitle)
           if (oldStreamer.streamTitle != streamer.streamTitle) {
             repo.updateStreamerStreamTitle(streamer.id, streamer.streamTitle)
           }

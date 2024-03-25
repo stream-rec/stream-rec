@@ -474,9 +474,11 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
   protected fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
     if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
       streamer.avatar = mediaInfo.artistImageUrl
+      logger.debug("(${streamer.name}) avatar: ${streamer.avatar}")
     }
     if (mediaInfo.title.isNotEmpty() && mediaInfo.title != streamer.streamTitle) {
       streamer.streamTitle = mediaInfo.title
+      logger.debug("(${streamer.name}) streamTitle: ${streamer.streamTitle}")
     }
     downloadTitle = mediaInfo.title
   }
