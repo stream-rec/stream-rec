@@ -10,15 +10,13 @@ import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.time.Duration
 
@@ -36,9 +34,11 @@ fun Application.configureSockets(json: Json) {
   }
   routing {
     webSocketRaw("/live/update") {
+      val isClosed = CompletableDeferred<Unit>()
       try {
         var timeOutJob = launch {
           delay(55000)
+          isClosed.complete(Unit)
           close(CloseReason(CloseReason.Codes.NORMAL, "Client timeout"))
         }
         // collect ws response...
@@ -55,6 +55,7 @@ fun Application.configureSockets(json: Json) {
                 timeOutJob.cancel()
                 timeOutJob = launch {
                   delay(55000)
+                  isClosed.complete(Unit)
                   close(CloseReason(CloseReason.Codes.NORMAL, "Client timeout"))
                 }
                 send(Frame.Binary(true, heartBeatArray))
@@ -89,9 +90,16 @@ fun Application.configureSockets(json: Json) {
           }
         }.collect { event ->
           // check if this websocket is still open
+          if (isClosed.isCompleted) {
+            return@collect
+          }
           send(Frame.Text(json.encodeToString(DownloadStateUpdate.serializer(), event)))
         }
         lastUpdate.clear()
+      } catch (e: CancellationException) {
+        // ignore
+      } catch (e: ClosedSendChannelException) {
+        logger.debug("onClose: ", e)
       } catch (e: ClosedReceiveChannelException) {
         logger.debug("onClose: ", e)
       } catch (e: Throwable) {
