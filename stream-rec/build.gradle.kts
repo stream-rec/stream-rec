@@ -1,7 +1,7 @@
 plugins {
   alias(libs.plugins.ktor)
   alias(libs.plugins.kotlin.jvm)
-  id("com.google.devtools.ksp") version "1.9.22-1.0.17"
+  id("com.google.devtools.ksp") version "1.9.23-1.0.19"
 }
 
 project.ext.set("development", false)
