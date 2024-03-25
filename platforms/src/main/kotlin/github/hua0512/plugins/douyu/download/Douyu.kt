@@ -33,6 +33,7 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Download
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.withIOContext
 
 /**
  * Douyu live stream downloader.
@@ -53,7 +54,7 @@ class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<D
     }
     (extractor as DouyuExtractor).selectedCdn = (config.cdn ?: app.config.douyuConfig.cdn) ?: "tct-h5"
     val mediaInfo = try {
-      extractor.extract()
+      withIOContext { extractor.extract() }
     } catch (e: Exception) {
       logger.error("Error extracting media info", e)
       return false

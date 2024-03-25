@@ -51,7 +51,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   private lateinit var roomId: String
 
-  private lateinit var jsonData: JsonElement
+  private var jsonData: JsonElement = JsonNull
 
   init {
     platformHeaders[HttpHeaders.Referrer] = LIVE_DOUYIN_URL
@@ -72,7 +72,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     val response = getResponse("${LIVE_DOUYIN_URL}/webcast/room/web/enter/") {
       parameter("web_rid", roomId)
     }
-    if (response.status != HttpStatusCode.OK) return false
+    if (response.status != HttpStatusCode.OK) throw IllegalStateException("$url failed to get live data")
     val data = response.bodyAsText()
     jsonData = json.parseToJsonElement(data)
     val liveData = jsonData.jsonObject["data"]?.jsonObject?.get("data")?.jsonArray?.get(0)?.jsonObject ?: run {

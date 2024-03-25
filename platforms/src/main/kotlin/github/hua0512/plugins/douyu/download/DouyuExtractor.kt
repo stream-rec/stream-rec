@@ -92,7 +92,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
   override suspend fun isLive(): Boolean {
     val response = getResponse(url)
     if (response.status != HttpStatusCode.OK) {
-      return false
+      throw IllegalStateException("$url failed to get html")
     }
     htmlText = response.bodyAsText()
     logger.trace("{}", htmlText)

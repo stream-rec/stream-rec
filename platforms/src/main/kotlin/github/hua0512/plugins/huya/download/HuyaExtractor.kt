@@ -97,7 +97,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
 
   override suspend fun isLive(): Boolean {
     val response: HttpResponse = getResponse("$BASE_URL/$roomId")
-    if (response.status != HttpStatusCode.OK) return false
+    if (response.status != HttpStatusCode.OK) throw IllegalStateException("Invalid response status ${response.status.value} from $url")
 
     htmlResponseBody = response.bodyAsText().apply {
       if (isEmpty()) {
