@@ -27,7 +27,6 @@
 package github.hua0512.data.config
 
 import github.hua0512.data.dto.RcloneConfigDTO
-import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -38,14 +37,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class Action {
 
-  @Required
-  val enabled: Boolean = true
+  abstract val enabled: Boolean
 
   @Serializable
   @SerialName("command")
   data class CommandAction(
     var program: String = "",
     var args: List<String> = emptyList(),
+    override val enabled: Boolean = true,
   ) : Action()
 
 
@@ -60,13 +59,14 @@ sealed class Action {
     override var rcloneOperation: String = "",
     override var remotePath: String = "",
     override var args: List<String> = emptyList(),
+    override val enabled: Boolean = true,
   ) : Action(), RcloneConfigDTO
 
   @Serializable
   @SerialName("remove")
-  class RemoveAction : Action()
+  data class RemoveAction(override val enabled: Boolean = true) : Action()
 
   @Serializable
   @SerialName("move")
-  data class MoveAction(val destination: String) : Action()
+  data class MoveAction(val destination: String, override val enabled: Boolean = true) : Action()
 }
