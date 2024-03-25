@@ -117,7 +117,7 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest)
         return@post
       }
-
+      // ensure the streamer is saved in db
       val newStreamer = repo.findStreamerByUrl(streamer.url) ?: run {
         logger.error("Error saving streamer, not found in db : {}", streamer)
         call.respond(HttpStatusCode.InternalServerError, "Streamer not found in db")
@@ -132,25 +132,29 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id")
         return@put
       }
-      val streamer: Streamer
-      try {
-        streamer = call.receive<Streamer>()
-        logger.info("server updating streamer : {}", streamer)
+      // receive streamer object
+      val streamer: Streamer = try {
+        call.receive<Streamer>().also {
+          logger.debug("Received streamer : {}", it)
+        }
       } catch (e: Exception) {
         logger.error("Error receiving streamer", e)
         call.respond(HttpStatusCode.BadRequest, "Invalid streamer: ${e.message}")
         return@put
       }
+      // check if the id in the url matches the id in the streamer object
       if (streamer.id != id) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
         return@put
       }
-      val old = repo.findStreamerByUrl(streamer.url) ?: run {
-        logger.error("Error updating streamer, not found in db : {}", streamer)
-        call.respond(HttpStatusCode.BadRequest, "Streamer not found in db")
+      // check if the streamer exists
+      val old = repo.getStreamerById(id) ?: run {
+        call.respond(HttpStatusCode.BadRequest, "Error updating streamer, not found in db")
         return@put
       }
-      if (old.id != id) {
+      // check if the url is already used by another streamer
+      val dbStreamer = repo.findStreamerByUrl(streamer.url)
+      if (dbStreamer != null && dbStreamer.id != id) {
         call.respond(HttpStatusCode.BadRequest, "Streamer url already exists")
         return@put
       }
@@ -164,10 +168,9 @@ fun Route.streamerRoute(repo: StreamerRepo) {
           return@put
         }
       }
-
+      // update streamer
       try {
-        streamer.id = id
-        repo.insertOrUpdate(streamer)
+        repo.updateStreamer(streamer)
         call.respond(streamer)
       } catch (e: Exception) {
         logger.error("Error updating streamer", e)

@@ -31,9 +31,7 @@ import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.logger
-import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor
-import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.utils.asLong
@@ -149,32 +147,32 @@ class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
     }
   }
 
-
-  override suspend fun insertOrUpdate(newStreamer: Streamer) {
+  override suspend fun updateStreamer(streamer: Streamer) {
     return withIOContext {
-      val downloadConfig = if (newStreamer.downloadConfig != null) {
-        json.encodeToString(newStreamer.downloadConfig)
+      val downloadConfig = if (streamer.downloadConfig != null) {
+        json.encodeToString(streamer.downloadConfig)
       } else null
 
-      val platform = if (newStreamer.platform == StreamingPlatform.UNKNOWN) {
-        getPlatformByUrl(newStreamer.url)
+      val platform = if (streamer.platform == StreamingPlatform.UNKNOWN) {
+        getPlatformByUrl(streamer.url)
       } else {
-        newStreamer.platform
+        streamer.platform
       }
       dao.updateStreamer(
-        name = newStreamer.name,
-        url = newStreamer.url,
+        id = StreamerId(streamer.id),
+        name = streamer.name,
+        url = streamer.url,
         platform = platform.id.toLong(),
-        lastStream = newStreamer.lastLiveTime,
-        isLive = newStreamer.isLive.asLong,
-        isActive = newStreamer.isActivated.asLong,
-        avatar = newStreamer.avatar,
-        description = newStreamer.streamTitle,
-        isTemplate = newStreamer.isTemplate.asLong,
-        templateId = newStreamer.templateId,
-        downloadConfig = downloadConfig
+        lastStream = streamer.lastLiveTime,
+        isLive = streamer.isLive.asLong,
+        isActive = streamer.isActivated.asLong,
+        description = streamer.streamTitle,
+        avatar = streamer.avatar,
+        downloadConfig = downloadConfig,
+        isTemplate = streamer.isTemplate.asLong,
+        templateId = streamer.templateId
       )
-      logger.debug("updatedStreamer: {}", newStreamer)
+      logger.debug("updatedStreamer: {}", streamer)
     }
   }
 

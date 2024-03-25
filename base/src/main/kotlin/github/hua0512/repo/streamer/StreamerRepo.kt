@@ -49,7 +49,7 @@ interface StreamerRepo {
   suspend fun findStreamersUsingTemplate(templateId: Long): List<Streamer>
   suspend fun countStreamersUsingTemplate(templateId: Long): Long
 
-  suspend fun insertOrUpdate(newStreamer: Streamer)
+  suspend fun updateStreamer(streamer: Streamer)
   suspend fun saveStreamer(newStreamer: Streamer)
   suspend fun deleteStreamer(oldStreamer: Streamer)
 

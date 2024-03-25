@@ -69,6 +69,7 @@ interface StreamerDao {
   suspend fun updateLastStream(id: StreamerId, lastStream: Long)
 
   suspend fun updateStreamer(
+    id: StreamerId,
     name: String, url: String, platform: Long, lastStream: Long?, isLive: Long, isActive: Long, description: String?,
     avatar: String?, downloadConfig: String?,
     isTemplate: Long, templateId: Long?,
