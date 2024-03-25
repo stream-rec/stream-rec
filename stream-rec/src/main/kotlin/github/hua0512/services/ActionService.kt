@@ -70,7 +70,7 @@ class ActionService(private val app: App, private val uploadService: UploadServi
         job.await()
       } catch (e: Exception) {
         logger.error("$streamDataList, error while executing action $action : ${e.message}")
-        return@forEach
+        return@withIOContext
       }
     }
   }

@@ -33,10 +33,11 @@ import github.hua0512.data.event.UploadEvent
 import github.hua0512.data.upload.*
 import github.hua0512.data.upload.UploadConfig.NoopConfig
 import github.hua0512.data.upload.UploadConfig.RcloneConfig
-import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.base.Upload
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.upload.NoopUploader
 import github.hua0512.plugins.upload.RcloneUploader
+import github.hua0512.plugins.upload.UploadFailedException
 import github.hua0512.plugins.upload.UploadInvalidArgumentsException
 import github.hua0512.repo.uploads.UploadRepo
 import github.hua0512.utils.withIOContext
@@ -136,6 +137,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
    *
    * @param uploadAction The upload action to upload.
    */
+  @OptIn(ExperimentalCoroutinesApi::class)
   suspend fun upload(uploadAction: UploadAction) {
     val saved = withIOContext {
       uploadRepo.saveAction(uploadAction)
@@ -153,6 +155,10 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
     }
 
     deferredResults.await()
+    // throw exception with exception message of the first failed upload
+    deferredResults.getCompleted().firstOrNull { !it.isSuccess }?.let {
+      throw UploadFailedException(it.message, it.filePath)
+    }
   }
 
 
@@ -209,8 +215,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
           val status = plugin.upload(file).apply {
             uploadData = file
           }
-          // change the status to UPLOADED if the upload is successful
-          file.status = if (status.isSuccess) UploadState.UPLOADED else UploadState.FAILED
+          file.status = UploadState.UPLOADED
           file.uploadResults.add(status)
           uploadRepo.changeUploadDataStatus(file.id, file.status)
           EventCenter.sendEvent(UploadEvent.UploadSuccess(file.filePath, file.uploadPlatform, Clock.System.now()))
