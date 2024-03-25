@@ -54,7 +54,7 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: Us
       dao.getLatestAppConfig()?.let { AppConfig(it, json) } ?: AppConfig().apply {
         logger.info("First time running the app, creating default app config")
         id = 1
-        val user = UserEntity(1, "stream-rec", "stream-rec", "ADMIN")
+        val user = UserEntity(1, "stream-rec", System.getenv("LOGIN_SECRET") ?: "stream-rec", "ADMIN")
         userDao.createUser(user)
         saveAppConfig(this)
       }
