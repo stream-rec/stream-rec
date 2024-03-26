@@ -172,13 +172,28 @@ class DownloadService(
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
         return@launch
       }
-      plugin.init(streamer)
       val streamDataList = mutableListOf<StreamData>()
       var retryCount = 0
       val retryDelay = app.config.downloadRetryDelay
       val maxRetry = app.config.maxDownloadRetries
-      while (true) {
 
+      plugin.apply {
+        init(streamer)
+        // set update callbacks
+        avatarUrlUpdateCallback {
+          streamer.avatar = it
+          newScope.launch {
+            repo.updateStreamerAvatar(streamer.id, it)
+          }
+        }
+        descriptionUpdateCallback {
+          streamer.streamTitle = it
+          newScope.launch {
+            repo.updateStreamerStreamTitle(streamer.id, it)
+          }
+        }
+      }
+      while (true) {
         if (retryCount >= maxRetry) {
           retryCount = 0
           // update db with the new isLive value
@@ -199,7 +214,6 @@ class DownloadService(
           delay(1.toDuration(DurationUnit.MINUTES))
           continue
         }
-        val oldStreamer = streamer.copy()
         val isLive = try {
           // check if streamer is live
           plugin.shouldDownload()
@@ -223,16 +237,7 @@ class DownloadService(
             EventCenter.sendEvent(StreamerOnline(streamer.name, streamer.url, streamer.platform, streamer.streamTitle ?: "", Clock.System.now()))
             repo.updateStreamerLiveStatus(streamer.id, true)
           }
-          logger.debug("checking is need to update stream title : {} != {}", oldStreamer.streamTitle, streamer.streamTitle)
-          if (oldStreamer.streamTitle != streamer.streamTitle) {
-            repo.updateStreamerStreamTitle(streamer.id, streamer.streamTitle)
-          }
           streamer.isLive = true
-
-          // update avatar if it has changed
-          if (!streamer.avatar.isNullOrEmpty() && oldStreamer.avatar != streamer.avatar) {
-            repo.updateStreamerAvatar(streamer.id, streamer.avatar)
-          }
           val now = Clock.System.now()
           // update last live time
           if (repo.shouldUpdateStreamerLastLiveTime(streamer.id, streamer.lastLiveTime ?: 0, now.epochSeconds)) {

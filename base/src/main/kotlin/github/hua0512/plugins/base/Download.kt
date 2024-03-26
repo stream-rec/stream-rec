@@ -91,6 +91,17 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
    */
   protected lateinit var streamer: Streamer
 
+  /**
+   * Callback triggered when the artist avatar url is updated
+   */
+  private var artistAvatarUrlUpdateCallback: ((String) -> Unit)? = null
+
+  /**
+   * Callback triggered when the stream title is updated
+   */
+  private var streamTitleUpdateCallback: ((String) -> Unit)? = null
+
+
   suspend fun init(streamer: Streamer) {
     this.streamer = streamer
     extractor.prepare()
@@ -475,11 +486,29 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
     if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
       streamer.avatar = mediaInfo.artistImageUrl
       logger.debug("(${streamer.name}) avatar: ${streamer.avatar}")
+      artistAvatarUrlUpdateCallback?.invoke(mediaInfo.artistImageUrl)
     }
     if (mediaInfo.title.isNotEmpty() && mediaInfo.title != streamer.streamTitle) {
       streamer.streamTitle = mediaInfo.title
       logger.debug("(${streamer.name}) streamTitle: ${streamer.streamTitle}")
+      streamTitleUpdateCallback?.invoke(mediaInfo.title)
     }
     downloadTitle = mediaInfo.title
+  }
+
+  /**
+   * Set the artist avatar url update callback
+   * @param callback the callback function
+   */
+  fun avatarUrlUpdateCallback(callback: (String) -> Unit) {
+    this.artistAvatarUrlUpdateCallback = callback
+  }
+
+  /**
+   * Set the stream title update callback
+   * @param callback the callback function
+   */
+  fun descriptionUpdateCallback(callback: (String) -> Unit) {
+    this.streamTitleUpdateCallback = callback
   }
 }
