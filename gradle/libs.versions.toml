@@ -2,7 +2,7 @@
 ktor = "2.3.9"
 kotlin = "1.9.23"
 kotlin-coroutines = "1.8.0"
-logback = "1.4.14"
+logback = "1.5.3"
 dagger = "2.51"
 sqldelight = "2.0.1"
 protobuf = "3.25.2"
