@@ -240,27 +240,35 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     // launch a coroutine to send heart beat
     launchHeartBeatJob(this)
     incoming.receiveAsFlow()
-      .collect { frame ->
+      .onEach { frame ->
         val data = frame.data
-        try {
-          // decode danmu
-          decodeDanmu(this, data).filterIsInstance<DanmuData>().forEach {
-            // danmu server time
-            val serverTime = it.serverTime
-            // danmu process start time
-            val danmuStartTime = videoStartTime.toEpochMilliseconds()
-            // danmu in video time
-            val danmuInVideoTime = (serverTime - danmuStartTime).run {
-              val time = if (this < 0) 0 else this
-              String.format("%.3f", time / 1000.0).toDouble()
+        // decode danmu
+        for (danmu in decodeDanmu(this, data)) {
+          when (danmu) {
+            is DanmuData -> {
+              // danmu server time
+              val serverTime = danmu.serverTime
+              // danmu process start time
+              val danmuStartTime = videoStartTime.toEpochMilliseconds()
+              // danmu in video time
+              val danmuInVideoTime = (serverTime - danmuStartTime).run {
+                val time = if (this < 0) 0 else this
+                String.format("%.3f", time / 1000.0).toDouble()
+              }
+              // emit danmu to write to file
+              writeChannel.trySend(danmu.copy(clientTime = danmuInVideoTime))
             }
-            // emit danmu to write to file
-            writeChannel.send(it.copy(clientTime = danmuInVideoTime))
+
+            else -> logger.error("Invalid danmu data {}", danmu)
           }
-        } catch (e: Exception) {
-          logger.error("$websocketUrl error decoding danmu: $e")
         }
       }
+      .catch { e ->
+        logger.error("Error decoding danmu", e)
+      }
+      .buffer()
+      .flowOn(Dispatchers.Default)
+      .collect()
   }
 
 
@@ -291,9 +299,6 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
           logger.error("Error writing danmu to file {}", danmuFile.absolutePath, e)
         }
         .flowOn(Dispatchers.IO)
-        .onCompletion {
-          logger.debug("Danmu {} flow completed, ", danmuFile.absolutePath, it)
-        }
         .collect()
     }
   }
