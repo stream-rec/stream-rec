@@ -157,7 +157,7 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     }
     val msgList = payloadPackage.messagesListList
     // each frame may contain multiple messages
-    return msgList.map { msg ->
+    return msgList.mapNotNull { msg ->
       when (msg.method) {
         "WebcastChatMessage" -> {
           val chatMessage = Dy.ChatMessage.parseFrom(msg.payload)
