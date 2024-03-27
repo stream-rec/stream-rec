@@ -1,0 +1,62 @@
+version: '3.7'
+
+networks:
+  stream-rec:
+
+services:
+  # Backend service
+  backend:
+    #   Uses the latest main branch image
+    image: streamrec/stream-rec:latest
+    #    container name, you can change it to any name you like
+    container_name: stream-rec
+    restart: unless-stopped
+    #    port mapping, you can change the port to any port you like, default is 12555
+    ports:
+      - "12555:12555"
+    networks:
+      - stream-rec
+    environment:
+      #      log level, by default is info. Debug logs are useful for debugging, but they can be very verbose.
+      #      - LOG_LEVEL=debug
+      #      CONTAINER database path, CHANGE IT ACCORDING TO BELOW VOLUME CONFIGURATION.
+      - DB_PATH=/opt/records
+      # JWT secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
+      - JWT_SECRET=IU123412987UYASUJKDH1239IUIU
+      # LOGIN secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
+      - LOGIN_SECRET=123
+    volumes:
+      #      - BINDS THE HOST MACHINE PATH TO THE CONTAINER PATH
+      - type: bind
+        #        SOURCE is the path of the host machine, WHERE YOU WANT TO STORE THE RECORDS
+        source: /home/hua/records
+        #        TARGET is the path of the container, WHERE THE RECORDS WILL BE STORED
+        target: /opt/records
+
+  # Frontend service
+  frontend:
+    image: streamrec/stream-rec-frontend:latest
+    restart: unless-stopped
+    #   port mapping, you can change the port to any port you like, default is 15275
+    ports:
+      - "15275:15275"
+    networks:
+      - stream-rec
+    depends_on:
+      - backend
+    environment:
+      # Backend api url, made up of the container name and port. DO NOT CHANGE IT if you don't know what you are doing.
+      # Make sure the port is the same as the backend port.
+      - API_URL=http://backend:12555/api
+      # Secret for next-auth, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
+      - NEXTAUTH_SECRET=21312312
+      # NEXTAUTH_URL, SERVER URL. DO NOT CHANGE IT if you don't know what you are doing.
+      # Most of the time, you don't need to change it. This is the url used INTERNALLY by next-auth.
+      # Even when you deploy the frontend on a different server, you don't need to change it.
+      # Make sure the port is the same as the frontend port.
+      - NEXTAUTH_URL=http://localhost:15275/
+      # WS_API_URL, CLIENT websocket url. Used for live status updates. DO NOT CHANGE IT if you don't know what you are doing.
+      # This should use the ip address of the deployed server.
+      # Below is an example of using localhost, you can change it to the ip address of the deployed server.
+      # For example, if backend is deployed on the server ip address 12.12.12.12, with port 12555, then you should change it to ws://12.12.12.12:12555/live/update
+      - WS_API_URL=ws://localhost:12555/live/update
