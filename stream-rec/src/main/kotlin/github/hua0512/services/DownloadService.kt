@@ -164,6 +164,19 @@ class DownloadService(
   private suspend fun downloadStreamer(streamer: Streamer) {
     val newJob = SupervisorJob(coroutineContext[Job])
     val newScope = CoroutineScope(coroutineContext + CoroutineName("Streamer-${streamer.name}") + newJob)
+
+    val streamDataList = mutableListOf<StreamData>()
+    // download retry count
+    var retryCount = 0
+    // delay to wait before retrying the download, used when streams goes from live to offline
+    val retryDelay = app.config.downloadRetryDelay.toDuration(DurationUnit.SECONDS)
+    // delay between download checks
+    val downloadInterval = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
+    // retry delay for parted downloads
+    val platformRetryDelay = (streamer.platform.platformConfig.partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
+    // max download retries
+    val maxRetry = app.config.maxDownloadRetries
+
     newScope.launch {
       val plugin = try {
         getPlatformDownloader(streamer.platform, streamer.url)
@@ -172,10 +185,6 @@ class DownloadService(
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
         return@launch
       }
-      val streamDataList = mutableListOf<StreamData>()
-      var retryCount = 0
-      val retryDelay = app.config.downloadRetryDelay
-      val maxRetry = app.config.maxDownloadRetries
 
       plugin.apply {
         init(streamer)
@@ -195,6 +204,7 @@ class DownloadService(
       }
       while (true) {
         if (retryCount >= maxRetry) {
+          // reset retry count
           retryCount = 0
           // update db with the new isLive value
           if (streamer.isLive) repo.updateStreamerLiveStatus(streamer.id, false)
@@ -211,7 +221,7 @@ class DownloadService(
             bindOnStreamingEndActions(streamer, streamDataList.toList())
           }
           streamDataList.clear()
-          delay(1.toDuration(DurationUnit.MINUTES))
+          delay(downloadInterval)
           continue
         }
         val isLive = try {
@@ -253,17 +263,10 @@ class DownloadService(
               } catch (e: Exception) {
                 EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
                 when (e) {
-                  is IllegalArgumentException -> {
+                  is IllegalArgumentException, is UnsupportedOperationException -> {
                     streamer.isLive = false
                     repo.updateStreamerLiveStatus(streamer.id, false)
-                    logger.error("${streamer.name} invalid url or invalid streamer : ${e.message}")
-                    return@launch
-                  }
-
-                  is UnsupportedOperationException -> {
-                    streamer.isLive = false
-                    repo.updateStreamerLiveStatus(streamer.id, false)
-                    logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
+                    logger.error("${streamer.name} invalid url or invalid engine : ${e.message}")
                     return@launch
                   }
 
@@ -288,8 +291,7 @@ class DownloadService(
             streamDataList.add(stream)
             logger.info("${streamer.name} downloaded : $stream}")
             newScope.launch { executePostPartedDownloadActions(streamer, stream) }
-            val platformRetryDelay = streamer.platform.platformConfig.partedDownloadRetry ?: 0
-            delay(platformRetryDelay.toDuration(DurationUnit.SECONDS))
+            delay(platformRetryDelay)
           }
         } else {
           if (streamDataList.isNotEmpty()) {
@@ -304,9 +306,9 @@ class DownloadService(
          * otherwise wait [app.config.downloadCheckInterval] seconds
          */
         val duration = if (streamDataList.isNotEmpty()) {
-          retryDelay.toDuration(DurationUnit.SECONDS)
+          retryDelay
         } else {
-          app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
+          downloadInterval
         }
         delay(duration)
       }
