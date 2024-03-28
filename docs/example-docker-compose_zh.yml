@@ -38,7 +38,7 @@ services:
   # 前端服务
   frontend:
     #   使用最新的主分支镜像
-    image: streamrec/stream-rec-frontend:latest
+    image: streamrec/stream-rec-front:latest
     # 容器名称，您可以将其更改为任何您喜欢的名称
     container_name: stream-rec-frontend
     restart: unless-stopped

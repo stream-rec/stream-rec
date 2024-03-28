@@ -35,7 +35,7 @@ services:
 
   # Frontend service
   frontend:
-    image: streamrec/stream-rec-frontend:latest
+    image: streamrec/stream-rec-front:latest
     container_name: stream-rec-frontend
     restart: unless-stopped
     #   port mapping, you can change the port to any port you like, default is 15275
