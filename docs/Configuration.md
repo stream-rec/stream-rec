@@ -16,6 +16,7 @@ Navigate to the settings page by clicking on the settings icon in the left navig
 After that, you will see the general settings page. Configure the settings as needed and click on the `Update setttings` button to save the changes.
 
 > [!NOTE]\
+> Things to note:
 > - `Output folder`: The directory where the recorded streams will be saved. If you are running the tool in a Docker container, make sure the path is
     a container path bind to host. Otherwise, you may not be able to locate the recorded streams. For example, assuming you deployed
     with `/path/to/host/folder:/path/to/container/folder`. Then, you should put `/path/to/container/folder` as the output folder.
@@ -48,6 +49,7 @@ In the page, fill the form with the streamer's information. If a correct URL is 
 configuration.
 
 > [!NOTE]\
+> Things to note:
 > - Each streamer has its own download settings. These settings are empty by default, which means the global settings of each platform will be used.
     Changing these settings overrides the global settings for this streamer.
 > - Changing these settings will take effect **immediately** if the streamer is recording. The current recording will be cancelled, and a new
@@ -67,6 +69,7 @@ etc.
 Uploads by Rclone are supported out of the box. You can use the `rclone` command to upload the downloaded part to a cloud.
 
 > [!IMPORTANT]\
+> Things to note:
 > - Configuring callbacks is optional. You can leave it empty if you don't need it.
 > - Configuring callbacks disables the `Global delete files flag` global flag. You can still delete files by setting a `delete` action in the
     callback.
@@ -96,5 +99,6 @@ Here you can see the status of the recordings, whether they are running or disab
 recording.
 
 > [!NOTE]\
+> Things to note:
 > - The download speed/recording duration will no longer be updated after a long time of inactivity on this page. This is to reduce server load.
     Refresh the page to update this information.
