@@ -6,4 +6,3 @@ build
 *.log
 *.db
 db
-stream-rec/build
