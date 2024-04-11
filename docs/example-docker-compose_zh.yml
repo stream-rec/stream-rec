@@ -25,8 +25,10 @@ services:
         # TARGET是容器的路径，录制将存储的地方
         target: /opt/records
     environment:
-      #      日志级别，默认为info。调试日志对于调试非常有用，但可能非常冗长。 遇到问题时，您可以将其更改为debug。
-      # - LOG_LEVEL=debug
+      # 时区，默认为 Europe/Paris,您可以将其更改为任何您喜欢的时区。
+      - TZ=Asia/Shanghai
+      # 日志级别，默认为info。调试日志对于调试非常有用，但可能非常冗长。 遇到问题时，您可以将其更改为debug。
+      - LOG_LEVEL=INFO
       # 容器数据库路径，请确保路径是绑定到主机的容器路径
       - DB_PATH=/opt/records
       # JWT密钥，您可以将其更改为任何您喜欢的字符串

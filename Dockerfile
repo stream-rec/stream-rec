@@ -17,6 +17,10 @@ RUN apk add --no-cache streamlink --repository=https://dl-cdn.alpinelinux.org/al
 # Install SQLite
 RUN apk add --no-cache sqlite
 
+# Set timezone
+ENV TZ ${TZ:-Europe/Paris}
+RUN apk add --no-cache tzdata
+
 EXPOSE 12555
 
 CMD ["java", "-jar", "app.jar"]

@@ -17,8 +17,10 @@ services:
     networks:
       - stream-rec
     environment:
+      #    timezone, by default is Europe/Paris. You can change it to any timezone you like.
+      - TZ=Europe/Paris
       #      log level, by default is info. Debug logs are useful for debugging, but they can be very verbose.
-      #      - LOG_LEVEL=debug
+      - LOG_LEVEL=INFO
       #      CONTAINER database path, CHANGE IT ACCORDING TO BELOW VOLUME CONFIGURATION.
       - DB_PATH=/opt/records
       # JWT secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
