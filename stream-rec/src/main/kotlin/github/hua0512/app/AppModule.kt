@@ -34,8 +34,6 @@ import github.hua0512.data.platform.DouyuQuality
 import github.hua0512.data.platform.DouyuQualitySerializer
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.repo.LocalDataSourceImpl
-import github.hua0512.repo.TomlDataSource
-import github.hua0512.repo.TomlDataSourceImpl
 import github.hua0512.repo.streamer.StreamDataRepo
 import github.hua0512.repo.streamer.StreamerRepo
 import github.hua0512.repo.uploads.UploadRepo
@@ -84,8 +82,5 @@ class AppModule {
 
   @Provides
   fun provideLocalDataSource(appDao: AppConfigDao, json: Json, userDao: UserDao): LocalDataSource = LocalDataSourceImpl(appDao, userDao, json)
-
-  @Provides
-  fun provideTomlDataSource(): TomlDataSource = TomlDataSourceImpl()
 
 }

@@ -31,7 +31,6 @@ dependencies {
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)
-  implementation("net.peanuuutz.tomlkt:tomlkt:0.3.7")
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(project(":base"))
   implementation(project(":platforms"))
