@@ -22,6 +22,8 @@ allprojects {
     }
   }
   tasks.withType<JavaCompile>().configureEach {
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+    sourceCompatibility = JavaVersion.VERSION_17.toString()
     options.isFork = true
   }
 }
