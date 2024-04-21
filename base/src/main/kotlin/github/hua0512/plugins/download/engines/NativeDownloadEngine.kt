@@ -88,4 +88,8 @@ class NativeDownloadEngine(val client: HttpClient) : BaseDownloadEngine() {
       return null
     }
   }
+
+  override suspend fun stopDownload(): Boolean {
+    TODO("Not yet implemented")
+  }
 }

@@ -101,6 +101,11 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
    */
   private var streamTitleUpdateCallback: ((String) -> Unit)? = null
 
+  /**
+   * The download engine used to download the stream
+   */
+  private lateinit var engine: BaseDownloadEngine
+
 
   suspend fun init(streamer: Streamer) {
     this.streamer = streamer
@@ -207,7 +212,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
     }
 
     // download engine
-    val engine = selectDownloadEngine().apply {
+    engine = selectDownloadEngine().apply {
       init(
         downloadUrl,
         fileFormat,
@@ -308,7 +313,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
           error = e
         )
       )
-      streamData = null
+      // if the download is cancelled and triggered by another exception then delete the file
+      if (e !is CancellationException) {
+        streamData = null
+      }
       // ignore other exceptions
       if (e is UnsupportedOperationException || e is IllegalArgumentException) throw e
     } finally {
@@ -340,6 +348,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
       }
     }
     return@supervisorScope streamData
+  }
+
+  suspend fun stopDownload() {
+    engine.stopDownload()
   }
 
   private fun deleteOutputs(outputPath: Path, isDanmuEnabled: Boolean, danmuPath: Path) {

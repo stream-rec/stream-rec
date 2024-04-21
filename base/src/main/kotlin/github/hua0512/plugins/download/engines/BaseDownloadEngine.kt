@@ -134,6 +134,14 @@ abstract class BaseDownloadEngine() {
    */
   abstract suspend fun startDownload(): StreamData?
 
+
+  /**
+   * Stops the download process.
+   *
+   * @return True if the download was stopped successfully, false otherwise.
+   */
+  abstract suspend fun stopDownload(): Boolean
+
   /**
    * Sets the callback to be executed when the download starts.
    *

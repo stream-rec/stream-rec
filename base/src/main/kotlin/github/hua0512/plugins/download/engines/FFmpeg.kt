@@ -118,7 +118,7 @@ fun buildFFMpegCmd(
 fun processFFmpegOutputLine(line: String, streamer: String, lastSize: Long, onDownloadProgress: (Long, Long, String) -> Unit) {
   if (!line.startsWith("size=")) {
     logger.info("$streamer - $line")
-  } else {
+  } else if (line.contains("time=")) {
     //  size=     768kB time=00:00:02.70 bitrate=2330.2kbits/s speed=5.28x
     val sizeString = line.substringAfter("size=").substringBefore("time").trim()
     // extract the size in kB
