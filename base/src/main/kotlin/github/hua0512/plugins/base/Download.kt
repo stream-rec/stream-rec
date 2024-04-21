@@ -140,7 +140,6 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
 
   /**
    * Check if the stream should be downloaded
-   * @param streamer the streamer to be checked
    * @return true if the stream should be downloaded, false otherwise
    */
   abstract suspend fun shouldDownload(): Boolean
