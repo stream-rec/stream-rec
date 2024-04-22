@@ -234,7 +234,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     private suspend fun getDouyinTTwid(client: HttpClient): String {
       if (TT_WID != null) return TT_WID!!
       val response = withIOContext {
-        client.get("${LIVE_DOUYIN_URL}/1-2-3-4-5-6-7-8-9-0") {
+        client.get("${LIVE_DOUYIN_URL}/") {
           commonDouyinParams.forEach { (key, value) ->
             parameter(key, value)
           }

@@ -81,7 +81,9 @@ class DouyinTest {
 
   @Test
   fun testLive() = runTest {
-    val extractor = DouyinExtractor(app.client, app.json, testUrl)
+    val extractor = DouyinExtractor(app.client, app.json, testUrl).apply {
+      match()
+    }
     val info = extractor.extract()
     println(info)
     assertNotNull("failed to extract", info)
