@@ -57,6 +57,7 @@ suspend fun executeProcess(
    * Callback to get the output stream of the process. This is useful for interactive processes
    */
   getOutputStream: (OutputStream) -> Unit = {},
+  getProcess: (Process) -> Unit = {},
   /** Consume without delay all streams configured with [Redirect.CAPTURE]. */
   consumer: suspend (String) -> Unit = {},
 ): Int {
@@ -77,6 +78,7 @@ suspend fun executeProcess(
         env?.let { environment().putAll(it) }
       }.start()
 
+      getProcess(process)
 
       // Handles async consumptions before the blocking output handling.
       if (stdout is Redirect.Consume) {

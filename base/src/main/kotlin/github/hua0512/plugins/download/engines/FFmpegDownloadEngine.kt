@@ -31,7 +31,6 @@ import github.hua0512.data.stream.StreamData
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.withIOContext
-import kotlinx.coroutines.channels.Channel
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
 import java.io.OutputStream
@@ -51,8 +50,8 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
   // output stream for writing 'q' to stop ffmpeg process
   private var ous: OutputStream? = null
 
-  // channel for receiving exit code of ffmpeg process
-  private var exitChannel = Channel<Int>()
+  // ffmpeg process
+  private var ffmpegProcess: Process? = null
 
   override suspend fun startDownload(): StreamData? {
     // ffmpeg running commands
@@ -66,16 +65,15 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
       val exitCode =
         executeProcess(App.ffmpegPath, *cmds, stdout = Redirect.CAPTURE, stderr = Redirect.CAPTURE, destroyForcibly = true, getOutputStream = {
           ous = it
+        }, getProcess = {
+          ffmpegProcess = it
         }) { line ->
-          if (line.contains("overhead:")) {
-            exitChannel.trySend(0)
-          }
           processFFmpegOutputLine(line, streamer.name, lastSize) { size, diff, bitrate ->
             lastSize = size
             onDownloadProgress(diff, bitrate)
           }
         }
-      exitChannel.close()
+      ffmpegProcess = null
       if (exitCode != 0) {
         logger.error("(${streamer.name}) download failed, exit code: $exitCode")
         null
@@ -101,8 +99,7 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
       }
     }
     // wait for the process to exit
-    val code = exitChannel.receive()
-    exitChannel.close()
+    val code = withIOContext { ffmpegProcess?.waitFor() }
     if (code != 0) {
       logger.error("FFmpeg process exited with code $code")
       return false

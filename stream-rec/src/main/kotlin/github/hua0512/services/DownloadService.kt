@@ -31,7 +31,7 @@ import github.hua0512.data.event.StreamerEvent.StreamerException
 import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.plugins.base.StreamerDownload
+import github.hua0512.plugins.base.StreamerDownloadManager
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.Douyin
 import github.hua0512.plugins.douyin.download.DouyinExtractor
@@ -65,7 +65,7 @@ class DownloadService(
   }
 
   // semaphore to limit the number of concurrent downloads
-  private var downloadSemaphore: Semaphore? = null
+  private lateinit var downloadSemaphore: Semaphore
 
   private fun getPlatformDownloader(platform: StreamingPlatform, url: String) = when (platform) {
     StreamingPlatform.HUYA -> Huya(app, HuyaDanmu(app), HuyaExtractor(app.client, app.json, url))
@@ -75,7 +75,7 @@ class DownloadService(
   }
 
   private val taskJobs = mutableMapOf<Streamer, Job?>()
-  private val plugins = mutableMapOf<Streamer, StreamerDownload>()
+  private val plugins = mutableMapOf<Streamer, StreamerDownloadManager>()
 
   suspend fun run() = coroutineScope {
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
@@ -155,44 +155,49 @@ class DownloadService(
       return
     }
 
-    val streamerDownload = StreamerDownload(
-      currentCoroutineContext(),
-      app,
-      streamer,
-      plugin,
-      downloadSemaphore!!
-    ).apply {
-      init()
 
-      onLiveStatusUpdate { id, isLive ->
-        repo.updateStreamerLiveStatus(id, isLive)
-      }
+    val streamerScope = supervisorScope {
+      val streamerDownload = StreamerDownloadManager(
+        this,
+        app,
+        streamer,
+        plugin,
+        downloadSemaphore
+      ).apply {
+        onLiveStatusUpdate { id, isLive ->
+          repo.updateStreamerLiveStatus(id, isLive)
+        }
 
-      onLastLiveTimeUpdate { id, lastLiveTime ->
-        repo.updateStreamerLastLiveTime(id, lastLiveTime)
-      }
+        onLastLiveTimeUpdate { id, lastLiveTime ->
+          repo.updateStreamerLastLiveTime(id, lastLiveTime)
+        }
 
-      onCheckLastLiveTime { id, lastLiveTime, now ->
-        repo.shouldUpdateStreamerLastLiveTime(id, lastLiveTime, now)
-      }
-      onSavedToDb {
-        streamDataRepository.saveStreamData(it)
-      }
+        onCheckLastLiveTime { id, lastLiveTime, now ->
+          repo.shouldUpdateStreamerLastLiveTime(id, lastLiveTime, now)
+        }
+        onSavedToDb {
+          streamDataRepository.saveStreamData(it)
+        }
 
-      onDescriptionUpdate { id, description ->
-        repo.updateStreamerStreamTitle(id, description)
-      }
+        onDescriptionUpdate { id, description ->
+          repo.updateStreamerStreamTitle(id, description)
+        }
 
-      onAvatarUpdate { id, avatarUrl ->
-        repo.updateStreamerAvatar(id, avatarUrl)
-      }
+        onAvatarUpdate { id, avatarUrl ->
+          repo.updateStreamerAvatar(id, avatarUrl)
+        }
 
-      onRunningActions { data, actions ->
-        actionService.runActions(data, actions)
+        onRunningActions { data, actions ->
+          actionService.runActions(data, actions)
+        }
+
+        init()
       }
+      plugins[streamer] = streamerDownload
+      streamerDownload.start()
+      coroutineContext[Job]?.join()
     }
-    plugins[streamer] = streamerDownload
-    streamerDownload.launchDownload()
+    logger.info("${streamer.name}, ${streamer.url} job finished")
   }
 
 
@@ -230,8 +235,8 @@ class DownloadService(
    */
   private suspend fun cancelJob(streamer: Streamer, reason: String = ""): Streamer {
     // stop the download
-    plugins[streamer]?.stopDownload()
-    // await the job to finish
+    plugins[streamer]?.cancel()
+//    // await the job to finish
     taskJobs[streamer]?.join()
     // cancel the job
     taskJobs[streamer]?.cancel(reason)?.also {
@@ -249,9 +254,5 @@ class DownloadService(
     taskJobs.remove(streamer)
     plugins.remove(streamer)
     return streamer
-  }
-
-  fun updateMaxConcurrentDownloads(max: Int) {
-    downloadSemaphore = Semaphore(max)
   }
 }

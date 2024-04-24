@@ -350,7 +350,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
   }
 
   suspend fun stopDownload() {
-    engine.stopDownload()
+    if (::engine.isInitialized) {
+      engine.stopDownload()
+    }
   }
 
   private fun deleteOutputs(outputPath: Path, isDanmuEnabled: Boolean, danmuPath: Path) {
