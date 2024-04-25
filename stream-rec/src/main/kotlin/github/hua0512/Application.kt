@@ -61,30 +61,25 @@ class Application {
     }
 
     @JvmStatic
-    fun main(args: Array<String>) {
+    fun main(args: Array<String>): Unit = runBlocking {
       var server: NettyApplicationEngine? = null
       val appComponent: AppComponent = DaggerAppComponent.create()
       val app = appComponent.getAppConfig()
-
-      runBlocking {
-        try {
-
-          initComponents(appComponent, app, initializeServer = { server = it })
-
-          Runtime.getRuntime().addShutdownHook(Thread {
-            logger.info("Stream-rec shutting down...")
-            server?.stop(1000, 1000)
-            appComponent.getSqlDriver().closeDriver()
-            app.releaseAll()
-            EventCenter.stop()
-            cancel()
-          })
-
-          // suspend until scope is cancelled
-          awaitCancellation()
-        } finally {
-          logger.info("Stream-rec is stopped")
-        }
+      try {
+        // start the app
+        // add shutdown hook
+        Runtime.getRuntime().addShutdownHook(Thread {
+          logger.info("Stream-rec shutting down...")
+          server?.stop(1000, 1000)
+          appComponent.getSqlDriver().closeDriver()
+          app.releaseAll()
+          EventCenter.stop()
+          cancel()
+        })
+        initComponents(appComponent, app, initializeServer = { server = it })
+        awaitCancellation()
+      } finally {
+        logger.info("Stream-rec is stopped")
       }
     }
 
@@ -135,6 +130,7 @@ class Application {
           initializeServer(this)
         }
       }
+      coroutineContext[Job]!!.join()
     }
 
     private fun initLogger() {

@@ -38,6 +38,7 @@ import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
@@ -54,11 +55,10 @@ import kotlin.time.toDuration
  * @date : 2024/4/21 20:15
  */
 class StreamerDownloadManager(
-  private val scope: CoroutineScope,
-  val app: App,
-  val streamer: Streamer,
-  val plugin: Download<DownloadConfig>,
-  val downloadSemaphore: Semaphore,
+  private val app: App,
+  private val streamer: Streamer,
+  private val plugin: Download<DownloadConfig>,
+  private val downloadSemaphore: Semaphore,
 ) {
 
   companion object {
@@ -95,7 +95,8 @@ class StreamerDownloadManager(
   private val downloadInterval = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
 
   // retry delay for parted downloads
-  private val platformRetryDelay = (streamer.platform.platformConfig.partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
+  private val platformRetryDelay =
+    (streamer.platform.platformConfig.partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
 
   // max download retries
   private val maxRetry = app.config.maxDownloadRetries
@@ -103,7 +104,7 @@ class StreamerDownloadManager(
   /**
    * Flag to check if the download is cancelled
    */
-  private var isCancelled = false
+  private var isCancelled = MutableStateFlow(false)
 
   /**
    * Flag to check if the download is in progress
@@ -112,34 +113,31 @@ class StreamerDownloadManager(
 
   private var updateLiveStatusCallback: suspend (id: Long, isLive: Boolean) -> Unit = { _, _ -> }
   private var updateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long) -> Unit = { _, _ -> }
-  private var checkShouldUpdateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long, now: Long) -> Boolean = { _, _, _ -> false }
+  private var checkShouldUpdateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long, now: Long) -> Boolean =
+    { _, _, _ -> false }
   private var onSavedToDb: suspend (stream: StreamData) -> Unit = {}
-  private var avatarUpdateCallback: suspend (id: Long, avatarUrl: String) -> Unit = { _, _ -> }
-  private var onDescriptionUpdateCallback: suspend (id: Long, description: String) -> Unit = { _, _ -> }
+  private var avatarUpdateCallback: (id: Long, avatarUrl: String) -> Unit = { _, _ -> }
+  private var onDescriptionUpdateCallback: (id: Long, description: String) -> Unit = { _, _ -> }
   private var onRunningActions: suspend (data: List<StreamData>, actions: List<Action>) -> Unit = { _, _ -> }
 
 
-  suspend fun init() = withIOContext {
+  suspend fun init() = supervisorScope {
     plugin.apply {
       avatarUrlUpdateCallback {
         streamer.avatar = it
         logger.info("avatar updated : $it")
-        scope.launch {
-          avatarUpdateCallback(streamer.id, it)
-        }
+        avatarUpdateCallback(streamer.id, it)
       }
       descriptionUpdateCallback {
         streamer.streamTitle = it
         logger.info("description updated : $it")
-        scope.launch {
-          onDescriptionUpdateCallback(streamer.id, it)
-        }
+        onDescriptionUpdateCallback(streamer.id, it)
       }
       init(streamer)
     }
   }
 
-  private suspend fun handleMaxRetry() {
+  private suspend fun handleMaxRetry() = supervisorScope {
     // reset retry count
     retryCount = 0
     // update db with the new isLive value
@@ -147,13 +145,21 @@ class StreamerDownloadManager(
     streamer.isLive = false
     // stream is not live or without data
     if (dataList.isEmpty()) {
-      return
+      return@supervisorScope
     }
     // stream finished with data
     logger.info("${streamer.name} stream finished")
-    EventCenter.sendEvent(StreamerOffline(streamer.name, streamer.url, streamer.platform, Clock.System.now(), dataList.toList()))
+    EventCenter.sendEvent(
+      StreamerOffline(
+        streamer.name,
+        streamer.url,
+        streamer.platform,
+        Clock.System.now(),
+        dataList.toList()
+      )
+    )
     // call onStreamingFinished callback with the copy of the list
-    scope.launch {
+    launch {
       bindOnStreamingEndActions(streamer, dataList.toList())
     }
     dataList.clear()
@@ -178,7 +184,15 @@ class StreamerDownloadManager(
   private suspend fun handleLiveStreamer() {
     // save streamer to the database with the new isLive value
     if (!streamer.isLive) {
-      EventCenter.sendEvent(StreamerOnline(streamer.name, streamer.url, streamer.platform, streamer.streamTitle ?: "", Clock.System.now()))
+      EventCenter.sendEvent(
+        StreamerOnline(
+          streamer.name,
+          streamer.url,
+          streamer.platform,
+          streamer.streamTitle ?: "",
+          Clock.System.now()
+        )
+      )
       updateLiveStatusCallback(streamer.id, true)
     }
     streamer.isLive = true
@@ -192,7 +206,7 @@ class StreamerDownloadManager(
       }
       // save the stream data to the database
       saveStreamData(stream)
-      if (!isCancelled) delay(platformRetryDelay)
+      if (!isCancelled.value) delay(platformRetryDelay)
       else break
     }
   }
@@ -211,6 +225,11 @@ class StreamerDownloadManager(
             streamer.isLive = false
             updateLiveStatusCallback(streamer.id, false)
             logger.error("${streamer.name} invalid url or invalid engine : ${e.message}")
+            throw e
+          }
+
+          is CancellationException -> {
+            isCancelled.value = true
             throw e
           }
 
@@ -234,7 +253,7 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun saveStreamData(stream: StreamData) {
+  private suspend fun saveStreamData(stream: StreamData) = withIOContext {
     try {
       onSavedToDb(stream)
       logger.debug("saved to db : {}", stream)
@@ -244,7 +263,13 @@ class StreamerDownloadManager(
     dataList.add(stream)
     logger.info("${streamer.name} downloaded : $stream}")
     // execute post parted download actions
-    scope.launch { executePostPartedDownloadActions(streamer, stream) }
+    launch {
+      try {
+        executePostPartedDownloadActions(streamer, stream)
+      } catch (e: Exception) {
+        logger.error("${streamer.name} error while executing post parted download actions : ${e.message}")
+      }
+    }
   }
 
 
@@ -257,34 +282,48 @@ class StreamerDownloadManager(
   }
 
 
-  fun start() {
-    scope.launch {
-      // download the stream
-      while (!isCancelled) {
-        if (retryCount >= maxRetry) {
-          handleMaxRetry()
-          continue
+  suspend fun start(): Unit = supervisorScope {
+    // download the stream
+    while (!isCancelled.value) {
+      launch {
+        isCancelled.collect {
+          if (it) {
+            // await for the download to finish
+            stop()
+            if (!isDownloading) {
+              // break the loop if download is not in progress
+              logger.info("Download not in progress, cancelling download for ${streamer.name}")
+              this@supervisorScope.cancel("Download cancelled")
+            }
+          }
         }
-        val isLive = checkStreamerLiveStatus()
-
-        if (isLive) {
-          handleLiveStreamer()
-        } else {
-          handleOfflineStreamer()
-        }
-        if (isCancelled) break
-        retryCount++
-        delay(getDelay())
       }
-      this@StreamerDownloadManager.cancel()
+
+      if (retryCount >= maxRetry) {
+        handleMaxRetry()
+        continue
+      }
+      val isLive = checkStreamerLiveStatus()
+
+      if (isLive) {
+        handleLiveStreamer()
+      } else {
+        handleOfflineStreamer()
+      }
+      if (isCancelled.value) break
+      retryCount++
+      delay(getDelay())
     }
+    throw CancellationException("Download cancelled")
   }
 
   /**
    * Returns the delay to wait before checking the stream again
    * if a data list is not empty, then it means the stream has ended
    * wait [retryDelay] seconds before checking again
-   * otherwise wait [app.config.downloadCheckInterval] seconds
+   * otherwise wait [downloadInterval] seconds
+   *
+   * @return [Duration] delay
    */
   private fun getDelay(): Duration {
     return if (dataList.isNotEmpty()) {
@@ -295,32 +334,25 @@ class StreamerDownloadManager(
   }
 
   private suspend fun stop() {
-    isCancelled = true
+    isCancelled.value = true
     plugin.stopDownload()
   }
 
   suspend fun cancel() {
     logger.info("Cancelling download for ${streamer.name}, isDownloading : $isDownloading")
-    if (isDownloading) {
-      stop()
-    } else {
-      isCancelled = true
-      cancelScope()
-      logger.info("Download cancelled for ${streamer.name}")
-    }
+    isCancelled.value = true
   }
 
-  private fun cancelScope() {
-    scope.cancel("Download cancelled")
-  }
 
   private suspend fun bindOnStreamingEndActions(streamer: Streamer, streamDataList: List<StreamData>) {
-    val actions = streamer.templateStreamer?.downloadConfig?.onStreamingFinished ?: streamer.downloadConfig?.onStreamingFinished
+    val actions =
+      streamer.templateStreamer?.downloadConfig?.onStreamingFinished ?: streamer.downloadConfig?.onStreamingFinished
     actions?.let {
       onRunningActions(streamDataList, it)
     } ?: run {
       // check if on parted download is also empty
-      val partedActions = streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
+      val partedActions =
+        streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
       if (partedActions.isNullOrEmpty()) {
         // delete files if both onStreamFinished and onPartedDownload are empty
         if (app.config.deleteFilesAfterUpload) {
@@ -331,7 +363,8 @@ class StreamerDownloadManager(
   }
 
   private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
-    val actions = streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
+    val actions =
+      streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
     actions?.let {
       onRunningActions(listOf(streamData), it)
     }
@@ -341,11 +374,11 @@ class StreamerDownloadManager(
     this.onRunningActions = onRunningActions
   }
 
-  fun onAvatarUpdate(avatarUpdateCallback: suspend (id: Long, avatarUrl: String) -> Unit) {
+  fun onAvatarUpdate(avatarUpdateCallback: (id: Long, avatarUrl: String) -> Unit) {
     this.avatarUpdateCallback = avatarUpdateCallback
   }
 
-  fun onDescriptionUpdate(onDescriptionUpdateCallback: suspend (id: Long, description: String) -> Unit) {
+  fun onDescriptionUpdate(onDescriptionUpdateCallback: (id: Long, description: String) -> Unit) {
     this.onDescriptionUpdateCallback = onDescriptionUpdateCallback
   }
 

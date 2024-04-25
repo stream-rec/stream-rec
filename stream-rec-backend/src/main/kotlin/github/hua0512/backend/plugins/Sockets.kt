@@ -13,16 +13,26 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ClosedSendChannelException
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.Json
 import java.time.Duration
 
 
 val heartBeatArray = byteArrayOf(0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte())
 
+
+private fun Frame.Binary.isHeartBeat(): Boolean {
+  return data.contentEquals(heartBeatArray)
+}
+
+private fun CoroutineScope.createTimeoutJob(session: WebSocketSession): Job {
+  return launch {
+    delay(55000)
+    session.close(CloseReason(CloseReason.Codes.NORMAL, "Client timeout"))
+    // cancel the parent job
+    throw CancellationException("Client timeout")
+  }
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Application.configureSockets(json: Json) {
@@ -34,70 +44,81 @@ fun Application.configureSockets(json: Json) {
   }
   routing {
     webSocketRaw("/live/update") {
-      val isClosed = CompletableDeferred<Unit>()
       try {
-        var timeOutJob = launch {
-          delay(55000)
-          isClosed.complete(Unit)
-          close(CloseReason(CloseReason.Codes.NORMAL, "Client timeout"))
-        }
         // collect ws response...
-        launch {
-          for (frame in incoming) {
-            if (frame is Frame.Text) {
-              val text = frame.readText()
-              if (text.equals("bye", ignoreCase = true)) {
-                close(CloseReason(CloseReason.Codes.NORMAL, "Client said BYE"))
-              }
-            } else if (frame is Frame.Binary) {
-              // check if it's a heart beat
-              if (frame.data.contentEquals(heartBeatArray)) {
-                timeOutJob.cancel()
-                timeOutJob = launch {
-                  delay(55000)
-                  isClosed.complete(Unit)
-                  close(CloseReason(CloseReason.Codes.NORMAL, "Client timeout"))
+        var timeOutJob = createTimeoutJob(this)
+
+        incoming.receiveAsFlow()
+          .onEach { frame ->
+            when (frame) {
+              is Frame.Text -> {
+                val text = frame.readText()
+                if (text.equals("bye", ignoreCase = true)) {
+                  close(CloseReason(CloseReason.Codes.NORMAL, "Client said BYE"))
+                  return@onEach
                 }
-                send(Frame.Binary(true, heartBeatArray))
+              }
+
+              is Frame.Binary -> {
+                // check if it's a heart beat
+                if (frame.isHeartBeat()) {
+                  timeOutJob.cancel()
+                  timeOutJob = createTimeoutJob(this@webSocketRaw)
+                  send(Frame.Binary(true, heartBeatArray))
+                }
+              }
+
+              else -> {
+                // do nothing
               }
             }
-          }
-        }
+          }.launchIn(this)
+
 
         launch {
           EventCenter.events.filter {
             it is StreamerEvent
-          }.collect { event ->
-            send(Frame.Text(json.encodeToString(StreamerEvent.serializer(), event as StreamerEvent)))
-          }
+          }.onEach {
+            // check if this websocket is still open
+            if (timeOutJob.isCompleted || !this.isActive) {
+              cancel("Client timeout")
+              return@onEach
+            }
+            send(Frame.Text(json.encodeToString(StreamerEvent.serializer(), it as StreamerEvent)))
+          }.collect()
         }
+
+
         // collect events from event center
         // if a same event from a same url is received within 1 second, ignore it
         // otherwise, send it to client
         val lastUpdate = mutableMapOf<String, Long>()
-        EventCenter.events.filter {
-          it is DownloadStateUpdate
-        }.flatMapConcat { update ->
-          val event = update as DownloadStateUpdate
-          val url = event.url
-          val last = lastUpdate[url]
-          val now = System.currentTimeMillis()
-          if (last == null || now - last > 1000) {
-            lastUpdate[url] = now
-            flowOf(event)
-          } else {
-            emptyFlow()
-          }
-        }.collect { event ->
-          // check if this websocket is still open
-          if (isClosed.isCompleted) {
-            return@collect
-          }
-          send(Frame.Text(json.encodeToString(DownloadStateUpdate.serializer(), event)))
-        }
-        lastUpdate.clear()
+
+        launch {
+          EventCenter.events.filter {
+            it is DownloadStateUpdate
+          }.flatMapConcat { update ->
+            val event = update as DownloadStateUpdate
+            val url = event.url
+            val last = lastUpdate[url]
+            val now = System.currentTimeMillis()
+            if (last == null || now - last > 1000) {
+              lastUpdate[url] = now
+              flowOf(event)
+            } else {
+              emptyFlow()
+            }
+          }.onEach {
+            // check if this websocket is still open and active
+            if (timeOutJob.isCompleted || !this.isActive) {
+              cancel("Client timeout")
+              return@onEach
+            }
+            send(Frame.Text(json.encodeToString(DownloadStateUpdate.serializer(), it)))
+          }.collect()
+        }.join()
       } catch (e: CancellationException) {
-        // ignore
+        // client timeout
       } catch (e: ClosedSendChannelException) {
         logger.debug("onClose: ", e)
       } catch (e: ClosedReceiveChannelException) {

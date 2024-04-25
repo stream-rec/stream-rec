@@ -75,7 +75,7 @@ class DownloadService(
   }
 
   private val taskJobs = mutableMapOf<Streamer, Job?>()
-  private val plugins = mutableMapOf<Streamer, StreamerDownloadManager>()
+  private val managers = mutableMapOf<Streamer, StreamerDownloadManager>()
 
   suspend fun run() = coroutineScope {
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
@@ -146,58 +146,62 @@ class DownloadService(
   }
 
 
-  private suspend fun downloadStreamer(streamer: Streamer) {
+  private suspend fun downloadStreamer(streamer: Streamer) = supervisorScope {
     val plugin = try {
       getPlatformDownloader(streamer.platform, streamer.url)
     } catch (e: Exception) {
       logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
       EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
-      return
+      return@supervisorScope
     }
 
+    val streamerDownload = StreamerDownloadManager(
+      app,
+      streamer,
+      plugin,
+      downloadSemaphore
+    ).apply {
+      onLiveStatusUpdate { id, isLive ->
+        repo.updateStreamerLiveStatus(id, isLive)
+      }
 
-    val streamerScope = supervisorScope {
-      val streamerDownload = StreamerDownloadManager(
-        this,
-        app,
-        streamer,
-        plugin,
-        downloadSemaphore
-      ).apply {
-        onLiveStatusUpdate { id, isLive ->
-          repo.updateStreamerLiveStatus(id, isLive)
-        }
+      onLastLiveTimeUpdate { id, lastLiveTime ->
+        repo.updateStreamerLastLiveTime(id, lastLiveTime)
+      }
 
-        onLastLiveTimeUpdate { id, lastLiveTime ->
-          repo.updateStreamerLastLiveTime(id, lastLiveTime)
-        }
+      onCheckLastLiveTime { id, lastLiveTime, now ->
+        repo.shouldUpdateStreamerLastLiveTime(id, lastLiveTime, now)
+      }
+      onSavedToDb {
+        streamDataRepository.saveStreamData(it)
+      }
 
-        onCheckLastLiveTime { id, lastLiveTime, now ->
-          repo.shouldUpdateStreamerLastLiveTime(id, lastLiveTime, now)
-        }
-        onSavedToDb {
-          streamDataRepository.saveStreamData(it)
-        }
-
-        onDescriptionUpdate { id, description ->
+      onDescriptionUpdate { id, description ->
+        launch {
           repo.updateStreamerStreamTitle(id, description)
         }
+      }
 
-        onAvatarUpdate { id, avatarUrl ->
+      onAvatarUpdate { id, avatarUrl ->
+        launch {
           repo.updateStreamerAvatar(id, avatarUrl)
         }
-
-        onRunningActions { data, actions ->
-          actionService.runActions(data, actions)
-        }
-
-        init()
       }
-      plugins[streamer] = streamerDownload
-      streamerDownload.start()
-      coroutineContext[Job]?.join()
+
+      onRunningActions { data, actions ->
+        actionService.runActions(data, actions)
+      }
+
+      init()
     }
-    logger.info("${streamer.name}, ${streamer.url} job finished")
+    managers[streamer] = streamerDownload
+    try {
+      streamerDownload.start()
+      // wait for cancellation
+      awaitCancellation()
+    } finally {
+      logger.info("${streamer.name}, ${streamer.url} job finished")
+    }
   }
 
 
@@ -235,7 +239,7 @@ class DownloadService(
    */
   private suspend fun cancelJob(streamer: Streamer, reason: String = ""): Streamer {
     // stop the download
-    plugins[streamer]?.cancel()
+    managers[streamer]?.cancel()
 //    // await the job to finish
     taskJobs[streamer]?.join()
     // cancel the job
@@ -252,7 +256,7 @@ class DownloadService(
       )
     }
     taskJobs.remove(streamer)
-    plugins.remove(streamer)
+    managers.remove(streamer)
     return streamer
   }
 }

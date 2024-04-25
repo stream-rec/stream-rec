@@ -57,34 +57,33 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
     // ffmpeg running commands
     val cmds = buildFFMpegCmd(headers, cookies, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, downloadFilePath)
     val streamer = streamData!!.streamer
-    return withIOContext {
-      logger.info("(${streamer.name}) Starting download using ffmpeg...")
-      onDownloadStarted()
-      // last size of the file
-      var lastSize = 0L
-      val exitCode =
-        executeProcess(App.ffmpegPath, *cmds, stdout = Redirect.CAPTURE, stderr = Redirect.CAPTURE, destroyForcibly = true, getOutputStream = {
-          ous = it
-        }, getProcess = {
-          ffmpegProcess = it
-        }) { line ->
-          processFFmpegOutputLine(line, streamer.name, lastSize) { size, diff, bitrate ->
-            lastSize = size
-            onDownloadProgress(diff, bitrate)
-          }
+
+    logger.info("(${streamer.name}) Starting download using ffmpeg...")
+    onDownloadStarted()
+    // last size of the file
+    var lastSize = 0L
+    val exitCode =
+      executeProcess(App.ffmpegPath, *cmds, stdout = Redirect.CAPTURE, stderr = Redirect.CAPTURE, destroyForcibly = true, getOutputStream = {
+        ous = it
+      }, getProcess = {
+        ffmpegProcess = it
+      }) { line ->
+        processFFmpegOutputLine(line, streamer.name, lastSize) { size, diff, bitrate ->
+          lastSize = size
+          onDownloadProgress(diff, bitrate)
         }
-      ffmpegProcess = null
-      if (exitCode != 0) {
-        logger.error("(${streamer.name}) download failed, exit code: $exitCode")
-        null
-      } else {
-        // case when download is successful (exit code is 0)
-        streamData!!.copy(
-          dateStart = startTime.epochSeconds,
-          dateEnd = Clock.System.now().epochSeconds,
-          outputFilePath = downloadFilePath,
-        )
       }
+    ffmpegProcess = null
+    return if (exitCode != 0) {
+      logger.error("(${streamer.name}) download failed, exit code: $exitCode")
+      null
+    } else {
+      // case when download is successful (exit code is 0)
+      streamData!!.copy(
+        dateStart = startTime.epochSeconds,
+        dateEnd = Clock.System.now().epochSeconds,
+        outputFilePath = downloadFilePath,
+      )
     }
   }
 
