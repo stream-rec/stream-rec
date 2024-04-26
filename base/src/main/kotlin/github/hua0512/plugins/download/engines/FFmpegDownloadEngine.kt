@@ -91,6 +91,11 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
     // stop ffmpeg process by writing 'q' to the output stream
     withIOContext {
       ous?.apply {
+        // check if the process is still running
+        if (ffmpegProcess?.isAlive == false) {
+          logger.info("FFmpeg process is not running")
+          return@withIOContext
+        }
         logger.info("(${streamData!!.streamer.name}) Stopping ffmpeg process...")
         write("q\n".toByteArray())
         flush()

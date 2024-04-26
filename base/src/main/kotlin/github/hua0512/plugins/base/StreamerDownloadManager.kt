@@ -286,10 +286,11 @@ class StreamerDownloadManager(
         isCancelled.collect {
           if (it) {
             // await for the download to finish
-            stop()
+            val result = stop()
+            logger.info("${streamer.name} download stopped with result : $result")
             if (!isDownloading) {
               // break the loop if download is not in progress
-              logger.info("Download not in progress, cancelling download for ${streamer.name}")
+              logger.info("${streamer.name} download canceled, not in progress")
               this@supervisorScope.cancel("Download cancelled")
             }
           }
