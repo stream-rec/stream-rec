@@ -32,7 +32,6 @@ import github.hua0512.utils.withIOContext
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.http.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.datetime.Clock
@@ -87,5 +86,9 @@ class NativeDownloadEngine(val client: HttpClient) : BaseDownloadEngine() {
       logger.error("Error downloading stream", e)
       return null
     }
+  }
+
+  override suspend fun stopDownload(): Boolean {
+    TODO("Not yet implemented")
   }
 }

@@ -30,9 +30,11 @@ import github.hua0512.app.App
 import github.hua0512.data.stream.StreamData
 import github.hua0512.logger
 import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlin.coroutines.coroutineContext
 
 /**
  * Streamlink download engine for downloading streams using streamlink and ffmpeg
@@ -40,6 +42,9 @@ import kotlinx.datetime.Clock
  * @date : 2024/3/20 19:56
  */
 class StreamlinkDownloadEngine() : BaseDownloadEngine() {
+
+  private var streamlinkProcess: Process? = null
+  private var ffmpegProcess: Process? = null
 
   private fun ensureHlsUrl(url: String): String {
     return if (url.contains("m3u8").not()) {
@@ -82,6 +87,8 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
       redirectOutput(ProcessBuilder.Redirect.INHERIT)
     }
     val streamer = streamData!!.streamer
+
+    val job = coroutineContext[Job.Key]
     return try {
       withIOContext {
         coroutineScope {
@@ -93,11 +100,14 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
               )
             )
           }
-          val streamLinkProcess = pipeList[0]
-          val ffmpegProcess = pipeList[1]
+          streamlinkProcess = pipeList[0]
+          ffmpegProcess = pipeList[1]
+          job?.invokeOnCompletion {
+            streamlinkProcess?.destroy()
+          }
           // collect streamlink output
           launch {
-            streamLinkProcess.errorStream.bufferedReader().forEachLine {
+            streamlinkProcess!!.errorStream.bufferedReader().forEachLine {
               // search for opening bracket
               if (it.contains("Opening")) {
                 onDownloadStarted()
@@ -108,7 +118,7 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
           // collect ffmpeg output
           launch {
             var downloaded = 0L
-            ffmpegProcess.errorStream.bufferedReader().forEachLine {
+            ffmpegProcess!!.errorStream.bufferedReader().forEachLine {
               processFFmpegOutputLine(it, streamer = streamer.name, downloaded) { lastSize, diff, bitrate ->
                 downloaded = lastSize
                 onDownloadProgress(diff, bitrate)
@@ -117,9 +127,7 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
           }
 
           // wait for ffmpeg process to finish
-          val exitCode = ffmpegProcess.waitFor()
-          streamLinkProcess.destroy()
-          streamLinkProcess.waitFor()
+          val exitCode = ffmpegProcess!!.waitFor()
           if (exitCode == 0) {
             streamData!!.copy(
               dateStart = startTime.epochSeconds,
@@ -136,6 +144,30 @@ class StreamlinkDownloadEngine() : BaseDownloadEngine() {
       e.printStackTrace()
       logger.error("Download failed: ${e.message}")
       null
+    } finally {
+      streamlinkProcess?.apply {
+        destroy()
+        waitFor()
+      }
+      ffmpegProcess?.apply {
+        destroy()
+        waitFor()
+      }
+      streamlinkProcess = null
+      ffmpegProcess = null
     }
+  }
+
+  override suspend fun stopDownload(): Boolean {
+    streamlinkProcess?.destroy()
+    logger.info("(${streamData!!.streamer.name}) streamlink process stopped")
+    val code = withIOContext {
+      streamlinkProcess?.waitFor()
+    }
+    if (code != 0) {
+      logger.error("streamlink process exited with code $code")
+      return false
+    }
+    return true
   }
 }

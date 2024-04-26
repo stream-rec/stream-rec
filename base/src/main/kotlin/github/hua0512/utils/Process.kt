@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 import java.nio.charset.Charset
 
 
@@ -52,6 +53,11 @@ suspend fun executeProcess(
   directory: File? = null,
   /** Determine if process should be destroyed forcibly on job cancellation. */
   destroyForcibly: Boolean = false,
+  /**
+   * Callback to get the output stream of the process. This is useful for interactive processes
+   */
+  getOutputStream: (OutputStream) -> Unit = {},
+  getProcess: (Process) -> Unit = {},
   /** Consume without delay all streams configured with [Redirect.CAPTURE]. */
   consumer: suspend (String) -> Unit = {},
 ): Int {
@@ -72,6 +78,7 @@ suspend fun executeProcess(
         env?.let { environment().putAll(it) }
       }.start()
 
+      getProcess(process)
 
       // Handles async consumptions before the blocking output handling.
       if (stdout is Redirect.Consume) {
@@ -104,6 +111,7 @@ suspend fun executeProcess(
           process.outputStream.use { handler(it) }
         }
       }
+      getOutputStream(process.outputStream)
       try {
         awaitAll(output, input)
         runInterruptible { process.waitFor() }

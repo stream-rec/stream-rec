@@ -45,7 +45,6 @@ import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
-import github.hua0512.services.DownloadService
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import org.slf4j.Logger
@@ -62,71 +61,76 @@ class Application {
     }
 
     @JvmStatic
-    fun main(args: Array<String>) {
-      runBlocking {
-        var server: NettyApplicationEngine? = null
-        val appComponent: AppComponent = DaggerAppComponent.create()
-        val app = appComponent.getAppConfig()
-        val appConfigRepository = appComponent.getAppConfigRepository()
-        val downloadService = appComponent.getDownloadService()
-        val uploadService = appComponent.getUploadService()
-
-        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob()).apply {
-          val config = withContext(Dispatchers.IO) {
-            initAppConfig(appConfigRepository, app, downloadService)
-          }
-          launch(Dispatchers.IO) {
-            appConfigRepository.streamAppConfig()
-              .collect {
-                val previous = app.config
-                app.updateConfig(it)
-                // update download semaphore
-                if (previous.maxConcurrentDownloads != it.maxConcurrentDownloads) {
-                  downloadService.updateMaxConcurrentDownloads(it.maxConcurrentDownloads)
-                }
-              }
-          }
-          launch {
-            downloadService.run()
-          }
-          launch(Dispatchers.IO) {
-            uploadService.run()
-          }
-
-          launch {
-            EventCenter.run()
-          }
-
-          launch {
-            // start server
-            server = backendServer(
-              json = appComponent.getJson(),
-              appComponent.getUserRepo(),
-              appComponent.getAppConfigRepository(),
-              appComponent.getStreamerRepo(),
-              appComponent.getStreamDataRepo(),
-              appComponent.getStatsRepository(),
-              appComponent.getUploadRepo(),
-            ).apply {
-              start()
-            }
-          }
-
-        }
-
+    fun main(args: Array<String>): Unit = runBlocking {
+      var server: NettyApplicationEngine? = null
+      val appComponent: AppComponent = DaggerAppComponent.create()
+      val app = appComponent.getAppConfig()
+      try {
+        // start the app
+        // add shutdown hook
         Runtime.getRuntime().addShutdownHook(Thread {
-          logger.info("Shutting down...")
+          logger.info("Stream-rec shutting down...")
           server?.stop(1000, 1000)
           appComponent.getSqlDriver().closeDriver()
           app.releaseAll()
           EventCenter.stop()
-          scope.cancel("Application is shutting down")
-          logger.info("Shutdown complete")
+          cancel()
         })
-
-        // suspend until scope is cancelled
-        scope.coroutineContext[Job]!!.join()
+        initComponents(appComponent, app, initializeServer = { server = it })
+        awaitCancellation()
+      } finally {
+        logger.info("Stream-rec is stopped")
       }
+    }
+
+    private suspend fun initComponents(
+      appComponent: AppComponent,
+      app: App,
+      initializeServer: (NettyApplicationEngine) -> Unit = {},
+    ) = supervisorScope {
+      val appConfigRepository = appComponent.getAppConfigRepository()
+      val downloadService = appComponent.getDownloadService()
+      val uploadService = appComponent.getUploadService()
+
+      // await for app config to be loaded
+      withContext(Dispatchers.IO) {
+        initAppConfig(appConfigRepository, app)
+      }
+      // launch a job to listen for app config changes
+      launch(Dispatchers.IO) {
+        appConfigRepository.streamAppConfig()
+          .collect {
+            app.updateConfig(it)
+            // TODO : find a way to update download semaphore dynamically
+          }
+      }
+      // start download and upload services
+      launch {
+        downloadService.run()
+      }
+      launch(Dispatchers.IO) {
+        uploadService.run()
+      }
+      // start a job to listen for events
+      launch {
+        EventCenter.run()
+      }
+      // start the backend server
+      launch {
+        val server = backendServer(
+          json = appComponent.getJson(),
+          appComponent.getUserRepo(),
+          appComponent.getAppConfigRepository(),
+          appComponent.getStreamerRepo(),
+          appComponent.getStreamDataRepo(),
+          appComponent.getStatsRepository(),
+          appComponent.getUploadRepo(),
+        ).apply {
+          start()
+          initializeServer(this)
+        }
+      }
+      coroutineContext[Job]!!.join()
     }
 
     private fun initLogger() {
@@ -189,10 +193,10 @@ class Application {
       }
     }
 
-    private suspend fun initAppConfig(repo: AppConfigRepo, app: App, downloadService: DownloadService): AppConfig {
+    private suspend fun initAppConfig(repo: AppConfigRepo, app: App): AppConfig {
       return repo.getAppConfig().also {
         app.updateConfig(it)
-        downloadService.updateMaxConcurrentDownloads(it.maxConcurrentDownloads)
+        // TODO : find a way to update download semaphore dynamically
       }
     }
 
