@@ -169,9 +169,6 @@ class DownloadService(
         repo.updateStreamerLastLiveTime(id, lastLiveTime)
       }
 
-      onCheckLastLiveTime { id, lastLiveTime, now ->
-        repo.shouldUpdateStreamerLastLiveTime(id, lastLiveTime, now)
-      }
       onSavedToDb {
         streamDataRepository.saveStreamData(it)
       }

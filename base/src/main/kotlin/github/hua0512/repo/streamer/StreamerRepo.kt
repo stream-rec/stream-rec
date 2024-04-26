@@ -57,8 +57,6 @@ interface StreamerRepo {
   suspend fun updateStreamerLiveStatus(id: Long, status: Boolean)
 
   suspend fun updateStreamerStreamTitle(id: Long, streamTitle: String?)
-
-  suspend fun shouldUpdateStreamerLastLiveTime(id: Long, lastLiveTime: Long, currentLiveTime: Long): Boolean
   suspend fun updateStreamerLastLiveTime(id: Long, lastLiveTime: Long)
   suspend fun updateStreamerAvatar(id: Long, avatar: String?)
 }

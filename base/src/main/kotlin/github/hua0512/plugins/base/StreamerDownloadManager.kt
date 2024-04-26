@@ -112,8 +112,6 @@ class StreamerDownloadManager(
 
   private var updateLiveStatusCallback: suspend (id: Long, isLive: Boolean) -> Unit = { _, _ -> }
   private var updateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long) -> Unit = { _, _ -> }
-  private var checkShouldUpdateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long, now: Long) -> Boolean =
-    { _, _, _ -> false }
   private var onSavedToDb: suspend (stream: StreamData) -> Unit = {}
   private var avatarUpdateCallback: (id: Long, avatarUrl: String) -> Unit = { _, _ -> }
   private var onDescriptionUpdateCallback: (id: Long, description: String) -> Unit = { _, _ -> }
@@ -157,6 +155,8 @@ class StreamerDownloadManager(
         dataList.toList()
       )
     )
+    // update last live time
+    updateLastLiveTime()
     // call onStreamingFinished callback with the copy of the list
     launch {
       bindOnStreamingEndActions(streamer, dataList.toList())
@@ -246,10 +246,8 @@ class StreamerDownloadManager(
 
   private suspend fun updateLastLiveTime() {
     val now = Clock.System.now()
-    if (checkShouldUpdateStreamerLastLiveTime(streamer.id, streamer.lastLiveTime ?: 0, now.epochSeconds)) {
-      updateStreamerLastLiveTime(streamer.id, now.epochSeconds)
-      streamer.lastLiveTime = now.epochSeconds
-    }
+    updateStreamerLastLiveTime(streamer.id, now.epochSeconds)
+    streamer.lastLiveTime = now.epochSeconds
   }
 
   private suspend fun saveStreamData(stream: StreamData) = coroutineScope {
@@ -387,10 +385,6 @@ class StreamerDownloadManager(
 
   fun onLastLiveTimeUpdate(updateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long) -> Unit) {
     this.updateStreamerLastLiveTime = updateStreamerLastLiveTime
-  }
-
-  fun onCheckLastLiveTime(checkShouldUpdateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long, now: Long) -> Boolean) {
-    this.checkShouldUpdateStreamerLastLiveTime = checkShouldUpdateStreamerLastLiveTime
   }
 
   fun onSavedToDb(onSavedToDb: suspend (stream: StreamData) -> Unit) {
