@@ -1,5 +1,3 @@
-@file:OptIn(FlowPreview::class)
-
 package github.hua0512.backend.plugins
 
 import github.hua0512.data.event.DownloadEvent.DownloadStateUpdate

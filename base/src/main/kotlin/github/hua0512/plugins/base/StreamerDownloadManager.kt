@@ -36,7 +36,6 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.deleteFile
-import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Semaphore
@@ -253,7 +252,7 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun saveStreamData(stream: StreamData) = withIOContext {
+  private suspend fun saveStreamData(stream: StreamData) = coroutineScope {
     try {
       onSavedToDb(stream)
       logger.debug("saved to db : {}", stream)
