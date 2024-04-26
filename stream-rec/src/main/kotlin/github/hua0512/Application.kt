@@ -108,9 +108,6 @@ class Application {
       launch {
         downloadService.run()
       }
-      launch(Dispatchers.IO) {
-        uploadService.run()
-      }
       // start a job to listen for events
       launch {
         EventCenter.run()
