@@ -42,6 +42,12 @@ enum class DouyuQuality(val rate: Int) {
   // 原画1080P30/60 码率比4M高，每个主播不一样
   ORIGIN(0),
 
+  /**
+   * ULTRA HIGH DEFINITION quality, capped at 8000 bitrate
+   * 蓝光8M
+   */
+  UHD_8M(8),
+
   // ULTRA HIGH DEFINITION quality, capped at 4000 bitrate
   // 蓝光4M
   UHD(4),
