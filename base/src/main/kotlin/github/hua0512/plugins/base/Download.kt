@@ -349,10 +349,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
     return@supervisorScope streamData
   }
 
-  suspend fun stopDownload() {
-    if (::engine.isInitialized) {
+  suspend fun stopDownload(): Boolean {
+    return if (::engine.isInitialized) {
       engine.stopDownload()
-    }
+    } else true
   }
 
   private fun deleteOutputs(outputPath: Path, isDanmuEnabled: Boolean, danmuPath: Path) {

@@ -332,9 +332,9 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun stop() {
+  private suspend fun stop(): Boolean {
     isCancelled.value = true
-    plugin.stopDownload()
+    return plugin.stopDownload()
   }
 
   suspend fun cancel() {
