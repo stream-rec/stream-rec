@@ -134,7 +134,7 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun handleMaxRetry() = supervisorScope {
+  private suspend fun handleMaxRetry(scope: CoroutineScope) {
     // reset retry count
     retryCount = 0
     // update db with the new isLive value
@@ -142,7 +142,7 @@ class StreamerDownloadManager(
     streamer.isLive = false
     // stream is not live or without data
     if (dataList.isEmpty()) {
-      return@supervisorScope
+      return
     }
     // stream finished with data
     logger.info("${streamer.name} stream finished")
@@ -158,7 +158,7 @@ class StreamerDownloadManager(
     // update last live time
     updateLastLiveTime()
     // call onStreamingFinished callback with the copy of the list
-    launch {
+    scope.launch {
       bindOnStreamingEndActions(streamer, dataList.toList())
     }
     dataList.clear()
@@ -180,7 +180,7 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun handleLiveStreamer() {
+  private suspend fun handleLiveStreamer(scope: CoroutineScope) {
     // save streamer to the database with the new isLive value
     if (!streamer.isLive) {
       EventCenter.sendEvent(
@@ -205,6 +205,10 @@ class StreamerDownloadManager(
       }
       // save the stream data to the database
       saveStreamData(stream)
+      // execute post parted download actions
+      scope.launch {
+        executePostActions(streamer, stream)
+      }
       if (!isCancelled.value) delay(platformRetryDelay)
       else break
     }
@@ -250,7 +254,7 @@ class StreamerDownloadManager(
     streamer.lastLiveTime = now.epochSeconds
   }
 
-  private suspend fun saveStreamData(stream: StreamData) = coroutineScope {
+  private suspend fun saveStreamData(stream: StreamData) {
     try {
       onSavedToDb(stream)
       logger.debug("saved to db : {}", stream)
@@ -259,16 +263,15 @@ class StreamerDownloadManager(
     }
     dataList.add(stream)
     logger.info("${streamer.name} downloaded : $stream}")
-    // execute post parted download actions
-    launch {
-      try {
-        executePostPartedDownloadActions(streamer, stream)
-      } catch (e: Exception) {
-        logger.error("${streamer.name} error while executing post parted download actions : ${e.message}")
-      }
-    }
   }
 
+  private suspend fun executePostActions(streamer: Streamer, streamData: StreamData) {
+    try {
+      executePostPartedDownloadActions(streamer, streamData)
+    } catch (e: Exception) {
+      logger.error("${streamer.name} error while executing post parted download actions : ${e.message}")
+    }
+  }
 
   private fun handleOfflineStreamer() {
     if (dataList.isNotEmpty()) {
@@ -277,7 +280,6 @@ class StreamerDownloadManager(
       logger.info("${streamer.name} is not live")
     }
   }
-
 
   suspend fun start(): Unit = supervisorScope {
     // download the stream
@@ -298,13 +300,13 @@ class StreamerDownloadManager(
       }
 
       if (retryCount >= maxRetry) {
-        handleMaxRetry()
+        handleMaxRetry(this)
         continue
       }
       val isLive = checkStreamerLiveStatus()
 
       if (isLive) {
-        handleLiveStreamer()
+        handleLiveStreamer(this)
       } else {
         handleOfflineStreamer()
       }
