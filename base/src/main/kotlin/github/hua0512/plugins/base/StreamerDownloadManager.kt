@@ -283,22 +283,21 @@ class StreamerDownloadManager(
 
   suspend fun start(): Unit = supervisorScope {
     // download the stream
-    while (!isCancelled.value) {
-      launch {
-        isCancelled.collect {
-          if (it) {
-            // await for the download to finish
-            val result = stop()
-            logger.info("${streamer.name} download stopped with result : $result")
-            if (!isDownloading) {
-              // break the loop if download is not in progress
-              logger.info("${streamer.name} download canceled, not in progress")
-              this@supervisorScope.cancel("Download cancelled")
-            }
+    launch {
+      isCancelled.collect {
+        if (it) {
+          // await for the download to finish
+          val result = stop()
+          logger.info("${streamer.name} download stopped with result : $result")
+          if (!isDownloading) {
+            // break the loop if download is not in progress
+            logger.info("${streamer.name} download canceled, not in progress")
+            this@supervisorScope.cancel("Download cancelled")
           }
         }
       }
-
+    }
+    while (!isCancelled.value) {
       if (retryCount >= maxRetry) {
         handleMaxRetry(this)
         continue
