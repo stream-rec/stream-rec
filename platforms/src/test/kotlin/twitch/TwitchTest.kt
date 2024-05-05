@@ -41,7 +41,7 @@ import kotlin.time.Duration
  */
 class TwitchTest : BaseTest() {
 
-  override val testUrl: String = "https://www.twitch.tv/valorant_americas"
+  override val testUrl: String = "https://www.twitch.tv/aspaszin"
 
   @Test
   override fun testLive() = runTest {
@@ -63,11 +63,11 @@ class TwitchTest : BaseTest() {
   @Test
   fun testDanmu() = runTest(timeout = Duration.INFINITE) {
     val danmu = TwitchDanmu(app).apply {
-      channel = "valorant_americas"
+      channel = "aspaszin"
       enableWrite = false
       filePath = "twitch_danmu.txt"
     }
-    val init = danmu.init(Streamer("mira004", testUrl))
+    val init = danmu.init(Streamer("aspaszin", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }
