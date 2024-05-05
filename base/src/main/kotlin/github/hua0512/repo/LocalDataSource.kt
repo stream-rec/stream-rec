@@ -51,6 +51,11 @@ interface LocalDataSource {
       return envKey ?: "n6hCG9eSwj6foa3MhubtBBJbF1rxYt2rUlC2jOllrg1zquvmU9Fg6auCDfZy3l83"
     }
 
+    fun isFirstRun(): Boolean {
+      val dbPath = getDefaultPath()
+      return !Files.exists(Path(dbPath))
+    }
+
     private fun getDbVersionPath(): String {
       // get db version from file
       val dbPath = getDefaultPath()

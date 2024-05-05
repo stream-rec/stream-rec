@@ -78,18 +78,19 @@ class DatabaseModule {
   fun provideDatabase(sqlDriver: SqlDriver): StreamRecDatabase {
     StreamRecDatabase.Schema.create(sqlDriver)
     val dbVersion = LocalDataSource.getDbVersion()
-    // if db version is 0, write the current version, this is a new install
-    if (dbVersion == 0L) {
-      LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
-    }
-    try {
-      // check db version and migrate if needed
-      if (dbVersion < StreamRecDatabase.Schema.version) {
-        StreamRecDatabase.Schema.migrate(sqlDriver, dbVersion, StreamRecDatabase.Schema.version)
-        LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
+    // if not first run, check db version and migrate if needed
+    if (!LocalDataSource.isFirstRun()) {
+      try {
+        if (dbVersion < StreamRecDatabase.Schema.version) {
+          StreamRecDatabase.Schema.migrate(sqlDriver, dbVersion, StreamRecDatabase.Schema.version)
+          LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
+        }
+      } catch (e: Exception) {
+        logger.error("Failed to migrate database", e)
       }
-    } catch (e: Exception) {
-      logger.error("Failed to migrate database", e)
+    } else {
+      // write db version
+      LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
     }
     return StreamRecDatabase(driver = sqlDriver)
   }
