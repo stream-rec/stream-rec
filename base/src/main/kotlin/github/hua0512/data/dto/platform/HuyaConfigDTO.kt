@@ -24,26 +24,18 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.data.dto.platform
 
 import github.hua0512.data.media.VideoFormat
 
 /**
- * A data class representing the stream information
- * @param url the stream url
- * @param format the stream format
- * @param quality the stream quality
- * @param bitrate the stream bitrate
- * @param priority the stream priority
  * @author hua0512
- * @date : 2024/3/15 20:37
+ * @date : 2024/2/11 19:56
  */
-data class StreamInfo(
-  val url: String,
-  val format: VideoFormat,
-  val quality: String,
-  val bitrate: Long,
-  val priority: Int = 0,
-  val frameRate: Double = 0.0,
-  val extras: Map<String, Any> = emptyMap(),
-)
+interface HuyaConfigDTO {
+
+  val primaryCdn: String?
+  val maxBitRate: Int?
+  val cookies: String?
+  val sourceFormat: VideoFormat?
+}

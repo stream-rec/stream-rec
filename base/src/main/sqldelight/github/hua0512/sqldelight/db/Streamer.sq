@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS app_config(
    deleteFilesAfterUpload INTEGER NOT NULL DEFAULT 1,
    huyaConfig TEXT,
    douyinConfig TEXT,
-   douyuConfig TEXT
+   douyuConfig TEXT,
+   twitchConfig TEXT
 );
 
 -- QUERIES
@@ -57,11 +58,12 @@ upsertAppConfig{
     deleteFilesAfterUpload = :deleteFilesAfterUpload,
     huyaConfig = :huyaConfig,
     douyinConfig = :douyinConfig,
-    douyuConfig = :douyuConfig
+    douyuConfig = :douyuConfig,
+    twitchConfig = :twitchConfig
     WHERE id = :id;
 
-    INSERT OR IGNORE INTO app_config ( id, engine, danmu, outputFolder, outputFileName, outputFileFormat, minPartSize, maxPartSize, maxPartDuration, maxDownloadRetries, downloadRetryDelay, downloadCheckInterval, maxConcurrentDownloads, maxConcurrentUploads, deleteFilesAfterUpload, huyaConfig, douyinConfig, douyuConfig)
-    VALUES ( :id, :engine, :danmu, :outputFolder, :outputFileName, :outputFileFormat, :minPartSize, :maxPartSize, :maxPartDuration, :maxDownloadRetries, :downloadRetryDelay,  :downloadCheckInterval,:maxConcurrentDownloads, :maxConcurrentUploads, :deleteFilesAfterUpload, :huyaConfig, :douyinConfig, :douyuConfig);
+    INSERT OR IGNORE INTO app_config ( id, engine, danmu, outputFolder, outputFileName, outputFileFormat, minPartSize, maxPartSize, maxPartDuration, maxDownloadRetries, downloadRetryDelay, downloadCheckInterval, maxConcurrentDownloads, maxConcurrentUploads, deleteFilesAfterUpload, huyaConfig, douyinConfig, douyuConfig, twitchConfig)
+    VALUES ( :id, :engine, :danmu, :outputFolder, :outputFileName, :outputFileFormat, :minPartSize, :maxPartSize, :maxPartDuration, :maxDownloadRetries, :downloadRetryDelay,  :downloadCheckInterval,:maxConcurrentDownloads, :maxConcurrentUploads, :deleteFilesAfterUpload, :huyaConfig, :douyinConfig, :douyuConfig, :twitchConfig);
     }
 deleteAppConfig : DELETE FROM app_config WHERE id = ?;
 

@@ -26,11 +26,23 @@
 
 package github.hua0512.data.config
 
-import github.hua0512.data.dto.DouyinConfigDTO
-import github.hua0512.data.dto.GlobalPlatformConfig
+import github.hua0512.data.dto.*
+import github.hua0512.data.dto.platform.DouyinConfigDTO
+import github.hua0512.data.dto.platform.DouyuConfigDTO
+import github.hua0512.data.dto.platform.HuyaConfigDTO
+import github.hua0512.data.dto.platform.TwitchConfigDTO
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
+import github.hua0512.data.platform.DouyuQuality
+import github.hua0512.data.platform.DouyuQualitySerializer
+import github.hua0512.data.platform.TwitchQuality
 import kotlinx.serialization.Serializable
+
+/**
+ * Global configuration classes for different platforms
+ * @author hua0512
+ * @date : 2024/5/4 14:45
+ */
 
 @Serializable
 data class DouyinConfigGlobal(
@@ -39,3 +51,30 @@ data class DouyinConfigGlobal(
   override val partedDownloadRetry: Int? = 5,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
 ) : GlobalPlatformConfig, DouyinConfigDTO
+
+@Serializable
+data class DouyuConfigGlobal(
+  override val cdn: String? = "tct-h5",
+  @Serializable(with = DouyuQualitySerializer::class)
+  override val quality: DouyuQuality? = DouyuQuality.ORIGIN,
+  override val cookies: String? = null,
+  override val partedDownloadRetry: Int? = 30,
+) : GlobalPlatformConfig, DouyuConfigDTO
+
+
+@Serializable
+data class HuyaConfigGlobal(
+  override val primaryCdn: String = "AL",
+  override val maxBitRate: Int? = 10000,
+  override val cookies: String? = null,
+  override val partedDownloadRetry: Int? = 15,
+  override val sourceFormat: VideoFormat? = VideoFormat.flv,
+) : GlobalPlatformConfig, HuyaConfigDTO
+
+@Serializable
+data class TwitchConfigGlobal(
+  override val authToken: String = "",
+  override val quality: TwitchQuality = TwitchQuality.Source,
+  override val partedDownloadRetry: Int? = 30,
+  override val cookies: String? = null,
+) : GlobalPlatformConfig, TwitchConfigDTO

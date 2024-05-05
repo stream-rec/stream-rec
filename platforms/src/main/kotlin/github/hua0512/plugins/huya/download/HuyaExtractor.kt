@@ -206,10 +206,11 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
             streams.add(
               StreamInfo(
                 url = url,
-                quality = displayName,
                 format = if (isFlv) VideoFormat.flv else VideoFormat.hls,
-                bitrate = bitrate,
+                quality = displayName,
+                bitrate = bitrate.toLong(),
                 priority = priority,
+                frameRate = 0.0,
                 extras = mapOf("cdn" to cdn)
               )
             )

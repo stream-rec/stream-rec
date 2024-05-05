@@ -24,23 +24,16 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.config
+package github.hua0512.data.dto.platform
 
-import github.hua0512.data.dto.DouyuConfigDTO
-import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.platform.DouyuQuality
-import github.hua0512.data.platform.DouyuQualitySerializer
-import kotlinx.serialization.Serializable
 
 /**
  * @author hua0512
- * @date : 2024/3/22 23:41
+ * @date : 2024/3/22 23:36
  */
-@Serializable
-data class DouyuConfigGlobal(
-  override val cdn: String? = "tct-h5",
-  @Serializable(with = DouyuQualitySerializer::class)
-  override val quality: DouyuQuality? = DouyuQuality.ORIGIN,
-  override val cookies: String? = null,
-  override val partedDownloadRetry: Int? = 30,
-) : GlobalPlatformConfig, DouyuConfigDTO
+interface DouyuConfigDTO {
+  val cdn: String?
+  val quality: DouyuQuality?
+  val cookies: String?
+}

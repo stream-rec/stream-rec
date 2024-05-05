@@ -28,7 +28,6 @@ package github.hua0512.plugins.douyin.download
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat

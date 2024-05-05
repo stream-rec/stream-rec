@@ -133,12 +133,26 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       val stream = streamsData[sdkKey]?.jsonObject ?: return@flatMap emptyList()
       val main = stream["main"]?.jsonObject ?: return@flatMap emptyList()
       val flvInfo = main["flv"]?.jsonPrimitive?.content?.nonEmptyOrNull()?.let {
-        StreamInfo(url = it, format = VideoFormat.flv, quality = name, bitrate = bitrate, extras = mapOf("sdkKey" to sdkKey))
+        StreamInfo(
+          url = it,
+          format = VideoFormat.flv,
+          quality = name,
+          bitrate = bitrate.toLong(),
+          frameRate = 0.0,
+          extras = mapOf("sdkKey" to sdkKey)
+        )
       }
       // hls is not always available
       // hls may have no sound
       val hlsInfo = main["hls"]?.jsonPrimitive?.content?.nonEmptyOrNull()?.let {
-        StreamInfo(url = it, format = VideoFormat.hls, quality = name, bitrate = bitrate, extras = mapOf("sdkKey" to sdkKey))
+        StreamInfo(
+          url = it,
+          format = VideoFormat.hls,
+          quality = name,
+          bitrate = bitrate.toLong(),
+          frameRate = 0.0,
+          extras = mapOf("sdkKey" to sdkKey)
+        )
       }
       listOfNotNull(flvInfo, hlsInfo)
     } ?: emptyList()

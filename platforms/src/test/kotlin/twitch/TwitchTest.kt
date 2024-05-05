@@ -24,18 +24,53 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
+package twitch
 
-import github.hua0512.data.media.VideoFormat
+import BaseTest
+import github.hua0512.data.stream.Streamer
+import github.hua0512.plugins.twitch.danmu.TwitchDanmu
+import github.hua0512.plugins.twitch.download.TwitchExtractor
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.time.Duration
 
 /**
+ * Twitch platform test
  * @author hua0512
- * @date : 2024/2/11 19:56
+ * @date : 2024/4/27 22:05
  */
-interface HuyaConfigDTO {
+class TwitchTest : BaseTest() {
 
-  val primaryCdn: String?
-  val maxBitRate: Int?
-  val cookies: String?
-  val sourceFormat: VideoFormat?
+  override val testUrl: String = "https://www.twitch.tv/valorant_americas"
+
+  @Test
+  override fun testLive() = runTest {
+    val extractor = TwitchExtractor(app.client, app.json, testUrl).apply {
+      match()
+    }
+    val info = extractor.extract()
+    println(info)
+  }
+
+  @Test
+  override fun testRegex() {
+    val regex = TwitchExtractor.URL_REGEX.toRegex()
+    val matchResult = regex.find(testUrl)
+    assert(matchResult != null)
+    assert(matchResult!!.groupValues[1] == "aspaszin")
+  }
+
+  @Test
+  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+    val danmu = TwitchDanmu(app).apply {
+      channel = "valorant_americas"
+      enableWrite = false
+      filePath = "twitch_danmu.txt"
+    }
+    val init = danmu.init(Streamer("mira004", testUrl))
+    if (init) {
+      danmu.fetchDanmu()
+    }
+    assert(init)
+  }
 }

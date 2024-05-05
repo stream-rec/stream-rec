@@ -31,6 +31,7 @@ enum class StreamingPlatform(val id: Int) {
   HUYA(0),
   DOUYIN(1),
   DOUYU(2),
+  TWITCH(3),
   UNKNOWN(Integer.MAX_VALUE);
 
 

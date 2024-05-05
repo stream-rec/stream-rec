@@ -77,6 +77,11 @@ class DatabaseModule {
   @Singleton
   fun provideDatabase(sqlDriver: SqlDriver): StreamRecDatabase {
     StreamRecDatabase.Schema.create(sqlDriver)
+    val dbVersion = LocalDataSource.getDbVersion()
+    if (dbVersion < StreamRecDatabase.Schema.version) {
+      StreamRecDatabase.Schema.migrate(sqlDriver, dbVersion, StreamRecDatabase.Schema.version)
+      LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
+    }
     return StreamRecDatabase(driver = sqlDriver)
   }
 

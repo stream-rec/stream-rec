@@ -1,3 +1,8 @@
+import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
+import kotlinx.serialization.json.Json
+import kotlin.test.Test
+
 /*
  * MIT License
  *
@@ -24,26 +29,23 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
-
-import github.hua0512.data.media.VideoFormat
-
 /**
- * A data class representing the stream information
- * @param url the stream url
- * @param format the stream format
- * @param quality the stream quality
- * @param bitrate the stream bitrate
- * @param priority the stream priority
+ * Base test class
  * @author hua0512
- * @date : 2024/3/15 20:37
+ * @date : 2024/4/27 22:06
  */
-data class StreamInfo(
-  val url: String,
-  val format: VideoFormat,
-  val quality: String,
-  val bitrate: Long,
-  val priority: Int = 0,
-  val frameRate: Double = 0.0,
-  val extras: Map<String, Any> = emptyMap(),
-)
+abstract class BaseTest {
+
+  protected val app = App(Json).apply {
+    updateConfig(AppConfig())
+  }
+
+  abstract val testUrl: String
+
+  @Test
+  abstract fun testLive()
+
+  @Test
+  abstract fun testRegex()
+
+}

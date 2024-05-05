@@ -24,23 +24,16 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.config
+package github.hua0512.data.dto.platform
 
-import github.hua0512.data.dto.GlobalPlatformConfig
-import github.hua0512.data.dto.HuyaConfigDTO
-import github.hua0512.data.media.VideoFormat
-import kotlinx.serialization.Serializable
+import github.hua0512.data.platform.TwitchQuality
 
 /**
- * Huya configuration data class
  * @author hua0512
- * @date : 2024/2/11 13:28
+ * @date : 2024/5/3 21:49
  */
-@Serializable
-data class HuyaConfigGlobal(
-  override val primaryCdn: String = "AL",
-  override val maxBitRate: Int? = 10000,
-  override val cookies: String? = null,
-  override val partedDownloadRetry: Int? = 15,
-  override val sourceFormat: VideoFormat? = VideoFormat.flv,
-) : GlobalPlatformConfig, HuyaConfigDTO
+interface TwitchConfigDTO {
+  val authToken: String?
+  val quality: TwitchQuality?
+  val cookies: String?
+}

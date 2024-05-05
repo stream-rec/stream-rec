@@ -58,8 +58,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @param app app config
  * @author hua0512
  * @date : 2024/2/9 13:31
+ * @property app app config
+ * @property enablePing enable ping pong mechanism
+ * @property manualHeartBeat whether to manually send heart beat
  */
-abstract class Danmu(val app: App, val enablePing: Boolean = false) {
+abstract class Danmu(val app: App, val enablePing: Boolean = false, val manualHeartBeat: Boolean = false) {
 
   companion object {
     @JvmStatic
@@ -238,7 +241,8 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     // make an initial hello
     sendHello(this)
     // launch a coroutine to send heart beat
-    launchHeartBeatJob(this)
+    if (!manualHeartBeat)
+      launchHeartBeatJob(this)
     incoming.receiveAsFlow()
       .onEach { frame ->
         val data = frame.data
@@ -259,7 +263,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
               writeChannel.trySend(danmu.copy(clientTime = danmuInVideoTime))
             }
 
-            else -> logger.error("Invalid danmu data {}", danmu)
+            else -> logger.error("Unsupported danmu data:{}", danmu)
           }
         }
       }
@@ -337,6 +341,8 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     with(session) {
       launch {
         while (true) {
+          // ensure the session is still active
+          if (!isActive) break
           // send heart beat with delay
           send(heartBeatPack)
           logger.trace("$websocketUrl heart beat sent")
