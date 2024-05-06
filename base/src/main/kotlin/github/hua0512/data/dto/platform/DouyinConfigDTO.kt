@@ -24,16 +24,18 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
+package github.hua0512.data.dto.platform
 
-import github.hua0512.data.platform.DouyuQuality
+import github.hua0512.data.media.VideoFormat
+import github.hua0512.data.platform.DouyinQuality
 
 /**
  * @author hua0512
- * @date : 2024/3/22 23:36
+ * @date : 2024/2/11 20:00
  */
-interface DouyuConfigDTO {
-  val cdn: String?
-  val quality: DouyuQuality?
+interface DouyinConfigDTO {
+
+  val quality: DouyinQuality?
+  val sourceFormat: VideoFormat?
   val cookies: String?
 }

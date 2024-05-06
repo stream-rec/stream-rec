@@ -24,23 +24,53 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.config
+package twitch
 
-import github.hua0512.data.dto.GlobalPlatformConfig
-import github.hua0512.data.dto.HuyaConfigDTO
-import github.hua0512.data.media.VideoFormat
-import kotlinx.serialization.Serializable
+import BaseTest
+import github.hua0512.data.stream.Streamer
+import github.hua0512.plugins.twitch.danmu.TwitchDanmu
+import github.hua0512.plugins.twitch.download.TwitchExtractor
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.time.Duration
 
 /**
- * Huya configuration data class
+ * Twitch platform test
  * @author hua0512
- * @date : 2024/2/11 13:28
+ * @date : 2024/4/27 22:05
  */
-@Serializable
-data class HuyaConfigGlobal(
-  override val primaryCdn: String = "AL",
-  override val maxBitRate: Int? = 10000,
-  override val cookies: String? = null,
-  override val partedDownloadRetry: Int? = 15,
-  override val sourceFormat: VideoFormat? = VideoFormat.flv,
-) : GlobalPlatformConfig, HuyaConfigDTO
+class TwitchTest : BaseTest() {
+
+  override val testUrl: String = "https://www.twitch.tv/aspaszin"
+
+  @Test
+  override fun testLive() = runTest {
+    val extractor = TwitchExtractor(app.client, app.json, testUrl).apply {
+      match()
+    }
+    val info = extractor.extract()
+    println(info)
+  }
+
+  @Test
+  override fun testRegex() {
+    val regex = TwitchExtractor.URL_REGEX.toRegex()
+    val matchResult = regex.find(testUrl)
+    assert(matchResult != null)
+    assert(matchResult!!.groupValues[1] == "aspaszin")
+  }
+
+  @Test
+  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+    val danmu = TwitchDanmu(app).apply {
+      channel = "aspaszin"
+      enableWrite = false
+      filePath = "twitch_danmu.txt"
+    }
+    val init = danmu.init(Streamer("aspaszin", testUrl))
+    if (init) {
+      danmu.fetchDanmu()
+    }
+    assert(init)
+  }
+}

@@ -1,3 +1,8 @@
+import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
+import kotlinx.serialization.json.Json
+import kotlin.test.Test
+
 /*
  * MIT License
  *
@@ -24,18 +29,23 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
-
-import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.platform.DouyinQuality
-
 /**
+ * Base test class
  * @author hua0512
- * @date : 2024/2/11 20:00
+ * @date : 2024/4/27 22:06
  */
-interface DouyinConfigDTO {
+abstract class BaseTest {
 
-  val quality: DouyinQuality?
-  val sourceFormat: VideoFormat?
-  val cookies: String?
+  protected val app = App(Json).apply {
+    updateConfig(AppConfig())
+  }
+
+  abstract val testUrl: String
+
+  @Test
+  abstract fun testLive()
+
+  @Test
+  abstract fun testRegex()
+
 }

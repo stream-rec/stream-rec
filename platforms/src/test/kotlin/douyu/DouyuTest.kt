@@ -26,14 +26,12 @@
 
 package douyu
 
-import github.hua0512.app.App
-import github.hua0512.data.config.AppConfig
+import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.douyu.download.DouyuExtractor
 import github.hua0512.plugins.douyu.download.extractDouyunRidFromUrl
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 
 /*
@@ -66,16 +64,12 @@ import kotlin.test.Test
  * @author hua0512
  * @date : 2024/3/22 13:42
  */
-class DouyuTest {
+class DouyuTest : BaseTest() {
 
-  private val app = App(Json).apply {
-    updateConfig(AppConfig())
-  }
-
-  private val testUrl = "https://www.douyu.com/topic/wwqymadrid?rid=8984762&dyshid=19bcae2-ced06e4edcaf43bb8f2bb9c500041601"
+  override val testUrl = "https://www.douyu.com/topic/wwqymadrid?rid=8984762&dyshid=19bcae2-ced06e4edcaf43bb8f2bb9c500041601"
 
   @Test
-  fun testUrlMatch() {
+  override fun testRegex() {
     val match = Regex("""^https:\/\/www\.douyu\.com.*""").matches(testUrl)
     assert(match)
   }
@@ -87,7 +81,7 @@ class DouyuTest {
   }
 
   @Test
-  fun testLive() = runTest {
+  override fun testLive() = runTest {
     val extractor = DouyuExtractor(app.client, app.json, testUrl).apply {
       prepare()
     }

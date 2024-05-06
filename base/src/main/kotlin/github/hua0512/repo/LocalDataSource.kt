@@ -28,7 +28,9 @@ package github.hua0512.repo
 
 import github.hua0512.data.config.AppConfig
 import kotlinx.coroutines.flow.Flow
+import java.nio.file.Files
 import kotlin.io.path.Path
+import kotlin.io.path.createParentDirectories
 import kotlin.io.path.pathString
 
 /**
@@ -47,6 +49,31 @@ interface LocalDataSource {
     fun getJwtSecret(): String {
       val envKey = System.getenv("JWT_SECRET")
       return envKey ?: "n6hCG9eSwj6foa3MhubtBBJbF1rxYt2rUlC2jOllrg1zquvmU9Fg6auCDfZy3l83"
+    }
+
+    fun isFirstRun(): Boolean {
+      val dbPath = getDefaultPath()
+      return !Files.exists(Path(dbPath))
+    }
+
+    private fun getDbVersionPath(): String {
+      // get db version from file
+      val dbPath = getDefaultPath()
+      return Path(dbPath).resolveSibling("version").pathString
+    }
+
+    fun getDbVersion(): Long {
+      val dbVersionPath = Path(getDbVersionPath())
+      // check if db version file exists
+      if (!Files.exists(dbVersionPath)) return 0
+      return Files.readString(dbVersionPath, Charsets.UTF_8).toLongOrNull() ?: 0
+    }
+
+    fun writeDbVersion(version: Long) {
+      val dbVersionPath = Path(getDbVersionPath())
+      dbVersionPath.createParentDirectories()
+      // overwrite db version file
+      Files.writeString(dbVersionPath, version.toString(), Charsets.UTF_8)
     }
   }
 

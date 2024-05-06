@@ -24,18 +24,42 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
+package github.hua0512.data.platform
 
-import github.hua0512.data.media.VideoFormat
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 /**
+ * Twitch stream quality
  * @author hua0512
- * @date : 2024/2/11 19:56
+ * @date : 2024/5/4 14:25
  */
-interface HuyaConfigDTO {
+@Serializable(with = TwitchQualitySerializer::class)
+enum class TwitchQuality(val value: String) {
+  Source("best"),
+  P1080("1080p"),
+  P720("720p"),
+  P480("480p"),
+  P360("360p"),
+  P160("160p"),
+  Audio("audio_only");
+}
 
-  val primaryCdn: String?
-  val maxBitRate: Int?
-  val cookies: String?
-  val sourceFormat: VideoFormat?
+object TwitchQualitySerializer : KSerializer<TwitchQuality> {
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("TwitchQuality", PrimitiveKind.STRING)
+
+  override fun deserialize(decoder: Decoder): TwitchQuality {
+    val value = decoder.decodeString()
+    return TwitchQuality.entries.first { it.value == value }
+  }
+
+  override fun serialize(encoder: Encoder, value: TwitchQuality) {
+    encoder.encodeString(value.value)
+  }
+
 }

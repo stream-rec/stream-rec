@@ -206,8 +206,9 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       url = url,
       format = VideoFormat.flv,
       quality = qualityName["name"]!!,
-      bitrate = qualityName["bitrate"]!!.toInt(),
+      bitrate = qualityName["bitrate"]!!.toLong(),
       priority = qualityName["highBit"]!!.toInt(),
+      frameRate = 0.0,
       extras = mapOf("cdn" to cdn, "rate" to qualityName["rate"]!!)
     ) to multirates
   }

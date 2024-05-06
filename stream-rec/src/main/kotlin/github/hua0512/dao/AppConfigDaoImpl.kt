@@ -68,6 +68,7 @@ class AppConfigDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, 
         huyaConfig = huyaConfig,
         douyinConfig = douyinConfig,
         douyuConfig = douyuConfig,
+        twitchConfig = twitchConfig,
         id = id,
       )
     }

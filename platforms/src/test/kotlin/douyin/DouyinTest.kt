@@ -26,13 +26,11 @@
 
 package douyin
 
-import github.hua0512.app.App
-import github.hua0512.data.config.AppConfig
+import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.DouyinExtractor
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.test.DefaultAsserter.assertEquals
 import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
@@ -63,24 +61,19 @@ import kotlin.test.Test
  * SOFTWARE.
  */
 
-class DouyinTest {
+class DouyinTest : BaseTest() {
 
-
-  private val app = App(Json).apply {
-    updateConfig(AppConfig())
-  }
-
-  private val testUrl = "https://live.douyin.com/557481980778"
+  override val testUrl = "https://live.douyin.com/557481980778"
 
   @Test
-  fun testUrl() = runTest {
+  override fun testRegex() = runTest {
     val url = testUrl
     val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url) ?: throw IllegalArgumentException("Invalid url")
     assertEquals("failed to match id", matchResult.groupValues.last(), "217536353956")
   }
 
   @Test
-  fun testLive() = runTest {
+  override fun testLive() = runTest {
     val extractor = DouyinExtractor(app.client, app.json, testUrl).apply {
       match()
     }

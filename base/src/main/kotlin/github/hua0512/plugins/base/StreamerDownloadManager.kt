@@ -79,6 +79,7 @@ class StreamerDownloadManager(
         StreamingPlatform.HUYA -> app.config.huyaConfig
         StreamingPlatform.DOUYIN -> app.config.douyinConfig
         StreamingPlatform.DOUYU -> app.config.douyuConfig
+        StreamingPlatform.TWITCH -> app.config.twitchConfig
         else -> throw UnsupportedOperationException("Platform not supported")
       }
     }

@@ -26,7 +26,6 @@
 
 package github.hua0512.data.config
 
-import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.utils.AppConfigEntity
 import github.hua0512.utils.asLong
@@ -60,6 +59,7 @@ data class AppConfig(
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
   val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
+  val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
 ) {
   var id: Long = 1
 
@@ -88,6 +88,9 @@ data class AppConfig(
     entity.douyuConfig?.run {
       json.decodeFromString<DouyuConfigGlobal>(this)
     } ?: DouyuConfigGlobal(),
+    entity.twitchConfig?.run {
+      json.decodeFromString<TwitchConfigGlobal>(this)
+    } ?: TwitchConfigGlobal(),
   ) {
     this.id = entity.id
   }
@@ -113,6 +116,7 @@ data class AppConfig(
       json.encodeToString(huyaConfig),
       json.encodeToString(douyinConfig),
       json.encodeToString(douyuConfig),
+      json.encodeToString(twitchConfig),
     )
   }
 }

@@ -164,6 +164,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
     val cookie = downloadConfig.cookies?.nonEmptyOrNull() ?: when (streamer.platform) {
       StreamingPlatform.HUYA -> app.config.huyaConfig.cookies
       StreamingPlatform.DOUYIN -> app.config.douyinConfig.cookies
+      StreamingPlatform.DOUYU -> app.config.douyuConfig.cookies
+      StreamingPlatform.TWITCH -> app.config.twitchConfig.cookies
       else -> null
     }
 

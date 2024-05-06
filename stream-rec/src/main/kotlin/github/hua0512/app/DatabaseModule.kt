@@ -77,6 +77,21 @@ class DatabaseModule {
   @Singleton
   fun provideDatabase(sqlDriver: SqlDriver): StreamRecDatabase {
     StreamRecDatabase.Schema.create(sqlDriver)
+    val dbVersion = LocalDataSource.getDbVersion()
+    // if not first run, check db version and migrate if needed
+    if (!LocalDataSource.isFirstRun()) {
+      try {
+        if (dbVersion < StreamRecDatabase.Schema.version) {
+          StreamRecDatabase.Schema.migrate(sqlDriver, dbVersion, StreamRecDatabase.Schema.version)
+          LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
+        }
+      } catch (e: Exception) {
+        logger.error("Failed to migrate database", e)
+      }
+    } else {
+      // write db version
+      LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
+    }
     return StreamRecDatabase(driver = sqlDriver)
   }
 
