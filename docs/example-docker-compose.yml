@@ -48,6 +48,8 @@ services:
     depends_on:
       - backend
     environment:
+      #    timezone, by default is Europe/Paris. You can change it to any timezone you like.
+      - TZ=Europe/Paris
       # Backend api url, made up of the container name and port. DO NOT CHANGE IT if you don't know what you are doing.
       # Make sure the port is the same as the backend port.
       - API_URL=http://backend:12555/api

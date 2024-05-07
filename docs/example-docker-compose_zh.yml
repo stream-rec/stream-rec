@@ -52,6 +52,8 @@ services:
     depends_on:
       - backend
     environment:
+      # 时区，默认为 Europe/Paris,您可以将其更改为任何您喜欢的时区。
+      - TZ=Asia/Shanghai
       # 后端api url，由容器名称和端口组成。 如果您不知道自己在做什么，请不要更改它。
       - API_URL=http://backend:12555/api
       # 加密密钥，用于next-auth，您可以将其更改为任何您喜欢的字符串
