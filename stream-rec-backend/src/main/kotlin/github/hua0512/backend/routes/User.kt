@@ -67,7 +67,7 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
           call.respond(HttpStatusCode.BadRequest, "Password incorrect")
           return@post
         }
-        val validTo = Clock.System.now().plus(2.toDuration(DurationUnit.DAYS)).toJavaInstant()
+        val validTo = Clock.System.now().plus(7.toDuration(DurationUnit.DAYS)).toJavaInstant()
         val token = JWT.create()
           .withAudience(jwtAudience)
           .withIssuer(jwtDomain)
