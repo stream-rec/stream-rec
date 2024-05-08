@@ -43,6 +43,6 @@ class StringTest {
 
     val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
 
-    assertEquals("雪乃荔荔枝 - 新人第一天开播 - 2024-2-20 21-41-52", formatted)
+    assertEquals("雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52", formatted)
   }
 }

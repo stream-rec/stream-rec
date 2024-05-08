@@ -48,11 +48,11 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant = 
     "{streamer}" to streamer,
     "{title}" to title,
     "%yyyy" to localDateTime.year.toString(),
-    "%MM" to localDateTime.monthNumber.toString(),
-    "%dd" to localDateTime.dayOfMonth.toString(),
-    "%HH" to localDateTime.hour.toString(),
-    "%mm" to localDateTime.minute.toString(),
-    "%ss" to localDateTime.second.toString(),
+    "%MM" to formatLeadingZero(localDateTime.monthNumber),
+    "%dd" to formatLeadingZero(localDateTime.dayOfMonth),
+    "%HH" to formatLeadingZero(localDateTime.hour),
+    "%mm" to formatLeadingZero(localDateTime.minute),
+    "%ss" to formatLeadingZero(localDateTime.second),
   )
 
   // Replace each placeholder in the string with its corresponding value from the map and return the result
@@ -60,6 +60,13 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant = 
     acc.replace(entry.key, entry.value)
   }
 }
+
+/**
+ * Formats an integer value to a string with a leading zero if the value is less than 10.
+ * @param value The integer value to format.
+ * @return The formatted string.
+ */
+private fun formatLeadingZero(value : Int) : String = String.format("%02d", value)
 
 
 /**
