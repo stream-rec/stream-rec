@@ -24,58 +24,59 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.twitch.download
+package github.hua0512.plugins.pandalive.download
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
-import github.hua0512.data.platform.TwitchQuality
+import github.hua0512.data.config.DownloadConfig.PandaliveDownloadConfig
+import github.hua0512.data.platform.PandaliveQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Download
-import github.hua0512.plugins.twitch.danmu.TwitchDanmu
+import github.hua0512.plugins.pandalive.danmu.PandaliveDanmu
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
 
 /**
+ * Pandalive live stream downloader.
  * @author hua0512
- * @date : 2024/5/3 21:47
+ * @date : 2024/5/10 13:22
  */
-class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Download<TwitchDownloadConfig>(app, danmu, extractor) {
+class Pandalive(app: App, override val danmu: PandaliveDanmu, override val extractor: PandaliveExtractor) :
+  Download<PandaliveDownloadConfig>(app, danmu, extractor) {
 
-
-  override fun createDownloadConfig(): TwitchDownloadConfig = TwitchDownloadConfig(
-    quality = app.config.twitchConfig.quality,
-    authToken = app.config.twitchConfig.authToken,
+  override fun createDownloadConfig() = PandaliveDownloadConfig(
+    quality = app.config.pandaliveConfig.quality,
+    cookies = app.config.pandaliveConfig.cookies,
   )
 
   override suspend fun shouldDownload(): Boolean {
-    val authToken = (config.authToken?.nonEmptyOrNull() ?: app.config.twitchConfig.authToken).nonEmptyOrNull()
-      ?: throw UnsupportedOperationException("Twitch requires an auth token to download")
-    (extractor as TwitchExtractor).authToken = authToken
-
-    (config.cookies ?: app.config.twitchConfig.cookies)?.nonEmptyOrNull()?.also {
+    (config.cookies ?: app.config.pandaliveConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
 
     val mediaInfo = try {
       withIOContext { extractor.extract() }
     } catch (e: Exception) {
-      // throw if illegal argument or unsupported operation
       if (e is IllegalArgumentException || e is UnsupportedOperationException) throw e
       logger.error("Error extracting media info", e)
       return false
+    }
+    if (mediaInfo.live) {
+      // init danmu
+      danmu.apply {
+        userIdx = extractor.userIdx
+        token = extractor.token
+      }
     }
     return getStreamInfo(mediaInfo, streamer, config)
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
-    this as TwitchDownloadConfig
-    val userPreferredQuality = quality ?: app.config.twitchConfig.quality
-    // if source quality is selected, return the first stream
-    if (userPreferredQuality == TwitchQuality.Source) {
+    this as PandaliveDownloadConfig
+    val userPreferredQuality = quality ?: app.config.pandaliveConfig.quality ?: PandaliveQuality.Source
+    // source quality should be the first one
+    if (userPreferredQuality == PandaliveQuality.Source) {
       return streams.first()
-    } else if (userPreferredQuality == TwitchQuality.Audio) {
-      return streams.first { it.quality == TwitchQuality.Audio.value }
     }
     // resolution quality
     val preferredResolution = userPreferredQuality.value.removePrefix("p").toInt()

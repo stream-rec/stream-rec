@@ -60,6 +60,7 @@ data class AppConfig(
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
   val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
   val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
+  val pandaliveConfig: PandaliveConfigGlobal = PandaliveConfigGlobal(),
 ) {
   var id: Long = 1
 
@@ -91,6 +92,9 @@ data class AppConfig(
     entity.twitchConfig?.run {
       json.decodeFromString<TwitchConfigGlobal>(this)
     } ?: TwitchConfigGlobal(),
+    entity.pandaliveConfig?.run {
+      json.decodeFromString<PandaliveConfigGlobal>(this)
+    } ?: PandaliveConfigGlobal(),
   ) {
     this.id = entity.id
   }
@@ -117,6 +121,7 @@ data class AppConfig(
       json.encodeToString(douyinConfig),
       json.encodeToString(douyuConfig),
       json.encodeToString(twitchConfig),
+      json.encodeToString(pandaliveConfig),
     )
   }
 }

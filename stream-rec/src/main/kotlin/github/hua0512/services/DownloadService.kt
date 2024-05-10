@@ -42,6 +42,9 @@ import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
+import github.hua0512.plugins.pandalive.danmu.PandaliveDanmu
+import github.hua0512.plugins.pandalive.download.Pandalive
+import github.hua0512.plugins.pandalive.download.PandaliveExtractor
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.plugins.twitch.download.Twitch
 import github.hua0512.plugins.twitch.download.TwitchExtractor
@@ -75,6 +78,7 @@ class DownloadService(
     StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app), DouyinExtractor(app.client, app.json, url))
     StreamingPlatform.DOUYU -> Douyu(app, DouyuDanmu(app), DouyuExtractor(app.client, app.json, url))
     StreamingPlatform.TWITCH -> Twitch(app, TwitchDanmu(app), TwitchExtractor(app.client, app.json, url))
+    StreamingPlatform.PANDALIVE -> Pandalive(app, PandaliveDanmu(app), PandaliveExtractor(app.client, app.json, url))
     else -> throw Exception("Platform not supported")
   }
 
