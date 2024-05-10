@@ -27,12 +27,9 @@
 package github.hua0512.plugins.twitch.download
 
 import github.hua0512.data.media.MediaInfo
-import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import io.ktor.client.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import kotlinx.serialization.json.*
 
 /**
@@ -47,10 +44,6 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
   companion object {
     internal const val BASE_URL = "https://www.twitch.tv"
     internal const val URL_REGEX = """https?://(?:www\.)?twitch\.tv/([^/]+)"""
-    internal val bandwidthPattern = Regex("BANDWIDTH=(\\d+)")
-    internal val resolutionPattern = Regex("RESOLUTION=(\\d+x\\d+)")
-    internal val videoPattern = Regex("VIDEO=\"([^\"]+)\"")
-    internal val frameRatePattern = Regex("FRAME-RATE=(\\d+)")
   }
 
   override val regexPattern: Regex = URL_REGEX.toRegex()
@@ -143,19 +136,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
       parameter("sig", signature)
       parameter("token", valueToken)
     }
-
-    val body = resp.bodyAsText()
-    val streams = mutableListOf<StreamInfo>()
-    val lines = body.lines()
-    lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") }.forEach { index ->
-      val line = lines[index]
-      val bandwidth = bandwidthPattern.find(line)?.groupValues?.get(1)?.toLong() ?: 0
-      val resolution = resolutionPattern.find(line)?.groupValues?.get(1)?.let { mapOf("resolution" to it) } ?: emptyMap()
-      val video = videoPattern.find(line)?.groupValues?.get(1)!!
-      val frameRate = frameRatePattern.find(line)?.groupValues?.get(1)?.toDouble() ?: 0.0
-      val url = lines[index + 1]
-      streams.add(StreamInfo(url, VideoFormat.hls, video, bandwidth, frameRate = frameRate, extras = resolution))
-    }
+    val streams = parseHlsPlaylist(resp)
     mediaInfo = mediaInfo.copy(artistImageUrl = artistProfileUrl, title = title, live = true, streams = streams)
     return mediaInfo
   }

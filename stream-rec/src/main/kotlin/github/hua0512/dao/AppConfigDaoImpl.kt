@@ -69,6 +69,7 @@ class AppConfigDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, 
         douyinConfig = douyinConfig,
         douyuConfig = douyuConfig,
         twitchConfig = twitchConfig,
+        pandaliveConfig = pandaliveConfig,
         id = id,
       )
     }

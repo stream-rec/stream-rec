@@ -26,16 +26,10 @@
 
 package github.hua0512.data.config
 
-import github.hua0512.data.dto.*
-import github.hua0512.data.dto.platform.DouyinConfigDTO
-import github.hua0512.data.dto.platform.DouyuConfigDTO
-import github.hua0512.data.dto.platform.HuyaConfigDTO
-import github.hua0512.data.dto.platform.TwitchConfigDTO
+import github.hua0512.data.dto.GlobalPlatformConfig
+import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.platform.DouyinQuality
-import github.hua0512.data.platform.DouyuQuality
-import github.hua0512.data.platform.DouyuQualitySerializer
-import github.hua0512.data.platform.TwitchQuality
+import github.hua0512.data.platform.*
 import kotlinx.serialization.Serializable
 
 /**
@@ -78,3 +72,10 @@ data class TwitchConfigGlobal(
   override val partedDownloadRetry: Int? = 30,
   override val cookies: String? = null,
 ) : GlobalPlatformConfig, TwitchConfigDTO
+
+@Serializable
+data class PandaliveConfigGlobal(
+  override val partedDownloadRetry: Int? = 30,
+  override val cookies: String? = null,
+  override val quality: PandaliveQuality = PandaliveQuality.Source,
+) : GlobalPlatformConfig, PandaliveConfigDTO

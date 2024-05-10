@@ -64,7 +64,7 @@ import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, val extractor: Extractor) {
+abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Danmu, open val extractor: Extractor) {
 
   companion object {
     @JvmStatic
@@ -166,6 +166,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, val danmu: Danmu, 
       StreamingPlatform.DOUYIN -> app.config.douyinConfig.cookies
       StreamingPlatform.DOUYU -> app.config.douyuConfig.cookies
       StreamingPlatform.TWITCH -> app.config.twitchConfig.cookies
+      StreamingPlatform.PANDALIVE -> app.config.pandaliveConfig.cookies
       else -> null
     }
 

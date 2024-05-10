@@ -27,6 +27,8 @@
 package github.hua0512.plugins.base
 
 import github.hua0512.data.media.MediaInfo
+import github.hua0512.data.media.VideoFormat
+import github.hua0512.data.stream.StreamInfo
 import github.hua0512.utils.withIOContext
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -69,6 +71,11 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
     protected fun parseCookies(cookies: String): Map<String, String> {
       return parseClientCookiesHeader(cookies)
     }
+
+    private val bandwidthPattern = Regex("BANDWIDTH=(\\d+)")
+    private val resolutionPattern = Regex("RESOLUTION=(\\d+x\\d+)")
+    private val videoPattern = Regex("VIDEO=\"([^\"]+)\"")
+    private val frameRatePattern = Regex("FRAME-RATE=(\\d+)")
 
   }
 
@@ -181,5 +188,26 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
     platformParams.forEach { (t, u) ->
       parameter(t, u)
     }
+  }
+
+  /**
+   * Parses a hls playlist response and returns a list of [StreamInfo]
+   * @param response the input response
+   * @return a list of [StreamInfo]
+   */
+  protected suspend fun parseHlsPlaylist(response: HttpResponse): List<StreamInfo> {
+    val body = response.bodyAsText()
+    val streams = mutableListOf<StreamInfo>()
+    val lines = body.lines()
+    lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") }.forEach { index ->
+      val line = lines[index]
+      val bandwidth = bandwidthPattern.find(line)?.groupValues?.get(1)?.toLong() ?: 0
+      val resolution = resolutionPattern.find(line)?.groupValues?.get(1)?.let { mapOf("resolution" to it) } ?: emptyMap()
+      val video = videoPattern.find(line)?.groupValues?.get(1)!!
+      val frameRate = frameRatePattern.find(line)?.groupValues?.get(1)?.toDouble() ?: 0.0
+      val url = lines[index + 1]
+      streams.add(StreamInfo(url, VideoFormat.hls, video, bandwidth, frameRate = frameRate, extras = resolution))
+    }
+    return streams.toList()
   }
 }

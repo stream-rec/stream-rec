@@ -80,6 +80,7 @@ class StreamerDownloadManager(
         StreamingPlatform.DOUYIN -> app.config.douyinConfig
         StreamingPlatform.DOUYU -> app.config.douyuConfig
         StreamingPlatform.TWITCH -> app.config.twitchConfig
+        StreamingPlatform.PANDALIVE -> app.config.pandaliveConfig
         else -> throw UnsupportedOperationException("Platform not supported")
       }
     }

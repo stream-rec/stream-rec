@@ -24,27 +24,16 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.data.dto.platform
 
+import github.hua0512.data.platform.PandaliveQuality
 
-enum class StreamingPlatform(val id: Int) {
-  HUYA(0),
-  DOUYIN(1),
-  DOUYU(2),
-  TWITCH(3),
-  PANDALIVE(4),
-  UNKNOWN(Integer.MAX_VALUE);
+/**
+ * @author hua0512
+ * @date : 2024/5/10 13:22
+ */
+interface PandaliveConfigDTO {
 
-
-  companion object {
-    fun fromId(id: Int): StreamingPlatform? {
-      for (platform in entries) {
-        if (platform.id == id) {
-          return platform
-        }
-      }
-      return null
-    }
-  }
-
+  val cookies: String?
+  val quality: PandaliveQuality?
 }

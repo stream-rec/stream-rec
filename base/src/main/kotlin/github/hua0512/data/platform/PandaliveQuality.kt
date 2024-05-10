@@ -24,27 +24,40 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.data.platform
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
-enum class StreamingPlatform(val id: Int) {
-  HUYA(0),
-  DOUYIN(1),
-  DOUYU(2),
-  TWITCH(3),
-  PANDALIVE(4),
-  UNKNOWN(Integer.MAX_VALUE);
+/**
+ * Pandalive stream quality
+ * @author hua0512
+ * @date : 2024/5/4 14:25
+ */
+@Serializable(with = PandaliveQualitySerializer::class)
+enum class PandaliveQuality(val value: String) {
+  Source("best"),
+  P1080("1080p"),
+  P720("720p"),
+  P480("480p"),
+  P360("360p"),
+  P160("160p"),
+}
 
+object PandaliveQualitySerializer : KSerializer<PandaliveQuality> {
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("PandaliveQuality", PrimitiveKind.STRING)
 
-  companion object {
-    fun fromId(id: Int): StreamingPlatform? {
-      for (platform in entries) {
-        if (platform.id == id) {
-          return platform
-        }
-      }
-      return null
-    }
+  override fun deserialize(decoder: Decoder): PandaliveQuality {
+    val value = decoder.decodeString()
+    return PandaliveQuality.entries.first { it.value == value }
   }
 
+  override fun serialize(encoder: Encoder, value: PandaliveQuality) {
+    encoder.encodeString(value.value)
+  }
 }

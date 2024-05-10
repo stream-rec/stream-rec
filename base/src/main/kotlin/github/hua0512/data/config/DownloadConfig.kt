@@ -27,15 +27,9 @@
 package github.hua0512.data.config
 
 import github.hua0512.data.dto.DownloadConfigDTO
-import github.hua0512.data.dto.platform.DouyinConfigDTO
-import github.hua0512.data.dto.platform.DouyuConfigDTO
-import github.hua0512.data.dto.platform.HuyaConfigDTO
-import github.hua0512.data.dto.platform.TwitchConfigDTO
+import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.platform.DouyinQuality
-import github.hua0512.data.platform.DouyuQuality
-import github.hua0512.data.platform.DouyuQualitySerializer
-import github.hua0512.data.platform.TwitchQuality
+import github.hua0512.data.platform.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -139,6 +133,21 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override val quality: TwitchQuality? = null,
   ) : DownloadConfig, TwitchConfigDTO {
     override var cookies: String? = null
+    override var danmu: Boolean? = null
+    override var maxBitRate: Int? = null
+    override var outputFolder: String? = null
+    override var outputFileName: String? = null
+    override var outputFileFormat: VideoFormat? = null
+    override var onPartedDownload: List<Action>? = emptyList()
+    override var onStreamingFinished: List<Action>? = emptyList()
+  }
+
+  @Serializable
+  @SerialName("pandalive")
+  data class PandaliveDownloadConfig(
+    override val quality: PandaliveQuality? = null,
+    override var cookies: String? = null,
+  ) : DownloadConfig, PandaliveConfigDTO {
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null
