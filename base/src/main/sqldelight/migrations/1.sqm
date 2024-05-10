@@ -1,2 +1,1 @@
 ALTER TABLE app_config ADD COLUMN twitchConfig TEXT DEFAULT "{}";
-ALTER TABLE app_config ADD COLUMN pandaliveConfig TEXT DEFAULT "{}";
