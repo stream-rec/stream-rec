@@ -2,15 +2,13 @@
 
 启动工具后，您将被重定向到登录页面。输入您的凭据，然后单击“登录”按钮。
 
-![login.png](images/zh/login.png)
-
 默认用户名和密码均为`stream-rec`。但是，如果设置了`LOGIN_SECRET`环境变量，则密码将设置为该值。
+
+![login.png](images/zh/login.png)
 
 # 2. 全局设置
 
 单击左侧导航栏中的“设置”以访问设置页面。
-
-![global_settings.png](images/zh/global_settings.png)
 
 根据个人需求配置设置，然后单击“保存设置”按钮以保存更改。
 
@@ -19,8 +17,11 @@
 > - `下载文件夹`:
     保存录制流的目录。如果您在Docker容器中运行工具，请确保路径是绑定到主机的容器路径。否则，您可能无法找到录制的流。例如，假设您部署了`/path/to/host/folder:/path/to/container/folder`
     。那么，您应该将`/path/to/container/folder`作为输出文件夹。 Docker compose 请使用后端服务volumes里的target值作为输出文件夹。
-> - 如果要禁用分段下载，请将`最大分段大小`设置为一个较高的值，例如`9999` GB。
+> - 如果要禁用分段下载，请将`最大分段时长`设置为一个较高的值，例如`1` 天。
 > - 请详细阅读每个设置的注释以获取更多信息。如果您有任何问题，也可以发起讨论。
+
+![global_settings.png](images/zh/global_settings.png)
+
 
 # 3. 全局平台设置
 

@@ -2,16 +2,14 @@
 
 After starting the tool, you will be redirected to the login page. Enter your credentials and click on the `Sign in` button.
 
-![login.png](images/en/login.png)
-
 The default credentials are set to `stream-rec` for both the username and password. But if you set the `LOGIN_SECRET` environment variable, the
 password will be set to that value.
+
+![login.png](images/en/login.png)
 
 # 2. General settings
 
 Navigate to the settings page by clicking on the settings icon in the left navigation bar.
-
-![global_settings.png](images/en/global_settings.png)
 
 After that, you will see the general settings page. Configure the settings as needed and click on the `Update setttings` button to save the changes.
 
@@ -20,8 +18,10 @@ After that, you will see the general settings page. Configure the settings as ne
 > - `Output folder`: The directory where the recorded streams will be saved. If you are running the tool in a Docker container, make sure the path is
     a container path bind to host. Otherwise, you may not be able to locate the recorded streams. For example, assuming you deployed
     with `/path/to/host/folder:/path/to/container/folder`. Then, you should put `/path/to/container/folder` as the output folder.
-> - If you want to disable parted downloads, set the `Maximum parted download size` to a high value, e.g., `9999` GB.
+> - If you want to disable parted downloads, set the `Maximum parted download duration` to a high value, e.g., `1` day.
 > - Read the comments of each setting for more information. You can also open a discussion if you have any questions.
+
+![global_settings.png](images/en/global_settings.png)
 
 # 3. Platform settings
 

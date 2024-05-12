@@ -60,7 +60,7 @@ services:
       # Even when you deploy the frontend on a different server, you don't need to change it.
       # Make sure the port is the same as the frontend port.
       - NEXTAUTH_URL=http://localhost:15275/
-      # WS_API_URL, CLIENT websocket url. Used for live status updates. DO NOT CHANGE IT if you don't know what you are doing.
+      # WS_API_URL, CLIENT websocket url. Used for live status updates.
       # This should use the ip address of the deployed server.
       # Below is an example of using localhost, you can change it to the ip address of the deployed server.
       # For example, if backend is deployed on the server ip address 12.12.12.12, with port 12555, then you should change it to ws://12.12.12.12:12555/live/update
