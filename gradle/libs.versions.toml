@@ -1,6 +1,6 @@
 [versions]
 ktor = "2.3.11"
-kotlin = "1.9.23"
+kotlin = "1.9.24"
 kotlin-coroutines = "1.8.1"
 logback = "1.5.6"
 dagger = "2.51.1"
