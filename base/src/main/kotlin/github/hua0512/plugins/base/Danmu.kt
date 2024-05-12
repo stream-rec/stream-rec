@@ -246,29 +246,33 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false, val manualHe
     incoming.receiveAsFlow()
       .onEach { frame ->
         val data = frame.data
-        // decode danmu
-        for (danmu in decodeDanmu(this, data)) {
-          when (danmu) {
-            is DanmuData -> {
-              // danmu server time
-              val serverTime = danmu.serverTime
-              // danmu process start time
-              val danmuStartTime = videoStartTime.toEpochMilliseconds()
-              // danmu in video time
-              val danmuInVideoTime = (serverTime - danmuStartTime).run {
-                val time = if (this < 0) 0 else this
-                String.format("%.3f", time / 1000.0).toDouble()
+        try {
+          // decode danmu
+          for (danmu in decodeDanmu(this, data)) {
+            when (danmu) {
+              is DanmuData -> {
+                // danmu server time
+                val serverTime = danmu.serverTime
+                // danmu process start time
+                val danmuStartTime = videoStartTime.toEpochMilliseconds()
+                // danmu in video time
+                val danmuInVideoTime = (serverTime - danmuStartTime).run {
+                  val time = if (this < 0) 0 else this
+                  String.format("%.3f", time / 1000.0).toDouble()
+                }
+                // emit danmu to write to file
+                writeChannel.trySend(danmu.copy(clientTime = danmuInVideoTime))
               }
-              // emit danmu to write to file
-              writeChannel.trySend(danmu.copy(clientTime = danmuInVideoTime))
-            }
 
-            else -> logger.error("Unsupported danmu data:{}", danmu)
+              else -> logger.error("Unsupported danmu data:{}", danmu)
+            }
           }
+        } catch (e: Exception) {
+          logger.error("Error decoding danmu", e)
         }
       }
       .catch { e ->
-        logger.error("Error decoding danmu", e)
+        logger.error("Error writing danmu", e)
       }
       .buffer()
       .flowOn(Dispatchers.Default)
