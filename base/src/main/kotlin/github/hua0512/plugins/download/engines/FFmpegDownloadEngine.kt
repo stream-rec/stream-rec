@@ -55,7 +55,15 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
 
   override suspend fun startDownload(): StreamData? {
     // ffmpeg running commands
-    val cmds = buildFFMpegCmd(headers, cookies, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, downloadFilePath)
+    val cmds = buildFFMpegCmd(
+      headers,
+      cookies,
+      downloadUrl!!,
+      downloadFormat!!,
+      fileLimitSize,
+      fileLimitDuration,
+      downloadFilePath
+    )
     val streamer = streamData!!.streamer
 
     logger.info("(${streamer.name}) Starting download using ffmpeg...")
@@ -63,17 +71,25 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
     // last size of the file
     var lastSize = 0L
     val exitCode =
-      executeProcess(App.ffmpegPath, *cmds, stdout = Redirect.CAPTURE, stderr = Redirect.CAPTURE, destroyForcibly = true, getOutputStream = {
-        ous = it
-      }, getProcess = {
-        ffmpegProcess = it
-      }) { line ->
+      executeProcess(
+        App.ffmpegPath,
+        *cmds,
+        stdout = Redirect.CAPTURE,
+        stderr = Redirect.CAPTURE,
+        destroyForcibly = true,
+        getOutputStream = {
+          ous = it
+        },
+        getProcess = {
+          ffmpegProcess = it
+        }) { line ->
         processFFmpegOutputLine(line, streamer.name, lastSize) { size, diff, bitrate ->
           lastSize = size
           onDownloadProgress(diff, bitrate)
         }
       }
     ffmpegProcess = null
+    ous = null
     return if (exitCode != 0) {
       logger.error("(${streamer.name}) download failed, exit code: $exitCode")
       null
@@ -97,9 +113,12 @@ class FFmpegDownloadEngine() : BaseDownloadEngine() {
           return@withIOContext
         }
         logger.info("(${streamData!!.streamer.name}) Stopping ffmpeg process...")
-        write("q\n".toByteArray())
-        flush()
-        ous = null
+        try {
+          write("q\n".toByteArray())
+          flush()
+        } catch (e: Exception) {
+          logger.error("Error sending stop signal to ffmpeg process", e)
+        }
       }
     }
     // wait for the process to exit
