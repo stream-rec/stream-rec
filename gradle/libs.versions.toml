@@ -1,7 +1,7 @@
 [versions]
 ktor = "2.3.11"
 kotlin = "1.9.23"
-kotlin-coroutines = "1.8.0"
+kotlin-coroutines = "1.8.1"
 logback = "1.5.6"
 dagger = "2.51.1"
 sqldelight = "2.0.2"
