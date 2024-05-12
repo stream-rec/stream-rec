@@ -58,6 +58,8 @@ import kotlin.io.path.pathString
 @Module
 class DatabaseModule {
 
+  private  var firstRun : Boolean = true
+
   @Provides
   @Singleton
   fun provideSqlDriver(): SqlDriver {
@@ -65,6 +67,7 @@ class DatabaseModule {
       it.createParentDirectories()
       logger.info("Database path: ${it.pathString}")
     }
+    firstRun = LocalDataSource.isFirstRun()
     return LogSqliteDriver(
       sqlDriver = JdbcSqliteDriver("jdbc:sqlite:${path.pathString}", Properties().apply {
         put("foreign_keys", "true")
@@ -78,19 +81,23 @@ class DatabaseModule {
   fun provideDatabase(sqlDriver: SqlDriver): StreamRecDatabase {
     StreamRecDatabase.Schema.create(sqlDriver)
     val dbVersion = LocalDataSource.getDbVersion()
+    val schemaVersion = StreamRecDatabase.Schema.version
+    logger.info("Database version: $dbVersion")
     // if not first run, check db version and migrate if needed
-    if (!LocalDataSource.isFirstRun()) {
+    if (!firstRun) {
       try {
-        if (dbVersion < StreamRecDatabase.Schema.version) {
-          StreamRecDatabase.Schema.migrate(sqlDriver, dbVersion, StreamRecDatabase.Schema.version)
-          LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
+        if (dbVersion < schemaVersion) {
+          logger.info("Trying to migrate database from version $dbVersion to $schemaVersion")
+          StreamRecDatabase.Schema.migrate(sqlDriver, dbVersion, schemaVersion)
+          LocalDataSource.writeDbVersion(schemaVersion)
         }
       } catch (e: Exception) {
         logger.error("Failed to migrate database", e)
       }
     } else {
       // write db version
-      LocalDataSource.writeDbVersion(StreamRecDatabase.Schema.version)
+      LocalDataSource.writeDbVersion(schemaVersion)
+      firstRun = false
     }
     return StreamRecDatabase(driver = sqlDriver)
   }
