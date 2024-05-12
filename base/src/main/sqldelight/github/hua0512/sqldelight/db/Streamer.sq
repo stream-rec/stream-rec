@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS app_config(
    engine TEXT NOT NULL DEFAULT 'ffmpeg',
    danmu INTEGER NOT NULL DEFAULT 0,
    outputFolder TEXT DEFAULT '',
-   outputFileName TEXT NOT NULL DEFAULT '{streamer}-{title}-%yyyy-%MM-%dd %HH:%mm:%ss',
+   outputFileName TEXT NOT NULL DEFAULT '{streamer}-{title}-%Y-%m-%d %H:%M:%S',
    outputFileFormat TEXT NOT NULL DEFAULT 'flv',
    minPartSize INTEGER NOT NULL DEFAULT 20000000,
    maxPartSize INTEGER NOT NULL DEFAULT 2621440000,

@@ -39,7 +39,7 @@ class StringTest {
     val time = 1708461712L
     val instant = Instant.fromEpochSeconds(time)
 
-    val fileFormat = "{streamer} - {title} - %yyyy-%MM-%dd %HH-%mm-%ss"
+    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
 
     val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
 

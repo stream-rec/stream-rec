@@ -47,12 +47,12 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant = 
   val toReplace: Map<String, String> = mapOf(
     "{streamer}" to streamer,
     "{title}" to title,
-    "%yyyy" to localDateTime.year.toString(),
-    "%MM" to formatLeadingZero(localDateTime.monthNumber),
-    "%dd" to formatLeadingZero(localDateTime.dayOfMonth),
-    "%HH" to formatLeadingZero(localDateTime.hour),
-    "%mm" to formatLeadingZero(localDateTime.minute),
-    "%ss" to formatLeadingZero(localDateTime.second),
+    "%Y" to localDateTime.year.toString(),
+    "%m" to formatLeadingZero(localDateTime.monthNumber),
+    "%d" to formatLeadingZero(localDateTime.dayOfMonth),
+    "%H" to formatLeadingZero(localDateTime.hour),
+    "%M" to formatLeadingZero(localDateTime.minute),
+    "%S" to formatLeadingZero(localDateTime.second),
   )
 
   // Replace each placeholder in the string with its corresponding value from the map and return the result
@@ -66,7 +66,7 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant = 
  * @param value The integer value to format.
  * @return The formatted string.
  */
-private fun formatLeadingZero(value : Int) : String = String.format("%02d", value)
+private fun formatLeadingZero(value: Int): String = String.format("%02d", value)
 
 
 /**
