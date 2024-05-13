@@ -21,8 +21,10 @@ services:
       - TZ=Europe/Paris
       #      log level, by default is info. Debug logs are useful for debugging, but they can be very verbose.
       - LOG_LEVEL=INFO
-      #      CONTAINER database path, CHANGE IT ACCORDING TO BELOW VOLUME CONFIGURATION.
+      # CONTAINER database path, MUST BE THE SAME AS THE VOLUME TARGET PATH.
       - DB_PATH=/opt/records
+      # CONTAINER download path, MUST BE THE SAME AS THE VOLUME TARGET PATH.
+      - DOWNLOAD_PATH=/opt/records
       # JWT secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
       - JWT_SECRET=IU123412987UYASUJKDH1239IUIU
       # LOGIN secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
