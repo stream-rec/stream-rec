@@ -44,7 +44,7 @@ import kotlinx.serialization.json.Json
 data class AppConfig(
   val engine: String = "ffmpeg",
   val danmu: Boolean = false,
-  val outputFolder: String = System.getProperty("user.dir"),
+  val outputFolder: String = System.getenv("DOWNLOAD_PATH") ?: System.getProperty("user.dir"),
   val outputFileName: String = "{streamer}-{title}-%yyyy-%MM-%dd %HH:%mm:%ss",
   val outputFileFormat: VideoFormat = VideoFormat.flv,
   val minPartSize: Long = 20000000,
@@ -68,7 +68,7 @@ data class AppConfig(
   constructor(entity: AppConfigEntity, json: Json) : this(
     entity.engine,
     entity.danmu.boolean,
-    entity.outputFolder?.nonEmptyOrNull() ?: System.getProperty("user.dir"),
+    entity.outputFolder?.nonEmptyOrNull() ?: System.getenv("DOWNLOAD_PATH") ?:  System.getProperty("user.dir"),
     entity.outputFileName.nonEmptyOrNull() ?: "{streamer}-{title}-%yyyy-%MM-%dd %HH:%mm:%ss",
     VideoFormat.format(entity.outputFileFormat) ?: VideoFormat.flv,
     entity.minPartSize,

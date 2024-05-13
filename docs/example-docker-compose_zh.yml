@@ -31,6 +31,8 @@ services:
       - LOG_LEVEL=INFO
       # 容器数据库路径，请确保路径是绑定到主机的容器路径
       - DB_PATH=/opt/records
+      # 容器下载路径，请确保路径是VOLUMES TARGET路径的子目录
+      - DOWNLOAD_PATH=/opt/records
       # JWT密钥，您可以将其更改为任何您喜欢的字符串
       - JWT_SECRET=IU123412987UYASUJKDH1239IUIU
       # 登录密钥，您可以将其更改为任何您喜欢的字符串, 用于登录
