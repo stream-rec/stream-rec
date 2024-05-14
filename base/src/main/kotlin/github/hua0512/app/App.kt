@@ -80,6 +80,9 @@ class App(val json: Json) {
         retryOnServerErrors(maxRetries = 5)
         exponentialDelay()
       }
+      install(ContentEncoding) {
+        gzip(0.9F)
+      }
 
 //      install(HttpCookies) {
 //        storage = AcceptAllCookiesStorage()
