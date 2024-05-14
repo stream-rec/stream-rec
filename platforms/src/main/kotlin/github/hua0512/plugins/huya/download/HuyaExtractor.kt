@@ -49,7 +49,8 @@ import kotlin.random.Random
  * @author hua0512
  * @date : 2024/3/15 19:46
  */
-class HuyaExtractor(override val http: HttpClient, override val json: Json, override val url: String) : Extractor(http, json) {
+class HuyaExtractor(override val http: HttpClient, override val json: Json, override val url: String) :
+  Extractor(http, json) {
   companion object {
     const val BASE_URL = "https://www.huya.com"
     const val URL_REGEX = "(?:https?://)?(?:(?:www|m)\\.)?huya\\.com/([a-zA-Z0-9]+)"
@@ -61,6 +62,9 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
     const val NICK_REGEX = """nick"\s*:\s*"([^"]+)"""
     const val INTRODUCTION_REGEX = """introduction"\s*:\s*"([^"]+)"""
     const val SCREENSHOT_REGEX = """screenshot"\s*:\s*"([^"]+)"""
+    const val AYYUID_REGEX = "yyid\":\"?(\\d+)\"?"
+    const val TOPSID_REGEX = "lChannelId\":\"?(\\d+)\"?"
+    const val SUBID_REGEX = "lSubChannelId\":\"?(\\d+)\"?"
 
 
     internal val requestHeaders = arrayOf(
@@ -74,6 +78,14 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
   override val regexPattern = URL_REGEX.toRegex()
   private var roomId: String = ""
   private lateinit var htmlResponseBody: String
+  private val ayyuidPattern = AYYUID_REGEX.toRegex()
+  private val topsidPattern = TOPSID_REGEX.toRegex()
+  private val subidPattern = SUBID_REGEX.toRegex()
+
+  internal var ayyuid: Long = 0
+  internal var topsid: Long = 0
+  internal var subid: Long = 0
+
 
   init {
     requestHeaders.forEach {
@@ -107,6 +119,10 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
         throw IllegalArgumentException("invalid url, no such streamer")
       }
     }
+
+    ayyuid = ayyuidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+    topsid = topsidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+    subid = subidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
 
     val matchResult = ROOM_DATA_REGEX.toRegex().find(htmlResponseBody)?.also {
       if (it.value.isEmpty()) {
@@ -167,9 +183,11 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
 
     val streamJson = json.parseToJsonElement(streamRegex).jsonObject
 
-    val vMultiStreamInfo = streamJson["vMultiStreamInfo"] ?: throw IllegalStateException("$url vMultiStreamInfo is null")
+    val vMultiStreamInfo =
+      streamJson["vMultiStreamInfo"] ?: throw IllegalStateException("$url vMultiStreamInfo is null")
 
-    val data = streamJson["data"]?.jsonArray?.getOrNull(0)?.jsonObject ?: throw IllegalStateException("$url data is null")
+    val data =
+      streamJson["data"]?.jsonArray?.getOrNull(0)?.jsonObject ?: throw IllegalStateException("$url data is null")
 
 
     val gameLiveInfo = data["gameLiveInfo"]?.jsonObject ?: throw IllegalStateException("$url gameLiveInfo is null")
@@ -194,7 +212,8 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
 
     withContext(Dispatchers.Default) {
       gameStreamInfoList.forEach { streamInfo ->
-        val uid = streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull() ?: (12340000L..12349999L).random()
+        val uid = streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull()
+          ?: (12340000L..12349999L).random()
         val cdn = streamInfo.jsonObject["sCdnType"]?.jsonPrimitive?.content ?: ""
 
         val priority = streamInfo.jsonObject["iWebPriorityRate"]?.jsonPrimitive?.int ?: 0
@@ -221,16 +240,30 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
     return mediaInfo.copy(streams = streams)
   }
 
-  private fun buildUrl(streamInfo: JsonElement, uid: Long, time: Instant, bitrate: Int? = null, isFlv: Boolean): String {
-    val antiCode = streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
+  private fun buildUrl(
+    streamInfo: JsonElement,
+    uid: Long,
+    time: Instant,
+    bitrate: Int? = null,
+    isFlv: Boolean
+  ): String {
+    val antiCode =
+      streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
     val streamName = streamInfo.jsonObject["sStreamName"]?.jsonPrimitive?.content ?: return ""
     val url = streamInfo.jsonObject[if (isFlv) "sFlvUrl" else "sHlsUrl"]?.jsonPrimitive?.content ?: return ""
-    val urlSuffix = streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
+    val urlSuffix =
+      streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
 
     return "$url/$streamName.$urlSuffix" + "?" + buildQuery(antiCode, uid, streamName, time, bitrate)
   }
 
-  private fun buildQuery(anticode: String, uid: Long, sStreamName: String, time: Instant, bitrate: Int? = null): String {
+  private fun buildQuery(
+    anticode: String,
+    uid: Long,
+    sStreamName: String,
+    time: Instant,
+    bitrate: Int? = null
+  ): String {
     val u = (uid shl 8 or (uid shr 24)) and -0x1
     val query = parseQueryString(anticode.removeSuffix(","))
     val wsTime = query["wsTime"]!!

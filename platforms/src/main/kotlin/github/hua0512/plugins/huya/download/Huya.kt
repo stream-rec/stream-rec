@@ -37,7 +37,9 @@ import github.hua0512.utils.nonEmptyOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download<HuyaDownloadConfig>(app, danmu, extractor) {
+class Huya(app: App, override val danmu: HuyaDanmu, override val extractor: HuyaExtractor) :
+  Download<HuyaDownloadConfig>(app, danmu, extractor) {
+
   override fun createDownloadConfig(): HuyaDownloadConfig {
     return HuyaDownloadConfig(
       primaryCdn = app.config.huyaConfig.primaryCdn,
@@ -57,6 +59,12 @@ class Huya(app: App, danmu: HuyaDanmu, extractor: HuyaExtractor) : Download<Huya
     } catch (e: Exception) {
       logger.error("Error extracting media info", e)
       return false
+    }
+    // bind danmu properties
+    with(danmu) {
+      ayyuid = extractor.ayyuid
+      topsid = extractor.topsid
+      subid = extractor.subid
     }
 
     // update streamer info
