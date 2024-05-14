@@ -30,6 +30,7 @@ import github.hua0512.data.config.AppConfig
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.flow.MutableStateFlow
