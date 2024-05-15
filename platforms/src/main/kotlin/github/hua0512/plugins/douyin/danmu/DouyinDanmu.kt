@@ -35,7 +35,7 @@ import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.Danmu
+import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.commonDouyinParams

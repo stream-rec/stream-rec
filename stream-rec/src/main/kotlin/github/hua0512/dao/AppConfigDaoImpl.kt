@@ -70,6 +70,7 @@ class AppConfigDaoImpl(override val database: StreamRecDatabase) : BaseDaoImpl, 
         douyuConfig = douyuConfig,
         twitchConfig = twitchConfig,
         pandaliveConfig = pandaliveConfig,
+        useBuiltInSegmenter = useBuiltInSegmenter,
         id = id,
       )
     }

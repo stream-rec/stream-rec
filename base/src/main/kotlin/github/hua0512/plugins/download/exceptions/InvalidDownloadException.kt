@@ -24,56 +24,12 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.plugins.download.exceptions
 
-import github.hua0512.utils.StreamDataEntity
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
-
-@Serializable
-data class StreamData(
-  val title: String,
-  val dateStart: Long? = null,
-  val dateEnd: Long? = null,
-  val outputFilePath: String,
-  val danmuFilePath: String? = null,
-  val outputFileSize: Long = 0,
-  val streamerId: Long = 0,
-) {
-  var id: Long = -1
-
-
-  var streamerName: String = ""
-    get() {
-      if (!::streamer.isInitialized) {
-        return ""
-      }
-      return streamer.name
-    }
-
-  @Transient
-  lateinit var streamer: Streamer
-
-  constructor(entity: StreamDataEntity) : this(
-    entity.title,
-    entity.dateStart,
-    entity.dateEnd,
-    entity.outputFilePath,
-    entity.danmuFilePath,
-    entity.outputFileSize,
-    entity.streamerId
-  ) {
-    id = entity.id
-  }
-
-  fun toStreamDataEntity() = StreamDataEntity(
-    title = title,
-    dateStart = dateStart,
-    dateEnd = dateEnd,
-    outputFilePath = outputFilePath,
-    danmuFilePath = danmuFilePath,
-    streamerId = streamerId,
-    outputFileSize = outputFileSize,
-    id = id
-  )
+/**
+ * Invalid download exception
+ * @author hua0512
+ * @date : 2024/5/17 17:59
+ */
+open class InvalidDownloadException(message: String) : DownloadErrorException(message) {
 }

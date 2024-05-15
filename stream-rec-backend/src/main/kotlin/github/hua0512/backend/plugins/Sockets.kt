@@ -27,6 +27,7 @@ private fun CoroutineScope.createTimeoutJob(session: WebSocketSession): Job {
   return launch {
     delay(55000)
     session.close(CloseReason(CloseReason.Codes.NORMAL, "Client timeout"))
+    session.coroutineContext.cancelChildren()
     // cancel the parent job
     throw CancellationException("Client timeout")
   }

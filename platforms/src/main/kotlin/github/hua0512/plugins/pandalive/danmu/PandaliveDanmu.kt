@@ -30,7 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.Danmu
+import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.pandalive.download.PandaliveExtractor
 import io.ktor.http.*
 import io.ktor.websocket.*
@@ -43,7 +43,7 @@ import kotlinx.serialization.json.put
  * @author hua0512
  * @date : 2024/5/9 0:26
  */
-class PandaliveDanmu(app: App) : Danmu(app, enablePing = true, manualHeartBeat = true) {
+class PandaliveDanmu(app: App) : Danmu(app, enablePing = true) {
 
   companion object {
     private val msgRegex = Regex("\"message\":\"(.+?)\"")

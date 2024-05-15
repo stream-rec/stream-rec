@@ -24,56 +24,30 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.utils
 
-import github.hua0512.utils.StreamDataEntity
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
-@Serializable
-data class StreamData(
-  val title: String,
-  val dateStart: Long? = null,
-  val dateEnd: Long? = null,
-  val outputFilePath: String,
-  val danmuFilePath: String? = null,
-  val outputFileSize: Long = 0,
-  val streamerId: Long = 0,
-) {
-  var id: Long = -1
-
-
-  var streamerName: String = ""
-    get() {
-      if (!::streamer.isInitialized) {
-        return ""
+/**
+ * Split the flow into chunks of the specified size
+ * @param chunkSize the size of each chunk
+ * @return a flow of lists of elements
+ * @author hua0512
+ * @date : 2024/5/13 20:00
+ */
+fun <T> Flow<T>.chunked(chunkSize: Int): Flow<List<T>> {
+  val buffer = mutableListOf<T>()
+  return flow {
+    this@chunked.collect {
+      buffer.add(it)
+      if (buffer.size == chunkSize) {
+        emit(buffer.toList())
+        buffer.clear()
       }
-      return streamer.name
     }
-
-  @Transient
-  lateinit var streamer: Streamer
-
-  constructor(entity: StreamDataEntity) : this(
-    entity.title,
-    entity.dateStart,
-    entity.dateEnd,
-    entity.outputFilePath,
-    entity.danmuFilePath,
-    entity.outputFileSize,
-    entity.streamerId
-  ) {
-    id = entity.id
+    if (buffer.isNotEmpty()) {
+      emit(buffer.toList())
+    }
   }
-
-  fun toStreamDataEntity() = StreamDataEntity(
-    title = title,
-    dateStart = dateStart,
-    dateEnd = dateEnd,
-    outputFilePath = outputFilePath,
-    danmuFilePath = danmuFilePath,
-    streamerId = streamerId,
-    outputFileSize = outputFileSize,
-    id = id
-  )
 }

@@ -31,7 +31,7 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
 import github.hua0512.data.platform.TwitchQuality
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.plugins.base.Download
+import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext

@@ -32,7 +32,7 @@ import github.hua0512.app.App
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.Danmu
+import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.huya.danmu.msg.HuyaMessageNotice
 import github.hua0512.plugins.huya.danmu.msg.HuyaPushMessage
 import github.hua0512.plugins.huya.danmu.msg.HuyaSocketCommand

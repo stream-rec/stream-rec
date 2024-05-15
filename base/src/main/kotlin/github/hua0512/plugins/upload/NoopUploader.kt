@@ -29,7 +29,7 @@ package github.hua0512.plugins.upload
 import github.hua0512.app.App
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
-import github.hua0512.plugins.base.Upload
+import github.hua0512.plugins.upload.base.Upload
 import kotlinx.datetime.Clock
 
 /**

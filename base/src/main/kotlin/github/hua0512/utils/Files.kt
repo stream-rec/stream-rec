@@ -52,15 +52,28 @@ fun Path.deleteFile(): Boolean = try {
 
 fun File.deleteFile(): Boolean = toPath().deleteFile()
 
-fun Path.rename(newPath: Path, vararg options: CopyOption): Boolean = try {
-  Files.move(this, newPath, *options)
-  newPath.toFile().exists().also {
-    if (it) logger.info("File renamed: {} to {}", this, newPath)
-    else logger.error("File not renamed: {} to {}", this, newPath)
+fun Path.rename(newPath: Path, vararg options: CopyOption): Boolean {
+  return try {
+    // check existence of this file
+    if (!Files.exists(this)) {
+      logger.error("Error renaming $this, file do not exist")
+      return false
+    }
+
+    // check existence of new file
+    if (Files.exists(newPath)) {
+      logger.error("Error renaming $this, new file already exists")
+      return false
+    }
+
+    Files.move(this, newPath, *options).also {
+      logger.info("File renamed: $this to $newPath")
+    }
+    true
+  } catch (e: Exception) {
+    logger.error("Could not rename file: $this to $newPath")
+    false
   }
-} catch (e: Exception) {
-  logger.error("Could not rename file: $this to $newPath")
-  false
 }
 
 fun File.rename(newFile: File): Boolean = toPath().rename(newFile.toPath())

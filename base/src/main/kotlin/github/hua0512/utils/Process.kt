@@ -57,6 +57,9 @@ suspend fun executeProcess(
    * Callback to get the output stream of the process. This is useful for interactive processes
    */
   getOutputStream: (OutputStream) -> Unit = {},
+  /**
+   * Callback to get the process object. This is useful for interacting with the process object
+   */
   getProcess: (Process) -> Unit = {},
   /** Consume without delay all streams configured with [Redirect.CAPTURE]. */
   consumer: suspend (String) -> Unit = {},
@@ -108,7 +111,13 @@ suspend fun executeProcess(
 
       val input = async {
         (stdin as? InputSource.FromStream)?.handler?.let { handler ->
-          process.outputStream.use { handler(it) }
+          try {
+            process.outputStream.use { handler(it) }
+          } catch (e: Exception) {
+            logger.error("Error while writing to process input stream", e)
+          } finally {
+            process.outputStream.close()
+          }
         }
       }
       getOutputStream(process.outputStream)

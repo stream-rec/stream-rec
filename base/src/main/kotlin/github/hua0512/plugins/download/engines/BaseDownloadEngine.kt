@@ -27,152 +27,111 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.stream.StreamData
+import github.hua0512.data.stream.FileInfo
+import github.hua0512.data.stream.Streamer
 import github.hua0512.logger
+import github.hua0512.plugins.download.base.DownloadCallback
 import github.hua0512.utils.rename
-import github.hua0512.utils.withIOContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import java.util.*
-import kotlin.io.path.Path
-import kotlin.io.path.fileSize
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 
 /**
  * Base download engine
  * @author hua0512
- * @date : 2024/2/12 18:22
+ * @date : 2024/5/5 18:30
  */
-abstract class BaseDownloadEngine() {
+abstract class BaseDownloadEngine {
 
-  protected var onDownloadStarted: () -> Unit = {}
-  protected var onDownloadProgress: (diff: Long, bitrate: String) -> Unit = { _, _ -> }
-  protected var onDownloadFinished: (StreamData) -> Unit = {}
+  companion object {
+
+    const val PART_PREFIX = "PART_"
+  }
+
 
   protected var cookies: String? = ""
   protected var downloadUrl: String? = null
   protected var downloadFormat: VideoFormat? = null
   protected var downloadFilePath: String = ""
   protected var headers = mutableMapOf<String, String>()
-  protected var streamData: StreamData? = null
-  protected var startTime: Instant = Instant.DISTANT_PAST
+  protected var downloads = mutableListOf<FileInfo>()
   protected var fileLimitDuration: Long? = null
   protected var fileLimitSize: Long = 0
   protected var isInitialized = false
+  protected var streamer: Streamer? = null
+  protected var callback: DownloadCallback? = null
+
 
   /**
-   * Initializes the download engine with the provided parameters.
+   * Initializes the video download process.
    *
-   * @param downloadUrl The URL of the file to be downloaded.
-   * @param downloadFilePath The path where the downloaded file will be saved.
-   * @param streamData The stream data, including the ID, title, start and end dates, output file path, and streamer information.
-   * @param cookies The optional cookies to be used for the download. Defaults to an empty string.
-   * @param headers The headers to be included in the download request.
-   * @param startTime The start time of the download. Defaults to the current system time.
-   * @param fileLimitSize The maximum allowed file size. Defaults to 0, which means no limit.
+   * @param downloadUrl The URL of the video to be downloaded.
+   * @param downloadFormat The format of the video to be downloaded.
+   * @param downloadFilePath The file path where the video will be saved.
+   * @param streamer The streamer object representing the source of the video.
+   * @param cookies The optional cookies to be used for the download.
+   * @param headers The optional headers to be used for the download.
+   * @param fileLimitSize The optional file size limit for the download.
+   * @param fileLimitDuration The optional duration limit for the download.
+   * @param callback The callback object to receive download events.
    */
   fun init(
     downloadUrl: String,
     downloadFormat: VideoFormat,
     downloadFilePath: String,
-    streamData: StreamData,
+    streamer: Streamer,
     cookies: String? = "",
-    headers: Map<String, String>,
-    startTime: Instant = Clock.System.now(),
+    headers: Map<String, String> = emptyMap(),
     fileLimitSize: Long = 0,
     fileLimitDuration: Long? = null,
+    callback: DownloadCallback,
   ) {
-    if (downloadUrl.isBlank() || downloadFilePath.isBlank()) {
-      throw IllegalArgumentException("downloadUrl or downloadFilePath is blank")
-    }
     this.downloadUrl = downloadUrl
     this.downloadFormat = downloadFormat
+    ensureDownloadUrl()
+    ensureDownloadFormat()
     this.downloadFilePath = downloadFilePath
-    this.streamData = streamData
+    this.streamer = streamer
     this.cookies = cookies
     this.headers = headers.toMutableMap()
-    this.startTime = startTime
     this.fileLimitSize = fileLimitSize
     this.fileLimitDuration = fileLimitDuration
+    this.callback = callback
     isInitialized = true
+    onInit()
+  }
+
+
+  /**
+   * Start the download process
+   */
+  abstract suspend fun start()
+
+  /**
+   * Stop the download process
+   */
+  abstract suspend fun stop(): Boolean
+
+  /**
+   * Clean up the resources
+   */
+  fun clean() {
+    onDestroy()
   }
 
   /**
-   * Starts the download process.
-   *
-   * @return The stream data of the downloaded file.
+   * Ensures that the download URL is not null.
+   * @throws IllegalArgumentException If the download URL is null.
    */
-  open suspend fun run(): StreamData? {
-    if (!isInitialized) {
-      throw IllegalStateException("Engine is not initialized")
-    }
-    return withIOContext {
-      ensureDownloadUrl()
-      ensureDownloadFormat()
-      logger.info("Starting download: $downloadUrl, format: $downloadFormat, path: $downloadFilePath")
-      startDownload()?.let { data ->
-        val filePath = Path(data.outputFilePath).run {
-          // remove .part suffix
-          val withoutPart = pathString.removeSuffix(".part")
-          rename(Path(withoutPart))
-          Path(withoutPart)
-        }
-        // get file size
-        val fileSize = filePath.fileSize()
-        data.outputFileSize = fileSize
-        data.copy(outputFilePath = filePath.pathString).also {
-          onDownloadFinished(it)
-        }
-      }
-    }
-  }
-
-  /**
-   * Starts the download process.
-   *
-   * @return The stream data of the downloaded file, or null if the download failed.
-   */
-  abstract suspend fun startDownload(): StreamData?
-
-
-  /**
-   * Stops the download process.
-   *
-   * @return True if the download was stopped successfully, false otherwise.
-   */
-  abstract suspend fun stopDownload(): Boolean
-
-  /**
-   * Sets the callback to be executed when the download starts.
-   *
-   * @param callback The callback to be executed when the download starts.
-   */
-  fun onDownloadStarted(callback: () -> Unit) {
-    onDownloadStarted = callback
-  }
-
-  /**
-   * Sets the callback to be executed when the download progresses.
-   *
-   * @param callback The callback to be executed when the download progresses.
-   */
-  fun onDownloadProgress(callback: (diff: Long, bitrate: String) -> Unit) {
-    onDownloadProgress = callback
-  }
-
-  /**
-   * Sets the callback to be executed when the download finishes.
-   *
-   * @param callback The callback to be executed when the download finishes.
-   */
-  fun onDownloadFinished(callback: (StreamData) -> Unit) {
-    onDownloadFinished = callback
+  private fun ensureDownloadUrl() {
+    requireNotNull(downloadUrl) { "downloadUrl is null" }
+    require(downloadUrl!!.isNotBlank()) { "downloadUrl is blank" }
   }
 
   private fun extractFormatFromPath(downloadFilePath: String): VideoFormat? {
-    val extension = downloadFilePath.removeSuffix(".part").substringAfterLast(".").lowercase(Locale.getDefault())
+    val extension = downloadFilePath.removePrefix(PART_PREFIX).substringAfterLast(".").lowercase(Locale.getDefault())
     return VideoFormat.format(extension)
   }
+
 
   /**
    * Ensures that the download format is not null.
@@ -184,15 +143,53 @@ abstract class BaseDownloadEngine() {
     downloadFormat = downloadFormat ?: extractFormatFromPath(downloadFilePath) ?: throw IllegalArgumentException("downloadFormat is null")
   }
 
-  /**
-   * Ensures that the download URL is not null.
-   * @throws IllegalArgumentException If the download URL is null.
-   */
-  private fun ensureDownloadUrl() {
-    downloadUrl?.let {
-      if (it.isBlank()) {
-        throw IllegalArgumentException("downloadUrl is blank")
-      }
-    } ?: throw IllegalArgumentException("downloadUrl is null")
+  protected fun onInit() {
+    callback?.onInit()
+  }
+
+  protected fun onDownloadStarted(filePath: String, time: Long) {
+    callback?.onDownloadStarted(filePath, time)
+  }
+
+  protected fun onDownloadProgress(diff: Long, bitrate: String) {
+    callback?.onDownloadProgress(diff, bitrate)
+  }
+
+  protected fun onDownloaded(data: FileInfo) {
+    // calculate file size
+    val oldPath = Path(data.path)
+    // check if the file exists
+    if (!oldPath.exists()) {
+      logger.error("Downloaded file does not exist: {}", oldPath)
+      return
+    }
+    logger.debug("Downloaded file: {}", oldPath)
+    // remove the file name PART_ prefix
+    val newPath = oldPath.parent.resolve(oldPath.name.removePrefix(PART_PREFIX))
+    // rename the file
+    oldPath.rename(newPath)
+    // get the file size
+    val fileSize = newPath.fileSize()
+    // update the data
+    val copy = data.copy(path = newPath.absolutePathString(), size = fileSize)
+    callback?.onDownloaded(copy)
+    downloads.add(copy)
+  }
+
+  protected fun onDownloadFinished() {
+    callback?.onDownloadFinished()
+  }
+
+  protected fun onDownloadError(filePath: String?, e: Exception) {
+    callback?.onDownloadError(filePath, e)
+  }
+
+  protected fun onDownloadCancelled() {
+    callback?.onDownloadCancelled()
+  }
+
+  protected fun onDestroy() {
+    callback?.onDestroy()
+    downloads.clear()
   }
 }

@@ -63,8 +63,10 @@ sealed class InputSource(val redirect: ProcessBuilder.Redirect) {
     fun fromInputStream(
       inputStream: InputStream,
       bufferSize: Int = DEFAULT_BUFFER_SIZE,
+      closeInput: Boolean = true,
     ): InputSource = FromStream { out ->
-      inputStream.use { it.copyTo(out, bufferSize) }
+      if (closeInput) inputStream.use { it.copyTo(out, bufferSize) }
+      else inputStream.copyTo(out, bufferSize)
     }
   }
 }

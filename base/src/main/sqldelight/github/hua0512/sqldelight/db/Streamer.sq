@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS app_config(
    douyinConfig TEXT,
    douyuConfig TEXT,
    twitchConfig TEXT,
-   pandaliveConfig TEXT
+   pandaliveConfig TEXT,
+   useBuiltInSegmenter INTEGER NOT NULL DEFAULT 0
 );
 
 -- QUERIES
@@ -61,11 +62,12 @@ upsertAppConfig{
     douyinConfig = :douyinConfig,
     douyuConfig = :douyuConfig,
     twitchConfig = :twitchConfig,
-    pandaliveConfig = :pandaliveConfig
+    pandaliveConfig = :pandaliveConfig,
+    useBuiltInSegmenter = : useBuiltInSegmenter
     WHERE id = :id;
 
-    INSERT OR IGNORE INTO app_config ( id, engine, danmu, outputFolder, outputFileName, outputFileFormat, minPartSize, maxPartSize, maxPartDuration, maxDownloadRetries, downloadRetryDelay, downloadCheckInterval, maxConcurrentDownloads, maxConcurrentUploads, deleteFilesAfterUpload, huyaConfig, douyinConfig, douyuConfig, twitchConfig, pandaliveConfig)
-    VALUES ( :id, :engine, :danmu, :outputFolder, :outputFileName, :outputFileFormat, :minPartSize, :maxPartSize, :maxPartDuration, :maxDownloadRetries, :downloadRetryDelay,  :downloadCheckInterval,:maxConcurrentDownloads, :maxConcurrentUploads, :deleteFilesAfterUpload, :huyaConfig, :douyinConfig, :douyuConfig, :twitchConfig, :pandaliveConfig);
+    INSERT OR IGNORE INTO app_config ( id, engine, danmu, outputFolder, outputFileName, outputFileFormat, minPartSize, maxPartSize, maxPartDuration, maxDownloadRetries, downloadRetryDelay, downloadCheckInterval, maxConcurrentDownloads, maxConcurrentUploads, deleteFilesAfterUpload, huyaConfig, douyinConfig, douyuConfig, twitchConfig, pandaliveConfig, useBuiltInSegmenter)
+    VALUES ( :id, :engine, :danmu, :outputFolder, :outputFileName, :outputFileFormat, :minPartSize, :maxPartSize, :maxPartDuration, :maxDownloadRetries, :downloadRetryDelay,  :downloadCheckInterval,:maxConcurrentDownloads, :maxConcurrentUploads, :deleteFilesAfterUpload, :huyaConfig, :douyinConfig, :douyuConfig, :twitchConfig, :pandaliveConfig, : useBuiltInSegmenter);
     }
 deleteAppConfig : DELETE FROM app_config WHERE id = ?;
 

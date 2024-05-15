@@ -27,106 +27,187 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
-import github.hua0512.data.stream.StreamData
+import github.hua0512.data.stream.FileInfo
+import github.hua0512.data.stream.Streamer
+import github.hua0512.plugins.download.exceptions.DownloadErrorException
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
 import org.slf4j.LoggerFactory
 import java.io.OutputStream
+import java.nio.file.Path
+import kotlin.io.path.Path
+import kotlin.io.path.fileSize
+import kotlin.io.path.name
+import kotlin.io.path.pathString
 
 /**
  * FFmpegDownloadEngine is a download engine that uses ffmpeg to download the stream.
  * @author hua0512
- * @date : 2024/2/12 18:22
+ * @date : 2024/5/5 21:16
  */
-class FFmpegDownloadEngine() : BaseDownloadEngine() {
+open class FFmpegDownloadEngine : BaseDownloadEngine() {
 
   companion object {
     @JvmStatic
     private val logger = LoggerFactory.getLogger(FFmpegDownloadEngine::class.java)
   }
 
-  // output stream for writing 'q' to stop ffmpeg process
-  private var ous: OutputStream? = null
+  /**
+   * Whether to use ffmpeg built-in segmenter to download the stream
+   */
+  internal var useSegmenter: Boolean = false
 
-  // ffmpeg process
-  private var ffmpegProcess: Process? = null
+  var ous: OutputStream? = null
+  protected var process: Process? = null
 
-  override suspend fun startDownload(): StreamData? {
+  protected var lastOpeningFile: String? = null
+  protected var lastOpeningFileTime: Long = 0
+  protected var lastOpeningSize = 0L
+  protected lateinit var outputFolder: Path
+  protected lateinit var outputFileName: String
+
+  protected fun initPath() {
+    if (!useSegmenter) {
+      lastOpeningFile = downloadFilePath
+      lastOpeningFileTime = Clock.System.now().epochSeconds
+    }
+    outputFolder = Path(downloadFilePath).parent
+    outputFileName = Path(downloadFilePath).name
+  }
+
+  override suspend fun start() {
+    initPath()
     // ffmpeg running commands
-    val cmds = buildFFMpegCmd(
-      headers,
-      cookies,
-      downloadUrl!!,
-      downloadFormat!!,
-      fileLimitSize,
-      fileLimitDuration,
-      downloadFilePath
-    )
-    val streamer = streamData!!.streamer
+    val cmds = buildFFMpegCmd(headers, null, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
 
-    logger.info("(${streamer.name}) Starting download using ffmpeg...")
-    onDownloadStarted()
-    // last size of the file
-    var lastSize = 0L
-    val exitCode =
-      executeProcess(
-        App.ffmpegPath,
-        *cmds,
-        stdout = Redirect.CAPTURE,
-        stderr = Redirect.CAPTURE,
-        destroyForcibly = true,
-        getOutputStream = {
-          ous = it
-        },
-        getProcess = {
-          ffmpegProcess = it
-        }) { line ->
-        processFFmpegOutputLine(line, streamer.name, lastSize) { size, diff, bitrate ->
-          lastSize = size
-          onDownloadProgress(diff, bitrate)
+    val streamer = streamer!!
+    logger.info("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
+    if (!useSegmenter) {
+      onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
+    }
+
+    val exitCode: Int = executeProcess(
+      App.ffmpegPath,
+      *cmds,
+      directory = Path(downloadFilePath).parent.toFile(),
+      stdout = Redirect.CAPTURE,
+      stderr = Redirect.CAPTURE,
+      destroyForcibly = false,
+      getOutputStream = {
+        ous = it
+      },
+      getProcess = {
+        process = it
+      }) { line ->
+      processFFmpegOutputLine(
+        line = line,
+        streamer = streamer.name,
+        lastSize = lastOpeningSize,
+        onSegmentStarted = { name ->
+          processSegment(outputFolder, name)
         }
+      ) { size, diff, bitrate ->
+        handleDownloadProgress(bitrate, size, diff)
       }
-    ffmpegProcess = null
+    }
+    handleExitCodeAndStreamer(exitCode, streamer)
+    process = null
     ous = null
-    return if (exitCode != 0) {
-      logger.error("(${streamer.name}) download failed, exit code: $exitCode")
-      null
-    } else {
-      // case when download is successful (exit code is 0)
-      streamData!!.copy(
-        dateStart = startTime.epochSeconds,
-        dateEnd = Clock.System.now().epochSeconds,
-        outputFilePath = downloadFilePath,
+  }
+
+  protected fun handleDownloadProgress(
+    bitrate: String,
+    size: Long,
+    diff: Long,
+  ) {
+    // if using segmentation, ffmpeg does not provide the total size of the file
+    if (useSegmenter) {
+      // calculate the total size of the file
+      val currentSize = lastOpeningFile?.let { outputFolder.resolve(it).fileSize() } ?: 0
+      val newDiff = currentSize - lastOpeningSize
+      logger.trace(
+        "({}) currentSize: {}, lastPartedSize: {}, diff: {}, bitrate: {}",
+        streamer!!.name,
+        currentSize,
+        lastOpeningSize,
+        newDiff,
+        bitrate
       )
+      lastOpeningSize = currentSize
+      onDownloadProgress(newDiff, bitrate)
+    } else {
+      lastOpeningSize = size
+      onDownloadProgress(diff, bitrate)
     }
   }
 
-  override suspend fun stopDownload(): Boolean {
-    // stop ffmpeg process by writing 'q' to the output stream
-    withIOContext {
-      ous?.apply {
-        // check if the process is still running
-        if (ffmpegProcess?.isAlive == false) {
-          logger.info("FFmpeg process is not running")
-          return@withIOContext
-        }
-        logger.info("(${streamData!!.streamer.name}) Stopping ffmpeg process...")
-        try {
-          write("q\n".toByteArray())
-          flush()
-        } catch (e: Exception) {
-          logger.error("Error sending stop signal to ffmpeg process", e)
-        }
+  protected fun handleExitCodeAndStreamer(exitCode: Int, streamer: Streamer) {
+    val pathString = outputFolder.resolve(lastOpeningFile!!).pathString
+    if (exitCode != 0) {
+      logger.error("(${streamer.name}) ffmpeg download failed, exit code: $exitCode")
+      onDownloadError(pathString, DownloadErrorException("ffmpeg download failed"))
+    } else {
+      // case when download is successful (exit code is 0)
+      onDownloaded(FileInfo(pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
+      onDownloadFinished()
+    }
+  }
+
+
+  protected fun processSegment(folder: Path, fileName: String) {
+    // first segment
+    if (lastOpeningFile == null) {
+      logger.debug("({}) first segment: {}", streamer!!.name, fileName)
+      lastOpeningFile = fileName
+      val now = Clock.System.now().epochSeconds
+      lastOpeningFileTime = now
+      onDownloadStarted(folder.resolve(fileName).pathString, now)
+      return
+    }
+    val now = Clock.System.now().epochSeconds
+    logger.debug("({}) segment finished: {}", streamer!!.name, lastOpeningFile)
+    // construct file data
+    val fileData = FileInfo(
+      path = folder.resolve(lastOpeningFile!!).pathString,
+      size = lastOpeningSize,
+      createdAt = lastOpeningFileTime,
+      updatedAt = now
+    )
+    // notify last segment finished
+    onDownloaded(fileData)
+    // notify segment started
+    logger.debug("({}) segment started: {}", streamer!!.name, fileName)
+    // reset lastOpeningSize
+    lastOpeningSize = 0
+    lastOpeningFile = fileName
+    lastOpeningFileTime = now
+    onDownloadStarted(folder.resolve(fileName).pathString, now)
+  }
+
+
+  protected open fun sendStopSignal() {
+    ous?.apply {
+      try {
+        write("q\n".toByteArray())
+        flush()
+      } catch (e: Exception) {
+        logger.error("Error sending stop signal to ffmpeg process", e)
       }
     }
-    // wait for the process to exit
-    val code = withIOContext { ffmpegProcess?.waitFor() }
-    if (code != 0) {
-      logger.error("FFmpeg process exited with code $code")
-      return false
+  }
+
+  override suspend fun stop(): Boolean {
+    withIOContext {
+      logger.info("$downloadUrl stopping ffmpeg process...")
+      sendStopSignal()
     }
-    return true
+    val code = withIOContext { process?.waitFor() }
+    if (code != 0) {
+      logger.error("ffmpeg process exited with code $code")
+      onDownloadError(lastOpeningFile, DownloadErrorException("ffmpeg process exited with code $code"))
+    }
+    return code == 0
   }
 }
