@@ -338,7 +338,8 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         logger.error("Error writing danmu to file {}", filePath, e)
       }
       .onCompletion {
-        danmuFile.writeEndOfFile()
+        if (danmuFile.exists())
+          danmuFile.writeEndOfFile()
       }
       .flowOn(Dispatchers.IO)
       .launchIn(this)
