@@ -58,11 +58,11 @@ abstract class BaseDownloadEngine {
   protected var fileLimitSize: Long = 0
   protected var isInitialized = false
   protected var streamer: Streamer? = null
-  protected var callback: DownloadCallback? = null
+  private var callback: DownloadCallback? = null
 
 
   /**
-   * Initializes the video download process.
+   * Instantiates the download engine with the required parameters.
    *
    * @param downloadUrl The URL of the video to be downloaded.
    * @param downloadFormat The format of the video to be downloaded.
@@ -128,7 +128,7 @@ abstract class BaseDownloadEngine {
   }
 
   private fun extractFormatFromPath(downloadFilePath: String): VideoFormat? {
-    val extension = downloadFilePath.removePrefix(PART_PREFIX).substringAfterLast(".").lowercase(Locale.getDefault())
+    val extension = downloadFilePath.substringAfterLast(".").lowercase(Locale.getDefault())
     return VideoFormat.format(extension)
   }
 
