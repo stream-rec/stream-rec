@@ -323,7 +323,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       .buffer()
       .chunked(20)
       .onStart {
-        logger.info("Start writing danmu to file: {}", filePath)
+        logger.debug("Start writing danmu to file: {}", filePath)
         // check if danmu file exists
         if (!danmuFile.exists()) {
           danmuFile.createNewFile()
@@ -442,7 +442,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
 
   private fun File.writeEndOfFile() {
     appendText(XML_END)
-    logger.info("Finish writing danmu to : $absolutePath")
+    logger.debug("Finish writing danmu to : $absolutePath")
   }
 
 }

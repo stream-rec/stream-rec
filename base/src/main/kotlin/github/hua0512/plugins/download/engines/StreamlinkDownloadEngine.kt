@@ -68,10 +68,10 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     val streamer = streamer ?: throw IllegalArgumentException("Streamer is not set")
     // streamlink args
     val streamlinkArgs = streamlinkInputArgs + headers + arrayOf(downloadUrl!!, "best", "-O")
-    logger.info("${streamer.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
+    logger.debug("${streamer.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
     val ffmpegCmdArgs =
       buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
-    logger.info("${streamer.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
+    logger.debug("${streamer.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
     // streamlink process builder
     val streamLinkBuilder = ProcessBuilder(App.streamLinkPath, *streamlinkArgs).apply {
       redirectInput(ProcessBuilder.Redirect.PIPE)

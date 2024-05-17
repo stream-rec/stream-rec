@@ -83,7 +83,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     val cmds = buildFFMpegCmd(headers, null, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
 
     val streamer = streamer!!
-    logger.info("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
+    logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
     if (!useSegmenter) {
       onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
     }

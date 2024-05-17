@@ -61,6 +61,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.pathString
 import kotlin.time.DurationUnit
@@ -354,9 +355,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
               )
             )
             danmuJob?.let { stopDanmuJob(it) }
-            logger.debug("(${streamer.name}) error danmu finished : ${danmu.filePath}")
             // process the segment
-            processSegment(filePath?.let { Path(it) } ?: outputPath, Path(danmu.filePath))
+            processSegment(filePath?.let { Path(it) } ?: outputPath, if (isDanmuEnabled) Path(danmu.filePath) else null)
             onStreamDownloadError?.invoke(e)
           }
 
@@ -396,18 +396,22 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   }
 
 
+  /**
+   * Process the segment.
+   * This method checks if the segment is valid, if not, it deletes the outputs
+   * A valid segment should exist and have a size greater than the minimum part size configured in the app config
+   * Otherwise, the segment is invalid
+   * @param segmentPath the path of the segment
+   * @param danmuPath the path of the danmu
+   * @return true if the segment is invalid, false otherwise
+   */
   protected fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
-    val minContentLength = app.config.minPartSize
-    val outputFile = Path(segmentPath.pathString)
-    val fileSize = outputFile.fileSize()
-    if (fileSize < minContentLength) {
-      logger.error("(${streamer.name}) file size too small: $fileSize")
-      deleteOutputs(outputFile, danmuPath)
-      return true
-    }
-    return false
+    // check if the segment is valid, a valid segment should exist and have a size greater than the minimum part size
+    if (segmentPath.exists() && segmentPath.fileSize() >= app.config.minPartSize) return false
+    // cases where the segment is invalid
+    deleteOutputs(segmentPath, danmuPath)
+    return true
   }
-
 
   /**
    * Stop the download process
@@ -419,11 +423,15 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     } else true
   }
 
+  /**
+   * Delete the outputs
+   * @param outputPath the path of the output
+   * @param danmuPath the path of the danmu
+   */
   private fun deleteOutputs(outputPath: Path, danmuPath: Path? = null) {
     outputPath.deleteFile()
     danmuPath?.deleteFile()
   }
-
 
   /**
    * Get the download engine based on type
@@ -460,7 +468,6 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     } catch (_: Exception) {
     }
   }
-
 
   private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String): Path {
     val timestamp = Clock.System.now()
