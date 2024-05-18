@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.base
+package github.hua0512.plugins.download
 
 import github.hua0512.app.App
 import github.hua0512.data.config.Action
@@ -34,6 +34,8 @@ import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
+import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.exceptions.InvalidDownloadException
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.deleteFile
 import kotlinx.coroutines.*
@@ -71,7 +73,7 @@ class StreamerDownloadManager(
   private val dataList = mutableListOf<StreamData>()
 
   /**
-   * Returns the platform config for the streamer
+   * Returns the global platform config for the streamer platform
    */
   private val StreamingPlatform.platformConfig: GlobalPlatformConfig
     get() {
@@ -199,34 +201,42 @@ class StreamerDownloadManager(
     streamer.isLive = true
     updateLastLiveTime()
     // while loop for parted download
-    while (true) {
-      val stream = downloadStream()
-      if (stream == null) {
+    var breakLoop = false
+    while (!breakLoop && !isCancelled.value) {
+      downloadStream(onStreamDownloaded = { stream ->
+        // save the stream data to the database
+        scope.launch {
+          saveStreamData(stream)
+          // execute post parted download actions
+          executePostActions(streamer, stream)
+        }
+      }) {
         logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
-        break
+        breakLoop = true
       }
-      // save the stream data to the database
-      saveStreamData(stream)
-      // execute post parted download actions
-      scope.launch {
-        executePostActions(streamer, stream)
-      }
+      if (breakLoop) break
+
       if (!isCancelled.value) delay(platformRetryDelay)
       else break
     }
   }
 
-  private suspend fun downloadStream(): StreamData? {
+  private suspend fun downloadStream(onStreamDownloaded: (stream: StreamData) -> Unit = {}, onStreamDownloadError: (e: Exception) -> Unit = {}) {
     // stream is live, start downloading
     // while loop for parting the download
     return downloadSemaphore.withPermit {
       isDownloading = true
       try {
-        plugin.download()
+        with(plugin) {
+          onStreamDownloaded { onStreamDownloaded(it) }
+          onStreamDownloadError { onStreamDownloadError(it) }
+          download()
+        }
+        logger.debug("${streamer.name} download finished")
       } catch (e: Exception) {
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
         when (e) {
-          is IllegalArgumentException, is UnsupportedOperationException -> {
+          is IllegalArgumentException, is UnsupportedOperationException, is InvalidDownloadException -> {
             streamer.isLive = false
             updateLiveStatusCallback(streamer.id, false)
             logger.error("${streamer.name} invalid url or invalid engine : ${e.message}")
@@ -240,7 +250,6 @@ class StreamerDownloadManager(
 
           else -> {
             logger.error("${streamer.name} Error while getting stream data : ${e.message}")
-            null
           }
         }
       } finally {
@@ -339,7 +348,7 @@ class StreamerDownloadManager(
     return plugin.stopDownload()
   }
 
-  suspend fun cancel() {
+  fun cancel() {
     logger.info("Cancelling download for ${streamer.name}, isDownloading : $isDownloading")
     isCancelled.value = true
   }

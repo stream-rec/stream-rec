@@ -30,7 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.Danmu
+import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.twitch.download.TwitchExtractor
 import io.ktor.http.*
 import io.ktor.websocket.*
@@ -42,7 +42,7 @@ import kotlinx.datetime.Instant
  * @author hua0512
  * @date : 2024/5/4 21:55
  */
-class TwitchDanmu(app: App) : Danmu(app = app, enablePing = false, manualHeartBeat = true) {
+class TwitchDanmu(app: App) : Danmu(app = app, enablePing = false) {
 
   companion object {
     const val WEB_SOCKET_URL = "wss://irc-ws.chat.twitch.tv"
@@ -81,6 +81,10 @@ class TwitchDanmu(app: App) : Danmu(app = app, enablePing = false, manualHeartBe
       send("USER $user 8 * :$user")
       send("JOIN #$channel")
     }
+  }
+
+  override fun launchHeartBeatJob(session: WebSocketSession) {
+    // twitch heartbeat is manually sent
   }
 
   private val contentPattern = Regex("PRIVMSG [^:]+:(.+)")

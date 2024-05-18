@@ -24,14 +24,15 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.base
+package github.hua0512.data.stream
 
-import github.hua0512.app.App
-import github.hua0512.data.upload.UploadConfig
-import github.hua0512.data.upload.UploadData
-import github.hua0512.data.upload.UploadResult
-
-abstract class Upload(protected val app: App, open val uploadConfig: UploadConfig?) {
-
-  abstract suspend fun upload(uploadData: UploadData): UploadResult
-}
+/**
+ * @author hua0512
+ * @date : 2024/5/6 12:27
+ */
+data class FileInfo(
+  val path: String,
+  val size: Long,
+  val createdAt: Long,
+  val updatedAt: Long,
+)

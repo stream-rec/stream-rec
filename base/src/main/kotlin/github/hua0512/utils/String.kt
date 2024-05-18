@@ -39,7 +39,7 @@ import java.util.*
  * @param time The time of the stream as an Instant object. The date and time parts of this value will replace the corresponding placeholders in the string. Defaults to the current system time if not provided.
  * @return The string with all placeholders replaced with their corresponding values.
  */
-fun String.replacePlaceholders(streamer: String, title: String, time: Instant = Clock.System.now()): String {
+fun String.replacePlaceholders(streamer: String, title: String, time: Instant = Clock.System.now(), replaceTimestamps: Boolean = true): String {
   // Convert the Instant time to a LocalDateTime object in the system's default time zone
   val localDateTime: LocalDateTime = time.toLocalDateTime(TimeZone.currentSystemDefault())
 
@@ -47,13 +47,18 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant = 
   val toReplace: Map<String, String> = mapOf(
     "{streamer}" to streamer,
     "{title}" to title,
-    "%yyyy" to localDateTime.year.toString(),
-    "%MM" to formatLeadingZero(localDateTime.monthNumber),
-    "%dd" to formatLeadingZero(localDateTime.dayOfMonth),
-    "%HH" to formatLeadingZero(localDateTime.hour),
-    "%mm" to formatLeadingZero(localDateTime.minute),
-    "%ss" to formatLeadingZero(localDateTime.second),
-  )
+  ) + if (replaceTimestamps) {
+    mapOf(
+      "%Y" to localDateTime.year.toString(),
+      "%m" to formatLeadingZero(localDateTime.monthNumber),
+      "%d" to formatLeadingZero(localDateTime.dayOfMonth),
+      "%H" to formatLeadingZero(localDateTime.hour),
+      "%M" to formatLeadingZero(localDateTime.minute),
+      "%S" to formatLeadingZero(localDateTime.second),
+    )
+  } else {
+    emptyMap()
+  }
 
   // Replace each placeholder in the string with its corresponding value from the map and return the result
   return toReplace.entries.fold(this) { acc, entry ->
@@ -66,7 +71,7 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant = 
  * @param value The integer value to format.
  * @return The formatted string.
  */
-private fun formatLeadingZero(value : Int) : String = String.format("%02d", value)
+private fun formatLeadingZero(value: Int): String = String.format("%02d", value)
 
 
 /**

@@ -34,7 +34,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.Download
+import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.utils.withIOContext
 

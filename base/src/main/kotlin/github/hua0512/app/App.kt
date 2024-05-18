@@ -101,7 +101,7 @@ class App(val json: Json) {
   }
 
   val config: AppConfig
-    get() = appFlow.value ?: throw Exception("App config not initialized")
+    get() = appFlow.value ?: throw IllegalStateException("App config not initialized")
 
   private val appFlow = MutableStateFlow<AppConfig?>(null)
 

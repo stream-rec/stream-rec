@@ -31,7 +31,7 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.PandaliveDownloadConfig
 import github.hua0512.data.platform.PandaliveQuality
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.plugins.base.Download
+import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.pandalive.danmu.PandaliveDanmu
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext

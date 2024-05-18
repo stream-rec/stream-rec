@@ -29,7 +29,7 @@ package github.hua0512.plugins.douyu.danmu
 import github.hua0512.app.App
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.Danmu
+import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.douyu.download.DouyuExtractor
 import github.hua0512.plugins.douyu.download.extractDouyunRidFromUrl
 import io.ktor.client.request.*

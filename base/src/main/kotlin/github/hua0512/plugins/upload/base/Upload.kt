@@ -1,8 +1,3 @@
-import github.hua0512.utils.replacePlaceholders
-import kotlinx.datetime.Instant
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
 /*
  * MIT License
  *
@@ -29,20 +24,14 @@ import kotlin.test.assertEquals
  * SOFTWARE.
  */
 
-class StringTest {
+package github.hua0512.plugins.upload.base
 
+import github.hua0512.app.App
+import github.hua0512.data.upload.UploadConfig
+import github.hua0512.data.upload.UploadData
+import github.hua0512.data.upload.UploadResult
 
-  @Test
-  fun testReplace() {
-    val streamer = "雪乃荔荔枝"
-    val title = "新人第一天开播"
-    val time = 1708461712L
-    val instant = Instant.fromEpochSeconds(time)
+abstract class Upload(protected val app: App, open val uploadConfig: UploadConfig?) {
 
-    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
-
-    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
-
-    assertEquals("雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52", formatted)
-  }
+  abstract suspend fun upload(uploadData: UploadData): UploadResult
 }

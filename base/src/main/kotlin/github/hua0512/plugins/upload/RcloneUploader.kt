@@ -30,7 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
-import github.hua0512.plugins.base.Upload
+import github.hua0512.plugins.upload.base.Upload
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders

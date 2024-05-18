@@ -1,8 +1,3 @@
-import github.hua0512.utils.replacePlaceholders
-import kotlinx.datetime.Instant
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
 /*
  * MIT License
  *
@@ -29,20 +24,30 @@ import kotlin.test.assertEquals
  * SOFTWARE.
  */
 
-class StringTest {
+package github.hua0512.utils
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
-  @Test
-  fun testReplace() {
-    val streamer = "雪乃荔荔枝"
-    val title = "新人第一天开播"
-    val time = 1708461712L
-    val instant = Instant.fromEpochSeconds(time)
-
-    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
-
-    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
-
-    assertEquals("雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52", formatted)
+/**
+ * Split the flow into chunks of the specified size
+ * @param chunkSize the size of each chunk
+ * @return a flow of lists of elements
+ * @author hua0512
+ * @date : 2024/5/13 20:00
+ */
+fun <T> Flow<T>.chunked(chunkSize: Int): Flow<List<T>> {
+  val buffer = mutableListOf<T>()
+  return flow {
+    this@chunked.collect {
+      buffer.add(it)
+      if (buffer.size == chunkSize) {
+        emit(buffer.toList())
+        buffer.clear()
+      }
+    }
+    if (buffer.isNotEmpty()) {
+      emit(buffer.toList())
+    }
   }
 }

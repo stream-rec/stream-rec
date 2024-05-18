@@ -26,6 +26,7 @@
 
 package github.hua0512.app
 
+import app.cash.sqldelight.db.AfterVersion
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.cash.sqldelight.logs.LogSqliteDriver
@@ -58,7 +59,7 @@ import kotlin.io.path.pathString
 @Module
 class DatabaseModule {
 
-  private  var firstRun : Boolean = true
+  private var firstRun: Boolean = true
 
   @Provides
   @Singleton
