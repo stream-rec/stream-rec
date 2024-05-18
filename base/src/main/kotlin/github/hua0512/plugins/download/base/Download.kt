@@ -323,7 +323,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
               outputFilePath = data.path,
               outputFileSize = data.size,
               danmuFilePath = if (isDanmuEnabled) danmu.filePath else null
-            )
+            ).also {
+              it.streamer = streamer
+            }
             EventCenter.sendEvent(
               DownloadEvent.DownloadSuccess(
                 filePath = data.path,
