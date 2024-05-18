@@ -45,10 +45,7 @@ import github.hua0512.plugins.download.exceptions.InvalidDownloadException
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.*
 import io.ktor.http.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import me.tongfei.progressbar.DelegatingProgressBarConsumer
@@ -340,7 +337,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           // normal exit
           override fun onDownloadFinished() {
             logger.debug("(${streamer.name}) download finished")
-            danmuJob?.let { stopDanmuJob(it) }
+            launch {
+              danmuJob?.let { stopDanmuJob(it) }
+            }
           }
 
           // error exit
@@ -354,10 +353,13 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
                 error = e
               )
             )
-            danmuJob?.let { stopDanmuJob(it) }
-            // process the segment
-            processSegment(filePath?.let { Path(it) } ?: outputPath, if (isDanmuEnabled) Path(danmu.filePath) else null)
-            onStreamDownloadError?.invoke(e)
+            launch {
+              danmuJob?.let { stopDanmuJob(it) }
+              val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
+              // process the segment
+              processSegment(filePath?.let { Path(it) } ?: outputPath, danmuPath)
+              onStreamDownloadError?.invoke(e)
+            }
           }
 
           override fun onDownloadCancelled() {
@@ -381,6 +383,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     withIOContext {
       try {
         engine.start()
+        // await children
+        coroutineContext[Job]?.children?.forEach { it.join() }
         logger.debug("(${streamer.name}) engine finished")
       } catch (e: Exception) {
         onStreamDownloadError?.invoke(e)
@@ -533,10 +537,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * Stop the danmu job
    * @param danmuJob the [Job] instance
    */
-  private fun stopDanmuJob(danmuJob: Job) {
+  private suspend fun stopDanmuJob(danmuJob: Job) {
     danmu.finish()
     try {
-      danmuJob.cancel()
+      danmuJob.cancelAndJoin()
     } catch (e: Exception) {
       logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
     } finally {
