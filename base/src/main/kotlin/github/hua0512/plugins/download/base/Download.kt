@@ -312,6 +312,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
             logger.debug("({}) downloaded: {}", streamer.name, data)
             // check if the segment is valid
             danmu.finish()
+            outputPath = Path(data.path)
             val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
             logger.debug("(${streamer.name}) danmu finished : ${danmu.filePath}")
             if (processSegment(Path(data.path), danmuPath)) return
