@@ -184,7 +184,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     logger.debug("(${streamer.name}) downloadUrl: $downloadUrl")
 
     // build output file path
-    val outputPath = buildOutputFilePath(downloadConfig, fileExtension)
+    var outputPath = buildOutputFilePath(downloadConfig, fileExtension)
     // check if disk space is enough
     checkDiskSpace(outputPath.parent, app.config.maxPartSize)
     // download start time
@@ -244,6 +244,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           override fun onDownloadStarted(filePath: String, time: Long) {
             logger.debug("(${streamer.name}) download started : $filePath, time: $time")
             pb?.reset()
+            outputPath = Path(filePath)
             val danmuPath = filePath.replace(fileExtension, ContentType.Application.Xml.contentSubtype).replace(PART_PREFIX, "")
             danmu.videoStartTime = Instant.fromEpochSeconds(time)
             danmu.filePath = danmuPath
@@ -337,29 +338,21 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           // normal exit
           override fun onDownloadFinished() {
             logger.debug("(${streamer.name}) download finished")
-            launch {
-              danmuJob?.let { stopDanmuJob(it) }
-            }
           }
 
           // error exit
           override fun onDownloadError(filePath: String?, e: Exception) {
             logger.error("(${streamer.name}), $filePath, download failed: $e")
+            outputPath = filePath?.let { Path(it) } ?: outputPath
             EventCenter.sendEvent(
               DownloadEvent.DownloadError(
-                filePath = filePath ?: outputPath.pathString,
+                filePath = outputPath.pathString,
                 url = downloadUrl,
                 platform = streamer.platform,
                 error = e
               )
             )
-            launch {
-              danmuJob?.let { stopDanmuJob(it) }
-              val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
-              // process the segment
-              processSegment(filePath?.let { Path(it) } ?: outputPath, danmuPath)
-              onStreamDownloadError?.invoke(e)
-            }
+            onStreamDownloadError?.invoke(e)
           }
 
           override fun onDownloadCancelled() {
@@ -384,7 +377,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       try {
         engine.start()
         // await children
-        coroutineContext[Job]?.children?.forEach { it.join() }
+        danmuJob?.let { stopDanmuJob(it) }
+        val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
+        // process last segment
+        processSegment(outputPath, danmuPath)
         logger.debug("(${streamer.name}) engine finished")
       } catch (e: Exception) {
         onStreamDownloadError?.invoke(e)
