@@ -67,7 +67,7 @@ class TwitchTest : BaseTest() {
       enableWrite = false
       filePath = "twitch_danmu.txt"
     }
-    val init = danmu.init(Streamer("aspaszin", testUrl))
+    val init = danmu.init(Streamer(0, "aspaszin", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }

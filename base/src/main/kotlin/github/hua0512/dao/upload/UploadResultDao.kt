@@ -26,33 +26,46 @@
 
 package github.hua0512.dao.upload
 
-import github.hua0512.data.UploadDataId
-import github.hua0512.data.UploadResultId
-import github.hua0512.utils.UploadResultEntity
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Transaction
+import github.hua0512.dao.BaseDao
+import github.hua0512.data.upload.UploadResultWithData
+import github.hua0512.data.upload.entity.UploadResultEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Interface for managing upload results.
- * Provides methods for streaming, finding, saving, and deleting upload results.
+ * Upload result related CRUD operations
  *
  * @author hua0512
  * @date : 2024/2/19 10:52
  */
-interface UploadResultDao {
+@Dao
+interface UploadResultDao : BaseDao<UploadResultEntity> {
 
   /**
    * Streams all upload results.
    *
    * @return Flow of list of UploadResultEntity
    */
-  fun streamUploadResults(): Flow<List<UploadResultEntity>>
+  @Query("SELECT * FROM UploadResult ORDER BY startTime DESC")
+  fun streamAllDesc(): Flow<List<UploadResultEntity>>
 
   /**
    * Streams all failed upload results.
    *
    * @return Flow of list of UploadResultEntity
    */
-  fun streamAllFailedUploadResult(): Flow<List<UploadResultEntity>>
+  @Query("SELECT * FROM UploadResult WHERE isSuccess = 0 ORDER BY startTime DESC")
+  fun streamAllFailedDesc(): Flow<List<UploadResultEntity>>
+
+  /**
+   * Streams all failed upload results with upload data.
+   * @return Flow of list of UploadResultWithData
+   */
+  @Transaction
+  @Query("SELECT * FROM UploadResult WHERE isSuccess = 0 ORDER BY startTime DESC")
+  fun streamAllFailedWithUploadDataDesc(): Flow<List<UploadResultWithData>>
 
 
   /**
@@ -60,7 +73,18 @@ interface UploadResultDao {
    *
    * @return List of UploadResultEntity
    */
-  fun getAllUploadResults(): List<UploadResultEntity>
+  @Query("SELECT * FROM UploadResult ORDER BY startTime DESC")
+  suspend fun getAllDesc(): List<UploadResultEntity>
+
+
+  /**
+   * Finds all upload results with upload data.
+   *
+   * @return List of UploadResultWithData
+   */
+  @Transaction
+  @Query("SELECT * FROM UploadResult ORDER BY startTime DESC")
+  suspend fun getAllWithDataDesc(): List<UploadResultWithData>
 
   /**
    * Finds all upload results paginated.
@@ -69,7 +93,8 @@ interface UploadResultDao {
    * @param pageSize The page size
    * @return List of UploadResultEntity
    */
-  fun getAllUploadResultsPaginated(page: Int, pageSize: Int): List<UploadResultEntity>
+  @Query("SELECT * FROM UploadResult ORDER BY startTime DESC LIMIT :pageSize OFFSET :page")
+  suspend fun getAllPaginated(page: Int, pageSize: Int): List<UploadResultEntity>
 
 
   /**
@@ -77,7 +102,8 @@ interface UploadResultDao {
    *
    * @return List of UploadResultEntity
    */
-  fun findFailedUploadResults(): List<UploadResultEntity>
+  @Query("SELECT * FROM UploadResult WHERE isSuccess = 0 ORDER BY startTime DESC")
+  suspend fun getAllFailed(): List<UploadResultEntity>
 
   /**
    * Finds upload results by upload ID.
@@ -85,20 +111,16 @@ interface UploadResultDao {
    * @param uploadId The ID of the upload
    * @return List of UploadResultEntity
    */
-  fun findUploadResultByUploadId(uploadId: UploadDataId): List<UploadResultEntity>
+  @Query("SELECT * FROM UploadResult WHERE uploadDataId = :uploadId ORDER BY startTime DESC")
+  suspend fun findByDataIdDesc(uploadId: Long): List<UploadResultEntity>
+
 
   /**
-   * Saves an upload result.
-   *
-   * @param uploadResult The upload result to save
-   * @return The ID of the saved upload result
+   * Finds upload results by upload ID with upload data.
+   * @param uploadId The ID of the upload
+   * @return List of UploadResultWithData
    */
-  fun saveUploadResult(uploadResult: UploadResultEntity): Long
-
-  /**
-   * Deletes an upload result.
-   *
-   * @param uploadResultId The ID of the upload result to delete
-   */
-  fun deleteUploadResult(uploadResultId: UploadResultId)
+  @Transaction
+  @Query("SELECT * FROM UploadResult WHERE uploadDataId = :uploadId ORDER BY startTime DESC")
+  suspend fun findByDataIdWithDataDesc(uploadId: Long): List<UploadResultWithData>
 }

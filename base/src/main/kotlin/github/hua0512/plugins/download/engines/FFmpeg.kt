@@ -158,7 +158,7 @@ fun buildFFMpegCmd(
 }
 
 
-fun processFFmpegOutputLine(
+internal fun processFFmpegOutputLine(
   line: String,
   streamer: String,
   lastSize: Long,

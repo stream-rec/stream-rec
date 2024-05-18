@@ -27,11 +27,14 @@
 package github.hua0512.plugins.upload
 
 import github.hua0512.app.App
-import github.hua0512.data.upload.UploadConfig
+import github.hua0512.data.upload.UploadConfig.RcloneConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
 import github.hua0512.plugins.upload.base.Upload
+import github.hua0512.plugins.upload.exceptions.UploadFailedException
+import github.hua0512.plugins.upload.exceptions.UploadInvalidArgumentsException
 import github.hua0512.utils.executeProcess
+import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.withIOContext
@@ -40,7 +43,7 @@ import kotlinx.datetime.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneConfig) : Upload(app, uploadConfig) {
+class RcloneUploader(app: App, override val config: RcloneConfig) : Upload<RcloneConfig>(app, config) {
 
   companion object {
     @JvmStatic
@@ -48,30 +51,21 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
   }
 
 
-  override suspend fun upload(uploadData: UploadData): UploadResult = withIOContext {
-    val remotePath = uploadConfig.remotePath.also {
-      if (it.isEmpty()) {
-        throw UploadInvalidArgumentsException("invalid remote path: $it")
-      }
-    }
+  override suspend fun performUpload(uploadData: UploadData): UploadResult = withIOContext {
+    val remotePath = config.remotePath.nonEmptyOrNull() ?: throw UploadInvalidArgumentsException("invalid rclone remote path")
 
-    if (!uploadData.isStreamDataInitialized()) {
-      throw UploadInvalidArgumentsException("stream data not initialized : $uploadData")
-    }
-
-    val startInstant =
-      Instant.fromEpochSeconds(uploadData.streamStartTime ?: throw UploadInvalidArgumentsException("stream start time not initialized"))
+    val startInstant = Instant.fromEpochSeconds(uploadData.streamStartTime)
     val streamer = uploadData.streamer
-    val replacedRemote = remotePath.run {
-      replacePlaceholders(streamer, uploadData.streamTitle, startInstant)
-    }
+    val streamTitle = uploadData.streamTitle
+
+    val replacedRemote = remotePath.replacePlaceholders(streamer, streamTitle, startInstant)
 
     val rcloneCommand = arrayOf(
       "rclone",
-      uploadConfig.rcloneOperation,
+      config.rcloneOperation,
       uploadData.filePath,
       replacedRemote
-    ) + uploadConfig.args
+    ) + config.args
 
     logger.debug("Processing {}...", rcloneCommand.toList())
     val errorBuilder = StringBuilder()
@@ -83,10 +77,16 @@ class RcloneUploader(app: App, override val uploadConfig: UploadConfig.RcloneCon
     })
 
     if (resultCode != 0) {
-      throw UploadFailedException("rclone failed with exit code: $resultCode\n$errorBuilder", uploadData.filePath)
+      throw UploadFailedException("$errorBuilder", uploadData.filePath)
     } else {
       logger.info("rclone: ${uploadData.filePath} finished")
-      UploadResult(startTime = startTime.epochSeconds, endTime = Clock.System.now().epochSeconds, isSuccess = true)
+      UploadResult(
+        startTime = startTime.epochSeconds,
+        endTime = Clock.System.now().epochSeconds,
+        isSuccess = true,
+        uploadDataId = uploadData.id,
+        uploadData = uploadData,
+      )
     }
   }
 }

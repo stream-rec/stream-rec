@@ -32,8 +32,8 @@ import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.download.StreamerDownloadManager
 import github.hua0512.plugins.event.EventCenter
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.streamer.StreamerRepo
+import github.hua0512.repo.stream.StreamDataRepo
+import github.hua0512.repo.stream.StreamerRepo
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -72,9 +72,9 @@ class DownloadService(
         logger.info("Streamers changed, reloading...")
 
         // compare the new streamers with the old ones, first by url, then by entity equals
-        // if a streamer is not in the new list, cancel the job
-        // if a streamer is in the new list but not in the old one, start a new job
-        // if a streamer is in both lists, do nothing
+        // if a stream is not in the new list, cancel the job
+        // if a stream is in the new list but not in the old one, start a new job
+        // if a stream is in both lists, do nothing
 
         if (streamerList.isEmpty()) {
           logger.info("No streamers to download")
@@ -94,9 +94,9 @@ class DownloadService(
         }
 
         // diff the new streamers with the old ones
-        // if a streamer has the same url but different entity, cancel the old job and start a new one
-        // if a streamer is not in the old list, start a new job
-        // if a streamer is in both lists, do nothing
+        // if a stream has the same url but different entity, cancel the old job and start a new one
+        // if a stream is not in the old list, start a new job
+        // if a stream is in both lists, do nothing
         newStreamers.forEach { new ->
           val old = oldStreamers.find { it.url == new.url } ?: run {
             if (validateActivation(new)) return@forEach
@@ -114,7 +114,7 @@ class DownloadService(
               old.name != new.name -> "name"
               old.isTemplate != new.isTemplate -> "as template"
               old.templateId != new.templateId -> "template id"
-              old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template streamer download config"
+              old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template stream download config"
               // other changes are ignored
               else -> return@forEach
             }
@@ -145,26 +145,26 @@ class DownloadService(
       downloadSemaphore
     ).apply {
       onLiveStatusUpdate { id, isLive ->
-        repo.updateStreamerLiveStatus(id, isLive)
+        repo.update(streamer.copy(isLive = isLive))
       }
 
       onLastLiveTimeUpdate { id, lastLiveTime ->
-        repo.updateStreamerLastLiveTime(id, lastLiveTime)
+        repo.update(streamer.copy(lastLiveTime = lastLiveTime))
       }
 
       onSavedToDb {
-        streamDataRepository.saveStreamData(it)
+        streamDataRepository.save(it)
       }
 
       onDescriptionUpdate { id, description ->
         launch {
-          repo.updateStreamerStreamTitle(id, description)
+          repo.update(streamer.copy(streamTitle = description))
         }
       }
 
       onAvatarUpdate { id, avatarUrl ->
         launch {
-          repo.updateStreamerAvatar(id, avatarUrl)
+          repo.update(streamer.copy(avatar = avatarUrl))
         }
       }
 

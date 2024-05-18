@@ -29,233 +29,90 @@ package github.hua0512.repo
 import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
-import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.logger
-import github.hua0512.plugins.douyin.download.DouyinExtractor
-import github.hua0512.plugins.huya.download.HuyaExtractor
-import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.utils.asLong
+import github.hua0512.data.stream.entity.StreamerEntity
+import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 /**
+ * Streamer related actions repository
  * @author hua0512
  * @date : 2024/2/18 13:45
  */
-class StreamerRepository(val dao: StreamerDao, val json: Json) : StreamerRepo {
+class StreamerRepository(val dao: StreamerDao) : StreamerRepo {
 
   override suspend fun stream() = dao.stream()
     .map { items ->
-      items.map {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
+      items.toStreamers()
     }
     .flowOn(Dispatchers.IO)
 
-  override suspend fun getStreamers(): List<Streamer> {
+  override suspend fun getStreamers(): List<Streamer> = withIOContext {
+    dao.getAll().toStreamers()
+  }
+
+  override suspend fun getAllTemplateStreamers(): List<Streamer> = withIOContext {
+    dao.getTemplates().toStreamers()
+  }
+
+  override suspend fun getAllNonTemplateStreamers(): List<Streamer> = withIOContext {
+    dao.getNonTemplates().toStreamers()
+  }
+
+  override suspend fun getStreamerById(id: StreamerId): Streamer? {
     return withIOContext {
-      dao.getAllStreamers().map {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
+      dao.getById(id)?.toStreamer()
     }
   }
 
-  override suspend fun getAllTemplateStreamers(): List<Streamer> {
-    return withIOContext {
-      dao.getAllTemplateStreamers().map {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
+  override suspend fun getStreamersActive(): List<Streamer> = withIOContext {
+    dao.getActivesNonTemplates().map {
+      it.toStreamer()
     }
   }
 
-  override suspend fun getAllNonTemplateStreamers(): List<Streamer> {
-    return withIOContext {
-      dao.getAllNonTemplateStreamers().map {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
+  override suspend fun getStreamersInactive(): List<Streamer> = withIOContext {
+    dao.getInactivesNonTemplates().toStreamers()
+  }
+
+  override suspend fun findStreamerByUrl(url: String): Streamer? = withIOContext {
+    dao.findByUrl(url)?.toStreamer()
+  }
+
+  override suspend fun findStreamersUsingTemplate(templateId: StreamerId): List<Streamer> = withIOContext {
+    dao.findByTemplateId(templateId).map {
+      it.toStreamer()
     }
   }
 
-  override suspend fun getStreamerById(id: Long): Streamer? {
-    return withIOContext {
-      dao.getStreamerById(StreamerId(id))?.let {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
-    }
+  override suspend fun countStreamersUsingTemplate(templateId: StreamerId): Long = withIOContext {
+    dao.countByTemplateId(templateId)
   }
 
-  override suspend fun getStreamersActive(): List<Streamer> {
-    return withIOContext {
-      dao.getAllStremersActive().map {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
-    }
+  override suspend fun update(streamer: Streamer) = withIOContext {
+    dao.update(streamer.toStreamerEntity()) == 1
   }
 
-  override suspend fun getStreamersInactive(): List<Streamer> {
-    return withIOContext {
-      dao.getAllStremersInactive().map {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
-    }
+  override suspend fun save(newStreamer: Streamer): Streamer = withIOContext {
+    val result = dao.insert(newStreamer.toStreamerEntity())
+    newStreamer.copy(id = result)
   }
 
-  override suspend fun findStreamerByUrl(url: String): Streamer? {
-    return withIOContext {
-      dao.findStreamerByUrl(url)?.let {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
-    }
-  }
-
-  override suspend fun findStreamersUsingTemplate(templateId: Long): List<Streamer> {
-    return withIOContext {
-      dao.findStreamersUsingTemplate(templateId).map {
-        Streamer(it, json).apply {
-          populateTemplateStreamer()
-        }
-      }
-    }
-  }
-
-  override suspend fun countStreamersUsingTemplate(templateId: Long): Long {
-    return withIOContext {
-      dao.countStreamersUsingTemplate(templateId)
-    }
-  }
-
-  override suspend fun updateStreamer(streamer: Streamer) {
-    return withIOContext {
-      val downloadConfig = if (streamer.downloadConfig != null) {
-        json.encodeToString(streamer.downloadConfig)
-      } else null
-
-      val platform = if (streamer.platform == StreamingPlatform.UNKNOWN) {
-        getPlatformByUrl(streamer.url)
-      } else {
-        streamer.platform
-      }
-      dao.updateStreamer(
-        id = StreamerId(streamer.id),
-        name = streamer.name,
-        url = streamer.url,
-        platform = platform.id.toLong(),
-        lastStream = streamer.lastLiveTime,
-        isLive = streamer.isLive.asLong,
-        isActive = streamer.isActivated.asLong,
-        description = streamer.streamTitle,
-        avatar = streamer.avatar,
-        downloadConfig = downloadConfig,
-        isTemplate = streamer.isTemplate.asLong,
-        templateId = streamer.templateId
-      )
-      logger.debug("updatedStreamer: {}", streamer)
-    }
-  }
-
-  override suspend fun saveStreamer(newStreamer: Streamer) {
-    return withIOContext {
-      val downloadConfig = if (newStreamer.downloadConfig != null) {
-        json.encodeToString(newStreamer.downloadConfig)
-      } else null
-
-      val platform = if (newStreamer.platform == StreamingPlatform.UNKNOWN) {
-        getPlatformByUrl(newStreamer.url)
-      } else {
-        newStreamer.platform
-      }
-      dao.insertStreamer(
-        name = newStreamer.name,
-        url = newStreamer.url,
-        platform = platform.id.toLong(),
-        lastStream = newStreamer.lastLiveTime,
-        isLive = newStreamer.isLive.asLong,
-        isActive = newStreamer.isActivated.asLong,
-        description = newStreamer.streamTitle,
-        avatar = newStreamer.avatar,
-        isTemplate = newStreamer.isTemplate.asLong,
-        templateId = newStreamer.templateId,
-        downloadConfig = downloadConfig
-      )
-      logger.debug("saveStreamer: {}, downloadConfig: {}", newStreamer, downloadConfig)
-    }
-  }
-
-  private fun getPlatformByUrl(url: String): StreamingPlatform = when {
-    HuyaExtractor.URL_REGEX.toRegex().find(url) != null -> StreamingPlatform.HUYA
-    DouyinExtractor.URL_REGEX.toRegex().find(url) != null -> StreamingPlatform.DOUYIN
-    else -> StreamingPlatform.UNKNOWN
-  }
-
-  override suspend fun deleteStreamer(oldStreamer: Streamer) {
+  override suspend fun delete(oldStreamer: Streamer): Boolean {
     if (oldStreamer.id == 0L) throw IllegalArgumentException("Streamer id is 0")
     return withIOContext {
-      dao.deleteStreamer(StreamerId(oldStreamer.id))
-      logger.debug("deletedStreamer: {}", oldStreamer)
+      dao.delete(oldStreamer.toStreamerEntity()) == 1
     }
   }
 
-  override suspend fun deleteStreamerById(id: Long) {
-    return withIOContext {
-      dao.deleteStreamer(StreamerId(id))
-    }
-  }
+  private suspend fun Collection<StreamerEntity>.toStreamers(): List<Streamer> = map { it.toStreamer() }
 
-  /**
-   * Change streamer active status
-   * @param id streamer id
-   * @param status true: active, false: inactive
-   */
-  override suspend fun updateStreamerLiveStatus(id: Long, status: Boolean) {
-    return withIOContext {
-      dao.updateStreamStatus(StreamerId(id), status.asLong)
+  private suspend fun StreamerEntity.toStreamer(): Streamer {
+    if (templateId > 0) {
+      return Streamer(this, getStreamerById(StreamerId(templateId)))
     }
-  }
-
-  override suspend fun updateStreamerStreamTitle(id: Long, streamTitle: String?) {
-    return withIOContext {
-      dao.updateStreamTitle(StreamerId(id), streamTitle)
-    }
-  }
-
-  override suspend fun updateStreamerLastLiveTime(id: Long, lastLiveTime: Long) {
-    return withIOContext {
-      dao.updateLastStream(StreamerId(id), lastLiveTime)
-    }
-  }
-
-  override suspend fun updateStreamerAvatar(id: Long, avatar: String?) {
-    return withIOContext {
-      dao.updateAvatar(StreamerId(id), avatar)
-    }
-  }
-
-  private suspend fun Streamer.populateTemplateStreamer() {
-    if (!isTemplate && templateId != null && templateId != -1L) {
-      templateStreamer = getStreamerById(templateId!!)
-    }
+    return Streamer(this)
   }
 }

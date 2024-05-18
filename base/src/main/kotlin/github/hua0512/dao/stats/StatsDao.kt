@@ -26,28 +26,31 @@
 
 package github.hua0512.dao.stats
 
-import github.hua0512.utils.StatsEntity
+import androidx.room.Dao
+import androidx.room.Query
+import github.hua0512.dao.BaseDao
+import github.hua0512.data.stats.StatsEntity
 
 /**
+ * DAO for stats entity
  * @author hua0512
  * @date : 2024/3/4 10:30
  */
-interface StatsDao {
+@Dao
+interface StatsDao : BaseDao<StatsEntity> {
 
-  fun getStatsFromTo(from: Long, to: Long): List<StatsEntity>
+  @Query("SELECT * FROM Stats WHERE time BETWEEN :from AND :to ORDER BY time DESC")
+  suspend fun getBetweenTimeOrderedDesc(from: Long, to: Long): List<StatsEntity>
 
-  fun getStatsFromToWithLimit(from: Long, to: Long, limit: Int): List<StatsEntity>
+  @Query("SELECT * FROM Stats WHERE time BETWEEN :from AND :to ORDER BY time DESC LIMIT :limit")
+  suspend fun getBetweenOrderedByTimeWithLimit(from: Long, to: Long, limit: Int): List<StatsEntity>
 
-  fun getStatsFrom(from: Long): List<StatsEntity>
+  @Query("SELECT * FROM Stats WHERE time >= :from ORDER BY time DESC")
+  suspend fun getFromOrderedByTimeDesc(from: Long): List<StatsEntity>
 
-  fun getStatsTo(to: Long): List<StatsEntity>
+  @Query("SELECT * FROM Stats WHERE time <= :to ORDER BY time DESC")
+  suspend fun getToTimeOrderedDesc(to: Long): List<StatsEntity>
 
-  fun getStats(): List<StatsEntity>
-
-  fun insertStats(stats: StatsEntity)
-
-  fun updateStats(stats: StatsEntity)
-
-  fun deleteStats(stats: StatsEntity)
-
+  @Query("SELECT * FROM Stats ORDER BY time DESC")
+  suspend fun getAllByTimeDesc(): List<StatsEntity>
 }

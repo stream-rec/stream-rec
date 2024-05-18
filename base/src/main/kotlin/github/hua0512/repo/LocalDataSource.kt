@@ -62,19 +62,43 @@ interface LocalDataSource {
       return Path(dbPath).resolveSibling("version").pathString
     }
 
-    fun getDbVersion(): Long {
+    @Deprecated("Remove in future version")
+    private fun getDbTypePath(): String {
+      // get db version from file
+      val dbPath = getDefaultPath()
+      return Path(dbPath).resolveSibling("type").pathString
+    }
+
+    fun getDbVersion(): Int {
       val dbVersionPath = Path(getDbVersionPath())
       // check if db version file exists
       if (!Files.exists(dbVersionPath)) return 0
-      return Files.readString(dbVersionPath, Charsets.UTF_8).toLongOrNull() ?: 0
+      return Files.readString(dbVersionPath, Charsets.UTF_8).toIntOrNull() ?: 0
     }
 
-    fun writeDbVersion(version: Long) {
+    fun writeDbVersion(version: Int) {
       val dbVersionPath = Path(getDbVersionPath())
       dbVersionPath.createParentDirectories()
       // overwrite db version file
       Files.writeString(dbVersionPath, version.toString(), Charsets.UTF_8)
     }
+
+    @Deprecated("Remove in future version")
+    fun getDbType(): String {
+      val dbTypePath = Path(getDbTypePath())
+      // check if db type file exists
+      if (!Files.exists(dbTypePath)) return "sqldelight"
+      return Files.readString(dbTypePath, Charsets.UTF_8)
+    }
+
+    @Deprecated("Remove in future version")
+    fun writeDbType(type: String) {
+      val dbTypePath = Path(getDbTypePath())
+      dbTypePath.createParentDirectories()
+      // overwrite db type file
+      Files.writeString(dbTypePath, type, Charsets.UTF_8)
+    }
+
   }
 
   suspend fun streamAppConfig(): Flow<AppConfig>

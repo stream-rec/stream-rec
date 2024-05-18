@@ -30,7 +30,7 @@ import github.hua0512.data.StreamerId
 import github.hua0512.data.UploadDataId
 import github.hua0512.data.upload.UploadState
 import github.hua0512.logger
-import github.hua0512.repo.uploads.UploadRepo
+import github.hua0512.repo.upload.UploadRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -46,21 +46,23 @@ fun Route.uploadRoute(json: Json, repo: UploadRepo) {
     get {
       val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 0
       val pageSize = call.request.queryParameters["per_page"]?.toIntOrNull() ?: 10
-      val status = call.request.queryParameters.getAll("status")?.run {
-        mapNotNull {
-          UploadState.entries.find { state -> state.name == it }?.value?.toLong() ?: run {
-            logger.warn("Invalid status: $it")
-            null
-          }
+      // filter status list
+      val status = call.request.queryParameters.getAll("status")?.mapNotNull {
+        try {
+          UploadState.valueOf(it).value
+        } catch (e: IllegalArgumentException) {
+          logger.warn("Invalid status: $it")
+          null
         }
-      } ?: UploadState.entries.map { it.value.toLong() }
+      } ?: UploadState.intValues()
+
+      // title or file path filter
       val filter = call.request.queryParameters["filter"]
-      val streamers = call.request.queryParameters.getAll("streamer")?.run {
-        mapNotNull {
-          it.toLongOrNull()?.let { StreamerId(it) } ?: run {
-            logger.warn("Invalid streamer id: $it")
-            null
-          }
+      // streamer list filter
+      val streamers = call.request.queryParameters.getAll("streamer")?.mapNotNull { input ->
+        input.toLongOrNull()?.let { StreamerId(it) } ?: run {
+          logger.warn("Invalid streamer id: $input")
+          null
         }
       }
       val sortColumn = call.request.queryParameters["sort"]
@@ -109,13 +111,8 @@ fun Route.uploadRoute(json: Json, repo: UploadRepo) {
         return@get
       }
       try {
-        val uploadData = repo.getUploadData(UploadDataId(id))
-        if (uploadData == null) {
-          call.respond(HttpStatusCode.NotFound, "Upload data not found")
-        } else {
-          val results = repo.getUploadDataResults(UploadDataId(id))
-          call.respond(results)
-        }
+        val results = repo.getUploadDataResults(UploadDataId(id))
+        call.respond(results)
       } catch (e: Exception) {
         logger.error("Failed to get upload results : ${e.message}")
         call.respond(HttpStatusCode.InternalServerError, "Failed to get upload results : ${e.message}")
@@ -129,8 +126,21 @@ fun Route.uploadRoute(json: Json, repo: UploadRepo) {
         call.respond(HttpStatusCode.BadRequest)
         return@delete
       }
+      val uploadData = try {
+        repo.getUploadData(UploadDataId(id))
+      } catch (e: Exception) {
+        logger.error("Delete upload data failed : ${e.message}")
+        call.respond(HttpStatusCode.InternalServerError, "Failed to get upload data : ${e.message}")
+        return@delete
+      }
+
+      if (uploadData == null) {
+        call.respond(HttpStatusCode.NotFound, "Upload data not found")
+        return@delete
+      }
+
       try {
-        repo.deleteUploadData(UploadDataId(id))
+        repo.deleteUploadData(uploadData)
       } catch (e: Exception) {
         logger.error("Failed to delete upload data : ${e.message}")
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete upload result : ${e.message}")

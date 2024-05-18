@@ -102,7 +102,7 @@ class DouyuTest : BaseTest() {
       enableWrite = false
       filePath = "douyu_danmu.txt"
     }
-    val init = danmu.init(Streamer("EQ118", testUrl))
+    val init = danmu.init(Streamer(0, "EQ118", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }

@@ -35,11 +35,11 @@ import github.hua0512.data.stats.SummaryStats
  */
 interface SummaryStatsRepo {
 
-  fun getSummaryStats(): SummaryStats
+  suspend fun getSummaryStats(): SummaryStats
 
-  fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats
+  suspend fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats
 
-  fun getStatsFromTo(from: Long, to: Long): List<Stats>
+  suspend fun getStatsFromTo(from: Long, to: Long): List<Stats>
 
-  fun getStatsFrom(from: Long): List<Stats>
+  suspend fun getStatsFrom(from: Long): List<Stats>
 }

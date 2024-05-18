@@ -26,8 +26,13 @@
 
 package github.hua0512.dao.upload
 
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Transaction
+import github.hua0512.dao.BaseDao
 import github.hua0512.data.UploadActionId
-import github.hua0512.utils.UploadActionEntity
+import github.hua0512.data.upload.UploadActionAndFiles
+import github.hua0512.data.upload.entity.UploadActionEntity
 
 /**
  * Interface for managing upload actions.
@@ -36,37 +41,24 @@ import github.hua0512.utils.UploadActionEntity
  * @author hua0512
  * @date : 2024/2/19 10:52
  */
-interface UploadActionDao {
+@Dao
+interface UploadActionDao : BaseDao<UploadActionEntity> {
 
   /**
    * Retrieves an upload action by its ID.
    *
-   * @param uploadId The ID of the upload action
+   * @param id The ID of the upload action
    * @return UploadActionEntity or null if no upload action with the given ID exists
    */
-  fun getUploadActionById(uploadId: UploadActionId): UploadActionEntity?
+  @Query("SELECT * FROM UploadAction WHERE id = :id")
+  suspend fun getById(id: UploadActionId): UploadActionEntity?
 
   /**
-   * Retrieves all upload actions associated with a specific upload ID.
-   *
-   * @param uploadId The ID of the upload
-   * @return List of UploadActionEntity
+   * Retrieves an upload action by its ID, including the files associated with it.
+   * @param id The ID of the upload action
+   * @return UploadActionAndFiles or null if no upload action with the given ID exists
    */
-  fun getUploadActionByUploadId(uploadId: UploadActionId): List<UploadActionEntity>
-
-  /**
-   * Saves an upload action.
-   *
-   * @param time The time of the upload action
-   * @param configString The configuration string of the upload action
-   * @return The ID of the saved upload action
-   */
-  fun saveUploadAction(time: Long, configString: String): UploadActionId
-
-  /**
-   * Deletes an upload action.
-   *
-   * @param uploadActionId The ID of the upload action to delete
-   */
-  fun deleteUploadAction(uploadActionId: UploadActionId)
+  @Transaction
+  @Query("SELECT * FROM UploadAction WHERE id = :id")
+  suspend fun getByIdWithFiles(id: UploadActionId): UploadActionAndFiles?
 }

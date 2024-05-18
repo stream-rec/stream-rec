@@ -98,7 +98,7 @@ class HuyaTest {
     val client = app.client
     val extractor = HuyaExtractor(client, app.json, streamingUrl)
     val downloader = Huya(app, HuyaDanmu(app), extractor).apply {
-      init(Streamer("test", streamingUrl))
+      init(Streamer(0, "test", streamingUrl))
     }
     val streamInfo = downloader.shouldDownload()
     println(streamInfo)
@@ -112,7 +112,7 @@ class HuyaTest {
       enableWrite = false
       filePath = "huya_danmu.txt"
     }
-    val init = danmu.init(Streamer("test", streamingUrl))
+    val init = danmu.init(Streamer(0, "test", streamingUrl))
     danmu.fetchDanmu()
     assertNotNull(danmu)
   }

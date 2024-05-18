@@ -1,13 +1,23 @@
 rootProject.name = "stream-rec"
-include("stream-rec")
+
+//enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+pluginManagement {
+  repositories {
+    google()
+    gradlePluginPortal()
+    mavenCentral()
+  }
+}
 
 dependencyResolutionManagement {
   repositories {
     mavenCentral()
     mavenLocal()
+    google()
     maven(url = "https://jitpack.io")
   }
 }
 include("base")
-include("stream-rec-backend")
 include("platforms")
+include("stream-rec")
+include("stream-rec-backend")

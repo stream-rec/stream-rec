@@ -26,9 +26,10 @@
 
 package github.hua0512.backend.routes
 
+import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
 import github.hua0512.logger
-import github.hua0512.repo.streamer.StreamerRepo
+import github.hua0512.repo.stream.StreamerRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -36,6 +37,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 /**
+ * Streamer related routes
  * @author hua0512
  * @date : 2024/3/4 13:00
  */
@@ -76,12 +78,11 @@ fun Route.streamerRoute(repo: StreamerRepo) {
     }
 
     get("{id}") {
-      val id = call.parameters["id"]?.toLongOrNull()
-      if (id == null) {
+      val id = call.parameters["id"]?.toLongOrNull() ?: run {
         call.respond(HttpStatusCode.BadRequest)
         return@get
       }
-      val streamer = repo.getStreamerById(id)
+      val streamer = repo.getStreamerById(StreamerId(id))
       if (streamer == null) {
         call.respond(HttpStatusCode.NotFound)
         return@get
@@ -92,10 +93,10 @@ fun Route.streamerRoute(repo: StreamerRepo) {
     post {
       val streamer: Streamer = try {
         call.receive<Streamer>().also {
-          logger.info("Received streamer : {}", it)
+          logger.info("Received stream : {}", it)
         }
       } catch (e: Exception) {
-        logger.error("Error receiving streamer", e)
+        logger.error("Error receiving stream", e)
         call.respond(HttpStatusCode.BadRequest)
         return@post
       }
@@ -108,22 +109,16 @@ fun Route.streamerRoute(repo: StreamerRepo) {
       try {
         val isTemplate = streamer.isTemplate
         if (isTemplate && streamer.downloadConfig == null) {
-          call.respond(HttpStatusCode.BadRequest, "Template streamer must have download config")
+          call.respond(HttpStatusCode.BadRequest, "Template stream must have download config")
           return@post
         }
-        repo.saveStreamer(streamer)
+        val saved = repo.save(streamer)
+        call.respond(saved)
       } catch (e: Exception) {
-        logger.error("Error saving streamer", e)
+        logger.error("Error saving stream", e)
         call.respond(HttpStatusCode.BadRequest)
         return@post
       }
-      // ensure the streamer is saved in db
-      val newStreamer = repo.findStreamerByUrl(streamer.url) ?: run {
-        logger.error("Error saving streamer, not found in db : {}", streamer)
-        call.respond(HttpStatusCode.InternalServerError, "Streamer not found in db")
-        return@post
-      }
-      call.respond(newStreamer)
     }
 
     put("{id}") {
@@ -132,49 +127,49 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id")
         return@put
       }
-      // receive streamer object
+      // receive stream object
       val streamer: Streamer = try {
         call.receive<Streamer>().also {
-          logger.debug("Received streamer : {}", it)
+          logger.debug("Received stream : {}", it)
         }
       } catch (e: Exception) {
-        logger.error("Error receiving streamer", e)
-        call.respond(HttpStatusCode.BadRequest, "Invalid streamer: ${e.message}")
+        logger.error("Error receiving stream", e)
+        call.respond(HttpStatusCode.BadRequest, "Invalid stream: ${e.message}")
         return@put
       }
-      // check if the id in the url matches the id in the streamer object
+      // check if the id in the url matches the id in the stream object
       if (streamer.id != id) {
         call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
         return@put
       }
-      // check if the streamer exists
-      val old = repo.getStreamerById(id) ?: run {
-        call.respond(HttpStatusCode.BadRequest, "Error updating streamer, not found in db")
+      // check if the stream exists
+      val old = repo.getStreamerById(StreamerId(id)) ?: run {
+        call.respond(HttpStatusCode.BadRequest, "Error updating stream, not found in db")
         return@put
       }
-      // check if the url is already used by another streamer
+      // check if the url is already used by another stream
       val dbStreamer = repo.findStreamerByUrl(streamer.url)
       if (dbStreamer != null && dbStreamer.id != id) {
         call.respond(HttpStatusCode.BadRequest, "Streamer url already exists")
         return@put
       }
 
-      // do not allow converting a template streamer to a non-template streamer when it is used by other streamers
+      // do not allow converting a template stream to a non-template stream when it is used by other streamers
       if (old.isTemplate && !streamer.isTemplate) {
-        val count = repo.countStreamersUsingTemplate(id)
+        val count = repo.countStreamersUsingTemplate(StreamerId(id))
         if (count > 0) {
-          logger.error("Template streamer is used by $count streamers")
-          call.respond(HttpStatusCode.BadRequest, "Template streamer is used by $count streamers")
+          logger.error("Template stream is used by $count streamers")
+          call.respond(HttpStatusCode.BadRequest, "Template stream is used by $count streamers")
           return@put
         }
       }
-      // update streamer
+      // update stream
       try {
-        repo.updateStreamer(streamer)
+        repo.update(streamer)
         call.respond(streamer)
       } catch (e: Exception) {
-        logger.error("Error updating streamer", e)
-        call.respond(HttpStatusCode.InternalServerError, "Error updating streamer: ${e.message}")
+        logger.error("Error updating stream", e)
+        call.respond(HttpStatusCode.InternalServerError, "Error updating stream: ${e.message}")
       }
     }
 
@@ -185,22 +180,22 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         return@delete
       }
       try {
-        val streamer = repo.getStreamerById(id) ?: run {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: run {
           call.respond(HttpStatusCode.NotFound, "Streamer not found")
           return@delete
         }
 
         if (streamer.isTemplate) {
-          val count = repo.countStreamersUsingTemplate(id)
+          val count = repo.countStreamersUsingTemplate(StreamerId(id))
           if (count > 0) {
-            call.respond(HttpStatusCode.BadRequest, "Template streamer is used by $count streamers")
+            call.respond(HttpStatusCode.BadRequest, "Template stream is used by $count streamers")
             return@delete
           }
         }
-        repo.deleteStreamerById(id)
+        repo.delete(streamer)
       } catch (e: Exception) {
-        logger.error("Error deleting streamer", e)
-        call.respond(HttpStatusCode.InternalServerError, "Error deleting streamer: ${e.message}")
+        logger.error("Error deleting stream", e)
+        call.respond(HttpStatusCode.InternalServerError, "Error deleting stream: ${e.message}")
         return@delete
       }
       call.respond(HttpStatusCode.OK)

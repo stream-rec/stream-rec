@@ -31,8 +31,8 @@ import com.auth0.jwt.algorithms.Algorithm
 import github.hua0512.backend.plugins.jwtAudience
 import github.hua0512.backend.plugins.jwtDomain
 import github.hua0512.backend.plugins.jwtSecret
-import github.hua0512.data.User
 import github.hua0512.data.event.UserEvent.UserLogin
+import github.hua0512.data.user.User
 import github.hua0512.logger
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.UserRepo

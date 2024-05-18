@@ -116,7 +116,7 @@ class StreamerDownloadManager(
 
   private var updateLiveStatusCallback: suspend (id: Long, isLive: Boolean) -> Unit = { _, _ -> }
   private var updateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long) -> Unit = { _, _ -> }
-  private var onSavedToDb: suspend (stream: StreamData) -> Unit = {}
+  private var onSavedToDb: suspend (stream: StreamData) -> StreamData = { it }
   private var avatarUpdateCallback: (id: Long, avatarUrl: String) -> Unit = { _, _ -> }
   private var onDescriptionUpdateCallback: (id: Long, description: String) -> Unit = { _, _ -> }
   private var onRunningActions: suspend (data: List<StreamData>, actions: List<Action>) -> Unit = { _, _ -> }
@@ -206,9 +206,9 @@ class StreamerDownloadManager(
       downloadStream(onStreamDownloaded = { stream ->
         // save the stream data to the database
         scope.launch {
-          saveStreamData(stream)
+          val saved = saveStreamData(stream)
           // execute post parted download actions
-          executePostActions(streamer, stream)
+          executePostActions(streamer, saved)
         }
       }) {
         logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
@@ -222,7 +222,7 @@ class StreamerDownloadManager(
   }
 
   private suspend fun downloadStream(onStreamDownloaded: (stream: StreamData) -> Unit = {}, onStreamDownloadError: (e: Exception) -> Unit = {}) {
-    // stream is live, start downloading
+    // streamer is live, start downloading
     // while loop for parting the download
     return downloadSemaphore.withPermit {
       isDownloading = true
@@ -265,15 +265,17 @@ class StreamerDownloadManager(
     streamer.lastLiveTime = now.epochSeconds
   }
 
-  private suspend fun saveStreamData(stream: StreamData) {
+  private suspend fun saveStreamData(stream: StreamData): StreamData {
+    var saved = stream
     try {
-      onSavedToDb(stream)
-      logger.debug("saved to db : {}", stream)
+      saved = onSavedToDb(stream)
+      logger.debug("saved to db : {}", saved)
     } catch (e: Exception) {
       logger.error("${streamer.name} error while saving $stream : ${e.message}")
     }
-    dataList.add(stream)
-    logger.info("${streamer.name} downloaded : $stream}")
+    dataList.add(saved)
+    logger.info("${streamer.name} downloaded : $saved}")
+    return saved
   }
 
   private suspend fun executePostActions(streamer: Streamer, streamData: StreamData) {
@@ -400,7 +402,7 @@ class StreamerDownloadManager(
     this.updateStreamerLastLiveTime = updateStreamerLastLiveTime
   }
 
-  fun onSavedToDb(onSavedToDb: suspend (stream: StreamData) -> Unit) {
+  fun onSavedToDb(onSavedToDb: suspend (stream: StreamData) -> StreamData) {
     this.onSavedToDb = onSavedToDb
   }
 

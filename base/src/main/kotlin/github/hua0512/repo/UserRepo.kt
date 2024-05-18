@@ -26,8 +26,8 @@
 
 package github.hua0512.repo
 
-import github.hua0512.data.User
 import github.hua0512.data.UserId
+import github.hua0512.data.user.User
 
 /**
  * @author hua0512
@@ -37,6 +37,6 @@ interface UserRepo {
   suspend fun getUserById(id: UserId): User?
   suspend fun getUserByName(name: String): User?
   suspend fun createUser(newUser: User): User
-  suspend fun deleteUser(id: UserId): Boolean
+  suspend fun deleteUser(user: User): Boolean
   suspend fun updateUser(user: User)
 }
