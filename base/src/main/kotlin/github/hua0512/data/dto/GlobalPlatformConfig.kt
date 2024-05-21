@@ -27,9 +27,18 @@
 package github.hua0512.data.dto
 
 /**
+ * Global platform configuration interface
  * @author hua0512
  * @date : 2024/2/28 23:39
  */
 interface GlobalPlatformConfig {
+  /**
+   * Delay in seconds before fetching next streamer
+   */
+  val fetchDelay: Long?
+
+  /**
+   * Delay in seconds before retrying a parted download
+   */
   val partedDownloadRetry: Int?
 }

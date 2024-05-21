@@ -44,6 +44,7 @@ data class DouyinConfigGlobal(
   override val quality: DouyinQuality = DouyinQuality.origin,
   override val partedDownloadRetry: Int? = 5,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
+  override val fetchDelay: Long? = 0,
 ) : GlobalPlatformConfig, DouyinConfigDTO
 
 @Serializable
@@ -53,6 +54,7 @@ data class DouyuConfigGlobal(
   override val quality: DouyuQuality? = DouyuQuality.ORIGIN,
   override val cookies: String? = null,
   override val partedDownloadRetry: Int? = 30,
+  override val fetchDelay: Long? = 0,
 ) : GlobalPlatformConfig, DouyuConfigDTO
 
 
@@ -63,6 +65,7 @@ data class HuyaConfigGlobal(
   override val cookies: String? = null,
   override val partedDownloadRetry: Int? = 15,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
+  override val fetchDelay: Long? = 0,
 ) : GlobalPlatformConfig, HuyaConfigDTO
 
 @Serializable
@@ -71,6 +74,7 @@ data class TwitchConfigGlobal(
   override val quality: TwitchQuality = TwitchQuality.Source,
   override val partedDownloadRetry: Int? = 30,
   override val cookies: String? = null,
+  override val fetchDelay: Long? = 15,
 ) : GlobalPlatformConfig, TwitchConfigDTO
 
 @Serializable
@@ -78,4 +82,5 @@ data class PandaliveConfigGlobal(
   override val partedDownloadRetry: Int? = 30,
   override val cookies: String? = null,
   override val quality: PandaliveQuality = PandaliveQuality.Source,
+  override val fetchDelay: Long? = 15,
 ) : GlobalPlatformConfig, PandaliveConfigDTO
