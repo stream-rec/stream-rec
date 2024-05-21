@@ -6,9 +6,7 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
+import github.hua0512.plugins.huya.download.HuyaExtractorV2
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.test.runTest
@@ -74,23 +72,23 @@ class HuyaTest {
   @Test
   fun testLive() = runTest {
     val client = app.client
-    val extractor = HuyaExtractor(client, app.json, streamingUrl)
-    assertNotNull(extractor.extract())
+    val extractor = HuyaExtractor(client, app.json, streamingUrl).apply {
+      prepare()
+    }
+    val mediaInfo = extractor.extract()
+    assertNotNull(mediaInfo)
+    println(mediaInfo)
   }
-
 
   @Test
   fun testLive2() = runTest {
-    val apiUrl = "https://mp.huya.com/cache.php"
-    val response = app.client.get(apiUrl) {
-      header(HttpHeaders.Origin, "https://www.huya.com")
-      header(HttpHeaders.Referrer, "https://www.huya.com")
-      parameter("m", "Live")
-      parameter("do", "profileRoom")
-      parameter("roomid", "660000")
+    val client = app.client
+    val extractor = HuyaExtractorV2(client, app.json, streamingUrl).apply {
+      prepare()
     }
-    val body = response.bodyAsText()
-    println(body)
+    val mediaInfo = extractor.extract()
+    assertNotNull(mediaInfo)
+    println(mediaInfo)
   }
 
   @Test
