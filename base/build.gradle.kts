@@ -23,7 +23,7 @@ dependencies {
   implementation(libs.io.ktor.client.encoding)
   api(libs.io.ktor.serialization.kotlinx.json)
   api(libs.io.ktor.client.logging)
-
+  implementation(libs.io.ktor.client.content.negotiation)
   testImplementation(libs.bundles.test.jvm)
 }
 

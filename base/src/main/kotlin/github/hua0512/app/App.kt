@@ -31,10 +31,12 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.compression.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
+import io.ktor.serialization.kotlinx.json.*
 import org.slf4j.LoggerFactory
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -81,6 +83,11 @@ class App(val json: Json) {
         retryOnServerErrors(maxRetries = 5)
         exponentialDelay()
       }
+
+      install(ContentNegotiation) {
+        json(json)
+      }
+
       install(ContentEncoding) {
         gzip(0.9F)
       }
