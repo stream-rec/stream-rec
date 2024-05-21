@@ -66,7 +66,7 @@ class PandaliveTest : BaseTest() {
       token =
         "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ2X2NmYWYwNTk5M2QiLCJleHAiOjE3MTUzNDA3NTgsImluZm8iOnsiY2hhbm5lbCI6IjI0NzQwMjAwIiwidHlwZSI6InZpZXdlciIsImR0Ijoid2ViIiwicGYiOiJ3ZWIiLCJpYXQiOjE3MTUzMzg5NTgsImlwIjoieFZCVUltOTlXT2oxVkVsRWt0azlcL1E9PSJ9LCJldGMiOnsibWMiOiIyNDc0MDIwMF8yMDI0MDUxMDA2YzkzNmU3YjcyMGU5OTIifX0.kjBDtAzo2kZKsFhGcMFfqzPiXV4-qw3Us-6AKOyP0zA"
     }
-    val init = danmu.init(Streamer("say0716", testUrl))
+    val init = danmu.init(Streamer(0, "say0716", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }

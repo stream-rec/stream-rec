@@ -194,14 +194,13 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     // progress bar
     var pb: ProgressBar? = null
 
-    val streamData: StreamData = StreamData(
+    val streamData = StreamData(
       title = downloadTitle,
       outputFilePath = outputPath.pathString,
       danmuFilePath = null,
-      streamerId = streamer.id
-    ).also {
-      it.streamer = streamer
-    }
+      streamerId = streamer.id,
+      streamer = streamer
+    )
 
     // download engine
     engine = selectDownloadEngine().apply {
@@ -323,9 +322,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
               outputFilePath = data.path,
               outputFileSize = data.size,
               danmuFilePath = if (isDanmuEnabled) danmu.filePath else null
-            ).also {
-              it.streamer = streamer
-            }
+            )
             EventCenter.sendEvent(
               DownloadEvent.DownloadSuccess(
                 filePath = data.path,

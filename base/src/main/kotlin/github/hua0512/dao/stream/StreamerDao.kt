@@ -26,55 +26,53 @@
 
 package github.hua0512.dao.stream
 
+import androidx.room.Dao
+import androidx.room.Query
+import github.hua0512.dao.BaseDao
 import github.hua0512.data.StreamerId
-import github.hua0512.utils.StreamerEntity
+import github.hua0512.data.stream.entity.StreamerEntity
 import kotlinx.coroutines.flow.Flow
 
 
 /**
+ * DAO for stream
  * @author hua0512
  * @date : 2024/2/18 16:05
  */
-interface StreamerDao {
+@Dao
+interface StreamerDao : BaseDao<StreamerEntity> {
 
-  suspend fun stream(): Flow<List<StreamerEntity>>
-  suspend fun getAllStreamers(): List<StreamerEntity>
+  @Query("SELECT * FROM streamer")
+  fun stream(): Flow<List<StreamerEntity>>
 
-  suspend fun getStreamerNameById(id: StreamerId): String?
+  @Query("SELECT * FROM streamer")
+  suspend fun getAll(): List<StreamerEntity>
 
-  suspend fun findStreamerByUrl(url: String): StreamerEntity?
-  suspend fun findStreamersUsingTemplate(templateId: Long): List<StreamerEntity>
-  suspend fun countStreamersUsingTemplate(templateId: Long): Long
+  @Query("SELECT * FROM streamer WHERE url = :url")
+  suspend fun findByUrl(url: String): StreamerEntity?
 
-  suspend fun getAllStremersActive(): List<StreamerEntity>
+  @Query("SELECT * FROM streamer WHERE is_template = 0 AND template_id = :templateId")
+  suspend fun findByTemplateId(templateId: StreamerId): List<StreamerEntity>
 
-  suspend fun getAllStremersInactive(): List<StreamerEntity>
+  @Query("SELECT COUNT(*) FROM streamer WHERE is_template = 0 AND template_id = :templateId")
+  suspend fun countByTemplateId(templateId: StreamerId): Long
 
-  suspend fun getAllTemplateStreamers(): List<StreamerEntity>
+  @Query("SELECT * FROM streamer WHERE is_active = 1 AND is_template = 0")
+  suspend fun getActivesNonTemplates(): List<StreamerEntity>
 
-  suspend fun getAllNonTemplateStreamers(): List<StreamerEntity>
+  @Query("SELECT * FROM streamer WHERE is_active = 0 AND is_template = 0")
+  suspend fun getInactivesNonTemplates(): List<StreamerEntity>
 
-  suspend fun getStreamerById(id: StreamerId): StreamerEntity?
-  suspend fun insertStreamer(
-    name: String, url: String, platform: Long, lastStream: Long?, isLive: Long, isActive: Long, description: String?,
-    avatar: String?, downloadConfig: String?,
-    isTemplate: Long, templateId: Long?,
-  )
+  @Query("SELECT * FROM streamer WHERE is_template = 1")
+  suspend fun getTemplates(): List<StreamerEntity>
 
-  suspend fun updateStreamStatus(id: StreamerId, isLive: Long)
-  suspend fun updateStreamTitle(id: StreamerId, streamTitle: String?)
+  @Query("SELECT * FROM streamer WHERE is_template = 0")
+  suspend fun getNonTemplates(): List<StreamerEntity>
 
-  suspend fun updateAvatar(id: StreamerId, avatar: String?)
+  @Query("SELECT * FROM streamer WHERE id = :id")
+  suspend fun getById(id: StreamerId): StreamerEntity?
 
-  suspend fun updateLastStream(id: StreamerId, lastStream: Long)
+  @Query("SELECT name FROM streamer WHERE id = :id")
+  suspend fun getNameById(id: StreamerId): String?
 
-  suspend fun updateStreamer(
-    id: StreamerId,
-    name: String, url: String, platform: Long, lastStream: Long?, isLive: Long, isActive: Long, description: String?,
-    avatar: String?, downloadConfig: String?,
-    isTemplate: Long, templateId: Long?,
-  )
-
-
-  suspend fun deleteStreamer(id: StreamerId)
 }

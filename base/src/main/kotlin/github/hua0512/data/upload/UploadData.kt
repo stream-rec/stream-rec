@@ -27,61 +27,60 @@
 package github.hua0512.data.upload
 
 import github.hua0512.data.stream.StreamData
-import github.hua0512.utils.UploadDataEntity
-import kotlinx.serialization.Required
+import github.hua0512.data.upload.entity.UploadDataEntity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 @Serializable
 data class UploadData(
-  var id: Long = 0,
+  val id: Long = 0,
   val filePath: String,
-  @Required
-  var status: UploadState = UploadState.NOT_STARTED,
-) {
-  var streamDataId: Long = -1
-    get() = if (isStreamDataInitialized()) streamData.id else field
-
-  var streamerId: Long = -1
-    get() = if (isStreamDataInitialized()) streamData.streamerId else field
-
+  val status: UploadState = UploadState.NOT_STARTED,
   @Transient
-  lateinit var streamData: StreamData
+  val streamData: StreamData? = null,
+  @Transient
+  val uploadAction: UploadAction? = null,
+) {
+
+  constructor(entity: UploadDataEntity, streamData: StreamData? = null, uploadAction: UploadAction? = null) : this(
+    id = entity.id,
+    filePath = entity.filePath,
+    status = entity.status,
+    streamData = streamData,
+    uploadAction = uploadAction
+  )
+
+  var streamDataId: Long = 0
+    get() = streamData?.id ?: field
+
+  var streamerId: Long = 0
+    get() = streamData?.streamerId ?: field
 
   var streamTitle = ""
-    get() = streamData.title
+    get() = streamData?.title ?: field
+
 
   var streamer = ""
-    get() = streamData.streamerName
+    get() = streamData?.streamerName ?: field
 
-  var streamStartTime: Long = 0
-    get() = streamData.dateStart!!
+  var streamStartTime: Long = 0L
+    get() = streamData?.dateStart ?: field
 
-  var uploadActionId: Long = -1
-    get() = if (isUploadActionInitialized()) uploadAction.id else field
+  var uploadActionId: Long = 0
+    get() = uploadAction?.id ?: field
 
   var uploadPlatform = UploadPlatform.NONE
-    get() = if (isUploadActionInitialized()) uploadAction.uploadConfig.platform else field
-
-  @Transient
-  var uploadResults = mutableListOf<UploadResult>()
+    get() = uploadAction?.uploadConfig?.platform ?: field
 
   var uploadConfig: UploadConfig = UploadConfig.NoopConfig
-    get() = if (isUploadActionInitialized()) uploadAction.uploadConfig else field
+    get() = uploadAction?.uploadConfig ?: field
 
-  @Transient
-  lateinit var uploadAction: UploadAction
 
-  fun isStreamDataInitialized() = ::streamData.isInitialized
-
-  fun isUploadActionInitialized() = ::uploadAction.isInitialized
-
-  fun toEntity(): UploadDataEntity {
-    return UploadDataEntity(
-      id = id,
-      filePath = filePath,
-      status = status.value.toLong(),
-      streamDataId = streamDataId
-    )
-  }
+  fun toEntity(): UploadDataEntity = UploadDataEntity(
+    id = id,
+    filePath = filePath,
+    status = status,
+    streamDataId = streamDataId,
+    uploadActionId = uploadActionId
+  )
 }

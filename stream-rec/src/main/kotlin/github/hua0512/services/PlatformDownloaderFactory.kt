@@ -58,6 +58,6 @@ object PlatformDownloaderFactory {
     StreamingPlatform.DOUYU -> Douyu(app, DouyuDanmu(app), DouyuExtractor(app.client, app.json, url))
     StreamingPlatform.TWITCH -> Twitch(app, TwitchDanmu(app), TwitchExtractor(app.client, app.json, url))
     StreamingPlatform.PANDALIVE -> Pandalive(app, PandaliveDanmu(app), PandaliveExtractor(app.client, app.json, url))
-    else -> throw Exception("Platform not supported")
+    else -> throw IllegalArgumentException("Platform not supported")
   }
 }

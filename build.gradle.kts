@@ -15,6 +15,8 @@ allprojects {
       arguments += "-Xno-param-assertions"
       arguments += "-Xno-receiver-assertions"
       arguments += "-opt-in=kotlin.RequiresOptIn"
+      arguments += "-opt-in=kotlinx.serialization.ExperimentalSerializationApi"
+      arguments += "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
       freeCompilerArgs.addAll(arguments)
     }
     kotlinOptions {

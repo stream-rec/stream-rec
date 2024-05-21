@@ -28,68 +28,60 @@ package github.hua0512.data.stream
 
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.StreamerDTO
-import github.hua0512.utils.StreamerEntity
-import github.hua0512.utils.asLong
-import github.hua0512.utils.boolean
+import github.hua0512.data.stream.entity.StreamerEntity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 
 @Serializable
 data class Streamer(
+  val id: Long = 0,
   override val name: String,
   override val url: String,
   override val platform: StreamingPlatform = StreamingPlatform.UNKNOWN,
-  override var lastLiveTime: Long? = 0,
+  override var lastLiveTime: Long = 0,
   override var isLive: Boolean = false,
   override var isActivated: Boolean = true,
   override var avatar: String? = null,
   override var streamTitle: String? = null,
   override val downloadConfig: DownloadConfig? = null,
   override val isTemplate: Boolean = false,
+  override val templateId: Long? = 0,
+  @Transient
+  val templateStreamer: Streamer? = null,
 ) : StreamerDTO {
 
-  var id: Long = -1
 
-  @Transient
-  override var templateStreamer: Streamer? = null
-
-  override var templateId: Long? = -1
-
-  constructor(entity: StreamerEntity, json: Json) : this(
+  constructor(entity: StreamerEntity, templateStreamer: Streamer? = null) : this(
+    id = entity.id,
     name = entity.name,
     url = entity.url,
-    platform = StreamingPlatform.fromId(entity.platform.toInt()) ?: StreamingPlatform.UNKNOWN,
-    lastLiveTime = entity.last_stream,
-    isLive = entity.is_live.boolean,
-    isActivated = entity.is_active.boolean,
+    platform = entity.platform,
+    lastLiveTime = entity.lastLiveTime,
+    isLive = entity.isLive,
+    isActivated = entity.isActivated,
     avatar = entity.avatar,
-    streamTitle = entity.description,
-    downloadConfig = if (entity.download_config != null) {
-      json.decodeFromString<DownloadConfig>(entity.download_config)
-    } else null,
-    isTemplate = entity.is_template.boolean
-  ) {
-    id = entity.streamer_id
-    templateId = entity.template_id
-  }
+    streamTitle = entity.streamTitle,
+    downloadConfig = entity.downloadConfig,
+    isTemplate = entity.isTemplate,
+    templateId = entity.templateId,
+    templateStreamer = templateStreamer
+  )
 
-  fun toStreamerEntity(json: Json) = StreamerEntity(
-    streamer_id = id,
+  fun toStreamerEntity() = StreamerEntity(
+    id = id,
     name = name,
     url = url,
-    platform = platform.id.toLong(),
-    last_stream = lastLiveTime ?: 0,
-    is_live = isLive.asLong,
-    is_active = isActivated.asLong,
-    description = streamTitle,
+    platform = platform,
+    lastLiveTime = lastLiveTime ?: 0,
+    isLive = isLive,
+    isActivated = isActivated,
+    streamTitle = streamTitle,
     avatar = avatar,
-    is_template = isTemplate.asLong,
-    template_id = templateId,
-    download_config = downloadConfig?.let { json.encodeToString<DownloadConfig>(it) },
-    app_config_id = 1
+    isTemplate = isTemplate,
+    templateId = templateId ?: 0,
+    downloadConfig = downloadConfig,
+    appConfigId = 1
   )
 
   override fun equals(other: Any?): Boolean {

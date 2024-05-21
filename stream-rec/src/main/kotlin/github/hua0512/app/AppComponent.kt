@@ -26,14 +26,14 @@
 
 package github.hua0512.app
 
-import app.cash.sqldelight.db.SqlDriver
 import dagger.Component
+import github.hua0512.dao.AppDatabase
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.repo.uploads.UploadRepo
+import github.hua0512.repo.stream.StreamDataRepo
+import github.hua0512.repo.stream.StreamerRepo
+import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
 import kotlinx.serialization.json.Json
@@ -45,11 +45,12 @@ import javax.inject.Singleton
 )
 interface AppComponent {
 
-  fun getSqlDriver(): SqlDriver
+  fun getDatabase(): AppDatabase
 
   fun getJson(): Json
 
   fun getAppConfig(): App
+
   fun getUserRepo(): UserRepo
 
   fun getDownloadService(): DownloadService

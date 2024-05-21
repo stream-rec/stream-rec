@@ -45,17 +45,17 @@ import kotlinx.serialization.encoding.Encoder
 sealed class StreamerEvent : Event {
 
   /**
-   * The name of the streamer.
+   * The name of the stream.
    */
   abstract val streamer: String
 
   /**
-   * The URL of the streamer.
+   * The URL of the stream.
    */
   abstract val streamerUrl: String
 
   /**
-   * The platform of the streamer.
+   * The platform of the stream.
    */
   abstract val streamerPlatform: StreamingPlatform
 
@@ -69,10 +69,10 @@ sealed class StreamerEvent : Event {
   ) : StreamerEvent()
 
   /**
-   * StreamerRecordStop represents a streamer record stop event.
-   * @property streamer The name of the streamer.
-   * @property streamerUrl The URL of the streamer.
-   * @property streamerPlatform The platform of the streamer.
+   * StreamerRecordStop represents a stream record stop event.
+   * @property streamer The name of the stream.
+   * @property streamerUrl The URL of the stream.
+   * @property streamerPlatform The platform of the stream.
    * @property time The time when the record stopped.
    */
   @Serializable
@@ -95,10 +95,10 @@ sealed class StreamerEvent : Event {
   ) : StreamerEvent()
 
   /**
-   * StreamerException represents a streamer exception event.
-   * @property streamer The name of the streamer.
-   * @property streamerUrl The URL of the streamer.
-   * @property streamerPlatform The platform of the streamer.
+   * StreamerException represents a stream exception event.
+   * @property streamer The name of the stream.
+   * @property streamerUrl The URL of the stream.
+   * @property streamerPlatform The platform of the stream.
    * @property time The time when the exception occurred.
    * @property exception The exception that occurred.
    */

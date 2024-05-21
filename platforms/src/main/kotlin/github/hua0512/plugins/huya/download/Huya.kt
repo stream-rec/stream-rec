@@ -67,7 +67,7 @@ class Huya(app: App, override val danmu: HuyaDanmu, override val extractor: Huya
       subid = extractor.subid
     }
 
-    // update streamer info
+    // update stream info
     return getStreamInfo(mediaInfo, streamer, config)
   }
 

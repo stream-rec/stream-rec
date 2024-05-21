@@ -35,40 +35,41 @@ import kotlinx.datetime.Instant
  * @author hua0512
  * @date : 2024/3/4 10:44
  */
-class SummaryStatsRepoImpl(val statsDao: StatsDao) : SummaryStatsRepo {
-  override fun getSummaryStats(): SummaryStats {
-    val stats = statsDao.getStats()
+class SummaryStatsRepoImpl(private val statsDao: StatsDao) : SummaryStatsRepo {
+
+  override suspend fun getSummaryStats(): SummaryStats {
+    val stats = statsDao.getAllByTimeDesc()
     return SummaryStats(
-      stats.sumOf { it.totalStreams },
+      stats.sumOf { it.streams },
       0,
-      stats.sumOf { it.totalUploads },
+      stats.sumOf { it.uploads },
       0,
       stats.map { Stats(it) }
     )
   }
 
-  override fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
-    val stats = statsDao.getStatsFromTo(from, to)
+  override suspend fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
+    val stats = statsDao.getBetweenTimeOrderedDesc(from, to)
     val fromDate = Instant.fromEpochSeconds(from)
     val toDate = Instant.fromEpochSeconds(to)
 
     val diff = toDate - fromDate
-    val previous = statsDao.getStatsFromTo(from - diff.inWholeSeconds, to - diff.inWholeSeconds)
+    val previous = statsDao.getBetweenTimeOrderedDesc(from - diff.inWholeSeconds, to - diff.inWholeSeconds)
     return SummaryStats(
-      stats.sumOf { it.totalStreams },
-      previous.sumOf { it.totalStreams },
-      stats.sumOf { it.totalUploads },
-      previous.sumOf { it.totalUploads },
+      stats.sumOf { it.streams },
+      previous.sumOf { it.streams },
+      stats.sumOf { it.uploads },
+      previous.sumOf { it.uploads },
       stats.map { Stats(it) }
     )
   }
 
-  override fun getStatsFromTo(from: Long, to: Long): List<Stats> {
-    return statsDao.getStatsFromTo(from, to).map { Stats(it) }
+  override suspend fun getStatsFromTo(from: Long, to: Long): List<Stats> {
+    return statsDao.getBetweenTimeOrderedDesc(from, to).map { Stats(it) }
   }
 
-  override fun getStatsFrom(from: Long): List<Stats> {
-    return statsDao.getStatsFrom(from).map { Stats(it) }
+  override suspend fun getStatsFrom(from: Long): List<Stats> {
+    return statsDao.getFromOrderedByTimeDesc(from).map { Stats(it) }
   }
 
 }

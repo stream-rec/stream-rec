@@ -26,48 +26,40 @@
 
 package github.hua0512.repo
 
-import github.hua0512.dao.AppConfigDao
-import github.hua0512.dao.UserDao
+import github.hua0512.dao.config.AppConfigDao
+import github.hua0512.dao.user.UserDao
+import github.hua0512.data.AppConfigId
 import github.hua0512.data.config.AppConfig
+import github.hua0512.data.user.UserEntity
 import github.hua0512.logger
-import github.hua0512.utils.UserEntity
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.json.Json
 
 /**
+ * Local data source implementation
  * @author hua0512
  * @date : 2024/2/18 23:55
  */
-class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: UserDao, private val json: Json) : LocalDataSource {
+class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: UserDao) : LocalDataSource {
   override suspend fun streamAppConfig(): Flow<AppConfig> {
-    return dao.streamLatestAppConfig()?.map {
-      AppConfig(it, json)
+    return dao.streamLatest()?.map {
+      AppConfig(it)
     } ?: emptyFlow()
   }
 
 
-  override suspend fun getAppConfig(): AppConfig {
-    return withIOContext {
-      dao.getLatestAppConfig()?.let { AppConfig(it, json) } ?: AppConfig().apply {
-        logger.info("First time running the app, creating default app config")
-        id = 1
-        val user = UserEntity(1, "stream-rec", System.getenv("LOGIN_SECRET") ?: "stream-rec", "ADMIN")
-        userDao.createUser(user)
-        saveAppConfig(this)
-      }
+  override suspend fun getAppConfig(): AppConfig = withIOContext {
+    dao.getById(AppConfigId(1))?.let { AppConfig(it) } ?: AppConfig().apply {
+      logger.info("First time running the app, creating default app config")
+      val user = UserEntity(0, "stream-rec", System.getenv("LOGIN_SECRET") ?: "stream-rec", "ADMIN", isActive = true)
+      userDao.insert(user)
+      saveAppConfig(this)
     }
   }
 
-  override fun getPath(): String {
-    return LocalDataSource.getDefaultPath()
-  }
+  override fun getPath() = LocalDataSource.getDefaultPath()
 
-  override suspend fun saveAppConfig(appConfig: AppConfig) {
-    return appConfig.run {
-      dao.upsert(appConfig.toEntity(json))
-    }
-  }
+  override suspend fun saveAppConfig(appConfig: AppConfig) = dao.upsert(appConfig.toEntity())
 }

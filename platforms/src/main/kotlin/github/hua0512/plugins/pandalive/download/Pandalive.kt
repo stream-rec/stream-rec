@@ -73,7 +73,7 @@ class Pandalive(app: App, override val danmu: PandaliveDanmu, override val extra
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as PandaliveDownloadConfig
-    val userPreferredQuality = quality ?: app.config.pandaliveConfig.quality ?: PandaliveQuality.Source
+    val userPreferredQuality = quality ?: app.config.pandaliveConfig.quality
     // source quality should be the first one
     if (userPreferredQuality == PandaliveQuality.Source) {
       return streams.first()

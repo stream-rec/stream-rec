@@ -26,7 +26,6 @@
 
 package github.hua0512
 
-import app.cash.sqldelight.db.SqlDriver
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
@@ -41,6 +40,7 @@ import github.hua0512.app.App
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
 import github.hua0512.backend.backendServer
+import github.hua0512.dao.startMigration
 import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
@@ -49,7 +49,6 @@ import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -64,6 +63,14 @@ class Application {
     fun main(args: Array<String>): Unit = runBlocking {
       var server: NettyApplicationEngine? = null
       val appComponent: AppComponent = DaggerAppComponent.create()
+      // TODO: Remove in the next version
+      try {
+        startMigration(appComponent.getDatabase(), appComponent.getJson())
+      } catch (e: Exception) {
+        logger.error("Migration failed", e)
+        throw e
+      }
+
       val app = appComponent.getAppConfig()
       try {
         // start the app
@@ -71,7 +78,7 @@ class Application {
         Runtime.getRuntime().addShutdownHook(Thread {
           logger.info("Stream-rec shutting down...")
           server?.stop(1000, 1000)
-          appComponent.getSqlDriver().closeDriver()
+          appComponent.getDatabase().close()
           app.releaseAll()
           EventCenter.stop()
           cancel()
@@ -194,14 +201,6 @@ class Application {
       return repo.getAppConfig().also {
         app.updateConfig(it)
         // TODO : find a way to update download semaphore dynamically
-      }
-    }
-
-    private fun SqlDriver.closeDriver() {
-      try {
-        close()
-      } catch (e: IOException) {
-        logger.error("Error closing sql driver", e)
       }
     }
   }
