@@ -28,6 +28,7 @@ package github.hua0512.plugins.download
 
 import github.hua0512.app.App
 import github.hua0512.data.config.Action
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.event.StreamerEvent.*
@@ -70,23 +71,7 @@ class StreamerDownloadManager(
   /**
    * List to store the downloaded stream data
    */
-  private val dataList = mutableListOf<StreamData>()
-
-  /**
-   * Returns the global platform config for the streamer platform
-   */
-  private val StreamingPlatform.platformConfig: GlobalPlatformConfig
-    get() {
-      return when (this) {
-        StreamingPlatform.HUYA -> app.config.huyaConfig
-        StreamingPlatform.DOUYIN -> app.config.douyinConfig
-        StreamingPlatform.DOUYU -> app.config.douyuConfig
-        StreamingPlatform.TWITCH -> app.config.twitchConfig
-        StreamingPlatform.PANDALIVE -> app.config.pandaliveConfig
-        else -> throw UnsupportedOperationException("Platform not supported")
-      }
-    }
-
+  private val dataList by lazy { mutableListOf<StreamData>() }
 
   // download retry count
   private var retryCount = 0
@@ -98,8 +83,7 @@ class StreamerDownloadManager(
   private val downloadInterval = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
 
   // retry delay for parted downloads
-  private val platformRetryDelay =
-    (streamer.platform.platformConfig.partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
+  private val platformRetryDelay = (streamer.platform.platformConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
 
   // max download retries
   private val maxRetry = app.config.maxDownloadRetries
@@ -107,7 +91,7 @@ class StreamerDownloadManager(
   /**
    * Flag to check if the download is cancelled
    */
-  private var isCancelled = MutableStateFlow(false)
+  private val isCancelled by lazy { MutableStateFlow(false) }
 
   /**
    * Flag to check if the download is in progress
@@ -406,4 +390,20 @@ class StreamerDownloadManager(
     this.onSavedToDb = onSavedToDb
   }
 
+}
+
+
+/**
+ * Returns the global platform config for the platform
+ *
+ * @param config [AppConfig] global app config
+ * @return [GlobalPlatformConfig] streaming global platform config
+ */
+fun StreamingPlatform.platformConfig(config: AppConfig): GlobalPlatformConfig = when (this) {
+  StreamingPlatform.HUYA -> config.huyaConfig
+  StreamingPlatform.DOUYIN -> config.douyinConfig
+  StreamingPlatform.DOUYU -> config.douyuConfig
+  StreamingPlatform.TWITCH -> config.twitchConfig
+  StreamingPlatform.PANDALIVE -> config.pandaliveConfig
+  else -> throw UnsupportedOperationException("Platform not supported")
 }

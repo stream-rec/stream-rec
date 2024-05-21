@@ -31,6 +31,7 @@ import github.hua0512.data.event.StreamerEvent.StreamerException
 import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.download.StreamerDownloadManager
+import github.hua0512.plugins.download.platformConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
@@ -41,6 +42,8 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 class DownloadService(
   private val app: App,
@@ -48,6 +51,8 @@ class DownloadService(
   private val repo: StreamerRepo,
   private val streamDataRepository: StreamDataRepo,
 ) {
+
+  private var isInitialized = false
 
   companion object {
     @JvmStatic
@@ -57,18 +62,43 @@ class DownloadService(
   // semaphore to limit the number of concurrent downloads
   private lateinit var downloadSemaphore: Semaphore
 
+  // map of streamer to job
   private val taskJobs = mutableMapOf<Streamer, Job?>()
+
+  // map of streamer to download manager
   private val managers = mutableMapOf<Streamer, StreamerDownloadManager>()
 
+  /**
+   * Starts the download service.
+   */
   suspend fun run() = coroutineScope {
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
-    // fetch all streamers from the database and start a job for each one
-    repo.getStreamersActive().forEach { streamer ->
-      startDownloadJob(streamer)
-    }
+    // listen to streamer changes
+    listenToStreamerChanges()
+    // fetch all active non-template streamers, group by platform
+    // start a download job for each platform with a delay
+    repo.getStreamersActive().groupBy {
+      it.platform
+    }.map { entry ->
+      val fetchDelay = (entry.key.platformConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
+      launch {
+        val streamers = entry.value
+        streamers.forEach {
+          startDownloadJob(it)
+          delay(fetchDelay)
+        }
+      }
+    }.joinAll()
+    isInitialized = true
+  }
 
+  private fun CoroutineScope.listenToStreamerChanges() {
     launch {
       repo.stream().distinctUntilChanged().buffer().collect { streamerList ->
+        if (!isInitialized) {
+          logger.info("Service not initialized yet, ignoring streamers change event")
+          return@collect
+        }
         logger.info("Streamers changed, reloading...")
 
         // compare the new streamers with the old ones, first by url, then by entity equals
