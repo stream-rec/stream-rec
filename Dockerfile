@@ -7,6 +7,9 @@ FROM amazoncorretto:17-alpine3.19
 WORKDIR /app
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
+# Add libc6-compat for Android room
+RUN apk apk add --no-cache libc6-compat
+
 # Install FFmpeg
 RUN apk add --no-cache ffmpeg
 # Install Rclone
