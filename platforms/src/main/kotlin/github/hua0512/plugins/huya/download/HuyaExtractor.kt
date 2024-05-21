@@ -49,7 +49,7 @@ import kotlin.random.Random
  * @author hua0512
  * @date : 2024/3/15 19:46
  */
-class HuyaExtractor(override val http: HttpClient, override val json: Json, override val url: String) :
+open class HuyaExtractor(override val http: HttpClient, override val json: Json, override val url: String) :
   Extractor(http, json) {
   companion object {
     const val BASE_URL = "https://www.huya.com"
@@ -76,7 +76,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
   }
 
   override val regexPattern = URL_REGEX.toRegex()
-  private var roomId: String = ""
+  protected var roomId: String = ""
   private lateinit var htmlResponseBody: String
   private val ayyuidPattern = AYYUID_REGEX.toRegex()
   private val topsidPattern = TOPSID_REGEX.toRegex()
@@ -206,6 +206,16 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
       val displayName = jsonElement.jsonObject["sDisplayName"]?.jsonPrimitive?.content ?: ""
       bitrate to displayName
     }
+    val streams = extractLiveStreams(gameStreamInfoList, bitrateList, maxBitRate)
+
+    return mediaInfo.copy(streams = streams)
+  }
+
+  protected suspend fun extractLiveStreams(
+    gameStreamInfoList: JsonArray,
+    bitrateList: List<Pair<Int, String>>,
+    maxBitRate: Int,
+  ): MutableList<StreamInfo> {
     // build stream info
     val streams = mutableListOf<StreamInfo>()
     val time = Clock.System.now()
@@ -237,15 +247,15 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
         }
       }
     }
-    return mediaInfo.copy(streams = streams)
+    return streams
   }
 
-  private fun buildUrl(
+  protected fun buildUrl(
     streamInfo: JsonElement,
     uid: Long,
     time: Instant,
     bitrate: Int? = null,
-    isFlv: Boolean
+    isFlv: Boolean,
   ): String {
     val antiCode =
       streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
@@ -272,7 +282,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
     val fm = query["fm"]?.decodeBase64()?.split("_")?.get(0)!!
 
     @Suppress("SpellCheckingInspection")
-    val ctype = query["ctype"]!!
+    val ctype = "tars_mp"
     val ss = "$seqId|${ctype}|$PLATFORM_ID".toByteArray().toMD5Hex()
     val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".toByteArray().toMD5Hex()
 
