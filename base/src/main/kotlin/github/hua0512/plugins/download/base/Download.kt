@@ -176,7 +176,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       StreamingPlatform.DOUYIN -> app.config.douyinConfig.cookies
       StreamingPlatform.DOUYU -> app.config.douyuConfig.cookies
       StreamingPlatform.TWITCH -> app.config.twitchConfig.cookies
-      StreamingPlatform.PANDALIVE -> app.config.pandaliveConfig.cookies
+      StreamingPlatform.PANDATV -> app.config.pandaliveConfig.cookies
       else -> null
     }
 
