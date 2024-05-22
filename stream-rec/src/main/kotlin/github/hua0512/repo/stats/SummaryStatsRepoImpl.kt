@@ -28,8 +28,12 @@ package github.hua0512.repo.stats
 
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.data.stats.Stats
+import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stats.SummaryStats
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * @author hua0512
@@ -49,12 +53,18 @@ class SummaryStatsRepoImpl(private val statsDao: StatsDao) : SummaryStatsRepo {
   }
 
   override suspend fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
-    val stats = statsDao.getBetweenTimeOrderedDesc(from, to)
-    val fromDate = Instant.fromEpochSeconds(from)
-    val toDate = Instant.fromEpochSeconds(to)
+    val diff = Instant.fromEpochSeconds(to) - Instant.fromEpochSeconds(from)
 
-    val diff = toDate - fromDate
+    val stats = if (diff.inWholeSeconds < 30 * 24 * 60 * 60) {
+      statsDao.getBetweenTimeOrderedDesc(from, to)
+    } else {
+      statsDao.getBetweenTimeOrderedDesc(from, to)
+        .groupByMonthAndYear()
+        .mergeStatsWithinMonth()
+    }
+
     val previous = statsDao.getBetweenTimeOrderedDesc(from - diff.inWholeSeconds, to - diff.inWholeSeconds)
+
     return SummaryStats(
       stats.sumOf { it.streams },
       previous.sumOf { it.streams },
@@ -62,6 +72,26 @@ class SummaryStatsRepoImpl(private val statsDao: StatsDao) : SummaryStatsRepo {
       previous.sumOf { it.uploads },
       stats.map { Stats(it) }
     )
+  }
+
+  private fun List<StatsEntity>.groupByMonthAndYear() = groupBy {
+    val dateTime = Instant.fromEpochSeconds(it.timeStamp).toLocalDateTime(TimeZone.currentSystemDefault()).date
+    dateTime.year to dateTime.monthNumber
+  }
+
+  private fun Map<Pair<Int, Int>, List<StatsEntity>>.mergeStatsWithinMonth() = flatMap {
+    val first = it.value.first()
+    val firstDay = Instant.fromEpochSeconds(first.timeStamp)
+      .toLocalDateTime(TimeZone.currentSystemDefault()).date.atStartOfDayIn(TimeZone.currentSystemDefault()).epochSeconds
+
+    val monthCurrent = it.value.reduce { acc, statsEntity ->
+      acc.copy(
+        streams = acc.streams + statsEntity.streams,
+        uploads = acc.uploads + statsEntity.uploads,
+        timeStamp = firstDay
+      )
+    }
+    listOf(monthCurrent)
   }
 
   override suspend fun getStatsFromTo(from: Long, to: Long): List<Stats> {
