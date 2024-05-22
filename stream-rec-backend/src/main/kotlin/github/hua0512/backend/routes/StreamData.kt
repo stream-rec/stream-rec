@@ -50,7 +50,7 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
       val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 0
       val pageSize = call.request.queryParameters["per_page"]?.toIntOrNull() ?: 10
       val filter = call.request.queryParameters["filter"]
-      val streamers = call.request.queryParameters.getAll("stream")?.run {
+      val streamers = call.request.queryParameters.getAll("streamer")?.run {
         mapNotNull {
           it.toLongOrNull()?.let { StreamerId(it) } ?: run {
             logger.warn("Invalid stream id: $it")

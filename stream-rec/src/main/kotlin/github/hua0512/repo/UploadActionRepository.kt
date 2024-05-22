@@ -99,7 +99,7 @@ class UploadActionRepository(
             pageSize,
             filter ?: "",
             status = status ?: UploadState.intValues(),
-            streamers?.map { it.value },
+            streamers?.map { it.value } ?: emptyList(),
             streamers?.isEmpty() ?: true,
             sortColumn
           )
@@ -111,7 +111,7 @@ class UploadActionRepository(
             pageSize,
             filter ?: "",
             status = status ?: UploadState.intValues(),
-            streamers?.map { it.value },
+            streamers?.map { it.value } ?: emptyList(),
             streamers?.isEmpty() ?: true,
             sortColumn
           )
@@ -125,20 +125,16 @@ class UploadActionRepository(
           ?: throw IllegalStateException("Streamer with ID ${it.streamData.streamerId} not found.")
         val stream = StreamData(it.streamData, streamer)
         UploadData(it.uploadData, stream, UploadAction(it.action))
-      }.also {
-        logger.debug("Retrieved {} upload data", it.size)
       }
     }
   }
 
-  override suspend fun countAllUploadData(status: List<Int>?, filter: String?, streamerId: Collection<StreamerId>?): Long {
-    return withIOContext {
-      uploadDataDao.countAllByFilter(
-        status ?: UploadState.intValues(),
-        filter ?: "",
-        streamerId
-      )
-    }
+  override suspend fun countAllUploadData(status: List<Int>?, filter: String?, streamerId: Collection<StreamerId>?): Long = withIOContext {
+    uploadDataDao.countAllByFilter(
+      status ?: UploadState.intValues(),
+      filter ?: "",
+      streamerId ?: emptyList(),
+    )
   }
 
 

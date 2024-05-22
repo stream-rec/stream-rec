@@ -179,11 +179,11 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
     SELECT COUNT(*) FROM UploadData
     JOIN StreamData ON UploadData.streamDataId = StreamData.id
     WHERE (UploadData.status IN (:status))
-    AND (:streamerIds IS NULL OR StreamData.streamerId IN (:streamerIds))
+    AND (StreamData.streamerId IN (:streamerIds))
     AND (StreamData.title LIKE '%' || :filter || '%' OR UploadData.filePath LIKE '%' || :filter || '%')
   """
   )
-  suspend fun countAllByFilter(status: Collection<Int>?, filter: String, streamerIds: Collection<StreamerId>?): Long
+  suspend fun countAllByFilter(status: Collection<Int>?, filter: String, streamerIds: Collection<StreamerId>): Long
 
 
   /**
