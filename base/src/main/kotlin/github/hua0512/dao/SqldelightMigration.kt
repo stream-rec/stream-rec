@@ -159,7 +159,7 @@ suspend fun startMigration(appDatabase: AppDatabase, json: Json) {
       it.description,
       json.decodeFromString<DownloadConfig>(it.download_config.toString()),
       it.is_template.boolean,
-      if (it.is_template == -1L) 0L else it.template_id ?: 0L,
+      if (it.template_id == -1L) 0L else it.template_id ?: 0L,
       it.app_config_id ?: 1L
     )
   }
