@@ -35,6 +35,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.*
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.danmu.base.Danmu
+import github.hua0512.plugins.download.StreamerCallback
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART_PREFIX
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
@@ -92,14 +93,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   protected lateinit var streamer: Streamer
 
   /**
-   * Callback triggered when the artist avatar url is updated
+   * Streamer callback
    */
-  private var artistAvatarUrlUpdateCallback: ((String) -> Unit)? = null
-
-  /**
-   * Callback triggered when the stream title is updated
-   */
-  private var streamTitleUpdateCallback: ((String) -> Unit)? = null
+  var callback: StreamerCallback? = null
 
   /**
    * The download engine used to download the stream
@@ -408,6 +404,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   protected fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
     // check if the segment is valid, a valid segment should exist and have a size greater than the minimum part size
     if (segmentPath.exists() && segmentPath.fileSize() >= app.config.minPartSize) return false
+    logger.error("(${streamer.name}) segment is invalid: ${segmentPath.pathString}")
     // cases where the segment is invalid
     deleteOutputs(segmentPath, danmuPath)
     return true
@@ -590,34 +587,16 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * @param mediaInfo the [MediaInfo] instance
    * @param streamer the [Streamer] instance
    */
-  protected fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
+  private fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
     if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
       streamer.avatar = mediaInfo.artistImageUrl
-      logger.debug("(${streamer.name}) avatar: ${streamer.avatar}")
-      artistAvatarUrlUpdateCallback?.invoke(mediaInfo.artistImageUrl)
+      callback?.onAvatarChanged(streamer, mediaInfo.artistImageUrl)
     }
     if (mediaInfo.title.isNotEmpty() && mediaInfo.title != streamer.streamTitle) {
       streamer.streamTitle = mediaInfo.title
-      logger.debug("(${streamer.name}) streamTitle: ${streamer.streamTitle}")
-      streamTitleUpdateCallback?.invoke(mediaInfo.title)
+      callback?.onDescriptionChanged(streamer, mediaInfo.title)
     }
     downloadTitle = mediaInfo.title
-  }
-
-  /**
-   * Set the artist avatar url update callback
-   * @param callback the callback function
-   */
-  fun avatarUrlUpdateCallback(callback: (String) -> Unit) {
-    this.artistAvatarUrlUpdateCallback = callback
-  }
-
-  /**
-   * Set the stream title update callback
-   * @param callback the callback function
-   */
-  fun descriptionUpdateCallback(callback: (String) -> Unit) {
-    this.streamTitleUpdateCallback = callback
   }
 
   /**

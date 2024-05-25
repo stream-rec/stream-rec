@@ -333,13 +333,13 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       .onEach { data ->
         danmuFile.writeToDanmu(data as List<DanmuData>)
       }
-      .catch { e ->
-        if (e is DownloadProcessFinishedException) return@catch
-        logger.error("Error writing danmu to file {}", filePath, e)
-      }
       .onCompletion {
         if (danmuFile.exists())
           danmuFile.writeEndOfFile()
+      }
+      .catch { e ->
+        if (e is DownloadProcessFinishedException) return@catch
+        logger.error("Error writing danmu to file {}", filePath, e)
       }
       .flowOn(Dispatchers.IO)
       .launchIn(this)

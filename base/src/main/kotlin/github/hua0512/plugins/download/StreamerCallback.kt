@@ -24,49 +24,30 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.plugins.download
 
-import github.hua0512.data.stream.entity.StreamDataEntity
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+import github.hua0512.data.stream.StreamData
+import github.hua0512.data.stream.Streamer
 
-@Serializable
-data class StreamData(
-  var id: Long = 0,
-  val title: String,
-  val dateStart: Long? = null,
-  val dateEnd: Long? = null,
-  val outputFilePath: String,
-  val danmuFilePath: String? = null,
-  val outputFileSize: Long = 0,
-  val streamerId: Long = 0,
-  @Transient
-  val streamer: Streamer? = null,
-) {
+/**
+ * Interface for listening to streamer events
+ * @see Streamer
+ * @author hua0512
+ * @date : 2024/5/25 10:05
+ */
+interface StreamerCallback {
 
-  var streamerName: String = ""
-    get() = streamer?.name ?: field
+  fun onLiveStatusChanged(streamer: Streamer, isLive: Boolean)
 
-  constructor(entity: StreamDataEntity, streamer: Streamer? = null) : this(
-    entity.id,
-    entity.title,
-    entity.dateStart,
-    entity.dateEnd,
-    entity.outputFilePath,
-    entity.danmuFilePath,
-    entity.outputFileSize,
-    entity.streamerId,
-    streamer,
-  )
+  fun onLastLiveTimeChanged(streamer: Streamer, lastLiveTime: Long)
 
-  fun toEntity() = StreamDataEntity(
-    id = id,
-    title = title,
-    dateStart = dateStart,
-    dateEnd = dateEnd,
-    outputFilePath = outputFilePath,
-    danmuFilePath = danmuFilePath,
-    outputFileSize = outputFileSize,
-    streamerId = streamerId,
-  )
+  fun onDescriptionChanged(streamer: Streamer, description: String)
+
+  fun onAvatarChanged(streamer: Streamer, avatar: String)
+
+  fun onStreamDownloaded(streamer: Streamer, stream: StreamData)
+
+  fun onStreamDownloadFailed(streamer: Streamer, stream: StreamData, e: Exception)
+
+  fun onStreamFinished(streamer: Streamer, streams: List<StreamData>)
 }
