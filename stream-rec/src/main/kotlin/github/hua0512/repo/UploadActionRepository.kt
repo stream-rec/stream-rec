@@ -37,12 +37,13 @@ import github.hua0512.data.UploadDataId
 import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.upload.*
-import github.hua0512.logger
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.utils.getTodayStart
 import github.hua0512.utils.withIOContext
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Repository class for managing upload related actions.
@@ -64,6 +65,11 @@ class UploadActionRepository(
   private val uploadResultDao: UploadResultDao,
   private val statsDao: StatsDao,
 ) : UploadRepo {
+
+  private companion object {
+    @JvmStatic
+    private val logger: Logger = LoggerFactory.getLogger(UploadActionRepository::class.java)
+  }
 
   override suspend fun getAllUploadData(): List<UploadData> {
     return withIOContext {

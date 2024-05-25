@@ -63,10 +63,10 @@ class ActionService(private val app: App, private val uploadService: UploadServi
     actions.filter {
       it.enabled
     }.forEach { action ->
-      val job = async {
-        action.mapToAction(streamDataList)
-      }
       try {
+        val job = async {
+          action.mapToAction(streamDataList)
+        }
         job.await()
       } catch (e: Exception) {
         logger.error("$streamDataList, error while executing action $action : ${e.message}")
