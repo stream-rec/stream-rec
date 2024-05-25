@@ -12,6 +12,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.flow.*
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.Duration
 
@@ -44,9 +45,47 @@ fun Application.configureSockets(json: Json) {
   routing {
     webSocketRaw("/live/update") {
       try {
-        // collect ws response...
+
         var timeOutJob = createTimeoutJob(this)
 
+        // collect streamer events and send to client
+        EventCenter.events.filterIsInstance<StreamerEvent>().onEach {
+          // check if this websocket is still open
+          if (timeOutJob.isCompleted || !this.isActive) {
+            cancel("Client timeout")
+            return@onEach
+          }
+          send(Frame.Text(json.encodeToString<StreamerEvent>(it)))
+        }.launchIn(this)
+
+
+        // collect events from event center
+        // if a same event from a same url is received within 1 second, ignore it
+        // otherwise, send it to client
+        val lastUpdate = mutableMapOf<String, Long>()
+        EventCenter.events.filter {
+          it is DownloadStateUpdate
+        }.flatMapConcat { update ->
+          val event = update as DownloadStateUpdate
+          val url = event.url
+          val last = lastUpdate[url]
+          val now = System.currentTimeMillis()
+          if (last == null || now - last > 1000) {
+            lastUpdate[url] = now
+            flowOf(event)
+          } else {
+            emptyFlow()
+          }
+        }.onEach {
+          // check if this websocket is still open and active
+          if (timeOutJob.isCompleted || !this.isActive) {
+            cancel("Client timeout")
+            return@onEach
+          }
+          send(Frame.Text(json.encodeToString(DownloadStateUpdate.serializer(), it)))
+        }.launchIn(this)
+
+        // collect ws response...
         incoming.receiveAsFlow()
           .onEach { frame ->
             when (frame) {
@@ -71,51 +110,7 @@ fun Application.configureSockets(json: Json) {
                 // do nothing
               }
             }
-          }.launchIn(this)
-
-
-        launch {
-          EventCenter.events.filter {
-            it is StreamerEvent
-          }.onEach {
-            // check if this websocket is still open
-            if (timeOutJob.isCompleted || !this.isActive) {
-              cancel("Client timeout")
-              return@onEach
-            }
-            send(Frame.Text(json.encodeToString(StreamerEvent.serializer(), it as StreamerEvent)))
           }.collect()
-        }
-
-
-        // collect events from event center
-        // if a same event from a same url is received within 1 second, ignore it
-        // otherwise, send it to client
-        val lastUpdate = mutableMapOf<String, Long>()
-
-        launch {
-          EventCenter.events.filter {
-            it is DownloadStateUpdate
-          }.flatMapConcat { update ->
-            val event = update as DownloadStateUpdate
-            val url = event.url
-            val last = lastUpdate[url]
-            val now = System.currentTimeMillis()
-            if (last == null || now - last > 1000) {
-              lastUpdate[url] = now
-              flowOf(event)
-            } else {
-              emptyFlow()
-            }
-          }.onEach {
-            // check if this websocket is still open and active
-            if (timeOutJob.isCompleted || !this.isActive) {
-              cancel("Client timeout")
-              return@onEach
-            }
-            send(Frame.Text(json.encodeToString(DownloadStateUpdate.serializer(), it)))
-          }.collect()
-        }.join()
       } catch (e: CancellationException) {
         // client timeout
       } catch (e: ClosedSendChannelException) {
