@@ -183,12 +183,14 @@ class DownloadService(
 
         val newStreamers = streamerList.filterNot { it.isTemplate }
         // cancel the jobs of the streamers that are not in the new list
-        oldStreamers.filter { old ->
-          newStreamers.none { new -> new.url == old.url }
-        }.forEach { streamer ->
-          val platform = streamer.platform
-          val streamerService = taskJobs[platform] ?: return@forEach
-          streamerService.cancelStreamer(streamer, "delete")
+        if (oldStreamers.isNotEmpty()) {
+          oldStreamers.filter { old ->
+            newStreamers.none { new -> new.url == old.url }
+          }.forEach { streamer ->
+            val platform = streamer.platform
+            val streamerService = taskJobs[platform] ?: return@forEach
+            streamerService.cancelStreamer(streamer, "delete")
+          }
         }
 
         // diff the new streamers with the old ones
@@ -221,7 +223,7 @@ class DownloadService(
             }
             logger.debug("Detected entity change for {}, {}", new, old)
             val platform = old.platform
-            val service = taskJobs[platform] ?: return@forEach
+            val service = taskJobs[platform] ?: getOrInitPlatformService(platform)
             service.cancelStreamer(old, reason)
             if (validateActivation(new)) return@forEach
             service.addStreamer(new)
@@ -241,7 +243,7 @@ class DownloadService(
    */
   private fun validateActivation(new: Streamer): Boolean {
     if (!new.isActivated) {
-      logger.info("${new.name}, ${new.url} is not activated")
+      logger.debug("${new.name}, ${new.url} is not activated")
       return true
     }
     return false

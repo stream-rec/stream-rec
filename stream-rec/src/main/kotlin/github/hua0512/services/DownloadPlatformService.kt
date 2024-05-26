@@ -60,7 +60,7 @@ data class DownloaderState(
  */
 sealed class DownloaderIntent {
   data class AddStreamer(val streamer: Streamer) : DownloaderIntent()
-  data class CancelStreamer(val streamer: Streamer) : DownloaderIntent()
+  data class CancelStreamer(val streamer: Streamer, val reason: String? = null) : DownloaderIntent()
   data object StartDownloading : DownloaderIntent()
 }
 
@@ -140,7 +140,7 @@ class DownloadPlatformService(
   fun cancelStreamer(streamer: Streamer, reason: String? = null) {
     logger.debug("({}) request to cancel streamer: {} reason : {}", platform, streamer.url, reason)
     scope.launch {
-      intentFlow.emit(DownloaderIntent.CancelStreamer(streamer))
+      intentFlow.emit(DownloaderIntent.CancelStreamer(streamer, reason))
     }
   }
 
@@ -165,7 +165,7 @@ class DownloadPlatformService(
         .collect { intent ->
           when (intent) {
             is DownloaderIntent.AddStreamer -> addStreamerToState(intent.streamer)
-            is DownloaderIntent.CancelStreamer -> cancelStreamerInState(intent.streamer)
+            is DownloaderIntent.CancelStreamer -> cancelStreamerInState(intent.streamer, intent.reason)
             DownloaderIntent.StartDownloading -> downloadStreamers()
           }
         }
