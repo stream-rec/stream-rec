@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.pandalive.download
+package github.hua0512.plugins.pandatv.download
 
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.plugins.base.Extractor
@@ -40,7 +40,7 @@ import kotlinx.serialization.json.*
  * @author hua0512
  * @date : 2024/5/8 21:47
  */
-class PandaliveExtractor(http: HttpClient, json: Json, override val url: String) : Extractor(http, json) {
+class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) : Extractor(http, json) {
 
   companion object {
     internal const val URL = "https://www.pandalive.co.kr"

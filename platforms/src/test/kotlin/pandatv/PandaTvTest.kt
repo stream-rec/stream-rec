@@ -24,12 +24,12 @@
  * SOFTWARE.
  */
 
-package pandalive
+package pandatv
 
 import BaseTest
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.pandalive.danmu.PandaliveDanmu
-import github.hua0512.plugins.pandalive.download.PandaliveExtractor
+import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
+import github.hua0512.plugins.pandatv.download.PandaTvExtractor
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.time.Duration
@@ -38,13 +38,13 @@ import kotlin.time.Duration
  * @author hua0512
  * @date : 2024/5/8 21:56
  */
-class PandaliveTest : BaseTest() {
+class PandaTvTest : BaseTest() {
 
   override val testUrl: String = "https://www.pandalive.co.kr/live/play/say0716"
 
   @Test
   override fun testLive() = runTest {
-    val extractor = PandaliveExtractor(app.client, app.json, testUrl).apply {
+    val extractor = PandaTvExtractor(app.client, app.json, testUrl).apply {
       prepare()
     }
     val mediaInfo = extractor.extract()
@@ -53,14 +53,14 @@ class PandaliveTest : BaseTest() {
 
   @Test
   override fun testRegex() {
-    val regex = PandaliveExtractor.URL_REGEX.toRegex()
+    val regex = PandaTvExtractor.URL_REGEX.toRegex()
     assert(regex.matches(testUrl))
     assert(regex.matchEntire(testUrl)?.groups?.get(1)?.value == "say0716")
   }
 
   @Test
   fun testDanmu() = runTest(timeout = Duration.INFINITE) {
-    val danmu = PandaliveDanmu(app).apply {
+    val danmu = PandaTvDanmu(app).apply {
       enableWrite = false
       filePath = "pandatv_danmu.txt"
       id = "say0716"

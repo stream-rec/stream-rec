@@ -24,15 +24,15 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.pandalive.download
+package github.hua0512.plugins.pandatv.download
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.DownloadConfig.PandaliveDownloadConfig
-import github.hua0512.data.platform.PandaliveQuality
+import github.hua0512.data.config.DownloadConfig.PandaTvDownloadConfig
+import github.hua0512.data.platform.PandaTvQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.download.base.Download
-import github.hua0512.plugins.pandalive.danmu.PandaliveDanmu
+import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
 
@@ -41,16 +41,16 @@ import github.hua0512.utils.withIOContext
  * @author hua0512
  * @date : 2024/5/10 13:22
  */
-class Pandalive(app: App, override val danmu: PandaliveDanmu, override val extractor: PandaliveExtractor) :
-  Download<PandaliveDownloadConfig>(app, danmu, extractor) {
+class PandaTv(app: App, override val danmu: PandaTvDanmu, override val extractor: PandaTvExtractor) :
+  Download<PandaTvDownloadConfig>(app, danmu, extractor) {
 
-  override fun createDownloadConfig() = PandaliveDownloadConfig(
-    quality = app.config.pandaliveConfig.quality,
-    cookies = app.config.pandaliveConfig.cookies,
+  override fun createDownloadConfig() = PandaTvDownloadConfig(
+    quality = app.config.pandaTvConfig.quality,
+    cookies = app.config.pandaTvConfig.cookies,
   )
 
   override suspend fun shouldDownload(): Boolean {
-    (config.cookies ?: app.config.pandaliveConfig.cookies)?.nonEmptyOrNull()?.also {
+    (config.cookies ?: app.config.pandaTvConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
 
@@ -72,10 +72,10 @@ class Pandalive(app: App, override val danmu: PandaliveDanmu, override val extra
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
-    this as PandaliveDownloadConfig
-    val userPreferredQuality = quality ?: app.config.pandaliveConfig.quality
+    this as PandaTvDownloadConfig
+    val userPreferredQuality = quality ?: app.config.pandaTvConfig.quality
     // source quality should be the first one
-    if (userPreferredQuality == PandaliveQuality.Source) {
+    if (userPreferredQuality == PandaTvQuality.Source) {
       return streams.first()
     }
     // resolution quality

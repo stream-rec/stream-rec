@@ -26,8 +26,27 @@
 
 package github.hua0512.dao
 
+import androidx.room.DeleteColumn
+import androidx.room.RenameColumn
+import androidx.room.migration.AutoMigrationSpec
+
 /**
  * This file contains all the room migrations
  * @author hua0512
  * @date : 2024/5/18 23:15
  */
+
+@RenameColumn.Entries(
+  RenameColumn(
+    tableName = "app_config",
+    fromColumnName = "pandaliveConfig",
+    toColumnName = "pandaTvConfig"
+  )
+)
+@DeleteColumn.Entries(
+  DeleteColumn(
+    tableName = "app_config",
+    columnName = "pandaliveConfig"
+  )
+)
+class Migrate1To2 : AutoMigrationSpec

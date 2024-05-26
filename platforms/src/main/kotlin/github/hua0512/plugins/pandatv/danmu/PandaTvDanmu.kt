@@ -24,14 +24,14 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.pandalive.danmu
+package github.hua0512.plugins.pandatv.danmu
 
 import github.hua0512.app.App
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.base.Danmu
-import github.hua0512.plugins.pandalive.download.PandaliveExtractor
+import github.hua0512.plugins.pandatv.download.PandaTvExtractor
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.datetime.Instant
@@ -43,7 +43,7 @@ import kotlinx.serialization.json.put
  * @author hua0512
  * @date : 2024/5/9 0:26
  */
-class PandaliveDanmu(app: App) : Danmu(app, enablePing = true) {
+class PandaTvDanmu(app: App) : Danmu(app, enablePing = true) {
 
   companion object {
     private val msgRegex = Regex("\"message\":\"(.+?)\"")
@@ -65,14 +65,14 @@ class PandaliveDanmu(app: App) : Danmu(app, enablePing = true) {
   lateinit var userIdx: String
 
   init {
-    headersMap[HttpHeaders.Origin] = PandaliveExtractor.URL
+    headersMap[HttpHeaders.Origin] = PandaTvExtractor.URL
   }
 
   override suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean {
     // extract danmu id from streamer url
-    id = PandaliveExtractor.URL_REGEX.toRegex().find(streamer.url)?.groupValues?.get(1) ?: return false
+    id = PandaTvExtractor.URL_REGEX.toRegex().find(streamer.url)?.groupValues?.get(1) ?: return false
     if (!::token.isInitialized || token.isEmpty() || !::userIdx.isInitialized || userIdx.isEmpty()) {
-      throw IllegalStateException("pandalive token not initialized")
+      throw IllegalStateException("pandatv token not initialized")
     }
     return true
   }

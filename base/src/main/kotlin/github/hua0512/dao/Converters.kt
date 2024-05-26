@@ -103,12 +103,12 @@ class Converters {
   }
 
   @TypeConverter
-  fun fromPandaliveGlobalConfig(value: String?): PandaliveConfigGlobal? {
+  fun fromPandaTvGlobalConfig(value: String?): PandaTvConfigGlobal? {
     return value?.let { json.decodeFromString(it) }
   }
 
   @TypeConverter
-  fun toPandaliveGlobalConfig(value: PandaliveConfigGlobal?): String? {
+  fun toPandaTvGlobalConfig(value: PandaTvConfigGlobal?): String? {
     return value?.let { json.encodeToString(it) }
   }
 

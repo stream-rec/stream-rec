@@ -143,11 +143,11 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   }
 
   @Serializable
-  @SerialName("pandalive")
-  data class PandaliveDownloadConfig(
-    override val quality: PandaliveQuality? = null,
+  @SerialName("pandatv")
+  data class PandaTvDownloadConfig(
+    override val quality: PandaTvQuality? = null,
     override var cookies: String? = null,
-  ) : DownloadConfig, PandaliveConfigDTO {
+  ) : DownloadConfig, PandaTvConfigDTO {
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null

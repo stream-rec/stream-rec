@@ -114,7 +114,7 @@ suspend fun startMigration(appDatabase: AppDatabase, json: Json) {
       json.decodeFromString(DouyinConfigGlobal.serializer(), it.douyinConfig.toString()),
       json.decodeFromString(DouyuConfigGlobal.serializer(), it.douyuConfig.toString()),
       json.decodeFromString(TwitchConfigGlobal.serializer(), it.twitchConfig.toString()),
-      json.decodeFromString(PandaliveConfigGlobal.serializer(), it.pandaliveConfig.toString())
+      json.decodeFromString(PandaTvConfigGlobal.serializer(), it.pandaliveConfig.toString())
     )
   }
   appDatabase.getConfigDao().insert(configs)

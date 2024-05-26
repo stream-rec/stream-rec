@@ -318,6 +318,6 @@ fun StreamingPlatform.platformConfig(config: AppConfig): GlobalPlatformConfig = 
   StreamingPlatform.DOUYIN -> config.douyinConfig
   StreamingPlatform.DOUYU -> config.douyuConfig
   StreamingPlatform.TWITCH -> config.twitchConfig
-  StreamingPlatform.PANDATV -> config.pandaliveConfig
+  StreamingPlatform.PANDATV -> config.pandaTvConfig
   else -> throw UnsupportedOperationException("Platform not supported")
 }

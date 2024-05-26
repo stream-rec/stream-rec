@@ -78,9 +78,9 @@ data class TwitchConfigGlobal(
 ) : GlobalPlatformConfig, TwitchConfigDTO
 
 @Serializable
-data class PandaliveConfigGlobal(
+data class PandaTvConfigGlobal(
   override val partedDownloadRetry: Int? = 10,
   override val cookies: String? = null,
-  override val quality: PandaliveQuality = PandaliveQuality.Source,
+  override val quality: PandaTvQuality = PandaTvQuality.Source,
   override val fetchDelay: Long? = 30,
-) : GlobalPlatformConfig, PandaliveConfigDTO
+) : GlobalPlatformConfig, PandaTvConfigDTO

@@ -39,8 +39,8 @@ import kotlinx.serialization.encoding.Encoder
  * @author hua0512
  * @date : 2024/5/4 14:25
  */
-@Serializable(with = PandaliveQualitySerializer::class)
-enum class PandaliveQuality(val value: String) {
+@Serializable(with = PandaTvQualitySerializer::class)
+enum class PandaTvQuality(val value: String) {
   Source("best"),
   P1080("1080p"),
   P720("720p"),
@@ -49,15 +49,15 @@ enum class PandaliveQuality(val value: String) {
   P160("160p"),
 }
 
-object PandaliveQualitySerializer : KSerializer<PandaliveQuality> {
-  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("PandaliveQuality", PrimitiveKind.STRING)
+object PandaTvQualitySerializer : KSerializer<PandaTvQuality> {
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("PandaTvQuality", PrimitiveKind.STRING)
 
-  override fun deserialize(decoder: Decoder): PandaliveQuality {
+  override fun deserialize(decoder: Decoder): PandaTvQuality {
     val value = decoder.decodeString()
-    return PandaliveQuality.entries.first { it.value == value }
+    return PandaTvQuality.entries.first { it.value == value }
   }
 
-  override fun serialize(encoder: Encoder, value: PandaliveQuality) {
+  override fun serialize(encoder: Encoder, value: PandaTvQuality) {
     encoder.encodeString(value.value)
   }
 }

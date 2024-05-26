@@ -26,6 +26,7 @@
 
 package github.hua0512.dao
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
@@ -63,13 +64,16 @@ import github.hua0512.data.user.UserEntity
     UploadDataEntity::class,
     UploadResultEntity::class
   ], version = DATABASE_VERSION,
-  exportSchema = true
+  exportSchema = true,
+  autoMigrations = [
+    AutoMigration(from = 1, to = 2, spec = Migrate1To2::class)
+  ]
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
   companion object {
-    const val DATABASE_VERSION = 1
+    const val DATABASE_VERSION = 2
   }
 
   abstract fun getConfigDao(): AppConfigDao

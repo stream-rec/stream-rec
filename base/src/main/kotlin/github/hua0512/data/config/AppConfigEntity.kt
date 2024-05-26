@@ -78,6 +78,6 @@ data class AppConfigEntity(
   val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
   @ColumnInfo(name = "twitchConfig")
   val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
-  @ColumnInfo(name = "pandaliveConfig")
-  val pandaliveConfig: PandaliveConfigGlobal = PandaliveConfigGlobal(),
+  @ColumnInfo(name = "pandaTvConfig")
+  val pandaTvConfig: PandaTvConfigGlobal = PandaTvConfigGlobal(),
 )
