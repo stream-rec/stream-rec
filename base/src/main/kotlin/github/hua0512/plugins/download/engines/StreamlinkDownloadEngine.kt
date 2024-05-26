@@ -27,6 +27,7 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
+import github.hua0512.utils.isWindows
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -54,16 +55,24 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       // add headers
       headers.forEach {
         val (key, value) = it
-
         add("--http-header")
-        add("$key=$value")
+        // check if windows
+        if (isWindows()) {
+          add("\"$key=$value\"")
+        } else {
+          add("$key=$value")
+        }
       }
       // add cookies if any
       if (cookies.isNullOrEmpty().not()) {
         val separatedCookies = cookies!!.split(";").map { it.trim() }
         separatedCookies.forEach {
           add("--http-cookie")
-          add(it)
+          if (isWindows()) {
+            add("\"$it\"")
+          } else {
+            add(it)
+          }
         }
       }
     }

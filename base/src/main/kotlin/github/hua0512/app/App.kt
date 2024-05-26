@@ -27,6 +27,7 @@
 package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
+import github.hua0512.utils.isWindows
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -34,9 +35,9 @@ import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
-import io.ktor.serialization.kotlinx.json.*
 import org.slf4j.LoggerFactory
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -51,7 +52,7 @@ class App(val json: Json) {
     @JvmStatic
     val ffmpegPath = (System.getenv("FFMPEG_PATH") ?: "ffmpeg").run {
       // check if is windows
-      if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
+      if (isWindows()) {
         "$this.exe"
       } else {
         this
@@ -61,7 +62,7 @@ class App(val json: Json) {
     @JvmStatic
     val streamLinkPath = (System.getenv("STREAMLINK_PATH") ?: "streamlink").run {
       // check if is windows
-      if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
+      if (isWindows()) {
         "$this.exe"
       } else {
         this
