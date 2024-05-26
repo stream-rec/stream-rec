@@ -27,15 +27,12 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
-import github.hua0512.logger
-import github.hua0512.utils.executeProcess
-import github.hua0512.utils.process.InputSource
-import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import kotlin.io.path.Path
+import org.slf4j.LoggerFactory
 
 /**
  * A download engine that uses streamlink and pipe the output to ffmpeg for downloading streams
@@ -43,6 +40,10 @@ import kotlin.io.path.Path
  * @date : 2024/5/7 13:46
  */
 class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
+
+  companion object {
+    private val logger = LoggerFactory.getLogger("Streamlink")
+  }
 
   private var streamlinkProcess: Process? = null
 
@@ -78,48 +79,56 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       redirectOutput(ProcessBuilder.Redirect.PIPE)
       directory(outputFolder.toFile())
     }
-    streamlinkProcess = withIOContext {
-      streamLinkBuilder.start()
+
+    val ffmpegBuilder = ProcessBuilder(App.ffmpegPath, *ffmpegCmdArgs).apply {
+      redirectInput(ProcessBuilder.Redirect.PIPE)
+      redirectErrorStream()
+      directory(outputFolder.toFile())
     }
 
-    launch {
+    if (!useSegmenter) {
+      onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
+    }
+    // process pipeline
+    val pipes = withIOContext {
+      ProcessBuilder.startPipeline(
+        listOf(
+          streamLinkBuilder,
+          ffmpegBuilder
+        )
+      )
+    }
+    // get streamlink process
+    streamlinkProcess = pipes.first()
+    // get streamlink output
+    launch(Dispatchers.IO) {
       streamlinkProcess?.errorReader()?.forEachLine {
         logger.info("${streamer.name} $it")
       }
     }
-    if (!useSegmenter) {
-      onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
-    }
-
-    val exitCode = executeProcess(
-      App.ffmpegPath,
-      *ffmpegCmdArgs,
-      directory = Path(downloadFilePath).parent.toFile(),
-      stdin = InputSource.fromInputStream(streamlinkProcess!!.inputStream, closeInput = false),
-      stdout = Redirect.CAPTURE,
-      stderr = Redirect.CAPTURE,
-      destroyForcibly = false,
-      getOutputStream = {
-        ous = it
-      },
-      getProcess = {
-        process = it
-      }) { line ->
-      processFFmpegOutputLine(
-        line = line,
-        streamer = streamer.name,
-        lastSize = lastOpeningSize,
-        onSegmentStarted = { name ->
-          processSegment(outputFolder, name)
+    // get ffmpeg process
+    process = pipes.last()
+    // get ffmpeg output
+    launch(Dispatchers.IO) {
+      // get error stream
+      while (process?.isAlive == true) {
+        val line = process?.errorStream?.bufferedReader()?.readLine() ?: break
+        processFFmpegOutputLine(
+          line = line,
+          streamer = streamer.name,
+          lastSize = lastOpeningSize,
+          onSegmentStarted = { name ->
+            processSegment(outputFolder, name)
+          }
+        ) { size, diff, bitrate ->
+          handleDownloadProgress(bitrate, size, diff)
         }
-      ) { size, diff, bitrate ->
-        handleDownloadProgress(bitrate, size, diff)
       }
     }
 
+    val exitCode = process?.waitFor() ?: -1
+
     handleExitCodeAndStreamer(exitCode, streamer)
-    streamlinkProcess?.destroy()
-    process?.destroy()
     streamlinkProcess = null
     process = null
   }
@@ -133,8 +142,8 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
   }
 
   override fun sendStopSignal() {
+    // stop streamlink
     streamlinkProcess?.destroy()
-    process?.destroy()
   }
 
 
