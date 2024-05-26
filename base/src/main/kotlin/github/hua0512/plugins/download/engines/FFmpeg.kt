@@ -27,8 +27,9 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.logger
 import io.ktor.http.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -37,6 +38,8 @@ import kotlin.time.toDuration
  * @author hua0512
  * @date : 2024/3/20 21:29
  */
+
+private val logger: Logger = LoggerFactory.getLogger("FFmpeg")
 
 private fun buildDefaultFFMpegInputArgs(
   headers: Map<String, String> = emptyMap(),
