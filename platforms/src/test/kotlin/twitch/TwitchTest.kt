@@ -46,7 +46,7 @@ class TwitchTest : BaseTest() {
   @Test
   override fun testLive() = runTest {
     val extractor = TwitchExtractor(app.client, app.json, testUrl).apply {
-      match()
+      prepare()
     }
     val info = extractor.extract()
     println(info)

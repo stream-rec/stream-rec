@@ -58,7 +58,6 @@ class PandaliveExtractor(http: HttpClient, json: Json, override val url: String)
 
   init {
     platformHeaders[HttpHeaders.Referrer] = URL
-    match()
   }
 
   override suspend fun isLive(): Boolean {

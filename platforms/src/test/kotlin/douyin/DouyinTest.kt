@@ -75,7 +75,7 @@ class DouyinTest : BaseTest() {
   @Test
   override fun testLive() = runTest {
     val extractor = DouyinExtractor(app.client, app.json, testUrl).apply {
-      match()
+      prepare()
     }
     val info = extractor.extract()
     println(info)

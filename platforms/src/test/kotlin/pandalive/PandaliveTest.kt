@@ -44,7 +44,9 @@ class PandaliveTest : BaseTest() {
 
   @Test
   override fun testLive() = runTest {
-    val extractor = PandaliveExtractor(app.client, app.json, testUrl)
+    val extractor = PandaliveExtractor(app.client, app.json, testUrl).apply {
+      prepare()
+    }
     val mediaInfo = extractor.extract()
     println(mediaInfo)
   }
