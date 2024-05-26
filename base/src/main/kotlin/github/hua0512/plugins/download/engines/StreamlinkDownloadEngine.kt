@@ -57,12 +57,14 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     ensureHlsUrl()
     initPath()
     val streamlinkInputArgs = mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
+      // check if windows
+      val isWindows = isWindows()
       // add headers
       headers.forEach {
         val (key, value) = it
         add("--http-header")
         // check if windows
-        if (isWindows()) {
+        if (isWindows) {
           add("\"$key=$value\"")
         } else {
           add("$key=$value")
@@ -74,11 +76,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
         separatedCookies.forEach {
           if (it.nonEmptyOrNull() == null) return@forEach
           add("--http-cookie")
-          if (isWindows()) {
-            add("\"$it\"")
-          } else {
-            add(it)
-          }
+          add(it)
         }
       }
     }
