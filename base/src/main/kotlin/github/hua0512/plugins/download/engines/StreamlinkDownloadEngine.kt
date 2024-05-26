@@ -50,25 +50,27 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
   override suspend fun start() = coroutineScope {
     ensureHlsUrl()
     initPath()
-    val streamlinkInputArgs = arrayOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1")
-    // streamlink headers
-    val headersArray = headers.map {
-      val (key, value) = it
-      "--http-header" to "\"$key=$value\""
-    }.toMutableList()
+    val streamlinkInputArgs = mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
+      // add headers
+      headers.forEach {
+        val (key, value) = it
 
-    if (cookies.isNullOrEmpty().not()) {
-      val separatedCookies = cookies!!.split(";").map { it.trim() }
-      val cookiesArray = separatedCookies.map {
-        // --http-cookie KEY=VALUE
-        "--http-cookie" to "\'$it\'"
+        add("--http-header")
+        add("$key=$value")
       }
-      headersArray += cookiesArray
+      // add cookies if any
+      if (cookies.isNullOrEmpty().not()) {
+        val separatedCookies = cookies!!.split(";").map { it.trim() }
+        separatedCookies.forEach {
+          add("--http-cookie")
+          add(it)
+        }
+      }
     }
-    val headers = headersArray.flatMap { it.toList() }.toTypedArray()
+
     val streamer = streamer ?: throw IllegalArgumentException("Streamer is not set")
     // streamlink args
-    val streamlinkArgs = streamlinkInputArgs + headers + arrayOf(downloadUrl!!, "best", "-O")
+    val streamlinkArgs = streamlinkInputArgs.toTypedArray() + arrayOf(downloadUrl!!, "best", "-O")
     logger.debug("${streamer.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
     val ffmpegCmdArgs =
       buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
