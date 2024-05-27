@@ -33,35 +33,45 @@ import org.slf4j.LoggerFactory
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
+private val logger: Logger = LoggerFactory.getLogger("FFmpeg")
+
+
 /**
  * Build the default ffmpeg input arguments
  * @author hua0512
  * @date : 2024/3/20 21:29
  */
-
-private val logger: Logger = LoggerFactory.getLogger("FFmpeg")
-
-private fun buildDefaultFFMpegInputArgs(
+private fun buildDefaultInputArgs(
   headers: Map<String, String> = emptyMap(),
   cookies: String? = null,
   enableLogger: Boolean = false,
 ): Array<String> =
   mutableListOf<String>().apply {
-    // ensure that the headers are properly separated
+    val headersString = StringBuilder()
     if (headers.isNotEmpty()) {
-      headers.forEach {
-        val prefix = if (it.key == HttpHeaders.UserAgent) "-user_agent" else "-headers"
-        add(prefix)
-        add("${it.key}: ${it.value}")
-      }
-      // ensure that the headers are properly separated
       add("-headers")
-      add("\r\n")
-    }
-    // add cookies if available
-    if (cookies.isNullOrEmpty().not()) {
-      add("-cookies")
-      add(cookies!!)
+      headers.forEach {
+        headersString.append("${it.key}: ${it.value}\n")
+      }
+      // add cookies if available
+      if (cookies.isNullOrEmpty().not()) {
+        headersString.append("Cookie: $cookies\n")
+      }
+      // add the headers
+      add(headersString.toString().removeSuffix("\n"))
+
+      // check if user agent is available
+      if (headers[HttpHeaders.UserAgent] != null) {
+        add("-user_agent")
+        add(headers[HttpHeaders.UserAgent]!!)
+      }
+
+    } else {
+      // add cookies if available
+      if (cookies.isNullOrEmpty().not()) {
+        add("-headers")
+        add("Cookie: $cookies")
+      }
     }
     add("-rw_timeout")
     add("20000000")
@@ -71,7 +81,7 @@ private fun buildDefaultFFMpegInputArgs(
     }
   }.toTypedArray()
 
-private fun buildDefaultFFMpegOutputArgs(
+private fun buildDefaultOutputArgs(
   downloadFormat: VideoFormat,
   segmentPart: Long,
   segmentTime: Long?,
@@ -146,10 +156,10 @@ fun buildFFMpegCmd(
   outputPath: String,
 ): Array<String> {
   // ffmpeg input args
-  val defaultFFmpegInputArgs = buildDefaultFFMpegInputArgs(headers, cookies)
+  val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies)
 
   // default output args
-  val defaultFFmpegOutputArgs = buildDefaultFFMpegOutputArgs(downloadFormat, segmentPart, segmentTime, useSegmentation ?: false)
+  val defaultFFmpegOutputArgs = buildDefaultOutputArgs(downloadFormat, segmentPart, segmentTime, useSegmentation ?: false)
   // build the ffmpeg command
   return buildFFMpegRunningCmd(
     defaultFFmpegInputArgs,

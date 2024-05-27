@@ -80,7 +80,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   override suspend fun start() {
     initPath()
     // ffmpeg running commands
-    val cmds = buildFFMpegCmd(headers, null, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
+    val cmds = buildFFMpegCmd(headers, cookies, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
 
     val streamer = streamer!!
     logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
