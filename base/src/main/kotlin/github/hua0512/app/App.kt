@@ -29,12 +29,14 @@ package github.hua0512.app
 import github.hua0512.data.config.AppConfig
 import github.hua0512.utils.isWindows
 import io.ktor.client.*
+import io.ktor.client.engine.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
@@ -74,6 +76,14 @@ class App(val json: Json) {
     HttpClient(CIO) {
       engine {
         pipelining = true
+        // Configure proxy
+        // Parse proxy from ENV variable
+        val httpProxy = System.getenv("HTTP_PROXY")
+        val httpsProxy = System.getenv("HTTPS_PROXY")
+        if (httpProxy.isNullOrEmpty().not()) {
+          val httpProxyUrl = Url(httpProxy)
+          proxy = ProxyBuilder.http(httpProxyUrl)
+        }
       }
       install(Logging) {
         logger = Logger.DEFAULT
