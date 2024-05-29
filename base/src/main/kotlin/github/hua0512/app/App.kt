@@ -82,6 +82,7 @@ class App(val json: Json) {
         val httpsProxy = System.getenv("HTTPS_PROXY")
         if (httpProxy.isNullOrEmpty().not()) {
           val httpProxyUrl = Url(httpProxy)
+          logger.info("Using HTTP proxy: {}", httpProxyUrl)
           proxy = ProxyBuilder.http(httpProxyUrl)
         }
       }
