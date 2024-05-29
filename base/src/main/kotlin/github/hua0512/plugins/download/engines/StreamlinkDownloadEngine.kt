@@ -122,6 +122,9 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       },
       getProcess = {
         process = it
+      },
+      onCancellation = {
+        streamlinkProcess?.destroy()
       }) { line ->
       processFFmpegOutputLine(
         line = line,
