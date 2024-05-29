@@ -21,10 +21,3 @@ kotlin {
     jvmTarget.set(JvmTarget.JVM_21)
   }
 }
-
-
-tasks.withType<JavaCompile>().configureEach {
-  targetCompatibility = JavaVersion.VERSION_21.toString()
-  sourceCompatibility = JavaVersion.VERSION_11.toString()
-  options.isFork = true
-}
