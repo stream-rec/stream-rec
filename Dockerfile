@@ -1,9 +1,9 @@
-FROM gradle:8.6.0-jdk17-alpine as builder
+FROM gradle:8.7-jdk21-alpine as builder
 WORKDIR /app
 COPY . .
 RUN gradle stream-rec:build -x test --no-daemon
 
-FROM amazoncorretto:17-alpine3.19
+FROM amazoncorretto:21-alpine3.19
 WORKDIR /app
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
