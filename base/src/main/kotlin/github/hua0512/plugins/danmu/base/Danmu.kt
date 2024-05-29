@@ -417,7 +417,6 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    * Finish writting danmu to file
    */
   fun finish() {
-    enableWrite = false
     ioJob.cancel()
     _danmuState.value = DanmuState.Closed("Finish triggered")
   }
