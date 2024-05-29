@@ -152,9 +152,7 @@ class DownloadService(
         downloadSemaphore,
         callback,
         platform
-      ).apply {
-        startDownloading()
-      }
+      )
     }
     return service
   }

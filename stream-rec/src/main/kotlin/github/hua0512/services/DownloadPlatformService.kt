@@ -34,6 +34,7 @@ import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.StreamerCallback
 import github.hua0512.plugins.download.StreamerDownloadManager
 import github.hua0512.plugins.event.EventCenter
+import io.ktor.util.collections.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
@@ -41,19 +42,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
-/**
- * Downloader state
- * @author hua0512
- * @date : 2024/5/22 21:27
- */
-data class DownloaderState(
-  val streamers: List<Streamer> = emptyList(),
-  val fetching: Boolean = false,
-  val cancelledStreamers: Set<String> = emptySet(),
-  val downloadingStreamers: Set<String> = emptySet(),
-  val cancellationChannels: Map<String, Channel<String?>> = emptyMap(),
-)
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Downloader intent
@@ -61,13 +50,11 @@ data class DownloaderState(
 sealed class DownloaderIntent {
   data class AddStreamer(val streamer: Streamer) : DownloaderIntent()
   data class CancelStreamer(val streamer: Streamer, val reason: String? = null) : DownloaderIntent()
-  data object StartDownloading : DownloaderIntent()
 }
 
 /**
  * Download platform service, used to download streamers from the same platform
  *
- * MVI pattern is used to handle intents and state
  *
  * @param app The application instance
  * @param scope Coroutine scope to launch download jobs
@@ -99,13 +86,10 @@ class DownloadPlatformService(
    */
   private val intentFlow = MutableSharedFlow<DownloaderIntent>()
 
-  /**
-   * State flow
-   *
-   * The state flow is used to manage the state of the downloader
-   * Represents the current state of the downloader, which includes the streamers to download, downloading streamers, and cancelled streamers
-   */
-  private val stateFlow = MutableStateFlow(DownloaderState())
+  private val streamers = mutableListOf<Streamer>()
+  private val cancelledStreamers = ConcurrentSet<String>()
+  private val downloadingStreamers = ConcurrentSet<String>()
+  private val cancellationChannels = ConcurrentHashMap<String, Channel<String?>>()
 
   /**
    * Streamer channel with a capacity of MAX_STREAMERS
@@ -145,17 +129,6 @@ class DownloadPlatformService(
   }
 
   /**
-   * Start downloading streamers
-   */
-  fun startDownloading() {
-    // emit start downloading intent
-    scope.launch {
-      intentFlow.emit(DownloaderIntent.StartDownloading)
-    }
-  }
-
-
-  /**
    * Handle intents
    */
   private fun handleIntents() {
@@ -166,7 +139,6 @@ class DownloadPlatformService(
           when (intent) {
             is DownloaderIntent.AddStreamer -> addStreamerToState(intent.streamer)
             is DownloaderIntent.CancelStreamer -> cancelStreamerInState(intent.streamer, intent.reason)
-            DownloaderIntent.StartDownloading -> downloadStreamers()
           }
         }
     }
@@ -176,14 +148,14 @@ class DownloadPlatformService(
         .buffer()
         .onEach {
           // check if streamer was cancelled before adding to state
-          if (stateFlow.value.cancelledStreamers.contains(it.url)) {
+          if (cancelledStreamers.contains(it.url)) {
             logger.debug("({}) streamer {} was cancelled before adding to state", it.platform, it.url)
             return@onEach
           }
 
           // check if streamer is already in the list
           // or is already being downloaded
-          if (stateFlow.value.streamers.contains(it) || stateFlow.value.downloadingStreamers.contains(it.url)) {
+          if (streamers.contains(it) || downloadingStreamers.contains(it.url)) {
             logger.debug("({}) streamer {} is already in the list", it.platform, it.url)
             return@onEach
           }
@@ -191,12 +163,11 @@ class DownloadPlatformService(
           logger.debug("({}) adding streamer: {}, {}", it.platform, it.name, it.url)
           // streamer cancellation channel
           val cancellationChannel = Channel<String?>(Channel.CONFLATED)
-          stateFlow.update { currentState ->
-            currentState.copy(
-              streamers = currentState.streamers + it,
-              cancellationChannels = currentState.cancellationChannels + (it.url to cancellationChannel)
-            )
-          }
+
+          streamers += it
+          cancellationChannels[it.url] = cancellationChannel
+
+          startDownloadJob(it)
           // delay before adding next streamer
           delay(fetchDelay)
         }.collect()
@@ -205,12 +176,8 @@ class DownloadPlatformService(
 
   private fun addStreamerToState(streamer: Streamer) {
     // check if streamer is in cancelled list, if so remove it
-    if (streamer.url in stateFlow.value.cancelledStreamers) {
-      stateFlow.update { currentState ->
-        currentState.copy(
-          cancelledStreamers = currentState.cancelledStreamers - streamer.url
-        )
-      }
+    if (streamer.url in cancelledStreamers) {
+      cancelledStreamers.remove(streamer.url)
     }
 
     // push streamer to channel
@@ -220,53 +187,33 @@ class DownloadPlatformService(
 
   private fun cancelStreamerInState(streamer: Streamer, reason: String? = null) {
     // check if streamer is present in the list
-    if (!stateFlow.value.streamers.contains(streamer)) {
+    if (!streamers.contains(streamer)) {
       logger.debug("({}) streamer {} not found in the list", platform, streamer.url)
       return
     }
 
-    stateFlow.update { currentState ->
-      currentState.copy(
-        // add streamer to cancelled list
-        cancelledStreamers = currentState.cancelledStreamers + streamer.url
-      )
-    }
-    stateFlow.value.cancellationChannels[streamer.url]?.trySend(reason)
+    cancelledStreamers.add(streamer.url)
+    cancellationChannels[streamer.url]?.trySend(reason)
   }
 
-  private fun downloadStreamers() {
+  private fun startDownloadJob(streamer: Streamer) {
     scope.launch {
-      stateFlow.collectLatest { state ->
-        logger.debug("({}) state: {}", platform, state)
-
-        state.streamers
-          .filterNot { it.url in state.downloadingStreamers || it.url in state.cancelledStreamers }
-          .forEach { streamer ->
-            scope.launch coroutineScope@{
-              logger.debug("({}), {} launching download coroutine", streamer.platform, streamer.url)
-              downloadStreamer(streamer)
-            }
-          }
-      }
+      logger.debug("({}), {} launching download coroutine", streamer.platform, streamer.url)
+      downloadStreamer(streamer)
     }
   }
 
   private suspend fun downloadStreamer(streamer: Streamer) = coroutineScope {
-
     // check if streamer is already being downloaded
-    if (stateFlow.value.downloadingStreamers.contains(streamer.url)) {
+    if (downloadingStreamers.contains(streamer.url)) {
       logger.debug("({}) streamer {} is already being downloaded", platform, streamer.url)
       return@coroutineScope
     }
 
     logger.debug("({}) downloading streamer: {}, {}", platform, streamer.name, streamer.url)
-    stateFlow.update { currentState ->
-      currentState.copy(
-        // add streamer to downloading list
-        downloadingStreamers = currentState.downloadingStreamers + streamer.url,
-      )
-    }
-    val cancellationChannel = stateFlow.value.cancellationChannels[streamer.url]
+
+    downloadingStreamers.add(streamer.url)
+    val cancellationChannel = cancellationChannels[streamer.url]
 
     try {
       // download streamer job
@@ -293,13 +240,9 @@ class DownloadPlatformService(
         )
       )
     } finally {
-      stateFlow.update { currentState ->
-        currentState.copy(
-          streamers = currentState.streamers - streamer,
-          downloadingStreamers = currentState.downloadingStreamers - streamer.url,
-          cancellationChannels = currentState.cancellationChannels - streamer.url
-        )
-      }
+      streamers.remove(streamer)
+      cancellationChannels.remove(streamer.url)
+      downloadingStreamers.remove(streamer.url)
     }
   }
 
@@ -325,7 +268,7 @@ class DownloadPlatformService(
 
   fun cancel() {
     // send cancellation signal to all streamers
-    stateFlow.value.cancellationChannels.forEach { (_, channel) ->
+    cancellationChannels.forEach { (_, channel) ->
       channel.trySend("App shutdown")
     }
   }
