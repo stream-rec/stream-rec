@@ -31,10 +31,6 @@ dependencies {
   testImplementation(libs.bundles.test.jvm)
 }
 
-kotlin {
-  jvmToolchain(17)
-}
-
 sqldelight {
   databases {
     create("StreamRecDatabase") {
