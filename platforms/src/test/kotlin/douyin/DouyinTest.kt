@@ -30,6 +30,7 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.DouyinExtractor
+import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.DefaultAsserter.assertEquals
 import kotlin.test.DefaultAsserter.assertNotNull
@@ -78,7 +79,7 @@ class DouyinTest : BaseTest() {
       prepare()
     }
     val info = extractor.extract()
-    println(info)
+    println(pprint(info))
     assertNotNull("failed to extract", info)
   }
 

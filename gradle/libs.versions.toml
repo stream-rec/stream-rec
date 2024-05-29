@@ -22,6 +22,9 @@ androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framewor
 app-cash-sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 app-cash-sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 app-cash-sqldelight-primitive-adapters = { module = "app.cash.sqldelight:primitive-adapters", version.ref = "sqldelight" }
+
+io-exoquery-pprint = "io.exoquery:pprint-kotlin:2.0.2"
+
 io-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 io-ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }

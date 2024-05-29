@@ -30,6 +30,7 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.plugins.twitch.download.TwitchExtractor
+import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.time.Duration
@@ -48,8 +49,8 @@ class TwitchTest : BaseTest() {
     val extractor = TwitchExtractor(app.client, app.json, testUrl).apply {
       prepare()
     }
-    val info = extractor.extract()
-    println(info)
+    val mediaInfo = extractor.extract()
+    println(pprint(mediaInfo))
   }
 
   @Test

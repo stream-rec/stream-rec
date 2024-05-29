@@ -7,6 +7,7 @@ import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.plugins.huya.download.HuyaExtractorV2
+import io.exoquery.pprint
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.test.runTest
@@ -77,7 +78,7 @@ class HuyaTest {
     }
     val mediaInfo = extractor.extract()
     assertNotNull(mediaInfo)
-    println(mediaInfo)
+    println(pprint(mediaInfo))
   }
 
   @Test
@@ -88,7 +89,7 @@ class HuyaTest {
     }
     val mediaInfo = extractor.extract()
     assertNotNull(mediaInfo)
-    println(mediaInfo)
+    println(pprint(mediaInfo))
   }
 
   @Test

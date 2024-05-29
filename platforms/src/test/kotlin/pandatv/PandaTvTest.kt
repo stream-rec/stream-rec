@@ -30,6 +30,7 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
 import github.hua0512.plugins.pandatv.download.PandaTvExtractor
+import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.time.Duration
@@ -48,7 +49,7 @@ class PandaTvTest : BaseTest() {
       prepare()
     }
     val mediaInfo = extractor.extract()
-    println(mediaInfo)
+    println(pprint(mediaInfo))
   }
 
   @Test
