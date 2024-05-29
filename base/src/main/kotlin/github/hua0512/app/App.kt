@@ -92,7 +92,7 @@ class App(val json: Json) {
       }
       BrowserUserAgent()
       install(HttpRequestRetry) {
-        retryOnServerErrors(maxRetries = 5)
+        retryOnServerErrors(maxRetries = 3)
         exponentialDelay()
       }
 
