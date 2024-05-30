@@ -101,8 +101,12 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     }
     // get streamlink output
     launch(Dispatchers.IO) {
-      streamlinkProcess?.errorReader()?.forEachLine {
-        logger.info("${streamer.name} $it")
+      try {
+        streamlinkProcess?.errorReader()?.forEachLine {
+          logger.info("${streamer.name} $it")
+        }
+      } catch (e: Exception) {
+        logger.error("Error reading streamlink output", e)
       }
     }
     if (!useSegmenter) {
