@@ -29,6 +29,7 @@ package github.hua0512.plugins.download.base
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
+import github.hua0512.data.dto.platform.TwitchConfigDTO
 import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
@@ -46,6 +47,7 @@ import github.hua0512.plugins.download.exceptions.InvalidDownloadException
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.*
 import io.ktor.http.*
+import io.ktor.http.auth.*
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -198,6 +200,14 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       streamer = streamer
     )
 
+    val headers = mutableMapOf<String, String>().apply {
+      putAll(Extractor.commonHeaders)
+      if (config is TwitchConfigDTO) {
+        // add twitch headers
+        put(HttpHeaders.Authorization, "${AuthScheme.OAuth} ${(config as TwitchConfigDTO).authToken}")
+      }
+    }
+
     // download engine
     engine = selectDownloadEngine().apply {
       init(
@@ -206,7 +216,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         outputPath.pathString,
         streamer,
         cookie,
-        Extractor.commonHeaders.toMap(),
+        headers,
         fileLimitSize = app.config.maxPartSize.run {
           if (this > 0) this else 2621440000
         },
