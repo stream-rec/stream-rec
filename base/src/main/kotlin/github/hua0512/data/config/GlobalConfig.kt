@@ -75,6 +75,7 @@ data class TwitchConfigGlobal(
   override val partedDownloadRetry: Int? = 10,
   override val cookies: String? = null,
   override val fetchDelay: Long? = 30,
+  val skipAds: Boolean = false,
 ) : GlobalPlatformConfig, TwitchConfigDTO
 
 @Serializable

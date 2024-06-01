@@ -203,9 +203,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     // download headers
     val headers = mutableMapOf<String, String>().apply {
       putAll(Extractor.commonHeaders)
-      if (config is TwitchConfigDTO) {
+      if (downloadConfig is TwitchConfigDTO) {
         // add twitch headers
-        put(HttpHeaders.Authorization, "${AuthScheme.OAuth} ${(config as TwitchConfigDTO).authToken}")
+        val authToken = downloadConfig.authToken ?: app.config.twitchConfig.authToken
+        put(HttpHeaders.Authorization, "${AuthScheme.OAuth} $authToken")
       }
     }
 
@@ -374,6 +375,17 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         }
       )
 
+      if (this is StreamlinkDownloadEngine) {
+        // check if twitch
+        if (streamer.platform == StreamingPlatform.TWITCH) {
+          // check if skip ads is enabled
+          if (app.config.twitchConfig.skipAds) {
+            // add skip ads to streamlink args
+            programArgs.add("--twitch-disable-ads")
+          }
+        }
+      }
+
       // determine if the built-in segmenter should be used
       if (this is FFmpegDownloadEngine) {
         useSegmenter = app.config.useBuiltInSegmenter
@@ -382,6 +394,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
     withIOContext {
       try {
+        logger.debug("(${streamer.name}) engine starting...")
         engine.start()
         // await children
         danmuJob?.let { stopDanmuJob(it) }
@@ -461,6 +474,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   private fun selectDownloadEngine(): BaseDownloadEngine {
     val userSelectedEngine = getDownloadEngine(app.config.engine)
+    // fallback to user selected engine if skipStreamInfo is enabled
+    if (extractor.skipStreamInfo) return userSelectedEngine
     if (!downloadUrl.contains("m3u8") && userSelectedEngine is StreamlinkDownloadEngine) {
       // fallback to ffmpeg if the stream is not HLS
       logger.warn("(${streamer.name}) stream is not HLS, fallback to ffmpeg")

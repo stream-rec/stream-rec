@@ -43,6 +43,11 @@ import github.hua0512.utils.withIOContext
 class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Download<TwitchDownloadConfig>(app, danmu, extractor) {
 
 
+  init {
+    extractor.skipStreamInfo = app.config.twitchConfig.skipAds
+  }
+
+
   override fun createDownloadConfig(): TwitchDownloadConfig = TwitchDownloadConfig(
     quality = app.config.twitchConfig.quality,
     authToken = app.config.twitchConfig.authToken,

@@ -111,6 +111,11 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
   abstract val url: String
 
   /**
+   * Whether to skip the stream info extraction
+   */
+  var skipStreamInfo = false
+
+  /**
    * Initialize the extractor
    */
   open suspend fun prepare() {

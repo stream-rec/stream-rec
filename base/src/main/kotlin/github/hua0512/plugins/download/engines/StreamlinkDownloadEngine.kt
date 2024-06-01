@@ -51,12 +51,18 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     private val logger = LoggerFactory.getLogger("Streamlink")
   }
 
+  internal val programArgs = mutableListOf<String>()
+
   private var streamlinkProcess: Process? = null
 
   override suspend fun start() = coroutineScope {
     ensureHlsUrl()
     initPath()
     val streamlinkInputArgs = mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
+      // add program args
+      if (programArgs.isNotEmpty()) {
+        addAll(programArgs)
+      }
       // check if windows
       val isWindows = isWindows()
       // add headers
@@ -113,6 +119,12 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
     }
 
+    // listen for streamlink exit
+    streamlinkProcess!!.onExit().thenApply {
+      logger.debug("${streamer.name} streamlink exited({})", { it.exitValue() })
+      super.sendStopSignal()
+    }
+
     val exitCode = executeProcess(
       App.ffmpegPath,
       *ffmpegCmdArgs,
@@ -162,6 +174,9 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
 
   private fun ensureHlsUrl() {
+    if (programArgs.contains("--twitch-disable-ads")) {
+      return
+    }
     require(downloadUrl!!.contains("m3u8")) {
       "Streamlink download engine only supports HLS streams"
     }
