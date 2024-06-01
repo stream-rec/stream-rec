@@ -28,7 +28,6 @@ package github.hua0512.plugins.download.base
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
 import github.hua0512.data.dto.platform.TwitchConfigDTO
 import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
@@ -192,6 +191,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     // progress bar
     var pb: ProgressBar? = null
 
+    // stream data info
     val streamData = StreamData(
       title = downloadTitle,
       outputFilePath = outputPath.pathString,
@@ -200,6 +200,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       streamer = streamer
     )
 
+    // download headers
     val headers = mutableMapOf<String, String>().apply {
       putAll(Extractor.commonHeaders)
       if (config is TwitchConfigDTO) {
@@ -274,7 +275,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
                 }
               } else {
                 danmu.enableWrite = true
-                danmu.relaunchIO(danmuPath)
+                danmu.relaunch(danmuPath)
               }
             }
             EventCenter.sendEvent(

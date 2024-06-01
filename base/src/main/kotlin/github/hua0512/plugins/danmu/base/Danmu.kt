@@ -32,7 +32,6 @@ import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.utils.chunked
-import github.hua0512.utils.withIOContext
 import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.plugins.websocket.cio.*
@@ -66,7 +65,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
 
   sealed class DanmuState {
     data object NotInitialized : DanmuState()
-    data object Initialized : DanmuState()
+    data class Initialized(val path: String) : DanmuState()
     data class Fetching(val path: String) : DanmuState()
     data class Error(val error: Throwable) : DanmuState()
     data class Closed(val reason: String) : DanmuState()
@@ -138,6 +137,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   private lateinit var ioJob: Job
 
   /**
+   * Websocket connection job
+   */
+  private lateinit var wsJob: Job
+
+  /**
    * Request headers
    */
   protected val headersMap = mutableMapOf<String, String>()
@@ -161,7 +165,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     return initDanmu(streamer, startTime).also { isEnabled ->
       isInitialized.set(isEnabled)
       if (isEnabled) {
-        _danmuState.value = DanmuState.Initialized
+        _danmuState.value = DanmuState.Initialized(filePath)
       }
     }
   }
@@ -179,83 +183,93 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    * Fetch danmu from server using websocket
    *
    */
-  suspend fun fetchDanmu() = withIOContext {
-    supervisorScope {
-      if (!isInitialized.get()) {
-        logger.error("Danmu is not initialized")
-        return@supervisorScope
+  suspend fun fetchDanmu() = supervisorScope {
+    if (!isInitialized.get()) {
+      logger.error("Danmu is not initialized")
+      return@supervisorScope
+    }
+    if (websocketUrl.isEmpty()) return@supervisorScope
+
+    _danmuState.onEach {
+      when (it) {
+        is DanmuState.Error -> {
+          logger.error("Danmu error: ${it.error}")
+          // close danmu
+          _danmuState.value = DanmuState.Closed(it.error.message ?: "Error")
+        }
+
+        is DanmuState.Closed -> {
+          logger.info("Danmu closed: {}", it.reason)
+        }
+
+        is DanmuState.Fetching -> {
+          // launch a coroutine to write danmu to file
+          ioJob = launchIOTask(it.path)
+        }
+
+        is DanmuState.Initialized -> {
+          // check if wsJob is active, if so, recalling will do nothing
+          if (this@Danmu::wsJob.isInitialized && wsJob.isActive) {
+            // check io job is active, otherwise, relaunch it
+            if (this@Danmu::ioJob.isInitialized && !ioJob.isActive) {
+              logger.debug("Relaunching IO job to write danmu to file: {}", it.path)
+              _danmuState.value = DanmuState.Fetching(it.path)
+            }
+            return@onEach
+          }
+          // otherwise, launch ws job
+          // fetch danmu
+          wsJob = launchWs(it.path)
+        }
+
+        is DanmuState.NotInitialized -> {}
       }
-      if (websocketUrl.isEmpty()) return@supervisorScope
+    }
+      .catch { e ->
+        logger.error("Error handling danmu state", e)
+      }
+      .flowOn(Dispatchers.IO)
+      .collect()
+  }
 
-      launch {
-        _danmuState.onEach {
-          when (it) {
-            is DanmuState.Error -> {
-              logger.error("Danmu error: ${it.error}")
-              // close danmu
-              _danmuState.value = DanmuState.Closed(it.error.message ?: "Error")
+  private fun CoroutineScope.launchWs(filePath: String): Job {
+    return launch {
+      withIORetry(
+        maxRetries = 10,
+        initialDelayMillis = 10000,
+        maxDelayMillis = 60000,
+        factor = 1.5,
+        onError = { e, retryCount ->
+          logger.error("Error fetching danmu: $filePath, retry count: $retryCount", e)
+          _danmuState.value = DanmuState.Error(e)
+        }
+      ) {
+        _danmuState.value = DanmuState.Fetching(filePath)
+        // determine if ping is enabled
+        if (enablePing) {
+          app.client.webSocket(websocketUrl, request = {
+            fillRequest()
+          }) {
+            processSession()
+          }
+        } else {
+          val urlBuilder = URLBuilder(websocketUrl)
+          logger.trace("Connecting to danmu server: {}", urlBuilder)
+          if (urlBuilder.protocol.isSecure()) {
+            app.client.wssRaw(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
+              fillRequest()
+            }) {
+              processSession()
             }
-
-            is DanmuState.Closed -> {
-              logger.info("Danmu closed: {}", it.reason)
+          } else {
+            app.client.wsRaw(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
+              fillRequest()
+            }) {
+              processSession()
             }
-
-            is DanmuState.Fetching -> {
-              // launch a coroutine to write danmu to file
-              ioJob = this@supervisorScope.launchIOTask(it.path)
-            }
-
-            is DanmuState.Initialized -> {
-              // fetch danmu
-              this@supervisorScope.launch(Dispatchers.IO) {
-                withIORetry(
-                  maxRetries = 10,
-                  initialDelayMillis = 10000,
-                  maxDelayMillis = 60000,
-                  factor = 1.5,
-                  onError = { e, retryCount ->
-                    logger.error("Error fetching danmu: $filePath, retry count: $retryCount", e)
-                    _danmuState.value = DanmuState.Error(e)
-                  }
-                ) {
-                  _danmuState.value = DanmuState.Fetching(filePath)
-                  // determine if ping is enabled
-                  if (enablePing) {
-                    app.client.webSocket(websocketUrl, request = {
-                      fillRequest()
-                    }) {
-                      processSession()
-                    }
-                  } else {
-                    val urlBuilder = URLBuilder(websocketUrl)
-                    logger.trace("Connecting to danmu server: {}", urlBuilder)
-                    if (urlBuilder.protocol.isSecure()) {
-                      app.client.wssRaw(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
-                        fillRequest()
-                      }) {
-                        processSession()
-                      }
-                    } else {
-                      app.client.wsRaw(host = urlBuilder.host, port = urlBuilder.port, request = {
-                        fillRequest()
-                      }) {
-                        processSession()
-                      }
-                    }
-                  }
-
-                }
-              }
-            }
-
-            is DanmuState.NotInitialized -> {}
           }
         }
-          .catch { e ->
-            logger.error("Error handling danmu state", e)
-          }
-          .flowOn(Dispatchers.IO)
-          .collect()
+        logger.debug("danmu fetching finished for: $filePath")
       }
     }
   }
@@ -417,16 +431,16 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    * Finish writting danmu to file
    */
   fun finish() {
+    enableWrite = false
     ioJob.cancel()
-    _danmuState.value = DanmuState.Closed("Finish triggered")
   }
 
 
   /**
-   * Relaunch danmu write IO
+   * Relaunch danmu fetching
    */
-  fun relaunchIO(path: String) {
-    _danmuState.value = DanmuState.Fetching(path)
+  fun relaunch(path: String) {
+    _danmuState.value = DanmuState.Initialized(path)
   }
 
   /**
@@ -435,6 +449,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   fun clean() {
     enableWrite = false
     writeChannel.close()
+    _danmuState.value = DanmuState.Closed("Finish triggered")
     // reset replay cache
     headersMap.clear()
     requestParams.clear()
