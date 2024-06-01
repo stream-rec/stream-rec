@@ -40,20 +40,20 @@ import github.hua0512.data.media.VideoFormat
 data class AppConfigEntity(
   @PrimaryKey(autoGenerate = true)
   val id: Int = 0,
-  @ColumnInfo(name = "engine", defaultValue = "ffmpeg")
+  @ColumnInfo(name = "engine", defaultValue = CONFIG_DEFAULT_ENGINE)
   val engine: String = "ffmpeg",
   @ColumnInfo(name = "danmu", defaultValue = "0")
-  val danmu: Boolean = false,
+  val danmu: Boolean = CONFIG_DEFAULT_DANMU,
   @ColumnInfo(name = "outputFolder")
   val outputFolder: String = System.getenv("DOWNLOAD_PATH") ?: System.getProperty("user.dir"),
   @ColumnInfo(name = "outputFileName")
-  val outputFileName: String = "{stream}-{title}-%Y-%m-%d %H:%M:%S",
+  val outputFileName: String = CONFIG_DEFAULT_OUTPUT_FILE_NAME,
   @ColumnInfo(name = "outputFileFormat", defaultValue = "flv")
   val outputFileFormat: VideoFormat = VideoFormat.flv,
   @ColumnInfo(name = "minPartSize")
-  val minPartSize: Long = 20971520,
+  val minPartSize: Long = CONFIG_DEFAULT_MIN_PART_SIZE,
   @ColumnInfo(name = "maxPartSize")
-  val maxPartSize: Long = 2684354560,
+  val maxPartSize: Long = CONFIG_DEFAULT_MAX_PART_SIZE,
   @ColumnInfo(name = "maxPartDuration")
   val maxPartDuration: Long? = null,
   @ColumnInfo(name = "maxDownloadRetries")
