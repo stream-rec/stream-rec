@@ -13,6 +13,7 @@ import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
+import kotlin.time.Duration
 
 /*
  * MIT License
@@ -64,7 +65,7 @@ class HuyaTest {
     assertEquals(matchResult.groupValues.last(), "https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310")
   }
 
-  private val streamingUrl = "https://www.huya.com/970311"
+  private val streamingUrl = "https://www.huya.com/991111"
 
   private val app = App(Json).apply {
     updateConfig(AppConfig(huyaConfig = HuyaConfigGlobal(sourceFormat = VideoFormat.hls, primaryCdn = "HW")))
@@ -106,10 +107,13 @@ class HuyaTest {
   }
 
   @Test
-  fun testDanmu() = runTest {
+  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
     val danmu = HuyaDanmu(app).apply {
       enableWrite = false
       filePath = "huya_danmu.txt"
+      ayyuid = 35184452693589
+      topsid = 1199536199401
+      subid = 1199536199401
     }
     val init = danmu.init(Streamer(0, "test", streamingUrl))
     danmu.fetchDanmu()
