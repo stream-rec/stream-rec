@@ -35,6 +35,7 @@ import github.hua0512.plugins.download.platformConfig
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
+import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.buffer
@@ -76,68 +77,73 @@ class DownloadService(
   /**
    * Starts the download service.
    */
-  fun run(scope: CoroutineScope) {
+  suspend fun run(downloadScope: CoroutineScope) {
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
-
-    this.scope = scope
-
-    scope.launch {
-      callback = object : StreamerCallback {
-        override fun onLiveStatusChanged(streamer: Streamer, isLive: Boolean) {
-          scope.launch {
-            logger.debug("({}) live status changed to {}", streamer.name, isLive)
-            repo.update(streamer.copy(isLive = isLive))
-          }
-        }
-
-        override fun onLastLiveTimeChanged(streamer: Streamer, lastLiveTime: Long) {
-          scope.launch {
-            logger.debug("({}) last live time changed to {}", streamer.name, lastLiveTime)
-            repo.update(streamer.copy(lastLiveTime = lastLiveTime))
-          }
-        }
-
-        override fun onDescriptionChanged(streamer: Streamer, description: String) {
-          scope.launch {
-            logger.debug("({}) description changed to {}", streamer.name, description)
-            repo.update(streamer.copy(streamTitle = description))
-          }
-        }
-
-        override fun onAvatarChanged(streamer: Streamer, avatar: String) {
-          scope.launch {
-            logger.debug("({}) avatar changed to {}", streamer.name, avatar)
-            repo.update(streamer.copy(avatar = avatar))
-          }
-        }
-
-        override fun onStreamDownloaded(streamer: Streamer, stream: StreamData) {
-          scope.launch {
-            try {
-              val saved = streamDataRepository.save(stream)
-              stream.id = saved.id
-            } catch (e: Exception) {
-              logger.error("Failed to save stream data", e)
-            }
-            // run post actions
-            executePostPartedDownloadActions(streamer, stream)
-          }
-        }
-
-        override fun onStreamDownloadFailed(streamer: Streamer, stream: StreamData, e: Exception) {
-
-        }
-
-        override fun onStreamFinished(streamer: Streamer, streams: List<StreamData>) {
-          launch {
-            logger.debug("({}) stream finished", streamer.name)
-            executeStreamFinishedActions(streamer, streams)
-          }
+    this.scope = downloadScope
+    callback = object : StreamerCallback {
+      override fun onLiveStatusChanged(streamer: Streamer, isLive: Boolean) {
+        scope.launch {
+          logger.debug("({}) live status changed to {}", streamer.name, isLive)
+          repo.update(streamer.copy(isLive = isLive))
         }
       }
-      // listen to streamer changes
-      listenToStreamerChanges()
+
+      override fun onLastLiveTimeChanged(streamer: Streamer, lastLiveTime: Long) {
+        scope.launch {
+          logger.debug("({}) last live time changed to {}", streamer.name, lastLiveTime)
+          repo.update(streamer.copy(lastLiveTime = lastLiveTime))
+        }
+      }
+
+      override fun onDescriptionChanged(streamer: Streamer, description: String) {
+        scope.launch {
+          logger.debug("({}) description changed to {}", streamer.name, description)
+          repo.update(streamer.copy(streamTitle = description))
+        }
+      }
+
+      override fun onAvatarChanged(streamer: Streamer, avatar: String) {
+        scope.launch {
+          logger.debug("({}) avatar changed to {}", streamer.name, avatar)
+          repo.update(streamer.copy(avatar = avatar))
+        }
+      }
+
+      override fun onStreamDownloaded(streamer: Streamer, stream: StreamData) {
+        scope.launch {
+          try {
+            val saved = streamDataRepository.save(stream)
+            stream.id = saved.id
+          } catch (e: Exception) {
+            logger.error("Failed to save stream data", e)
+          }
+          // run post actions
+          executePostPartedDownloadActions(streamer, stream)
+        }
+      }
+
+      override fun onStreamDownloadFailed(streamer: Streamer, stream: StreamData, e: Exception) {
+
+      }
+
+      override fun onStreamFinished(streamer: Streamer, streams: List<StreamData>) {
+        scope.launch {
+          logger.debug("({}) stream finished", streamer.name)
+          executeStreamFinishedActions(streamer, streams)
+        }
+      }
     }
+
+    val streamers = withIOContext {
+      repo.getStreamersActive()
+    }
+    this.streamers = streamers
+    streamers.groupBy { it.platform }.forEach {
+      val service = getOrInitPlatformService(it.key)
+      it.value.forEach(service::addStreamer)
+    }
+    // listen to streamer changes
+    scope.listenToStreamerChanges()
   }
 
 
