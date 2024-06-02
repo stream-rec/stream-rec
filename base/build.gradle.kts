@@ -15,6 +15,7 @@ version = versionName
 dependencies {
   implementation(libs.ch.qos.logback.classic)
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
+  implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.androidx.room.runtime)
   ksp(libs.androidx.room.compiler)
   api(libs.app.cash.sqldelight.sqlite.driver)
