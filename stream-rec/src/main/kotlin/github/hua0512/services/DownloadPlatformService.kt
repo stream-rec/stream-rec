@@ -133,7 +133,6 @@ class DownloadPlatformService(
   private fun handleIntents() {
     // collect streamers
     streamerChannel.receiveAsFlow()
-      .buffer()
       .onEach {
         // check if streamer was cancelled before adding to state
         if (cancelledStreamers.contains(it.url)) {
