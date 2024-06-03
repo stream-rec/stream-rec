@@ -234,6 +234,9 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
           val streamUrl = buildUrl(streamInfo, uid, time, null, isFlv).nonEmptyOrNull() ?: return@buildLoop
           bitrateList.forEach { (bitrate, displayName) ->
+            // Skip HDR streams as they are not supported
+            if (displayName.contains("HDR")) return@forEach
+
             val url = if (bitrate == maxBitRate) streamUrl else "$streamUrl&ratio=$bitrate"
             streams.add(
               StreamInfo(
