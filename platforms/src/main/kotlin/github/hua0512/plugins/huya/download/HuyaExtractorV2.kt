@@ -36,7 +36,7 @@ import kotlinx.serialization.json.*
 /**
  * Huya extractor v2
  *
- * @note Only supports numeric room ids
+ * @note Only supports numeric room ids, and only supports mobile bitrates (< 10000 蓝光10M)
  * @author hua0512
  * @date : 2024/5/21 20:20
  */

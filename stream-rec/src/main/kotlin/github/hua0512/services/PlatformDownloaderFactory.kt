@@ -55,7 +55,9 @@ object PlatformDownloaderFactory {
 
   fun createDownloader(app: App, platform: StreamingPlatform, url: String) = when (platform) {
     StreamingPlatform.HUYA -> {
-      val isNumericUrl = url.split("/").last().matches(Regex("\\d+"))
+//      val isNumericUrl = url.split("/").last().matches(Regex("\\d+"))
+      // disable as v2 extractor only supports mobile bitrates
+      val isNumericUrl = false
       // use v2 extractor for numeric urls
       if (isNumericUrl) {
         Huya(app, HuyaDanmu(app), HuyaExtractorV2(app.client, app.json, url))
