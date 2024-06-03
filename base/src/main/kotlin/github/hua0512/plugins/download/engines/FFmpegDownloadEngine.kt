@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory
 import java.io.OutputStream
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.name
 import kotlin.io.path.pathString
@@ -58,6 +59,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
    * Whether to use ffmpeg built-in segmenter to download the stream
    */
   internal var useSegmenter: Boolean = false
+  internal var detectErrors: Boolean = false
 
   var ous: OutputStream? = null
   protected var process: Process? = null
@@ -80,7 +82,8 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   override suspend fun start() {
     initPath()
     // ffmpeg running commands
-    val cmds = buildFFMpegCmd(headers, cookies, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
+    val cmds =
+      buildFFMpegCmd(headers, cookies, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, detectErrors, outputFileName)
 
     val streamer = streamer!!
     logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
@@ -100,6 +103,9 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       },
       getProcess = {
         process = it
+      },
+      onCancellation = {
+        sendStopSignal()
       }) { line ->
       processFFmpegOutputLine(
         line = line,
@@ -144,13 +150,19 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   }
 
   protected fun handleExitCodeAndStreamer(exitCode: Int, streamer: Streamer) {
-    val pathString = outputFolder.resolve(lastOpeningFile!!).pathString
+    val file = outputFolder.resolve(lastOpeningFile!!)
     if (exitCode != 0) {
       logger.error("(${streamer.name}) ffmpeg download failed, exit code: $exitCode")
-      onDownloadError(pathString, DownloadErrorException("ffmpeg download failed"))
+      // check if the file exists
+      if (file.exists()) {
+        onDownloaded(FileInfo(file.pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
+        onDownloadFinished()
+      } else {
+        onDownloadError(file.pathString, DownloadErrorException("ffmpeg download failed"))
+      }
     } else {
       // case when download is successful (exit code is 0)
-      onDownloaded(FileInfo(pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
+      onDownloaded(FileInfo(file.pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
       onDownloadFinished()
     }
   }

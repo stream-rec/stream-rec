@@ -317,30 +317,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
           override fun onDownloaded(data: FileInfo) {
             logger.debug("({}) downloaded: {}", streamer.name, data)
-            // check if the segment is valid
-            danmu.finish()
             outputPath = Path(data.path)
-            val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
-            logger.debug("(${streamer.name}) danmu finished : ${danmu.filePath}")
-            if (processSegment(Path(data.path), danmuPath)) return
-            // update stream data
-            val stream = streamData.copy(
-              dateStart = data.createdAt,
-              dateEnd = data.updatedAt,
-              outputFilePath = data.path,
-              outputFileSize = data.size,
-              danmuFilePath = if (isDanmuEnabled) danmu.filePath else null
-            )
-            EventCenter.sendEvent(
-              DownloadEvent.DownloadSuccess(
-                filePath = data.path,
-                url = downloadUrl,
-                platform = streamer.platform,
-                data = stream,
-                time = Instant.fromEpochSeconds(data.updatedAt)
-              )
-            )
-            onStreamDownloaded?.invoke(stream)
+            onFileDownloaded(data, streamData, isDanmuEnabled)
           }
 
           // normal exit
@@ -389,6 +367,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       // determine if the built-in segmenter should be used
       if (this is FFmpegDownloadEngine) {
         useSegmenter = app.config.useBuiltInSegmenter
+        detectErrors = app.config.exitDownloadOnError
       }
     }
 
@@ -398,9 +377,6 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         engine.start()
         // await children
         danmuJob?.let { stopDanmuJob(it) }
-        val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
-        // process last segment
-        processSegment(outputPath, danmuPath)
         logger.debug("(${streamer.name}) engine finished")
       } catch (e: Exception) {
         onStreamDownloadError?.invoke(e)
@@ -413,6 +389,32 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         engine.clean()
       }
     }
+  }
+
+  private fun onFileDownloaded(info: FileInfo, streamInfo: StreamData, isDanmuEnabled: Boolean) {
+    // check if the segment is valid
+    danmu.finish()
+    val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
+    logger.debug("(${streamer.name}) danmu finished : ${danmu.filePath}")
+    if (processSegment(Path(info.path), danmuPath)) return
+    // update stream data
+    val stream = streamInfo.copy(
+      dateStart = info.createdAt,
+      dateEnd = info.updatedAt,
+      outputFilePath = info.path,
+      outputFileSize = info.size,
+      danmuFilePath = if (isDanmuEnabled) danmu.filePath else null
+    )
+    EventCenter.sendEvent(
+      DownloadEvent.DownloadSuccess(
+        filePath = info.path,
+        url = downloadUrl,
+        platform = streamer.platform,
+        data = stream,
+        time = Instant.fromEpochSeconds(info.updatedAt)
+      )
+    )
+    onStreamDownloaded?.invoke(stream)
   }
 
 
@@ -451,7 +453,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   private fun deleteOutputs(outputPath: Path, danmuPath: Path? = null) {
     outputPath.deleteFile()
-    danmuPath?.deleteFile()
+    if (danmuPath != null && danmuPath.exists()) {
+      danmuPath.deleteFile()
+    }
   }
 
   /**

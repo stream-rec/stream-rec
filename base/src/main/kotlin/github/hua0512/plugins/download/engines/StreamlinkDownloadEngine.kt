@@ -92,7 +92,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     val streamlinkArgs = streamlinkInputArgs.toTypedArray() + arrayOf(downloadUrl!!, "best", "-O")
     logger.debug("${streamer.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
     val ffmpegCmdArgs =
-      buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
+      buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, detectErrors, outputFileName)
     logger.debug("${streamer.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
     // streamlink process builder
     val streamLinkBuilder = ProcessBuilder(App.streamLinkPath, *streamlinkArgs).apply {

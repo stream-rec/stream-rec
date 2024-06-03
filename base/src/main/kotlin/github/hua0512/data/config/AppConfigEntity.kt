@@ -70,6 +70,8 @@ data class AppConfigEntity(
   val deleteFilesAfterUpload: Boolean = false,
   @ColumnInfo(name = "useBuiltInSegmenter")
   val useBuiltInSegmenter: Boolean = false,
+  @ColumnInfo(name = "exitDownloadOnError", defaultValue = "false")
+  val exitDownloadOnError: Boolean = false,
   @ColumnInfo(name = "huyaConfig")
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   @ColumnInfo(name = "douyinConfig")

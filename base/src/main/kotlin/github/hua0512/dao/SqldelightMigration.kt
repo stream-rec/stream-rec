@@ -110,6 +110,7 @@ suspend fun startMigration(appDatabase: AppDatabase, json: Json) {
       it.maxConcurrentUploads.toInt(),
       it.deleteFilesAfterUpload.boolean,
       it.useBuiltInSegmenter.boolean,
+      false,
       json.decodeFromString(HuyaConfigGlobal.serializer(), it.huyaConfig.toString()),
       json.decodeFromString(DouyinConfigGlobal.serializer(), it.douyinConfig.toString()),
       json.decodeFromString(DouyuConfigGlobal.serializer(), it.douyuConfig.toString()),

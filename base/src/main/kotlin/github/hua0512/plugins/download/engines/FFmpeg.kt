@@ -45,6 +45,7 @@ private fun buildDefaultInputArgs(
   headers: Map<String, String> = emptyMap(),
   cookies: String? = null,
   enableLogger: Boolean = false,
+  exitOnError: Boolean = false,
 ): Array<String> =
   mutableListOf<String>().apply {
     val headersString = StringBuilder()
@@ -79,6 +80,17 @@ private fun buildDefaultInputArgs(
       add("-loglevel")
       add("debug")
     }
+    if (exitOnError) {
+      // detect errors
+      add("-xerror")
+      // skip frames with no keyframes
+      add("-skip_frame:v")
+      add("nokey")
+      // drop changed frames
+      add("-flags:v")
+      add("+drop_changed")
+    }
+
   }.toTypedArray()
 
 private fun buildDefaultOutputArgs(
@@ -132,12 +144,27 @@ private fun buildFFMpegRunningCmd(
   downloadUrl: String,
   downloadFormat: VideoFormat,
   useSegmentation: Boolean = false,
+  detectErrors: Boolean = false,
 ): Array<String> = defaultFFmpegInputArgs + mutableListOf<String>().apply {
   add("-i")
   add(downloadUrl)
   addAll(defaultFFmpegOutputArgs)
-  add("-c")
-  add("copy")
+  if (detectErrors) {
+    // add the video codec
+    add("-c:v")
+    add("copy")
+    // add the audio codec
+    add("-c:a")
+    add("aac")
+    // add the audio channels
+    add("-ac")
+    add("2")
+  } else {
+    // copy without re-encoding
+    add("-c")
+    add("copy")
+  }
+
   if (!useSegmentation) {
     add("-f")
     add(downloadFormat.ffmpegMuxer)
@@ -153,20 +180,22 @@ fun buildFFMpegCmd(
   segmentPart: Long,
   segmentTime: Long?,
   useSegmentation: Boolean? = false,
+  exitOnError: Boolean = false,
   outputPath: String,
 ): Array<String> {
   // ffmpeg input args
-  val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies)
+  val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies, exitOnError)
 
   // default output args
-  val defaultFFmpegOutputArgs = buildDefaultOutputArgs(downloadFormat, segmentPart, segmentTime, useSegmentation ?: false)
+  val defaultFFmpegOutputArgs = buildDefaultOutputArgs(downloadFormat, segmentPart, segmentTime, useSegmentation == true)
   // build the ffmpeg command
   return buildFFMpegRunningCmd(
     defaultFFmpegInputArgs,
     defaultFFmpegOutputArgs,
     downloadUrl,
     downloadFormat,
-    useSegmentation ?: false
+    useSegmentation == true,
+    exitOnError
   ) + outputPath
 }
 
