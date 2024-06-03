@@ -44,13 +44,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Downloader intent
- */
-sealed class DownloaderIntent {
-  data class AddStreamer(val streamer: Streamer) : DownloaderIntent()
-  data class CancelStreamer(val streamer: Streamer, val reason: String? = null) : DownloaderIntent()
-}
 
 /**
  * Download platform service, used to download streamers from the same platform
@@ -81,10 +74,6 @@ class DownloadPlatformService(
     private const val MAX_STREAMERS = 500
   }
 
-  /**
-   * Intent flow
-   */
-  private val intentFlow = MutableSharedFlow<DownloaderIntent>()
 
   private val streamers = mutableListOf<Streamer>()
   private val cancelledStreamers = ConcurrentSet<String>()
@@ -112,69 +101,6 @@ class DownloadPlatformService(
    * @param streamer the streamer to download
    */
   fun addStreamer(streamer: Streamer) {
-    scope.launch {
-      intentFlow.emit(DownloaderIntent.AddStreamer(streamer))
-    }
-  }
-
-  /**
-   * Cancel streamer download
-   * @param streamer the streamer to cancel
-   */
-  fun cancelStreamer(streamer: Streamer, reason: String? = null) {
-    logger.debug("({}) request to cancel streamer: {} reason : {}", platform, streamer.url, reason)
-    scope.launch {
-      intentFlow.emit(DownloaderIntent.CancelStreamer(streamer, reason))
-    }
-  }
-
-  /**
-   * Handle intents
-   */
-  private fun handleIntents() {
-    // collect intents
-    scope.launch {
-      intentFlow
-        .collect { intent ->
-          when (intent) {
-            is DownloaderIntent.AddStreamer -> addStreamerToState(intent.streamer)
-            is DownloaderIntent.CancelStreamer -> cancelStreamerInState(intent.streamer, intent.reason)
-          }
-        }
-    }
-    // collect streamers
-    scope.launch {
-      streamerChannel.receiveAsFlow()
-        .buffer()
-        .onEach {
-          // check if streamer was cancelled before adding to state
-          if (cancelledStreamers.contains(it.url)) {
-            logger.debug("({}) streamer {} was cancelled before adding to state", it.platform, it.url)
-            return@onEach
-          }
-
-          // check if streamer is already in the list
-          // or is already being downloaded
-          if (streamers.contains(it) || downloadingStreamers.contains(it.url)) {
-            logger.debug("({}) streamer {} is already in the list", it.platform, it.url)
-            return@onEach
-          }
-
-          logger.debug("({}) adding streamer: {}, {}", it.platform, it.name, it.url)
-          // streamer cancellation channel
-          val cancellationChannel = Channel<String?>(Channel.CONFLATED)
-
-          streamers += it
-          cancellationChannels[it.url] = cancellationChannel
-
-          startDownloadJob(it)
-          // delay before adding next streamer
-          delay(fetchDelay)
-        }.collect()
-    }
-  }
-
-  private fun addStreamerToState(streamer: Streamer) {
     // check if streamer is in cancelled list, if so remove it
     if (streamer.url in cancelledStreamers) {
       cancelledStreamers.remove(streamer.url)
@@ -185,7 +111,12 @@ class DownloadPlatformService(
     logger.debug("({}) added to channel: {}", platform, streamer.url)
   }
 
-  private fun cancelStreamerInState(streamer: Streamer, reason: String? = null) {
+  /**
+   * Cancel streamer download
+   * @param streamer the streamer to cancel
+   */
+  fun cancelStreamer(streamer: Streamer, reason: String? = null) {
+    logger.debug("({}) request to cancel streamer: {} reason : {}", platform, streamer.url, reason)
     // check if streamer is present in the list
     if (!streamers.contains(streamer)) {
       logger.debug("({}) streamer {} not found in the list", platform, streamer.url)
@@ -195,6 +126,41 @@ class DownloadPlatformService(
     cancelledStreamers.add(streamer.url)
     cancellationChannels[streamer.url]?.trySend(reason)
   }
+
+  /**
+   * Handle intents
+   */
+  private fun handleIntents() {
+    // collect streamers
+    streamerChannel.receiveAsFlow()
+      .buffer()
+      .onEach {
+        // check if streamer was cancelled before adding to state
+        if (cancelledStreamers.contains(it.url)) {
+          logger.debug("({}) streamer {} was cancelled before adding to state", it.platform, it.url)
+          return@onEach
+        }
+
+        // check if streamer is already in the list
+        // or is already being downloaded
+        if (streamers.contains(it) || downloadingStreamers.contains(it.url)) {
+          logger.debug("({}) streamer {} is already in the list", it.platform, it.url)
+          return@onEach
+        }
+
+        logger.debug("({}) adding streamer: {}, {}", it.platform, it.name, it.url)
+        // streamer cancellation channel
+        val cancellationChannel = Channel<String?>(Channel.CONFLATED)
+
+        streamers += it
+        cancellationChannels[it.url] = cancellationChannel
+
+        startDownloadJob(it)
+        // delay before adding next streamer
+        delay(fetchDelay)
+      }.launchIn(scope)
+  }
+
 
   private fun startDownloadJob(streamer: Streamer) {
     scope.launch {
