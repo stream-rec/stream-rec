@@ -7,7 +7,7 @@ logback = "1.5.6"
 dagger = "2.51.1"
 sqldelight = "2.0.2"
 protobuf = "4.26.1"
-androidx-room = "2.7.0-alpha02"
+androidx-room = "2.7.0-alpha03"
 androidx-sqlite = "2.5.0-alpha02"
 
 [libraries]
