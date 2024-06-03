@@ -198,15 +198,18 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       else this
     } ?: throw IllegalStateException("$url gameStreamInfoList is null")
 
-    // default max bit rate
-    val maxBitRate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0
+    // default bitrate
+    val defaultBitrate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0
     // available bitrate list
     val bitrateList: List<Pair<Int, String>> = vMultiStreamInfo.jsonArray.mapIndexed { index, jsonElement ->
-      val bitrate = if (index == 0) maxBitRate else jsonElement.jsonObject["iBitRate"]?.jsonPrimitive?.int ?: 0
+      var iBitrate = jsonElement.jsonObject["iBitRate"]?.jsonPrimitive?.int ?: 0
+      // if iBitrate is 0, use default bitrate
+      if (iBitrate == 0) iBitrate = defaultBitrate
+      val bitrate = iBitrate
       val displayName = jsonElement.jsonObject["sDisplayName"]?.jsonPrimitive?.content ?: ""
       bitrate to displayName
     }
-    val streams = extractLiveStreams(gameStreamInfoList, bitrateList, maxBitRate)
+    val streams = extractLiveStreams(gameStreamInfoList, bitrateList, defaultBitrate)
 
     return mediaInfo.copy(streams = streams)
   }
@@ -272,7 +275,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     uid: Long,
     sStreamName: String,
     time: Instant,
-    bitrate: Int? = null
+    bitrate: Int? = null,
   ): String {
     val u = (uid shl 8 or (uid shr 24)) and -0x1
     val query = parseQueryString(anticode.removeSuffix(","))
