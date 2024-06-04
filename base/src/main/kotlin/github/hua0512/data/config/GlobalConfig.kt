@@ -66,8 +66,8 @@ data class HuyaConfigGlobal(
   override val partedDownloadRetry: Int? = 10,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
   override val fetchDelay: Long? = 0,
-  val forceOrigin: Boolean = true,
-  val useMobileApi: Boolean = true,
+  val forceOrigin: Boolean = false,
+  val useMobileApi: Boolean = false,
 ) : GlobalPlatformConfig, HuyaConfigDTO
 
 @Serializable
