@@ -27,14 +27,15 @@ services:
     environment:
       # 时区，默认为 Europe/Paris,您可以将其更改为任何您喜欢的时区，请确保前端服务中的时区与此处一致。
       - TZ=Asia/Shanghai
+      # 代理设置，如果您在中国大陆，您可能需要设置代理。
+      # 不需要代理的用户请将其注释掉。 只支持http代理。
+      #- HTTP_PROXY=http://192.168.110.10:7890
       # 日志级别，默认为info。调试日志对于调试非常有用，但可能非常冗长。 遇到问题时，您可以将其更改为debug。
       - LOG_LEVEL=INFO
       # 容器数据库路径
       - DB_PATH=/opt/records
       # 容器第一次初始化下载路径
       - DOWNLOAD_PATH=/opt/records
-      # JWT密钥，您可以将其更改为任何您喜欢的字符串
-      - JWT_SECRET=IU123412987UYASUJKDH1239IUIU
       # 登录密钥，您可以将其更改为任何您喜欢的字符串, 用于登录
       # 请注意，该密钥只有第一次运行时有效，后续更改不会生效
       - LOGIN_SECRET=123

@@ -17,14 +17,15 @@ services:
     environment:
       # Timezone, by default is Europe/Paris. You can change it to any timezone you like.
       - TZ=Europe/Paris
+      # Proxy settings, if you are in mainland China, you may need to set up a proxy.
+      # Comment it out if you don't need a proxy. Only http proxy is supported.
+      #- HTTP_PROXY=http://192.168.110.10:7890
       # Log level, by default is info. Debug logs are useful for debugging, but they can be very verbose.
       - LOG_LEVEL=INFO
       # CONTAINER database path
       - DB_PATH=/opt/records
-      # CONTAINER download path
+      # CONTAINER download path for the first initialization
       - DOWNLOAD_PATH=/opt/records
-      # JWT secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
-      - JWT_SECRET=IU123412987UYASUJKDH1239IUIU
       # LOGIN secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
       - LOGIN_SECRET=123
     volumes:
