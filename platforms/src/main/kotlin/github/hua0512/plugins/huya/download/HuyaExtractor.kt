@@ -85,6 +85,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   internal var ayyuid: Long = 0
   internal var topsid: Long = 0
   internal var subid: Long = 0
+  var forceOrigin = false
 
 
   init {
@@ -265,7 +266,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   ): String {
     val antiCode =
       streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
-    val streamName = streamInfo.jsonObject["sStreamName"]?.jsonPrimitive?.content ?: return ""
+    var streamName = streamInfo.jsonObject["sStreamName"]?.jsonPrimitive?.content ?: return ""
+
+    if (forceOrigin) {
+      streamName = streamName.replace("-imgplus", "")
+    }
     val url = streamInfo.jsonObject[if (isFlv) "sFlvUrl" else "sHlsUrl"]?.jsonPrimitive?.content ?: return ""
     val urlSuffix =
       streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
