@@ -45,6 +45,7 @@ import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
+import github.hua0512.utils.nonEmptyOrNull
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import org.slf4j.Logger
@@ -143,13 +144,16 @@ class Application {
       return scope
     }
 
+    private val LOG_LEVEL
+      get() = System.getenv("LOG_LEVEL")?.nonEmptyOrNull().let { Level.valueOf(it) } ?: Level.INFO
+
     private fun initLogger() {
       val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
       loggerContext.reset()
 
       val patternEncoder = PatternLayoutEncoder().apply {
         context = loggerContext
-        pattern = "%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+        pattern = "%d{MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
         start()
       }
 
@@ -158,8 +162,7 @@ class Application {
         name = "STDOUT"
         encoder = patternEncoder
         addFilter(LevelFilter().apply {
-          val level = System.getenv("LOG_LEVEL")?.let { Level.valueOf(it) } ?: Level.INFO
-          setLevel(level)
+          setLevel(LOG_LEVEL)
           onMatch = FilterReply.ACCEPT
           onMismatch = FilterReply.DENY
         })
@@ -174,7 +177,7 @@ class Application {
 
       val timedRollingPolicy = TimeBasedRollingPolicy<ILoggingEvent>().apply {
         context = loggerContext
-        fileNamePattern = "$logFile.%d{yyyy-MM-dd}.gz"
+        fileNamePattern = "$logFile.%d{MM-dd}.gz"
         maxHistory = 7
         setTotalSizeCap(FileSize.valueOf("300MB"))
       }
@@ -189,7 +192,7 @@ class Application {
           it.start()
         }
         addFilter(LevelFilter().apply {
-          setLevel(Level.DEBUG)
+          setLevel(LOG_LEVEL)
           onMatch = FilterReply.ACCEPT
           onMismatch = FilterReply.DENY
         })
@@ -199,7 +202,7 @@ class Application {
       loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).apply {
         addAppender(consoleAppender)
         addAppender(fileAppender)
-        level = Level.DEBUG
+        level = LOG_LEVEL
       }
     }
 
