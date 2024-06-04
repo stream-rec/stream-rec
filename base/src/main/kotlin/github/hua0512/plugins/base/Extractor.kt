@@ -111,6 +111,11 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
   abstract val url: String
 
   /**
+   * Whether to skip the stream info extraction
+   */
+  var skipStreamInfo = false
+
+  /**
    * Initialize the extractor
    */
   open suspend fun prepare() {
@@ -123,9 +128,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * Function to match the url with the regex pattern
    * @return a boolean value
    */
-  open fun match(): Boolean {
-    return regexPattern.matches(url)
-  }
+  protected open fun match(): Boolean = regexPattern.matches(url)
 
   /**
    * Function to check if the stream is live

@@ -1,16 +1,30 @@
 [versions]
 ktor = "2.3.11"
-kotlin = "1.9.24"
+ksp = "2.0.0-1.0.21"
+kotlin = "2.0.0"
 kotlin-coroutines = "1.8.1"
 logback = "1.5.6"
 dagger = "2.51.1"
 sqldelight = "2.0.2"
 protobuf = "4.26.1"
+androidx-room = "2.7.0-alpha03"
+androidx-sqlite = "2.5.0-alpha02"
 
 [libraries]
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "androidx-room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "androidx-room" }
+androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "androidx-room" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "androidx-room" }
+androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "androidx-sqlite" }
+androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "androidx-sqlite" }
+androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framework", version.ref = "androidx-sqlite" }
+
 app-cash-sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 app-cash-sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 app-cash-sqldelight-primitive-adapters = { module = "app.cash.sqldelight:primitive-adapters", version.ref = "sqldelight" }
+
+io-exoquery-pprint = "io.exoquery:pprint-kotlin:2.0.2"
+
 io-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 io-ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
@@ -61,6 +75,8 @@ org-junit-jupiter-junit-jupiter = "org.junit.jupiter:junit-jupiter:5.10.2"
 org-mockito-mockito-core = "org.mockito:mockito-core:5.12.0"
 
 [plugins]
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "androidx-room" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }

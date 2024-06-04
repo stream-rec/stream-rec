@@ -29,7 +29,7 @@ package github.hua0512.backend.routes
 import github.hua0512.data.StreamDataId
 import github.hua0512.data.StreamerId
 import github.hua0512.logger
-import github.hua0512.repo.streamer.StreamDataRepo
+import github.hua0512.repo.stream.StreamDataRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -53,7 +53,7 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
       val streamers = call.request.queryParameters.getAll("streamer")?.run {
         mapNotNull {
           it.toLongOrNull()?.let { StreamerId(it) } ?: run {
-            logger.warn("Invalid streamer id: $it")
+            logger.warn("Invalid stream id: $it")
             null
           }
         }
@@ -64,7 +64,7 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
       val order = call.request.queryParameters["order"]?.uppercase()
 
       try {
-        val count = streamsRepo.countStreamData(streamers, filter, dateStart, dateEnd).run {
+        val count = streamsRepo.count(streamers, filter, dateStart, dateEnd).run {
           (this + pageSize - 1) / pageSize
         }
         val results = streamsRepo.getStreamDataPaged(page, pageSize, streamers, filter, dateStart, dateEnd, sortColumn, order)
@@ -93,7 +93,7 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
     delete("{id}") {
       val id = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid id")
       try {
-        streamsRepo.deleteStreamData(StreamDataId(id))
+        streamsRepo.delete(StreamDataId(id))
       } catch (e: Exception) {
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete stream data")
         return@delete

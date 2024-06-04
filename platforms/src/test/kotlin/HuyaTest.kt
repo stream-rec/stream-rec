@@ -6,14 +6,14 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
+import github.hua0512.plugins.huya.download.HuyaExtractorV2
+import io.exoquery.pprint
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
+import kotlin.time.Duration
 
 /*
  * MIT License
@@ -65,7 +65,7 @@ class HuyaTest {
     assertEquals(matchResult.groupValues.last(), "https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310")
   }
 
-  private val streamingUrl = "https://www.huya.com/970311"
+  private val streamingUrl = "https://www.huya.com/991111"
 
   private val app = App(Json).apply {
     updateConfig(AppConfig(huyaConfig = HuyaConfigGlobal(sourceFormat = VideoFormat.hls, primaryCdn = "HW")))
@@ -74,23 +74,23 @@ class HuyaTest {
   @Test
   fun testLive() = runTest {
     val client = app.client
-    val extractor = HuyaExtractor(client, app.json, streamingUrl)
-    assertNotNull(extractor.extract())
+    val extractor = HuyaExtractor(client, app.json, streamingUrl).apply {
+      prepare()
+    }
+    val mediaInfo = extractor.extract()
+    assertNotNull(mediaInfo)
+    println(pprint(mediaInfo))
   }
-
 
   @Test
   fun testLive2() = runTest {
-    val apiUrl = "https://mp.huya.com/cache.php"
-    val response = app.client.get(apiUrl) {
-      header(HttpHeaders.Origin, "https://www.huya.com")
-      header(HttpHeaders.Referrer, "https://www.huya.com")
-      parameter("m", "Live")
-      parameter("do", "profileRoom")
-      parameter("roomid", "660000")
+    val client = app.client
+    val extractor = HuyaExtractorV2(client, app.json, streamingUrl).apply {
+      prepare()
     }
-    val body = response.bodyAsText()
-    println(body)
+    val mediaInfo = extractor.extract()
+    assertNotNull(mediaInfo)
+    println(pprint(mediaInfo))
   }
 
   @Test
@@ -98,7 +98,7 @@ class HuyaTest {
     val client = app.client
     val extractor = HuyaExtractor(client, app.json, streamingUrl)
     val downloader = Huya(app, HuyaDanmu(app), extractor).apply {
-      init(Streamer("test", streamingUrl))
+      init(Streamer(0, "test", streamingUrl))
     }
     val streamInfo = downloader.shouldDownload()
     println(streamInfo)
@@ -107,12 +107,15 @@ class HuyaTest {
   }
 
   @Test
-  fun testDanmu() = runTest {
+  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
     val danmu = HuyaDanmu(app).apply {
       enableWrite = false
       filePath = "huya_danmu.txt"
+      ayyuid = 35184452693589
+      topsid = 1199536199401
+      subid = 1199536199401
     }
-    val init = danmu.init(Streamer("test", streamingUrl))
+    val init = danmu.init(Streamer(0, "test", streamingUrl))
     danmu.fetchDanmu()
     assertNotNull(danmu)
   }

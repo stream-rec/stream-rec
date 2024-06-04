@@ -1,5 +1,3 @@
-version: '3.7'
-
 networks:
   stream-rec:
 
@@ -7,6 +5,9 @@ services:
   # 后端服务
   backend:
     # 使用最新的主分支镜像
+    # 如果您想使用特定版本，请更改为streamrec/stream-rec:version
+    # 您可以在https://hub.docker.com/r/streamrec/stream-rec/tags中找到所有可用的版本
+    # latest是最新稳定内测版本，dev 是最新开发版。
     image: streamrec/stream-rec:latest
     # 容器名称，您可以将其更改为任何您喜欢的名称
     container_name: stream-rec
@@ -19,19 +20,18 @@ services:
       - stream-rec
     volumes:
       # 将主机机器路径绑定到容器路径，存储路径映射
-      - type: bind
-        # SOURCE是主机机器的路径，您想要存储录制的地方
-        source: /home/hua/records
-        # TARGET是容器的路径，录制将存储的地方
-        target: /opt/records
+      # 下载路径，默认为当前运行目录下的downloads文件夹
+      - "./downloads:/opt/records"
+      # Rclone 配置文件路径绑定
+      - "./rclone:/root/.config/rclone"
     environment:
-      # 时区，默认为 Europe/Paris,您可以将其更改为任何您喜欢的时区。
+      # 时区，默认为 Europe/Paris,您可以将其更改为任何您喜欢的时区，请确保前端服务中的时区与此处一致。
       - TZ=Asia/Shanghai
       # 日志级别，默认为info。调试日志对于调试非常有用，但可能非常冗长。 遇到问题时，您可以将其更改为debug。
       - LOG_LEVEL=INFO
-      # 容器数据库路径，请确保路径是绑定到主机的容器路径
+      # 容器数据库路径
       - DB_PATH=/opt/records
-      # 容器下载路径，请确保路径是VOLUMES TARGET路径的子目录
+      # 容器第一次初始化下载路径
       - DOWNLOAD_PATH=/opt/records
       # JWT密钥，您可以将其更改为任何您喜欢的字符串
       - JWT_SECRET=IU123412987UYASUJKDH1239IUIU
@@ -41,7 +41,10 @@ services:
 
   # 前端服务
   frontend:
-    #   使用最新的主分支镜像
+    #   使用最新的主分支镜像，请确保与后端服务tag一致
+    # 如果您想使用特定版本，请更改为streamrec/stream-rec-front:version
+    # 您可以在https://hub.docker.com/r/streamrec/stream-rec-front/tags中找到所有可用的版本
+    # latest是最新稳定内测版本，dev 是最新开发版。
     image: streamrec/stream-rec-front:latest
     # 容器名称，您可以将其更改为任何您喜欢的名称
     container_name: stream-rec-frontend

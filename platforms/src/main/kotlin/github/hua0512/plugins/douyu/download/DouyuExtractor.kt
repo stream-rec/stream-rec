@@ -30,6 +30,7 @@ import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
+import io.exoquery.pprint
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -161,7 +162,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       val (stream, _) = getStreamInfo(selectedCdn = selectedCdn, selectedRate = rateInfo["rate"]!!, encMap = paramsMap)
       streams.add(stream)
     }
-    logger.debug("Streams: {}", streams)
+    logger.trace("$url streams: {}", pprint(streams))
     return mediaInfo.copy(title = title, artist = artist, artistImageUrl = avatar, coverUrl = cover, streams = streams)
   }
 

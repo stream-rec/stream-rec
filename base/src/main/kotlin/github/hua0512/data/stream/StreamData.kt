@@ -26,12 +26,13 @@
 
 package github.hua0512.data.stream
 
-import github.hua0512.utils.StreamDataEntity
+import github.hua0512.data.stream.entity.StreamDataEntity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 @Serializable
 data class StreamData(
+  var id: Long = 0,
   val title: String,
   val dateStart: Long? = null,
   val dateEnd: Long? = null,
@@ -39,41 +40,33 @@ data class StreamData(
   val danmuFilePath: String? = null,
   val outputFileSize: Long = 0,
   val streamerId: Long = 0,
+  @Transient
+  val streamer: Streamer? = null,
 ) {
-  var id: Long = -1
-
 
   var streamerName: String = ""
-    get() {
-      if (!::streamer.isInitialized) {
-        return ""
-      }
-      return streamer.name
-    }
+    get() = streamer?.name ?: field
 
-  @Transient
-  lateinit var streamer: Streamer
-
-  constructor(entity: StreamDataEntity) : this(
+  constructor(entity: StreamDataEntity, streamer: Streamer? = null) : this(
+    entity.id,
     entity.title,
     entity.dateStart,
     entity.dateEnd,
     entity.outputFilePath,
     entity.danmuFilePath,
     entity.outputFileSize,
-    entity.streamerId
-  ) {
-    id = entity.id
-  }
+    entity.streamerId,
+    streamer,
+  )
 
-  fun toStreamDataEntity() = StreamDataEntity(
+  fun toEntity() = StreamDataEntity(
+    id = id,
     title = title,
     dateStart = dateStart,
     dateEnd = dateEnd,
     outputFilePath = outputFilePath,
     danmuFilePath = danmuFilePath,
-    streamerId = streamerId,
     outputFileSize = outputFileSize,
-    id = id
+    streamerId = streamerId,
   )
 }

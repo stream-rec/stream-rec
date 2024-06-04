@@ -28,13 +28,14 @@ package github.hua0512.plugins.download.base
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
+import github.hua0512.data.dto.platform.TwitchConfigDTO
 import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.*
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.danmu.base.Danmu
+import github.hua0512.plugins.download.StreamerCallback
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART_PREFIX
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
@@ -45,6 +46,7 @@ import github.hua0512.plugins.download.exceptions.InvalidDownloadException
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.*
 import io.ktor.http.*
+import io.ktor.http.auth.*
 import kotlinx.coroutines.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -92,14 +94,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   protected lateinit var streamer: Streamer
 
   /**
-   * Callback triggered when the artist avatar url is updated
+   * Streamer callback
    */
-  private var artistAvatarUrlUpdateCallback: ((String) -> Unit)? = null
-
-  /**
-   * Callback triggered when the stream title is updated
-   */
-  private var streamTitleUpdateCallback: ((String) -> Unit)? = null
+  var callback: StreamerCallback? = null
 
   /**
    * The download engine used to download the stream
@@ -176,7 +173,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       StreamingPlatform.DOUYIN -> app.config.douyinConfig.cookies
       StreamingPlatform.DOUYU -> app.config.douyuConfig.cookies
       StreamingPlatform.TWITCH -> app.config.twitchConfig.cookies
-      StreamingPlatform.PANDALIVE -> app.config.pandaliveConfig.cookies
+      StreamingPlatform.PANDATV -> app.config.pandaTvConfig.cookies
       else -> null
     }
 
@@ -194,13 +191,23 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     // progress bar
     var pb: ProgressBar? = null
 
-    val streamData: StreamData = StreamData(
+    // stream data info
+    val streamData = StreamData(
       title = downloadTitle,
       outputFilePath = outputPath.pathString,
       danmuFilePath = null,
-      streamerId = streamer.id
-    ).also {
-      it.streamer = streamer
+      streamerId = streamer.id,
+      streamer = streamer
+    )
+
+    // download headers
+    val headers = mutableMapOf<String, String>().apply {
+      putAll(Extractor.commonHeaders)
+      if (downloadConfig is TwitchConfigDTO) {
+        // add twitch headers
+        val authToken = downloadConfig.authToken ?: app.config.twitchConfig.authToken
+        put(HttpHeaders.Authorization, "${AuthScheme.OAuth} $authToken")
+      }
     }
 
     // download engine
@@ -211,7 +218,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         outputPath.pathString,
         streamer,
         cookie,
-        Extractor.commonHeaders.toMap(),
+        headers,
         fileLimitSize = app.config.maxPartSize.run {
           if (this > 0) this else 2621440000
         },
@@ -269,7 +276,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
                 }
               } else {
                 danmu.enableWrite = true
-                danmu.relaunchIO(danmuPath)
+                danmu.relaunch(danmuPath)
               }
             }
             EventCenter.sendEvent(
@@ -310,32 +317,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
           override fun onDownloaded(data: FileInfo) {
             logger.debug("({}) downloaded: {}", streamer.name, data)
-            // check if the segment is valid
-            danmu.finish()
             outputPath = Path(data.path)
-            val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
-            logger.debug("(${streamer.name}) danmu finished : ${danmu.filePath}")
-            if (processSegment(Path(data.path), danmuPath)) return
-            // update stream data
-            val stream = streamData.copy(
-              dateStart = data.createdAt,
-              dateEnd = data.updatedAt,
-              outputFilePath = data.path,
-              outputFileSize = data.size,
-              danmuFilePath = if (isDanmuEnabled) danmu.filePath else null
-            ).also {
-              it.streamer = streamer
-            }
-            EventCenter.sendEvent(
-              DownloadEvent.DownloadSuccess(
-                filePath = data.path,
-                url = downloadUrl,
-                platform = streamer.platform,
-                data = stream,
-                time = Instant.fromEpochSeconds(data.updatedAt)
-              )
-            )
-            onStreamDownloaded?.invoke(stream)
+            onFileDownloaded(data, streamData, isDanmuEnabled)
           }
 
           // normal exit
@@ -370,20 +353,30 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         }
       )
 
+      if (this is StreamlinkDownloadEngine) {
+        // check if twitch
+        if (streamer.platform == StreamingPlatform.TWITCH) {
+          // check if skip ads is enabled
+          if (app.config.twitchConfig.skipAds) {
+            // add skip ads to streamlink args
+            programArgs.add("--twitch-disable-ads")
+          }
+        }
+      }
+
       // determine if the built-in segmenter should be used
       if (this is FFmpegDownloadEngine) {
         useSegmenter = app.config.useBuiltInSegmenter
+        detectErrors = app.config.exitDownloadOnError
       }
     }
 
     withIOContext {
       try {
+        logger.debug("(${streamer.name}) engine starting...")
         engine.start()
         // await children
         danmuJob?.let { stopDanmuJob(it) }
-        val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
-        // process last segment
-        processSegment(outputPath, danmuPath)
         logger.debug("(${streamer.name}) engine finished")
       } catch (e: Exception) {
         onStreamDownloadError?.invoke(e)
@@ -396,6 +389,32 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         engine.clean()
       }
     }
+  }
+
+  private fun onFileDownloaded(info: FileInfo, streamInfo: StreamData, isDanmuEnabled: Boolean) {
+    // check if the segment is valid
+    danmu.finish()
+    val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
+    logger.debug("(${streamer.name}) danmu finished : ${danmu.filePath}")
+    if (processSegment(Path(info.path), danmuPath)) return
+    // update stream data
+    val stream = streamInfo.copy(
+      dateStart = info.createdAt,
+      dateEnd = info.updatedAt,
+      outputFilePath = info.path,
+      outputFileSize = info.size,
+      danmuFilePath = if (isDanmuEnabled) danmu.filePath else null
+    )
+    EventCenter.sendEvent(
+      DownloadEvent.DownloadSuccess(
+        filePath = info.path,
+        url = downloadUrl,
+        platform = streamer.platform,
+        data = stream,
+        time = Instant.fromEpochSeconds(info.updatedAt)
+      )
+    )
+    onStreamDownloaded?.invoke(stream)
   }
 
 
@@ -411,6 +430,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   protected fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
     // check if the segment is valid, a valid segment should exist and have a size greater than the minimum part size
     if (segmentPath.exists() && segmentPath.fileSize() >= app.config.minPartSize) return false
+    logger.error("(${streamer.name}) segment is invalid: ${segmentPath.pathString}")
     // cases where the segment is invalid
     deleteOutputs(segmentPath, danmuPath)
     return true
@@ -433,7 +453,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   private fun deleteOutputs(outputPath: Path, danmuPath: Path? = null) {
     outputPath.deleteFile()
-    danmuPath?.deleteFile()
+    if (danmuPath != null && danmuPath.exists()) {
+      danmuPath.deleteFile()
+    }
   }
 
   /**
@@ -456,6 +478,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   private fun selectDownloadEngine(): BaseDownloadEngine {
     val userSelectedEngine = getDownloadEngine(app.config.engine)
+    // fallback to user selected engine if skipStreamInfo is enabled
+    if (extractor.skipStreamInfo) return userSelectedEngine
     if (!downloadUrl.contains("m3u8") && userSelectedEngine is StreamlinkDownloadEngine) {
       // fallback to ffmpeg if the stream is not HLS
       logger.warn("(${streamer.name}) stream is not HLS, fallback to ffmpeg")
@@ -593,34 +617,16 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * @param mediaInfo the [MediaInfo] instance
    * @param streamer the [Streamer] instance
    */
-  protected fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
+  private fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
     if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
       streamer.avatar = mediaInfo.artistImageUrl
-      logger.debug("(${streamer.name}) avatar: ${streamer.avatar}")
-      artistAvatarUrlUpdateCallback?.invoke(mediaInfo.artistImageUrl)
+      callback?.onAvatarChanged(streamer, mediaInfo.artistImageUrl)
     }
     if (mediaInfo.title.isNotEmpty() && mediaInfo.title != streamer.streamTitle) {
       streamer.streamTitle = mediaInfo.title
-      logger.debug("(${streamer.name}) streamTitle: ${streamer.streamTitle}")
-      streamTitleUpdateCallback?.invoke(mediaInfo.title)
+      callback?.onDescriptionChanged(streamer, mediaInfo.title)
     }
     downloadTitle = mediaInfo.title
-  }
-
-  /**
-   * Set the artist avatar url update callback
-   * @param callback the callback function
-   */
-  fun avatarUrlUpdateCallback(callback: (String) -> Unit) {
-    this.artistAvatarUrlUpdateCallback = callback
-  }
-
-  /**
-   * Set the stream title update callback
-   * @param callback the callback function
-   */
-  fun descriptionUpdateCallback(callback: (String) -> Unit) {
-    this.streamTitleUpdateCallback = callback
   }
 
   /**

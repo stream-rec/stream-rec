@@ -40,6 +40,11 @@ import kotlinx.coroutines.withContext
 class Huya(app: App, override val danmu: HuyaDanmu, override val extractor: HuyaExtractor) :
   Download<HuyaDownloadConfig>(app, danmu, extractor) {
 
+  init {
+    extractor.forceOrigin = app.config.huyaConfig.forceOrigin
+  }
+
+
   override fun createDownloadConfig(): HuyaDownloadConfig {
     return HuyaDownloadConfig(
       primaryCdn = app.config.huyaConfig.primaryCdn,
@@ -67,7 +72,7 @@ class Huya(app: App, override val danmu: HuyaDanmu, override val extractor: Huya
       subid = extractor.subid
     }
 
-    // update streamer info
+    // update stream info
     return getStreamInfo(mediaInfo, streamer, config)
   }
 

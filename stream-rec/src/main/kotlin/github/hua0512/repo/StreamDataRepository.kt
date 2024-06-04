@@ -28,39 +28,33 @@ package github.hua0512.repo
 
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
-import github.hua0512.dao.stream.StreamerDao
 import github.hua0512.data.StreamDataId
 import github.hua0512.data.StreamerId
+import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.utils.StatsEntity
+import github.hua0512.data.stream.entity.StreamDataEntity
+import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.utils.getTodayStart
 import github.hua0512.utils.withIOContext
-import kotlinx.serialization.json.Json
 
 /**
+ * Stream data repository
  * @author hua0512
  * @date : 2024/2/19 10:21
  */
-class StreamDataRepository(val dao: StreamDataDao, private val streamerDao: StreamerDao, private val statsDao: StatsDao, private val json: Json) :
+class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDao) :
   StreamDataRepo {
   override suspend fun getStreamDataById(streamDataId: StreamDataId): StreamData? {
     return withIOContext {
-      dao.getStreamDataById(streamDataId)?.let {
-        StreamData(it).apply {
-          populateStreamer()
-        }
+      dao.getWithStreamerById(streamDataId.value)?.let {
+        StreamData(it.streamData, Streamer(it.streamer))
       }
     }
   }
 
   override suspend fun getAllStreamData(): List<StreamData> = withIOContext {
-    dao.getAllStreamData().map { streamData ->
-      StreamData(streamData).apply {
-        populateStreamer()
-      }
-    }
+    dao.getAllWithStreamer().flatMap { (t, u) -> u.map { StreamData(it, Streamer(t)) } }
   }
 
   override suspend fun getStreamDataPaged(
@@ -74,66 +68,68 @@ class StreamDataRepository(val dao: StreamDataDao, private val streamerDao: Stre
     sortOrder: String?,
   ): List<StreamData> {
     return withIOContext {
-      dao.getAllStreamDataPaged(
-        page,
-        pageSize,
-        filter,
-        streamers,
-        streamers?.isEmpty() ?: true,
-        dateStart,
-        dateEnd,
-        sortColumn ?: "dateStart",
-        sortOrder ?: "DESC"
-      )
-        .map {
-          StreamData(it).apply {
-            populateStreamer()
-          }
-        }
-    }
-  }
+      val order = sortOrder ?: "DESC"
 
-  override suspend fun countStreamData(streamers: List<StreamerId>?, filter: String?, dateStart: Long?, dateEnd: Long?): Long {
-    return withIOContext {
-      dao.countAllStreamData(filter, streamers, streamers?.isEmpty(), dateStart, dateEnd)
-    }
-  }
+      if (order != "ASC" && order != "DESC") {
+        throw IllegalArgumentException("Invalid sortOrder: $order")
+      }
 
+      when (order) {
+        "ASC" -> dao.getAllPagedAsc(
+          (page - 1) * pageSize,
+          pageSize,
+          filter,
+          streamers,
+          streamers?.isEmpty() ?: true,
+          dateStart,
+          dateEnd,
+          sortColumn ?: "dateStart"
+        )
 
-  override suspend fun getStreamDataByStreamerId(streamerId: StreamerId) = withIOContext {
-    dao.findStreamDataByStreamerId(streamerId).firstOrNull()?.let {
-      StreamData(it).apply {
-        populateStreamer()
+        "DESC" -> dao.getAllPagedDesc(
+          (page - 1) * pageSize,
+          pageSize,
+          filter,
+          streamers,
+          streamers?.isEmpty() ?: true,
+          dateStart,
+          dateEnd,
+          sortColumn ?: "dateStart"
+        )
+
+        else -> throw IllegalArgumentException("Invalid sortOrder: $order")
+      }.map {
+        StreamData(it.streamData, Streamer(it.streamer))
       }
     }
   }
 
-  override suspend fun saveStreamData(streamData: StreamData): Long {
+  override suspend fun count(streamers: List<StreamerId>?, filter: String?, dateStart: Long?, dateEnd: Long?): Long {
     return withIOContext {
-      val id = dao.saveStreamData(streamData.toStreamDataEntity()).also {
-        streamData.id = it
-      }
+      dao.countAllStreamData(filter, streamers, streamers?.isEmpty() ?: true, dateStart, dateEnd)
+    }
+  }
+
+
+  override suspend fun save(streamData: StreamData): StreamData {
+    return withIOContext {
+      val id = dao.insert(streamData.toEntity())
 
       // get today's timestamp
       val todayStart = getTodayStart()
-      val todayStats = statsDao.getStatsFromToWithLimit(todayStart.epochSeconds, todayStart.epochSeconds, 1).firstOrNull()
+      val todayStats = statsDao.getBetweenOrderedByTimeWithLimit(todayStart.epochSeconds, todayStart.epochSeconds, 1).firstOrNull()
       if (todayStats != null) {
-        val newStats = todayStats.copy(totalStreams = todayStats.totalStreams + 1)
-        statsDao.updateStats(newStats)
+        val newStats = todayStats.copy(streams = todayStats.streams + 1)
+        statsDao.update(newStats)
       } else {
-        statsDao.insertStats(StatsEntity(0, todayStart.epochSeconds, 1, 0, 0))
+        statsDao.insert(StatsEntity(0, todayStart.epochSeconds, 1, 0, 0))
       }
-      return@withIOContext id
+      return@withIOContext streamData.copy(id = id)
     }
   }
 
-  override suspend fun deleteStreamData(id: StreamDataId) {
-    return withIOContext { dao.deleteStreamData(id) }
+  override suspend fun delete(id: StreamDataId) = withIOContext {
+    val streamData = StreamDataEntity(id = id.value, "", outputFilePath = "")
+    dao.delete(streamData) == 1
   }
-
-  private suspend fun StreamData.populateStreamer() {
-    streamer = streamerDao.getStreamerById(StreamerId(streamerId))?.let { Streamer(it, json) }
-      ?: throw IllegalStateException("Streamer not found for streamData $id")
-  }
-
 }

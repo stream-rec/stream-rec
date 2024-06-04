@@ -30,6 +30,7 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.plugins.twitch.download.TwitchExtractor
+import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.time.Duration
@@ -46,10 +47,10 @@ class TwitchTest : BaseTest() {
   @Test
   override fun testLive() = runTest {
     val extractor = TwitchExtractor(app.client, app.json, testUrl).apply {
-      match()
+      prepare()
     }
-    val info = extractor.extract()
-    println(info)
+    val mediaInfo = extractor.extract()
+    println(pprint(mediaInfo))
   }
 
   @Test
@@ -67,7 +68,7 @@ class TwitchTest : BaseTest() {
       enableWrite = false
       filePath = "twitch_danmu.txt"
     }
-    val init = danmu.init(Streamer("aspaszin", testUrl))
+    val init = danmu.init(Streamer(0, "aspaszin", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }

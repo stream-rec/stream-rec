@@ -27,16 +27,19 @@
 package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
+import github.hua0512.utils.isWindows
 import io.ktor.client.*
+import io.ktor.client.engine.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
-import io.ktor.serialization.kotlinx.json.*
 import org.slf4j.LoggerFactory
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -51,7 +54,7 @@ class App(val json: Json) {
     @JvmStatic
     val ffmpegPath = (System.getenv("FFMPEG_PATH") ?: "ffmpeg").run {
       // check if is windows
-      if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
+      if (isWindows()) {
         "$this.exe"
       } else {
         this
@@ -61,7 +64,7 @@ class App(val json: Json) {
     @JvmStatic
     val streamLinkPath = (System.getenv("STREAMLINK_PATH") ?: "streamlink").run {
       // check if is windows
-      if (System.getProperty("os.name").contains("win", ignoreCase = true)) {
+      if (isWindows()) {
         "$this.exe"
       } else {
         this
@@ -73,6 +76,15 @@ class App(val json: Json) {
     HttpClient(CIO) {
       engine {
         pipelining = true
+        // Configure proxy
+        // Parse proxy from ENV variable
+        val httpProxy = System.getenv("HTTP_PROXY")
+        val httpsProxy = System.getenv("HTTPS_PROXY")
+        if (httpProxy.isNullOrEmpty().not()) {
+          val httpProxyUrl = Url(httpProxy)
+          logger.info("Using HTTP proxy: {}", httpProxyUrl)
+          proxy = ProxyBuilder.http(httpProxyUrl)
+        }
       }
       install(Logging) {
         logger = Logger.DEFAULT
@@ -80,7 +92,7 @@ class App(val json: Json) {
       }
       BrowserUserAgent()
       install(HttpRequestRetry) {
-        retryOnServerErrors(maxRetries = 5)
+        retryOnServerErrors(maxRetries = 3)
         exponentialDelay()
       }
 

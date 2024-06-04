@@ -30,8 +30,43 @@ import github.hua0512.app.App
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
+import github.hua0512.plugins.upload.exceptions.UploadFailedException
+import github.hua0512.plugins.upload.exceptions.UploadInvalidArgumentsException
 
-abstract class Upload(protected val app: App, open val uploadConfig: UploadConfig?) {
+/**
+ * Base class for uploaders.
+ * @param T The upload configuration type.
+ * @property app The application instance.
+ * @property config The upload configuration.
+ */
+abstract class Upload<T : UploadConfig>(protected val app: App, open val config: T?) {
 
-  abstract suspend fun upload(uploadData: UploadData): UploadResult
+  /**
+   * Uploads the given data.
+   * @param uploadData The data to upload.
+   * @return The upload result.
+   *
+   * @throws UploadInvalidArgumentsException If the upload data is invalid.
+   * @throws UploadFailedException If the upload failed.
+   */
+  suspend fun upload(uploadData: UploadData): UploadResult {
+    if (uploadData.streamData == null) {
+      throw UploadInvalidArgumentsException("stream data not initialized : $uploadData")
+    }
+
+    if (uploadData.streamData.streamer == null) {
+      throw UploadInvalidArgumentsException("streamer not initialized : $uploadData")
+    }
+    return performUpload(uploadData)
+  }
+
+  /**
+   * Performs the upload.
+   * @param uploadData The data to upload.
+   * @return The upload result.
+   *
+   *@throws UploadInvalidArgumentsException If the upload data is invalid.
+   *@throws UploadFailedException If the upload failed.
+   */
+  internal abstract suspend fun performUpload(uploadData: UploadData): UploadResult
 }

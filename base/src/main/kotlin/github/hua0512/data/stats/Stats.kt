@@ -26,7 +26,6 @@
 
 package github.hua0512.data.stats
 
-import github.hua0512.utils.StatsEntity
 import kotlinx.serialization.Serializable
 
 /**
@@ -36,25 +35,21 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class Stats(
+  val id: Long = 0,
   val timeStamp: Long,
-  val streams: Int,
-  val uploads: Int,
-  val failedUploads: Int,
+  val streams: Long,
+  val uploads: Long,
+  val failedUploads: Long = 0,
 ) {
 
-  var id = 0L
-
   constructor(statsEntity: StatsEntity) : this(
-    statsEntity.time,
-    statsEntity.totalStreams.toInt(),
-    statsEntity.totalUploads.toInt(),
-    statsEntity.totalFailedUploads.toInt()
-  ) {
-    id = statsEntity.id
-  }
+    statsEntity.id,
+    statsEntity.timeStamp,
+    statsEntity.streams,
+    statsEntity.uploads,
+    statsEntity.failedUploads
+  )
 
 
-  fun toEntity(): StatsEntity {
-    return StatsEntity(id, timeStamp, streams.toLong(), uploads.toLong(), failedUploads.toLong())
-  }
+  fun toEntity(): StatsEntity = StatsEntity(id, timeStamp, streams, uploads, failedUploads)
 }

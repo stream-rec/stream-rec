@@ -63,10 +63,10 @@ class ActionService(private val app: App, private val uploadService: UploadServi
     actions.filter {
       it.enabled
     }.forEach { action ->
-      val job = async {
-        action.mapToAction(streamDataList)
-      }
       try {
+        val job = async {
+          action.mapToAction(streamDataList)
+        }
         job.await()
       } catch (e: Exception) {
         logger.error("$streamDataList, error while executing action $action : ${e.message}")
@@ -80,16 +80,14 @@ class ActionService(private val app: App, private val uploadService: UploadServi
     val dataList = streamDataList.flatMap { streamData ->
       listOfNotNull(
         UploadData(
-          filePath = streamData.outputFilePath
-        ).also {
-          it.streamData = streamData
-        },
+          filePath = streamData.outputFilePath,
+          streamData = streamData,
+        ),
         streamData.danmuFilePath?.let { danmu ->
           UploadData(
-            filePath = danmu
-          ).also {
-            it.streamData = streamData
-          }
+            filePath = danmu,
+            streamData = streamData
+          )
         }
       )
     }
@@ -102,7 +100,7 @@ class ActionService(private val app: App, private val uploadService: UploadServi
       is RcloneAction -> {
         UploadAction(
           time = Clock.System.now().toEpochMilliseconds(),
-          files = dataList.toSet(),
+          files = dataList,
           uploadConfig = UploadConfig.RcloneConfig(
             rcloneOperation = this.rcloneOperation,
             remotePath = this.remotePath,
@@ -116,7 +114,7 @@ class ActionService(private val app: App, private val uploadService: UploadServi
           logger.info("Running command action : $this")
 
           val streamData = streamDataList.first()
-          val streamer = streamData.streamer
+          val streamer = streamData.streamer ?: throw IllegalStateException("Streamer not found for stream data $streamData")
           val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
           val downloadOutputFolder: File? = (downloadConfig?.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).let {
             val instant = Instant.fromEpochSeconds(streamData.dateStart!!)

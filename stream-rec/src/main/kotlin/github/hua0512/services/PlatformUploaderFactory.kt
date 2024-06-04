@@ -1,0 +1,58 @@
+/*
+ * MIT License
+ *
+ * Stream-rec  https://github.com/hua0512/stream-rec
+ *
+ * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package github.hua0512.services
+
+import github.hua0512.app.App
+import github.hua0512.data.upload.UploadConfig
+import github.hua0512.data.upload.UploadConfig.NoopConfig
+import github.hua0512.data.upload.UploadConfig.RcloneConfig
+import github.hua0512.plugins.upload.NoopUploader
+import github.hua0512.plugins.upload.RcloneUploader
+
+/**
+ * Platform uploader factory.
+ *
+ * TODO : Use KSP to generate the factory.
+ * @author hua0512
+ * @date : 2024/5/21 19:51
+ */
+object PlatformUploaderFactory {
+
+  /**
+   * Provides an uploader based on the upload configuration.
+   * This function returns an uploader based on the type of the upload configuration.
+   * @param config The upload configuration.
+   * @return An uploader.
+   * @throws IllegalArgumentException If the upload configuration is invalid.
+   */
+  fun create(app: App, config: UploadConfig) = when (config) {
+    is RcloneConfig -> RcloneUploader(app, config)
+    is NoopConfig -> NoopUploader(app)
+    else -> throw IllegalArgumentException("Invalid config: $config")
+  }
+
+}

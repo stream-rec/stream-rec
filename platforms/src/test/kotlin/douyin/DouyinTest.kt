@@ -30,6 +30,7 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.DouyinExtractor
+import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.DefaultAsserter.assertEquals
 import kotlin.test.DefaultAsserter.assertNotNull
@@ -75,10 +76,10 @@ class DouyinTest : BaseTest() {
   @Test
   override fun testLive() = runTest {
     val extractor = DouyinExtractor(app.client, app.json, testUrl).apply {
-      match()
+      prepare()
     }
     val info = extractor.extract()
-    println(info)
+    println(pprint(info))
     assertNotNull("failed to extract", info)
   }
 
@@ -88,7 +89,7 @@ class DouyinTest : BaseTest() {
       enableWrite = false
       filePath = "douyin_danmu.txt"
     }
-    val init = danmu.init(Streamer("test", testUrl))
+    val init = danmu.init(Streamer(0, "test", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }

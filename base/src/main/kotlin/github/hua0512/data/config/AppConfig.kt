@@ -27,13 +27,8 @@
 package github.hua0512.data.config
 
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.utils.AppConfigEntity
-import github.hua0512.utils.asLong
-import github.hua0512.utils.boolean
 import github.hua0512.utils.nonEmptyOrNull
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 /**
  * Application configuration data class
@@ -42,89 +37,78 @@ import kotlinx.serialization.json.Json
  */
 @Serializable
 data class AppConfig(
-  val engine: String = "ffmpeg",
-  val danmu: Boolean = false,
+  val id: Int = 0,
+  val engine: String = CONFIG_DEFAULT_ENGINE,
+  val danmu: Boolean = CONFIG_DEFAULT_DANMU,
   val outputFolder: String = System.getenv("DOWNLOAD_PATH") ?: System.getProperty("user.dir"),
-  val outputFileName: String = "{streamer}-{title}-%Y-%m-%d %H:%M:%S",
+  val outputFileName: String = CONFIG_DEFAULT_OUTPUT_FILE_NAME,
   val outputFileFormat: VideoFormat = VideoFormat.flv,
-  val minPartSize: Long = 20000000,
-  val maxPartSize: Long = 2621440000,
+  val minPartSize: Long = CONFIG_DEFAULT_MIN_PART_SIZE,
+  val maxPartSize: Long = CONFIG_DEFAULT_MAX_PART_SIZE,
   val maxPartDuration: Long? = null,
   val maxDownloadRetries: Int = 3,
   val downloadRetryDelay: Long = 10,
   val downloadCheckInterval: Long = 60,
   val maxConcurrentDownloads: Int = 5,
   val maxConcurrentUploads: Int = 3,
-  val deleteFilesAfterUpload: Boolean = true,
+  val deleteFilesAfterUpload: Boolean = false,
   val useBuiltInSegmenter: Boolean = false,
+  val exitDownloadOnError: Boolean = false,
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
   val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
   val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
-  val pandaliveConfig: PandaliveConfigGlobal = PandaliveConfigGlobal(),
+  val pandaTvConfig: PandaTvConfigGlobal = PandaTvConfigGlobal(),
 ) {
-  var id: Long = 1
 
-
-  constructor(entity: AppConfigEntity, json: Json) : this(
+  constructor(entity: AppConfigEntity) : this(
+    entity.id,
     entity.engine,
-    entity.danmu.boolean,
-    entity.outputFolder?.nonEmptyOrNull() ?: System.getenv("DOWNLOAD_PATH") ?: System.getProperty("user.dir"),
-    entity.outputFileName.nonEmptyOrNull() ?: "{streamer}-{title}-%Y-%m-%d %H:%M:%S",
-    VideoFormat.format(entity.outputFileFormat) ?: VideoFormat.flv,
+    entity.danmu,
+    entity.outputFolder.nonEmptyOrNull() ?: System.getenv("DOWNLOAD_PATH") ?: System.getProperty("user.dir"),
+    entity.outputFileName.nonEmptyOrNull() ?: CONFIG_DEFAULT_OUTPUT_FILE_NAME,
+    entity.outputFileFormat,
     entity.minPartSize,
     entity.maxPartSize,
     entity.maxPartDuration,
-    entity.maxDownloadRetries.toInt(),
+    entity.maxDownloadRetries,
     entity.downloadRetryDelay,
     entity.downloadCheckInterval,
-    entity.maxConcurrentDownloads.toInt(),
-    entity.maxConcurrentUploads.toInt(),
-    entity.deleteFilesAfterUpload.boolean,
-    entity.useBuiltInSegmenter.boolean,
-    entity.huyaConfig?.run {
-      json.decodeFromString<HuyaConfigGlobal>(this)
-    } ?: HuyaConfigGlobal(),
-    entity.douyinConfig?.run {
-      json.decodeFromString<DouyinConfigGlobal>(this)
-    } ?: DouyinConfigGlobal(),
-    entity.douyuConfig?.run {
-      json.decodeFromString<DouyuConfigGlobal>(this)
-    } ?: DouyuConfigGlobal(),
-    entity.twitchConfig?.run {
-      json.decodeFromString<TwitchConfigGlobal>(this)
-    } ?: TwitchConfigGlobal(),
-    entity.pandaliveConfig?.run {
-      json.decodeFromString<PandaliveConfigGlobal>(this)
-    } ?: PandaliveConfigGlobal(),
-  ) {
-    this.id = entity.id
-  }
+    entity.maxConcurrentDownloads,
+    entity.maxConcurrentUploads,
+    entity.deleteFilesAfterUpload,
+    entity.useBuiltInSegmenter,
+    entity.exitDownloadOnError,
+    entity.huyaConfig,
+    entity.douyinConfig,
+    entity.douyuConfig,
+    entity.twitchConfig,
+    entity.pandaTvConfig,
+  )
 
 
-  fun toEntity(json: Json): AppConfigEntity {
-    return AppConfigEntity(
-      id = id,
-      engine = engine,
-      danmu = danmu.asLong,
-      outputFolder = outputFolder,
-      outputFileName = outputFileName,
-      outputFileFormat = outputFileFormat.name,
-      minPartSize = minPartSize,
-      maxPartSize = maxPartSize,
-      maxPartDuration = maxPartDuration,
-      maxDownloadRetries = maxDownloadRetries.toLong(),
-      downloadRetryDelay = downloadRetryDelay,
-      downloadCheckInterval = downloadCheckInterval,
-      maxConcurrentDownloads = maxConcurrentDownloads.toLong(),
-      maxConcurrentUploads = maxConcurrentUploads.toLong(),
-      deleteFilesAfterUpload = deleteFilesAfterUpload.asLong,
-      huyaConfig = json.encodeToString(huyaConfig),
-      douyinConfig = json.encodeToString(douyinConfig),
-      douyuConfig = json.encodeToString(douyuConfig),
-      twitchConfig = json.encodeToString(twitchConfig),
-      pandaliveConfig = json.encodeToString(pandaliveConfig),
-      useBuiltInSegmenter = useBuiltInSegmenter.asLong,
-    )
-  }
+  fun toEntity(): AppConfigEntity = AppConfigEntity(
+    id,
+    engine,
+    danmu,
+    outputFolder,
+    outputFileName,
+    outputFileFormat,
+    minPartSize,
+    maxPartSize,
+    maxPartDuration,
+    maxDownloadRetries,
+    downloadRetryDelay,
+    downloadCheckInterval,
+    maxConcurrentDownloads,
+    maxConcurrentUploads,
+    deleteFilesAfterUpload,
+    useBuiltInSegmenter,
+    exitDownloadOnError,
+    huyaConfig,
+    douyinConfig,
+    douyuConfig,
+    twitchConfig,
+    pandaTvConfig,
+  )
 }

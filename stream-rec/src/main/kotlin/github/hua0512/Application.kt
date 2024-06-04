@@ -26,7 +26,6 @@
 
 package github.hua0512
 
-import app.cash.sqldelight.db.SqlDriver
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
@@ -41,6 +40,7 @@ import github.hua0512.app.App
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
 import github.hua0512.backend.backendServer
+import github.hua0512.dao.startMigration
 import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
@@ -49,7 +49,7 @@ import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.IOException
+import kotlin.coroutines.CoroutineContext
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
 
@@ -64,70 +64,83 @@ class Application {
     fun main(args: Array<String>): Unit = runBlocking {
       var server: NettyApplicationEngine? = null
       val appComponent: AppComponent = DaggerAppComponent.create()
-      val app = appComponent.getAppConfig()
+      val downloadService = appComponent.getDownloadService()
+
+      // TODO: Remove in the next version
       try {
-        // start the app
-        // add shutdown hook
-        Runtime.getRuntime().addShutdownHook(Thread {
-          logger.info("Stream-rec shutting down...")
-          server?.stop(1000, 1000)
-          appComponent.getSqlDriver().closeDriver()
-          app.releaseAll()
-          EventCenter.stop()
-          cancel()
-        })
-        initComponents(appComponent, app, initializeServer = { server = it })
-        awaitCancellation()
-      } finally {
-        logger.info("Stream-rec is stopped")
+        startMigration(appComponent.getDatabase(), appComponent.getJson())
+      } catch (e: Exception) {
+        logger.error("Migration failed", e)
+        throw e
       }
+
+      val app = appComponent.getAppConfig()
+
+      val jobScope = initComponents(this.coroutineContext, appComponent, app, initializeServer = { server = it })
+
+      // start the app
+      // add shutdown hook
+      Runtime.getRuntime().addShutdownHook(Thread {
+        logger.info("Stream-rec shutting down...")
+        server?.stop(1000, 1000)
+        jobScope.cancel()
+        appComponent.getDatabase().close()
+        app.releaseAll()
+        EventCenter.stop()
+      })
+      // wait for the job to finish
+      jobScope.coroutineContext[Job]?.join()
     }
 
     private suspend fun initComponents(
+      context: CoroutineContext,
       appComponent: AppComponent,
       app: App,
       initializeServer: (NettyApplicationEngine) -> Unit = {},
-    ) = supervisorScope {
+    ): CoroutineScope {
+      val scope = CoroutineScope(context + Dispatchers.IO + SupervisorJob())
       val appConfigRepository = appComponent.getAppConfigRepository()
       val downloadService = appComponent.getDownloadService()
-      val uploadService = appComponent.getUploadService()
 
-      // await for app config to be loaded
-      withContext(Dispatchers.IO) {
-        initAppConfig(appConfigRepository, app)
-      }
-      // launch a job to listen for app config changes
-      launch(Dispatchers.IO) {
-        appConfigRepository.streamAppConfig()
-          .collect {
-            app.updateConfig(it)
-            // TODO : find a way to update download semaphore dynamically
+      scope.apply {
+        // await for app config to be loaded
+        withContext(Dispatchers.IO) {
+          initAppConfig(appConfigRepository, app)
+        }
+        // launch a job to listen for app config changes
+        launch(Dispatchers.IO) {
+          appConfigRepository.streamAppConfig()
+            .collect {
+              app.updateConfig(it)
+              // TODO : find a way to update download semaphore dynamically
+            }
+        }
+        // start download and upload services
+        launch {
+          downloadService.run(scope)
+        }
+
+        // start a job to listen for events
+        launch {
+          EventCenter.run()
+        }
+        // start the backend server
+        launch {
+          val server = backendServer(
+            json = appComponent.getJson(),
+            appComponent.getUserRepo(),
+            appComponent.getAppConfigRepository(),
+            appComponent.getStreamerRepo(),
+            appComponent.getStreamDataRepo(),
+            appComponent.getStatsRepository(),
+            appComponent.getUploadRepo(),
+          ).apply {
+            start()
+            initializeServer(this)
           }
-      }
-      // start download and upload services
-      launch {
-        downloadService.run()
-      }
-      // start a job to listen for events
-      launch {
-        EventCenter.run()
-      }
-      // start the backend server
-      launch {
-        val server = backendServer(
-          json = appComponent.getJson(),
-          appComponent.getUserRepo(),
-          appComponent.getAppConfigRepository(),
-          appComponent.getStreamerRepo(),
-          appComponent.getStreamDataRepo(),
-          appComponent.getStatsRepository(),
-          appComponent.getUploadRepo(),
-        ).apply {
-          start()
-          initializeServer(this)
         }
       }
-      coroutineContext[Job]!!.join()
+      return scope
     }
 
     private fun initLogger() {
@@ -194,14 +207,6 @@ class Application {
       return repo.getAppConfig().also {
         app.updateConfig(it)
         // TODO : find a way to update download semaphore dynamically
-      }
-    }
-
-    private fun SqlDriver.closeDriver() {
-      try {
-        close()
-      } catch (e: IOException) {
-        logger.error("Error closing sql driver", e)
       }
     }
   }

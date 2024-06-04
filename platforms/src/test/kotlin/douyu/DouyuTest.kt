@@ -31,6 +31,7 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.douyu.download.DouyuExtractor
 import github.hua0512.plugins.douyu.download.extractDouyunRidFromUrl
+import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 
@@ -85,7 +86,9 @@ class DouyuTest : BaseTest() {
     val extractor = DouyuExtractor(app.client, app.json, testUrl).apply {
       prepare()
     }
-    extractor.extract()
+    val mediaInfo = extractor.extract()
+    assert(mediaInfo != null)
+    println(pprint(mediaInfo))
   }
 
   @Test
@@ -102,7 +105,7 @@ class DouyuTest : BaseTest() {
       enableWrite = false
       filePath = "douyu_danmu.txt"
     }
-    val init = danmu.init(Streamer("EQ118", testUrl))
+    val init = danmu.init(Streamer(0, "EQ118", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }

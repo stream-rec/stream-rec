@@ -29,9 +29,10 @@ package github.hua0512.plugins.douyu.download
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
+import github.hua0512.data.platform.DouyuQuality
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
+import github.hua0512.plugins.download.base.Download
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
 
@@ -62,21 +63,21 @@ class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<D
     // bind rid to avoid second time extraction
     (danmu as DouyuDanmu).rid = (extractor as DouyuExtractor).rid
 
-    // update streamer info
+    // update stream info
     return getStreamInfo(mediaInfo, streamer, config)
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyuDownloadConfig
     val selectedCdn = cdn ?: app.config.douyuConfig.cdn
-    val selectedQuality = quality ?: app.config.douyuConfig.quality
+    val selectedQuality = quality ?: app.config.douyuConfig.quality ?: DouyuQuality.ORIGIN
     if (streams.isEmpty()) {
-      throw IllegalStateException("$streamer no stream found")
+      throw IllegalStateException("${streamer.name} no stream found")
     }
     val group = streams.groupBy { it.extras["cdn"] }
     val cdnStreams = group[selectedCdn] ?: group.values.flatten().also { logger.warn("$streamer CDN $selectedCdn not found, using random") }
-    val qualityStreams = cdnStreams.firstOrNull { it.extras["rate"] == selectedQuality } ?: cdnStreams.firstOrNull()
-      .also { logger.warn("$streamer quality $selectedQuality not found, using first one available") }
-    return qualityStreams ?: streams.first()
+    val qualityStreams = cdnStreams.firstOrNull { it.extras["rate"] == selectedQuality.rate.toString() } ?: cdnStreams.firstOrNull()
+      .also { logger.warn("${streamer.name} quality $selectedQuality not found, using first one available") }
+    return (qualityStreams ?: streams.first())
   }
 }

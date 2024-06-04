@@ -26,43 +26,176 @@
 
 package github.hua0512.dao.stream
 
-import github.hua0512.data.StreamDataId
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Transaction
+import github.hua0512.dao.BaseDao
 import github.hua0512.data.StreamerId
-import github.hua0512.utils.StreamDataEntity
+import github.hua0512.data.stream.StreamDataWithStreamer
+import github.hua0512.data.stream.entity.StreamDataEntity
+import github.hua0512.data.stream.entity.StreamerEntity
 
 /**
+ * Dao for stream data entity
  * @author hua0512
  * @date : 2024/2/19 10:10
  */
-interface StreamDataDao {
+@Dao
+interface StreamDataDao : BaseDao<StreamDataEntity> {
 
 
-  suspend fun getStreamDataById(streamDataId: StreamDataId): StreamDataEntity?
+  /**
+   * Get stream data by id
+   * @param id stream data id
+   * @return stream data entity or null
+   */
+  @Query("SELECT * FROM StreamData WHERE id = :id")
+  suspend fun getById(id: Long): StreamDataEntity?
 
-  suspend fun getAllStreamData(): List<StreamDataEntity>
 
-  suspend fun getAllStreamDataPaged(
-    page: Int, pageSize: Int, filter: String?, streamerIds: Collection<StreamerId>?,
-    allStreamers: Boolean?,
-    dateStart: Long?,
-    dateEnd: Long?,
-    sortColumn: String,
-    sortOrder: String,
-  ): List<StreamDataEntity>
+  /**
+   * Get stream data by id with stream
+   * @param id stream data id
+   * @return stream data entity with stream
+   */
+  @Transaction
+  @Query("SELECT * FROM StreamData WHERE id = :id")
+  suspend fun getWithStreamerById(id: Long): StreamDataWithStreamer?
 
-  suspend fun countAllStreamData(
+  /**
+   * Get all stream data
+   * @return list of stream data entities
+   */
+  @Query("SELECT * FROM StreamData")
+  suspend fun getAll(): List<StreamDataEntity>
+
+  /**
+   * Get all stream data with stream.
+   * Uses multimap feature of Room to return a map of stream and stream data entities
+   * @return map of stream and stream data entities
+   */
+  @Query("SELECT * FROM streamer JOIN StreamData ON Streamer.id = StreamData.streamerId")
+  suspend fun getAllWithStreamer(): Map<StreamerEntity, List<StreamDataEntity>>
+
+  /**
+   * Get all stream data paged that match the filter
+   * @param page page number
+   * @param pageSize page size
+   * @param filter filter string
+   * @param streamerIds stream ids
+   * @param allStreamers whether to show all streamers
+   * @param dateStart start date
+   * @param dateEnd end date
+   * @param sortColumn sort column
+   * @return list of filtered stream data entities
+   *
+   */
+  @Transaction
+  @Query(
+    """
+     SELECT * FROM StreamData
+     WHERE (:allStreamers OR streamerId IN (:streamerIds))
+     AND (:dateStart IS NULL OR dateStart >= :dateStart )
+     AND (:dateEnd IS NULL OR dateEnd <= :dateEnd )
+     AND (:filter IS NULL OR title LIKE '%' || :filter || '%' OR outputFilePath LIKE '%' || :filter || '%' OR danmuFilePath LIKE '%' || :filter || '%')
+     ORDER BY CASE
+         WHEN :sortColumn = 'id' THEN id
+         WHEN :sortColumn = 'title' THEN title
+         WHEN :sortColumn = 'dateStart' THEN dateStart
+         WHEN :sortColumn = 'dateEnd' THEN dateEnd
+         WHEN :sortColumn = 'outputFileSize' THEN outputFileSize
+         ELSE dateStart
+         END ASC
+     LIMIT :pageSize OFFSET :page
+    """
+  )
+  suspend fun getAllPagedAsc(
+    page: Int,
+    pageSize: Int,
     filter: String?,
     streamerIds: Collection<StreamerId>?,
     allStreamers: Boolean?,
     dateStart: Long?,
     dateEnd: Long?,
+    sortColumn: String,
+  ): List<StreamDataWithStreamer>
+
+
+  /**
+   * Get all stream data paged that match the filter
+   * @param page page number
+   * @param pageSize page size
+   * @param filter filter string
+   * @param streamerIds stream ids
+   * @param allStreamers whether to show all streamers
+   * @param dateStart start date
+   * @param dateEnd end date
+   * @param sortColumn sort column
+   * @return list of filtered stream data entities
+   *
+   */
+  @Transaction
+  @Query(
+    """
+     SELECT * FROM StreamData
+     WHERE (:allStreamers OR streamerId IN (:streamerIds))
+     AND (:dateStart IS NULL OR dateStart >= :dateStart )
+     AND (:dateEnd IS NULL OR dateEnd <= :dateEnd )
+     AND (:filter IS NULL OR title LIKE '%' || :filter || '%' OR outputFilePath LIKE '%' || :filter || '%' OR danmuFilePath LIKE '%' || :filter || '%')
+     ORDER BY CASE
+         WHEN :sortColumn = 'id' THEN id
+         WHEN :sortColumn = 'title' THEN title
+         WHEN :sortColumn = 'dateStart' THEN dateStart
+         WHEN :sortColumn = 'dateEnd' THEN dateEnd
+         WHEN :sortColumn = 'outputFileSize' THEN outputFileSize
+         ELSE dateStart
+         END DESC
+     LIMIT :pageSize OFFSET :page
+    """
+  )
+  suspend fun getAllPagedDesc(
+    page: Int,
+    pageSize: Int,
+    filter: String?,
+    streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean,
+    dateStart: Long?,
+    dateEnd: Long?,
+    sortColumn: String,
+  ): List<StreamDataWithStreamer>
+
+  /**
+   * Count all stream data that match the filter
+   * @param filter filter string
+   * @param streamerIds stream ids
+   * @param allStreamers whether to show all streamers
+   * @param dateStart start date
+   * @param dateEnd end date
+   * @return count of stream data entities
+   */
+  @Query(
+    """
+     SELECT COUNT(*) FROM StreamData
+     WHERE (:allStreamers OR streamerId IN (:streamerIds))
+     AND (:filter IS NULL OR title LIKE '%' || :filter || '%' OR outputFilePath LIKE '%' || :filter || '%' OR danmuFilePath LIKE '%' || :filter || '%')
+     AND (:dateStart IS NULL OR dateStart >= :dateStart)
+     AND (:dateEnd IS NULL OR dateEnd <= :dateEnd )
+    """
+  )
+  suspend fun countAllStreamData(
+    filter: String?,
+    streamerIds: Collection<StreamerId>?,
+    allStreamers: Boolean,
+    dateStart: Long?,
+    dateEnd: Long?,
   ): Long
 
-  suspend fun findStreamDataByStreamerId(streamerId: StreamerId): List<StreamDataEntity>
-
-  suspend fun saveStreamData(streamData: StreamDataEntity): Long
-
-  suspend fun deleteStreamData(streamData: StreamDataEntity)
-
-  suspend fun deleteStreamData(streamDataId: StreamDataId)
+  /**
+   * Find stream data by stream id
+   * @param streamerId stream id
+   * @return list of stream data entities
+   */
+  @Transaction
+  @Query("SELECT * FROM StreamData WHERE streamerId = :streamerId ORDER BY dateStart DESC")
+  suspend fun findByStreamerIdWithStreamer(streamerId: StreamerId): List<StreamDataWithStreamer>
 }

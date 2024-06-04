@@ -40,14 +40,11 @@ enum class UploadState(val value: Int) {
 
   companion object {
 
-    fun fromValue(value: Int): UploadState {
-      return when (value) {
-        0 -> NOT_STARTED
-        1 -> UPLOADING
-        2 -> UPLOADED
-        3 -> FAILED
-        else -> throw IllegalArgumentException("Invalid value for UploadState: $value")
-      }
-    }
+    fun fromId(value: Int): UploadState = entries.first { it.value == value }
+
+    @Throws(IllegalArgumentException::class)
+    fun fromName(name: String): UploadState = valueOf(name)
+
+    fun intValues(): List<Int> = entries.map { it.value }
   }
 }

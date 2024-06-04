@@ -27,7 +27,7 @@
 package github.hua0512.plugins.download
 
 import github.hua0512.app.App
-import github.hua0512.data.config.Action
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.event.StreamerEvent.*
@@ -37,7 +37,6 @@ import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.download.exceptions.InvalidDownloadException
 import github.hua0512.plugins.event.EventCenter
-import github.hua0512.utils.deleteFile
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Semaphore
@@ -45,7 +44,6 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.io.path.Path
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -70,23 +68,7 @@ class StreamerDownloadManager(
   /**
    * List to store the downloaded stream data
    */
-  private val dataList = mutableListOf<StreamData>()
-
-  /**
-   * Returns the global platform config for the streamer platform
-   */
-  private val StreamingPlatform.platformConfig: GlobalPlatformConfig
-    get() {
-      return when (this) {
-        StreamingPlatform.HUYA -> app.config.huyaConfig
-        StreamingPlatform.DOUYIN -> app.config.douyinConfig
-        StreamingPlatform.DOUYU -> app.config.douyuConfig
-        StreamingPlatform.TWITCH -> app.config.twitchConfig
-        StreamingPlatform.PANDALIVE -> app.config.pandaliveConfig
-        else -> throw UnsupportedOperationException("Platform not supported")
-      }
-    }
-
+  private val dataList by lazy { mutableListOf<StreamData>() }
 
   // download retry count
   private var retryCount = 0
@@ -98,8 +80,7 @@ class StreamerDownloadManager(
   private val downloadInterval = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
 
   // retry delay for parted downloads
-  private val platformRetryDelay =
-    (streamer.platform.platformConfig.partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
+  private val platformRetryDelay = (streamer.platform.platformConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
 
   // max download retries
   private val maxRetry = app.config.maxDownloadRetries
@@ -107,42 +88,32 @@ class StreamerDownloadManager(
   /**
    * Flag to check if the download is cancelled
    */
-  private var isCancelled = MutableStateFlow(false)
+  private val isCancelled by lazy { MutableStateFlow(false) }
 
   /**
    * Flag to check if the download is in progress
    */
   private var isDownloading = false
 
-  private var updateLiveStatusCallback: suspend (id: Long, isLive: Boolean) -> Unit = { _, _ -> }
-  private var updateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long) -> Unit = { _, _ -> }
-  private var onSavedToDb: suspend (stream: StreamData) -> Unit = {}
-  private var avatarUpdateCallback: (id: Long, avatarUrl: String) -> Unit = { _, _ -> }
-  private var onDescriptionUpdateCallback: (id: Long, description: String) -> Unit = { _, _ -> }
-  private var onRunningActions: suspend (data: List<StreamData>, actions: List<Action>) -> Unit = { _, _ -> }
+  /**
+   * Callback to handle download events
+   */
+  private var callback: StreamerCallback? = null
 
 
-  suspend fun init() = supervisorScope {
+  suspend fun init(callback: StreamerCallback) {
+    setCallback(callback)
     plugin.apply {
-      avatarUrlUpdateCallback {
-        streamer.avatar = it
-        logger.info("avatar updated : $it")
-        avatarUpdateCallback(streamer.id, it)
-      }
-      descriptionUpdateCallback {
-        streamer.streamTitle = it
-        logger.info("description updated : $it")
-        onDescriptionUpdateCallback(streamer.id, it)
-      }
+      this.callback = this@StreamerDownloadManager.callback
       init(streamer)
     }
   }
 
-  private suspend fun handleMaxRetry(scope: CoroutineScope) {
+  private suspend fun handleMaxRetry() {
     // reset retry count
     retryCount = 0
     // update db with the new isLive value
-    if (streamer.isLive) updateLiveStatusCallback(streamer.id, false)
+    if (streamer.isLive) callback?.onLiveStatusChanged(streamer, false)
     streamer.isLive = false
     // stream is not live or without data
     if (dataList.isEmpty()) {
@@ -162,9 +133,7 @@ class StreamerDownloadManager(
     // update last live time
     updateLastLiveTime()
     // call onStreamingFinished callback with the copy of the list
-    scope.launch {
-      bindOnStreamingEndActions(streamer, dataList.toList())
-    }
+    callback?.onStreamFinished(streamer, dataList.toList())
     dataList.clear()
     delay(downloadInterval)
   }
@@ -184,7 +153,7 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun handleLiveStreamer(scope: CoroutineScope) {
+  private suspend fun handleLiveStreamer() {
     // save streamer to the database with the new isLive value
     if (!streamer.isLive) {
       EventCenter.sendEvent(
@@ -196,7 +165,7 @@ class StreamerDownloadManager(
           Clock.System.now()
         )
       )
-      updateLiveStatusCallback(streamer.id, true)
+      callback?.onLiveStatusChanged(streamer, true)
     }
     streamer.isLive = true
     updateLastLiveTime()
@@ -204,12 +173,8 @@ class StreamerDownloadManager(
     var breakLoop = false
     while (!breakLoop && !isCancelled.value) {
       downloadStream(onStreamDownloaded = { stream ->
-        // save the stream data to the database
-        scope.launch {
-          saveStreamData(stream)
-          // execute post parted download actions
-          executePostActions(streamer, stream)
-        }
+        callback?.onStreamDownloaded(streamer, stream)
+        dataList.add(stream)
       }) {
         logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
         breakLoop = true
@@ -222,7 +187,7 @@ class StreamerDownloadManager(
   }
 
   private suspend fun downloadStream(onStreamDownloaded: (stream: StreamData) -> Unit = {}, onStreamDownloadError: (e: Exception) -> Unit = {}) {
-    // stream is live, start downloading
+    // streamer is live, start downloading
     // while loop for parting the download
     return downloadSemaphore.withPermit {
       isDownloading = true
@@ -238,7 +203,7 @@ class StreamerDownloadManager(
         when (e) {
           is IllegalArgumentException, is UnsupportedOperationException, is InvalidDownloadException -> {
             streamer.isLive = false
-            updateLiveStatusCallback(streamer.id, false)
+            callback?.onLiveStatusChanged(streamer, false)
             logger.error("${streamer.name} invalid url or invalid engine : ${e.message}")
             throw e
           }
@@ -259,29 +224,10 @@ class StreamerDownloadManager(
   }
 
 
-  private suspend fun updateLastLiveTime() {
+  private fun updateLastLiveTime() {
     val now = Clock.System.now()
-    updateStreamerLastLiveTime(streamer.id, now.epochSeconds)
+    callback?.onLastLiveTimeChanged(streamer, now.epochSeconds)
     streamer.lastLiveTime = now.epochSeconds
-  }
-
-  private suspend fun saveStreamData(stream: StreamData) {
-    try {
-      onSavedToDb(stream)
-      logger.debug("saved to db : {}", stream)
-    } catch (e: Exception) {
-      logger.error("${streamer.name} error while saving $stream : ${e.message}")
-    }
-    dataList.add(stream)
-    logger.info("${streamer.name} downloaded : $stream}")
-  }
-
-  private suspend fun executePostActions(streamer: Streamer, streamData: StreamData) {
-    try {
-      executePostPartedDownloadActions(streamer, streamData)
-    } catch (e: Exception) {
-      logger.error("${streamer.name} error while executing post parted download actions : ${e.message}")
-    }
   }
 
   private fun handleOfflineStreamer() {
@@ -310,13 +256,13 @@ class StreamerDownloadManager(
     }
     while (!isCancelled.value) {
       if (retryCount >= maxRetry) {
-        handleMaxRetry(this)
+        handleMaxRetry()
         continue
       }
       val isLive = checkStreamerLiveStatus()
 
       if (isLive) {
-        handleLiveStreamer(this)
+        handleLiveStreamer()
       } else {
         handleOfflineStreamer()
       }
@@ -354,54 +300,24 @@ class StreamerDownloadManager(
   }
 
 
-  private suspend fun bindOnStreamingEndActions(streamer: Streamer, streamDataList: List<StreamData>) {
-    val actions =
-      streamer.templateStreamer?.downloadConfig?.onStreamingFinished ?: streamer.downloadConfig?.onStreamingFinished
-    actions?.let {
-      onRunningActions(streamDataList, it)
-    } ?: run {
-      // check if on parted download is also empty
-      val partedActions =
-        streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
-      if (partedActions.isNullOrEmpty()) {
-        // delete files if both onStreamFinished and onPartedDownload are empty
-        if (app.config.deleteFilesAfterUpload) {
-          streamDataList.forEach { Path(it.outputFilePath).deleteFile() }
-        }
-      }
-    }
+  fun setCallback(callback: StreamerCallback) {
+    this.callback = callback
   }
 
-  private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
-    val actions =
-      streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload
-    actions?.let {
-      onRunningActions(listOf(streamData), it)
-    }
-  }
+}
 
-  fun onRunningActions(onRunningActions: suspend (data: List<StreamData>, actions: List<Action>) -> Unit) {
-    this.onRunningActions = onRunningActions
-  }
 
-  fun onAvatarUpdate(avatarUpdateCallback: (id: Long, avatarUrl: String) -> Unit) {
-    this.avatarUpdateCallback = avatarUpdateCallback
-  }
-
-  fun onDescriptionUpdate(onDescriptionUpdateCallback: (id: Long, description: String) -> Unit) {
-    this.onDescriptionUpdateCallback = onDescriptionUpdateCallback
-  }
-
-  fun onLiveStatusUpdate(updateStreamerLiveStatus: suspend (id: Long, isLive: Boolean) -> Unit) {
-    this.updateLiveStatusCallback = updateStreamerLiveStatus
-  }
-
-  fun onLastLiveTimeUpdate(updateStreamerLastLiveTime: suspend (id: Long, lastLiveTime: Long) -> Unit) {
-    this.updateStreamerLastLiveTime = updateStreamerLastLiveTime
-  }
-
-  fun onSavedToDb(onSavedToDb: suspend (stream: StreamData) -> Unit) {
-    this.onSavedToDb = onSavedToDb
-  }
-
+/**
+ * Returns the global platform config for the platform
+ *
+ * @param config [AppConfig] global app config
+ * @return [GlobalPlatformConfig] streaming global platform config
+ */
+fun StreamingPlatform.platformConfig(config: AppConfig): GlobalPlatformConfig = when (this) {
+  StreamingPlatform.HUYA -> config.huyaConfig
+  StreamingPlatform.DOUYIN -> config.douyinConfig
+  StreamingPlatform.DOUYU -> config.douyuConfig
+  StreamingPlatform.TWITCH -> config.twitchConfig
+  StreamingPlatform.PANDATV -> config.pandaTvConfig
+  else -> throw UnsupportedOperationException("Platform not supported")
 }

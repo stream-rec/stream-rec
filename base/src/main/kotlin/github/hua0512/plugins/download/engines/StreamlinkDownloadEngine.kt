@@ -27,14 +27,17 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
-import github.hua0512.logger
 import github.hua0512.utils.executeProcess
+import github.hua0512.utils.isWindows
+import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import org.slf4j.LoggerFactory
 import kotlin.io.path.Path
 
 /**
@@ -44,33 +47,52 @@ import kotlin.io.path.Path
  */
 class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
+  companion object {
+    private val logger = LoggerFactory.getLogger("Streamlink")
+  }
+
+  internal val programArgs = mutableListOf<String>()
+
   private var streamlinkProcess: Process? = null
 
   override suspend fun start() = coroutineScope {
     ensureHlsUrl()
     initPath()
-    val streamlinkInputArgs = arrayOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1")
-    // streamlink headers
-    val headersArray = headers.map {
-      val (key, value) = it
-      "--http-header" to "\"$key=$value\""
-    }.toMutableList()
-
-    if (cookies.isNullOrEmpty().not()) {
-      val separatedCookies = cookies!!.split(";").map { it.trim() }
-      val cookiesArray = separatedCookies.map {
-        // --http-cookie KEY=VALUE
-        "--http-cookie" to "\'$it\'"
+    val streamlinkInputArgs = mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
+      // add program args
+      if (programArgs.isNotEmpty()) {
+        addAll(programArgs)
       }
-      headersArray += cookiesArray
+      // check if windows
+      val isWindows = isWindows()
+      // add headers
+      headers.forEach {
+        val (key, value) = it
+        add("--http-header")
+        // check if windows
+        if (isWindows) {
+          add("\"$key=$value\"")
+        } else {
+          add("$key=$value")
+        }
+      }
+      // add cookies if any
+      if (cookies?.nonEmptyOrNull() != null) {
+        val separatedCookies = cookies!!.split(";").map { it.trim() }
+        separatedCookies.forEach {
+          if (it.nonEmptyOrNull() == null) return@forEach
+          add("--http-cookie")
+          add(it)
+        }
+      }
     }
-    val headers = headersArray.flatMap { it.toList() }.toTypedArray()
+
     val streamer = streamer ?: throw IllegalArgumentException("Streamer is not set")
     // streamlink args
-    val streamlinkArgs = streamlinkInputArgs + headers + arrayOf(downloadUrl!!, "best", "-O")
+    val streamlinkArgs = streamlinkInputArgs.toTypedArray() + arrayOf(downloadUrl!!, "best", "-O")
     logger.debug("${streamer.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
     val ffmpegCmdArgs =
-      buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, outputFileName)
+      buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, detectErrors, outputFileName)
     logger.debug("${streamer.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
     // streamlink process builder
     val streamLinkBuilder = ProcessBuilder(App.streamLinkPath, *streamlinkArgs).apply {
@@ -78,17 +100,29 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       redirectOutput(ProcessBuilder.Redirect.PIPE)
       directory(outputFolder.toFile())
     }
+
+    // get streamlink process
     streamlinkProcess = withIOContext {
       streamLinkBuilder.start()
     }
-
-    launch {
-      streamlinkProcess?.errorReader()?.forEachLine {
-        logger.info("${streamer.name} $it")
+    // get streamlink output
+    launch(Dispatchers.IO) {
+      try {
+        streamlinkProcess?.errorReader()?.forEachLine {
+          logger.info("${streamer.name} $it")
+        }
+      } catch (e: Exception) {
+        logger.error("Error reading streamlink output", e)
       }
     }
     if (!useSegmenter) {
       onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
+    }
+
+    // listen for streamlink exit
+    streamlinkProcess!!.onExit().thenApply {
+      logger.debug("${streamer.name} streamlink exited({})", { it.exitValue() })
+      super.sendStopSignal()
     }
 
     val exitCode = executeProcess(
@@ -104,6 +138,9 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       },
       getProcess = {
         process = it
+      },
+      onCancellation = {
+        streamlinkProcess?.destroy()
       }) { line ->
       processFFmpegOutputLine(
         line = line,
@@ -118,8 +155,8 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     }
 
     handleExitCodeAndStreamer(exitCode, streamer)
+    // ensure the streamlink process is destroyed
     streamlinkProcess?.destroy()
-    process?.destroy()
     streamlinkProcess = null
     process = null
   }
@@ -133,12 +170,15 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
   }
 
   override fun sendStopSignal() {
+    // stop streamlink
     streamlinkProcess?.destroy()
-    process?.destroy()
   }
 
 
   private fun ensureHlsUrl() {
+    if (programArgs.contains("--twitch-disable-ads")) {
+      return
+    }
     require(downloadUrl!!.contains("m3u8")) {
       "Streamlink download engine only supports HLS streams"
     }

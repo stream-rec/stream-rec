@@ -61,6 +61,10 @@ suspend fun executeProcess(
    * Callback to get the process object. This is useful for interacting with the process object
    */
   getProcess: (Process) -> Unit = {},
+  /**
+   * Callback to handle the cancellation of the process. This is useful for cleaning up resources
+   */
+  onCancellation: (e: CancellationException) -> Unit = {},
   /** Consume without delay all streams configured with [Redirect.CAPTURE]. */
   consumer: suspend (String) -> Unit = {},
 ): Int {
@@ -126,6 +130,7 @@ suspend fun executeProcess(
         runInterruptible { process.waitFor() }
       } catch (e: CancellationException) {
         logger.warn("Process execution was cancelled", e)
+        onCancellation(e)
         when (destroyForcibly) {
           true -> process.destroyForcibly()
           false -> process.destroy()

@@ -28,20 +28,17 @@ package github.hua0512.app
 
 import dagger.Module
 import dagger.Provides
-import github.hua0512.dao.AppConfigDao
-import github.hua0512.dao.UserDao
-import github.hua0512.data.platform.DouyuQuality
-import github.hua0512.data.platform.DouyuQualitySerializer
+import github.hua0512.dao.config.AppConfigDao
+import github.hua0512.dao.user.UserDao
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.repo.LocalDataSourceImpl
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.repo.uploads.UploadRepo
+import github.hua0512.repo.stream.StreamDataRepo
+import github.hua0512.repo.stream.StreamerRepo
+import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
 import javax.inject.Singleton
 
 @Module
@@ -53,9 +50,6 @@ class AppModule {
     ignoreUnknownKeys = true
     isLenient = true
     encodeDefaults = false
-    serializersModule = SerializersModule {
-      contextual(DouyuQuality::class, DouyuQualitySerializer)
-    }
   }
 
   @Provides
@@ -81,6 +75,6 @@ class AppModule {
   fun provideUploadService(app: App, uploadRepo: UploadRepo): UploadService = UploadService(app, uploadRepo)
 
   @Provides
-  fun provideLocalDataSource(appDao: AppConfigDao, json: Json, userDao: UserDao): LocalDataSource = LocalDataSourceImpl(appDao, userDao, json)
+  fun provideLocalDataSource(appDao: AppConfigDao, userDao: UserDao): LocalDataSource = LocalDataSourceImpl(appDao, userDao)
 
 }

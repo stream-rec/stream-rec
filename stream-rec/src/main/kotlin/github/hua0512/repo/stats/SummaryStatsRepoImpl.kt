@@ -28,47 +28,78 @@ package github.hua0512.repo.stats
 
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.data.stats.Stats
+import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stats.SummaryStats
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * @author hua0512
  * @date : 2024/3/4 10:44
  */
-class SummaryStatsRepoImpl(val statsDao: StatsDao) : SummaryStatsRepo {
-  override fun getSummaryStats(): SummaryStats {
-    val stats = statsDao.getStats()
+class SummaryStatsRepoImpl(private val statsDao: StatsDao) : SummaryStatsRepo {
+
+  override suspend fun getSummaryStats(): SummaryStats {
+    val stats = statsDao.getAllByTimeDesc()
     return SummaryStats(
-      stats.sumOf { it.totalStreams },
+      stats.sumOf { it.streams },
       0,
-      stats.sumOf { it.totalUploads },
+      stats.sumOf { it.uploads },
       0,
       stats.map { Stats(it) }
     )
   }
 
-  override fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
-    val stats = statsDao.getStatsFromTo(from, to)
-    val fromDate = Instant.fromEpochSeconds(from)
-    val toDate = Instant.fromEpochSeconds(to)
+  override suspend fun getSummaryStatsFromTo(from: Long, to: Long): SummaryStats {
+    val diff = Instant.fromEpochSeconds(to) - Instant.fromEpochSeconds(from)
 
-    val diff = toDate - fromDate
-    val previous = statsDao.getStatsFromTo(from - diff.inWholeSeconds, to - diff.inWholeSeconds)
+    val stats = if (diff.inWholeSeconds < 30 * 24 * 60 * 60) {
+      statsDao.getBetweenTimeOrderedDesc(from, to)
+    } else {
+      statsDao.getBetweenTimeOrderedDesc(from, to)
+        .groupByMonthAndYear()
+        .mergeStatsWithinMonth()
+    }
+
+    val previous = statsDao.getBetweenTimeOrderedDesc(from - diff.inWholeSeconds, to - diff.inWholeSeconds)
+
     return SummaryStats(
-      stats.sumOf { it.totalStreams },
-      previous.sumOf { it.totalStreams },
-      stats.sumOf { it.totalUploads },
-      previous.sumOf { it.totalUploads },
+      stats.sumOf { it.streams },
+      previous.sumOf { it.streams },
+      stats.sumOf { it.uploads },
+      previous.sumOf { it.uploads },
       stats.map { Stats(it) }
     )
   }
 
-  override fun getStatsFromTo(from: Long, to: Long): List<Stats> {
-    return statsDao.getStatsFromTo(from, to).map { Stats(it) }
+  private fun List<StatsEntity>.groupByMonthAndYear() = groupBy {
+    val dateTime = Instant.fromEpochSeconds(it.timeStamp).toLocalDateTime(TimeZone.currentSystemDefault()).date
+    dateTime.year to dateTime.monthNumber
   }
 
-  override fun getStatsFrom(from: Long): List<Stats> {
-    return statsDao.getStatsFrom(from).map { Stats(it) }
+  private fun Map<Pair<Int, Int>, List<StatsEntity>>.mergeStatsWithinMonth() = flatMap {
+    val first = it.value.first()
+    val firstDay = Instant.fromEpochSeconds(first.timeStamp)
+      .toLocalDateTime(TimeZone.currentSystemDefault()).date.atStartOfDayIn(TimeZone.currentSystemDefault()).epochSeconds
+
+    val monthCurrent = it.value.reduce { acc, statsEntity ->
+      acc.copy(
+        streams = acc.streams + statsEntity.streams,
+        uploads = acc.uploads + statsEntity.uploads,
+        timeStamp = firstDay
+      )
+    }
+    listOf(monthCurrent)
+  }
+
+  override suspend fun getStatsFromTo(from: Long, to: Long): List<Stats> {
+    return statsDao.getBetweenTimeOrderedDesc(from, to).map { Stats(it) }
+  }
+
+  override suspend fun getStatsFrom(from: Long): List<Stats> {
+    return statsDao.getFromOrderedByTimeDesc(from).map { Stats(it) }
   }
 
 }

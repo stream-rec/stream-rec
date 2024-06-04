@@ -1,7 +1,7 @@
 plugins {
   alias(libs.plugins.ktor)
   alias(libs.plugins.kotlin.jvm)
-  id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+  alias(libs.plugins.ksp)
 }
 
 project.ext.set("development", false)
@@ -28,6 +28,7 @@ ktor {
 
 dependencies {
   implementation(libs.ch.qos.logback.classic)
+  implementation(libs.io.ktor.client.core)
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)
@@ -35,6 +36,9 @@ dependencies {
   implementation(project(":base"))
   implementation(project(":platforms"))
   implementation(project(":stream-rec-backend"))
+  implementation(libs.androidx.sqlite.bundled)
+  implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.room.compiler)
 
   ksp(libs.com.google.dagger.dagger.compiler)
   testImplementation(libs.bundles.test.jvm)
@@ -42,8 +46,4 @@ dependencies {
 
 tasks.test {
   useJUnitPlatform()
-}
-
-kotlin {
-  jvmToolchain(17)
 }

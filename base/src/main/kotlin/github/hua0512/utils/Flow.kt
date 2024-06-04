@@ -36,18 +36,20 @@ import kotlinx.coroutines.flow.flow
  * @author hua0512
  * @date : 2024/5/13 20:00
  */
-fun <T> Flow<T>.chunked(chunkSize: Int): Flow<List<T>> {
-  val buffer = mutableListOf<T>()
+public fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> {
+  require(size >= 1) { "Expected positive chunk size, but got $size" }
   return flow {
-    this@chunked.collect {
-      buffer.add(it)
-      if (buffer.size == chunkSize) {
-        emit(buffer.toList())
-        buffer.clear()
+    var result: ArrayList<T>? = null // Do not preallocate anything
+    collect { value ->
+      // Allocate if needed
+      val acc = result ?: ArrayList<T>(size).also { result = it }
+      acc.add(value)
+      if (acc.size == size) {
+        emit(acc)
+        // Cleanup, but don't allocate -- it might've been the case this is the last element
+        result = null
       }
     }
-    if (buffer.isNotEmpty()) {
-      emit(buffer.toList())
-    }
+    result?.let { emit(it) }
   }
 }

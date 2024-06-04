@@ -28,75 +28,63 @@ package github.hua0512.repo
 
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.upload.UploadActionDao
-import github.hua0512.dao.upload.UploadActionFilesDao
 import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
-import github.hua0512.data.*
+import github.hua0512.data.StreamDataId
+import github.hua0512.data.StreamerId
+import github.hua0512.data.UploadActionId
+import github.hua0512.data.UploadDataId
+import github.hua0512.data.stats.StatsEntity
+import github.hua0512.data.stream.StreamData
 import github.hua0512.data.upload.*
-import github.hua0512.logger
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.uploads.UploadRepo
-import github.hua0512.utils.StatsEntity
-import github.hua0512.utils.UploadDataEntity
+import github.hua0512.repo.stream.StreamDataRepo
+import github.hua0512.repo.stream.StreamerRepo
+import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.utils.getTodayStart
 import github.hua0512.utils.withIOContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
-import kotlinx.serialization.json.Json
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
- * Repository class for managing upload actions.
- * This class provides methods for streaming failed upload results, saving upload actions and results,
- * getting upload data, changing upload data status, deleting upload results, and getting upload action by upload data ID.
+ * Repository class for managing upload related actions.
  *
- * @property json Json serializer/deserializer.
+ * @property streamerRepo Repository for managing streamers.
+ * @property streamsRepo Repository for managing stream data.
  * @property uploadActionDao DAO for managing upload actions.
  * @property uploadDataDao DAO for managing upload data.
- * @property uploadActionFilesDao DAO for managing upload action files.
  * @property uploadResultDao DAO for managing upload results.
  *
  * @author hua0512
  * @date : 2024/2/17 20:20
  */
 class UploadActionRepository(
-  val json: Json,
-  val streamsRepo: StreamDataRepo,
-  val uploadActionDao: UploadActionDao,
-  val uploadDataDao: UploadDataDao,
-  val uploadActionFilesDao: UploadActionFilesDao,
-  val uploadResultDao: UploadResultDao,
-  val statsDao: StatsDao,
+  private val streamerRepo: StreamerRepo,
+  private val streamsRepo: StreamDataRepo,
+  private val uploadActionDao: UploadActionDao,
+  private val uploadDataDao: UploadDataDao,
+  private val uploadResultDao: UploadResultDao,
+  private val statsDao: StatsDao,
 ) : UploadRepo {
 
-  /**
-   * Streams all failed upload results.
-   *
-   * This function retrieves all failed upload results from the database and converts them to UploadResult objects.
-   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
-   *
-   * @return Flow of list of UploadResult
-   */
-  override suspend fun streamFailedUploadResults(): Flow<List<UploadResult>> =
-    uploadResultDao.streamAllFailedUploadResult().map {
-      it.map { result ->
-        UploadResult(result).apply {
-          populateUploadData(UploadDataId(result.uploadDataId))
-        }
-      }
-    }.flowOn(Dispatchers.IO)
+  private companion object {
+    @JvmStatic
+    private val logger: Logger = LoggerFactory.getLogger(UploadActionRepository::class.java)
+  }
 
   override suspend fun getAllUploadData(): List<UploadData> {
     return withIOContext {
-      uploadDataDao.getAllUploadData().mapToUploadData()
+      uploadDataDao.getAllWithStreamAndAction()
+        .map {
+          it.toUploadData()
+        }
     }
   }
+
 
   override suspend fun getAllUploadDataPaginated(
     page: Int,
     pageSize: Int,
-    status: List<Long>?,
+    status: List<Int>?,
     filter: String?,
     streamers: List<StreamerId>?,
     sortColumn: String?,
@@ -106,43 +94,56 @@ class UploadActionRepository(
     val sortOrder = sortOrder ?: "DESC"
 
     return withIOContext {
-      uploadDataDao.getAllUploadDataPaginated(
-        page,
-        pageSize,
-        filter ?: "",
-        status = status ?: UploadState.entries.map { it.value.toLong() },
-        streamers,
-        streamers?.isEmpty() ?: true,
-        sortColumn,
-        sortOrder
-      )
-        .mapToUploadData()
+      if (sortOrder != "ASC" && sortOrder != "DESC") {
+        throw IllegalArgumentException("Invalid sort order: $sortOrder")
+      }
+
+      return@withIOContext when (sortOrder) {
+        "ASC" -> {
+          uploadDataDao.getAllFilteredPaginatedAsc(
+            (page - 1) * pageSize,
+            pageSize,
+            filter ?: "",
+            status = status ?: UploadState.intValues(),
+            streamers?.map { it.value } ?: emptyList(),
+            streamers?.isEmpty() != false,
+            sortColumn
+          )
+        }
+
+        "DESC" -> {
+          uploadDataDao.getAllFilteredPaginatedDesc(
+            (page - 1) * pageSize,
+            pageSize,
+            filter ?: "",
+            status = status ?: UploadState.intValues(),
+            streamers?.map { it.value } ?: emptyList(),
+            streamers?.isEmpty() != false,
+            sortColumn
+          )
+        }
+
+        else -> {
+          throw IllegalArgumentException("Invalid sort order: $sortOrder")
+        }
+      }.map {
+        val streamer = streamerRepo.getStreamerById(StreamerId(it.streamData.streamerId))
+          ?: throw IllegalStateException("Streamer with ID ${it.streamData.streamerId} not found.")
+        val stream = StreamData(it.streamData, streamer)
+        UploadData(it.uploadData, stream, UploadAction(it.action))
+      }
     }
   }
 
-  override suspend fun countAllUploadData(status: List<Long>?, filter: String?, streamerId: Collection<StreamerId>?): Long {
-    return withIOContext {
-      uploadDataDao.countAllUploadData(
-        status ?: UploadState.entries.map { it.value.toLong() },
-        filter ?: "",
-        streamerId
-      )
-    }
+  override suspend fun countAllUploadData(status: List<Int>?, filter: String?, streamerId: Collection<StreamerId>?): Long = withIOContext {
+    uploadDataDao.countAllByFilter(
+      status ?: UploadState.intValues(),
+      filter ?: "",
+      streamerId?.map { it.value } ?: emptyList(),
+      streamerId?.isEmpty() != false
+    )
   }
 
-  private suspend fun List<UploadDataEntity>.mapToUploadData() = this.map { uploadData ->
-    UploadData(
-      id = uploadData.id,
-      filePath = uploadData.filePath,
-      status = UploadState.fromValue(uploadData.status.toInt())
-    ).apply {
-      streamDataId = uploadData.streamDataId ?: -1
-      uploadAction = getUploadActionIdByUploadDataId(UploadDataId(uploadData.id))
-        ?: throw IllegalStateException("Upload action not found for upload data: $this")
-      streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
-        ?: throw IllegalStateException("Stream data not found for upload data: $this")
-    }
-  }
 
   /**
    * Retrieves all upload results.
@@ -154,26 +155,36 @@ class UploadActionRepository(
    */
   override suspend fun getAllUploadResults(): List<UploadResult> {
     return withIOContext {
-      uploadResultDao.getAllUploadResults().map { result ->
-        UploadResult(result).apply {
-          populateUploadData(UploadDataId(result.uploadDataId))
+      uploadResultDao.getAllWithDataDesc().map {
+        val streamData = streamsRepo.getStreamDataById(StreamDataId(it.uploadData.streamDataId))
+          ?: throw IllegalStateException("Stream data with ID ${it.uploadData.streamDataId} not found.")
+        val action = uploadActionDao.getById(UploadActionId(it.uploadData.uploadActionId))
+          ?: throw IllegalStateException("Upload action with ID ${it.uploadData.uploadActionId} not found.")
+        val data = UploadData(it.uploadData, streamData, UploadAction(action))
+        UploadResult(it.uploadResult, data)
+      }
+    }
+  }
+
+  /**
+   * Retrieves an upload action by its ID.
+   *
+   * @param id The ID of the upload action
+   * @return UploadAction or null if no upload action with the given ID exists
+   */
+  override suspend fun getUploadAction(id: UploadActionId): UploadAction? {
+    return withIOContext {
+      uploadActionDao.getByIdWithFiles(id)?.let { actionResult ->
+        UploadAction(actionResult.action).apply {
+          files = actionResult.files.map {
+            val stream = streamsRepo.getStreamDataById(StreamDataId(it.streamDataId))
+              ?: throw IllegalStateException("Stream data with ID ${it.streamDataId} not found.")
+            UploadData(it, stream, this)
+          }.toList()
         }
       }
     }
   }
-
-  override suspend fun getUploadAction(id: UploadActionId): UploadAction? {
-    return withIOContext {
-      uploadActionDao.getUploadActionById(id)?.let { uploadAction ->
-        UploadAction(
-          id = uploadAction.id,
-          time = uploadAction.time,
-          uploadConfig = json.decodeFromString(UploadConfig.serializer(), uploadAction.uploadConfig)
-        )
-      }
-    }
-  }
-
 
   /**
    * Saves an upload action.
@@ -184,27 +195,28 @@ class UploadActionRepository(
    * @param uploadAction The upload action to save
    * @return The ID of the saved upload action
    */
-  override suspend fun saveAction(uploadAction: UploadAction): UploadActionId {
+  override suspend fun saveAction(uploadAction: UploadAction): UploadAction {
     val actionId = withIOContext {
-      val uploadConfigString = json.encodeToString(UploadConfig.serializer(), uploadAction.uploadConfig)
-      uploadActionDao.saveUploadAction(uploadAction.time, uploadConfigString)
+      uploadActionDao.insert(uploadAction.toEntity())
     }
+    val savedAction = uploadAction.copy(id = actionId)
     // save upload data
-    withIOContext {
-      uploadAction.files.forEach {
-        logger.debug("Saving upload data for file: {}, {}", it, it.streamDataId)
-        val uploadDataId = uploadDataDao.insertUploadData(
-          it.filePath,
-          StreamDataId(it.streamDataId),
-          it.status.value.toLong()
-        )
-        it.id = uploadDataId
-        it.uploadAction = uploadAction
-        // insert into upload action files
-        uploadActionFilesDao.insertUploadActionFiles(actionId, UploadDataId(uploadDataId))
+    val newFiles = withIOContext {
+      uploadAction.files.map {
+        if (it.streamDataId == 0L) {
+          throw IllegalArgumentException("Stream data ID is required for upload data.")
+        }
+        // upload data with new action id
+        val uploadData = it.copy(uploadAction = savedAction)
+        // insert upload data into the database
+        val uploadDataId = uploadDataDao.insert(uploadData.toEntity())
+        // update the upload data ID
+        uploadData.copy(id = uploadDataId).also {
+          logger.debug("Saved upload data ID : {}", uploadDataId)
+        }
       }
     }
-    return actionId
+    return savedAction.copy(files = newFiles)
   }
 
   /**
@@ -215,28 +227,26 @@ class UploadActionRepository(
    *
    * @param uploadResult The upload result to save
    */
-  override suspend fun saveResult(uploadResult: UploadResult) {
-    return withIOContext {
-      uploadResult.id = uploadResultDao.saveUploadResult(uploadResult.toEntity())
-      val today = getTodayStart().epochSeconds
-      val todayStats = statsDao.getStatsFromTo(today, today + 86400000).firstOrNull()
+  override suspend fun saveResult(uploadResult: UploadResult): UploadResult = withIOContext {
+    val id = uploadResultDao.insert(uploadResult.toEntity())
+    val today = getTodayStart().epochSeconds
+    val todayStats = statsDao.getBetweenTimeOrderedDesc(today, today + 86400000).firstOrNull()
 
-      if (todayStats == null) {
-        if (uploadResult.isSuccess) {
-          statsDao.insertStats(StatsEntity(0, today, 0, 1, 0))
-        } else {
-          statsDao.insertStats(StatsEntity(0, today, 0, 0, 1))
-        }
+    if (todayStats == null) {
+      if (uploadResult.isSuccess) {
+        statsDao.insert(StatsEntity(0, today, 0, 1, 0))
       } else {
-        if (uploadResult.isSuccess) {
-          val totalUploads = todayStats.totalUploads + 1
-          statsDao.updateStats(todayStats.copy(totalUploads = totalUploads))
-        } else {
-          val totalFailedUploads = todayStats.totalFailedUploads + 1
-          statsDao.updateStats(todayStats.copy(totalFailedUploads = totalFailedUploads))
-        }
+        statsDao.insert(StatsEntity(0, today, 0, 0, 1))
+      }
+    } else {
+      if (uploadResult.isSuccess) {
+        statsDao.update(todayStats.copy(uploads = todayStats.uploads + 1))
+      } else {
+        statsDao.update(todayStats.copy(failedUploads = todayStats.failedUploads + 1))
       }
     }
+    // update the upload result ID
+    uploadResult.copy(id = id)
   }
 
   /**
@@ -250,41 +260,45 @@ class UploadActionRepository(
    */
   override suspend fun getUploadData(uploadDataId: UploadDataId): UploadData? {
     return withIOContext {
-      uploadDataDao.getUploadDataById(uploadDataId)?.let { uploadData ->
-        UploadData(
-          id = uploadData.id,
-          filePath = uploadData.filePath,
-          status = UploadState.fromValue(uploadData.status.toInt())
-        ).also {
-          it.uploadAction =
-            getUploadActionIdByUploadDataId(uploadDataId) ?: throw IllegalStateException("Upload action not found for upload data: $this")
-          it.streamData = streamsRepo.getStreamDataById(StreamDataId(uploadData.streamDataId!!))
-            ?: throw IllegalStateException("Stream data not found for upload data: $this")
-        }
+      uploadDataDao.getByIdWithStreamAndAction(uploadDataId)?.let {
+        val streamer = streamerRepo.getStreamerById(StreamerId(it.streamData.streamerId))
+          ?: throw IllegalStateException("Streamer with ID ${it.streamData.streamerId} not found.")
+        val stream = StreamData(it.streamData, streamer)
+        UploadData(it.uploadData, stream, UploadAction(it.action))
       }
     }
   }
 
   /**
-   * Changes the status of the upload data.
-   *
-   * This function updates the status of the upload data in the database.
+   * Updates upload data.
+   * This function updates the upload data in the database.
    * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
-   *
-   * @param uploadDataId The ID of the upload data to update.
-   * @param status The new status to set for the upload data.
+   * @param uploadData The upload data to update
+   * @return The updated upload data
    */
-  override suspend fun changeUploadDataStatus(uploadDataId: Long, status: UploadState) {
+  override suspend fun updateUploadData(uploadData: UploadData): Boolean {
     return withIOContext {
-      uploadDataDao.updateUploadDataStatus(UploadDataId(uploadDataId), status.value.toLong())
+      uploadDataDao.update(uploadData.toEntity()) == 1
     }
   }
 
-  override suspend fun deleteUploadData(id: UploadDataId) {
+  /**
+   * Deletes an upload data.
+   *
+   * This function deletes an upload data from the database.
+   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
+   *
+   * @param uploadData The upload data to delete
+   */
+  override suspend fun deleteUploadData(uploadData: UploadData) {
     return withIOContext {
-      uploadDataDao.deleteUploadData(id)
+      if (uploadData.id == 0L) {
+        throw IllegalArgumentException("Upload data ID is required for deletion.")
+      }
+      uploadDataDao.delete(uploadData.toEntity())
     }
   }
+
 
   /**
    * Deletes an upload result.
@@ -292,53 +306,28 @@ class UploadActionRepository(
    * This function deletes an upload result from the database.
    * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
    *
-   * @param id The ID of the upload result to delete.
+   * @param result The upload result to delete
    */
-  override suspend fun deleteUploadResult(id: UploadResultId) {
-    return withIOContext {
-      uploadResultDao.deleteUploadResult(id)
-    }
+  override suspend fun deleteUploadResult(result: UploadResult) = withIOContext {
+    uploadResultDao.delete(result.toEntity()) == 1
   }
 
-  /**
-   * Retrieves an upload action by its associated upload data ID.
-   *
-   * This function retrieves an upload action from the database using the upload data ID.
-   * It uses the IO dispatcher for the coroutine context to ensure that the database operation doesn't block the main thread.
-   *
-   * @param id The ID of the upload data.
-   * @return UploadAction or null if no upload action with the given upload data ID exists.
-   */
-  override suspend fun getUploadActionIdByUploadDataId(id: UploadDataId): UploadAction? {
-    return withIOContext {
-      uploadActionFilesDao.getUploadActionByUploadDataId(id)?.let { uploadAction ->
-        UploadAction(
-          id = uploadAction.id,
-          time = uploadAction.time,
-          uploadConfig = json.decodeFromString(UploadConfig.serializer(), uploadAction.uploadConfig)
-        )
-      }
-    }
-  }
 
   override suspend fun getUploadDataResults(uploadDataId: UploadDataId): List<UploadResult> {
     return withIOContext {
-      uploadResultDao.findUploadResultByUploadId(uploadDataId).map { result ->
-        UploadResult(result).apply {
-          populateUploadData(uploadDataId)
-        }
-      }
+      val result = uploadDataDao.getUploadResults(uploadDataId)
+      val first = result.keys.firstOrNull() ?: return@withIOContext emptyList()
+      val uploadData = UploadData(first)
+      // map upload results to UploadResult objects
+      result[first]?.map { UploadResult(it, uploadData) } ?: emptyList()
     }
   }
 
-  /**
-   * Retrieves upload data for a given upload result.
-   * This function retrieves upload data from the database using the upload data ID associated with the upload result.
-   * @return UploadData or null if no upload data with the given ID exists
-   * @throws IllegalStateException if upload data is not found for the result
-   */
-  private suspend fun UploadResult.populateUploadData(id: UploadDataId) {
-    uploadData = getUploadData(id) ?: throw IllegalStateException("Upload data not found for result: $this")
-  }
 
+  private suspend fun UploadDataWithStreamAndConfig.toUploadData(): UploadData {
+    val streamer = streamerRepo.getStreamerById(StreamerId(streamData.streamerId))
+      ?: throw IllegalStateException("Streamer with ID ${streamData.streamerId} not found.")
+    val stream = StreamData(streamData, streamer)
+    return UploadData(uploadData, stream, UploadAction(action))
+  }
 }

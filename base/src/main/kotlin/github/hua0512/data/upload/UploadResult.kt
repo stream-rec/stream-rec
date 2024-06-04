@@ -26,61 +26,48 @@
 
 package github.hua0512.data.upload
 
-import github.hua0512.utils.UploadResultEntity
-import github.hua0512.utils.asLong
-import github.hua0512.utils.boolean
+
+import github.hua0512.data.upload.entity.UploadResultEntity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 
 /**
+ * Upload result data class.
  * @author hua0512
  * @date : 2024/2/9 19:16
  */
 @Serializable
 data class UploadResult(
-  var id: Long = 0,
+  val id: Long = 0,
   val startTime: Long,
   val endTime: Long = 0,
   val isSuccess: Boolean = false,
-  val message: String = "",
+  val message: String? = "",
+  val uploadDataId: Long = 0,
+  @Transient
+  val uploadData: UploadData? = null,
 ) {
 
-  var uploadDataId: Long = -1
-    get() {
-      if (!isUploadDataInitialized()) {
-        return field
-      }
-      return uploadData.id
-    }
-
-  @Transient
-  lateinit var uploadData: UploadData
-
   val filePath
-    get() = uploadData.filePath
+    get() = uploadData?.filePath
 
-  constructor(entity: UploadResultEntity) : this(
+  constructor(entity: UploadResultEntity, uploadData: UploadData? = null) : this(
     entity.id,
     entity.startTime,
     entity.endTime,
-    entity.isSuccess.boolean,
-    entity.message.toString(),
-  ) {
-    uploadDataId = entity.uploadDataId
-  }
+    entity.isSuccess,
+    entity.message,
+    entity.uploadDataId,
+    uploadData
+  )
 
-
-  fun isUploadDataInitialized() = ::uploadData.isInitialized
-
-  fun toEntity(): UploadResultEntity {
-    return UploadResultEntity(
-      id = id,
-      startTime = startTime,
-      endTime = endTime,
-      isSuccess = isSuccess.asLong,
-      message = message,
-      uploadDataId = uploadDataId
-    )
-  }
+  fun toEntity(): UploadResultEntity = UploadResultEntity(
+    id = id,
+    startTime = startTime,
+    endTime = endTime,
+    isSuccess = isSuccess,
+    message = message,
+    uploadDataId = uploadDataId
+  )
 }

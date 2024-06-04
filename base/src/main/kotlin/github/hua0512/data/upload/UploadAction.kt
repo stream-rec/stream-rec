@@ -26,17 +26,37 @@
 
 package github.hua0512.data.upload
 
+import github.hua0512.data.upload.entity.UploadActionEntity
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
+ * Upload action data class.
  * @author hua0512
  * @date : 2024/2/9 19:07
  */
 @Serializable
 data class UploadAction(
-  var id: Long = 0,
-  var time: Long = Clock.System.now().toEpochMilliseconds(),
-  val files: Set<UploadData> = emptySet(),
-  var uploadConfig: UploadConfig,
-)
+  val id: Long = 0,
+  val time: Long = Clock.System.now().toEpochMilliseconds(),
+  @Transient
+  var files: List<UploadData> = emptyList(),
+  val uploadConfig: UploadConfig,
+) {
+
+  constructor(entity: UploadActionEntity) : this(entity, emptyList())
+
+  constructor(entity: UploadActionEntity, files: List<UploadData>) : this(
+    id = entity.id,
+    time = entity.time,
+    files = files,
+    uploadConfig = entity.config,
+  )
+
+  fun toEntity() = UploadActionEntity(
+    id = id,
+    time = time,
+    config = uploadConfig,
+  )
+}

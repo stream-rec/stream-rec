@@ -27,6 +27,9 @@
 package github.hua0512.plugins.twitch.download
 
 import github.hua0512.data.media.MediaInfo
+import github.hua0512.data.media.VideoFormat
+import github.hua0512.data.platform.TwitchQuality
+import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -104,6 +107,13 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
     val lastBroadcast = bodyJson["lastBroadcast"]?.jsonObject ?: throw IllegalArgumentException("Invalid response, response: $bodyJson")
     val title = lastBroadcast["title"]?.jsonPrimitive?.content ?: ""
     val artistProfileUrl = bodyJson["profileImageURL"]?.jsonPrimitive?.content ?: ""
+
+    // skip stream info extraction, only return basic info
+    if (skipStreamInfo) {
+      val streamInfo = StreamInfo(url, VideoFormat.hls, TwitchQuality.Source.value, 0, 0)
+      mediaInfo = mediaInfo.copy(artistImageUrl = artistProfileUrl, title = title, live = true, streams = listOf(streamInfo))
+      return mediaInfo
+    }
 
     val accessTokenResponse = twitchPostQPL(
       http,

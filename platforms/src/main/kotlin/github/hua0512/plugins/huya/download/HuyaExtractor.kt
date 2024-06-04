@@ -49,7 +49,7 @@ import kotlin.random.Random
  * @author hua0512
  * @date : 2024/3/15 19:46
  */
-class HuyaExtractor(override val http: HttpClient, override val json: Json, override val url: String) :
+open class HuyaExtractor(override val http: HttpClient, override val json: Json, override val url: String) :
   Extractor(http, json) {
   companion object {
     const val BASE_URL = "https://www.huya.com"
@@ -76,7 +76,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
   }
 
   override val regexPattern = URL_REGEX.toRegex()
-  private var roomId: String = ""
+  protected var roomId: String = ""
   private lateinit var htmlResponseBody: String
   private val ayyuidPattern = AYYUID_REGEX.toRegex()
   private val topsidPattern = TOPSID_REGEX.toRegex()
@@ -85,6 +85,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
   internal var ayyuid: Long = 0
   internal var topsid: Long = 0
   internal var subid: Long = 0
+  var forceOrigin = false
 
 
   init {
@@ -198,14 +199,27 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
       else this
     } ?: throw IllegalStateException("$url gameStreamInfoList is null")
 
-    // default max bit rate
-    val maxBitRate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0
+    // default bitrate
+    val defaultBitrate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0
     // available bitrate list
     val bitrateList: List<Pair<Int, String>> = vMultiStreamInfo.jsonArray.mapIndexed { index, jsonElement ->
-      val bitrate = if (index == 0) maxBitRate else jsonElement.jsonObject["iBitRate"]?.jsonPrimitive?.int ?: 0
+      var iBitrate = jsonElement.jsonObject["iBitRate"]?.jsonPrimitive?.int ?: 0
+      // if iBitrate is 0, use default bitrate
+      if (iBitrate == 0) iBitrate = defaultBitrate
+      val bitrate = iBitrate
       val displayName = jsonElement.jsonObject["sDisplayName"]?.jsonPrimitive?.content ?: ""
       bitrate to displayName
     }
+    val streams = extractLiveStreams(gameStreamInfoList, bitrateList, defaultBitrate)
+
+    return mediaInfo.copy(streams = streams)
+  }
+
+  protected suspend fun extractLiveStreams(
+    gameStreamInfoList: JsonArray,
+    bitrateList: List<Pair<Int, String>>,
+    maxBitRate: Int,
+  ): MutableList<StreamInfo> {
     // build stream info
     val streams = mutableListOf<StreamInfo>()
     val time = Clock.System.now()
@@ -221,6 +235,9 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
           val streamUrl = buildUrl(streamInfo, uid, time, null, isFlv).nonEmptyOrNull() ?: return@buildLoop
           bitrateList.forEach { (bitrate, displayName) ->
+            // Skip HDR streams as they are not supported
+            if (displayName.contains("HDR")) return@forEach
+
             val url = if (bitrate == maxBitRate) streamUrl else "$streamUrl&ratio=$bitrate"
             streams.add(
               StreamInfo(
@@ -237,19 +254,23 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
         }
       }
     }
-    return mediaInfo.copy(streams = streams)
+    return streams
   }
 
-  private fun buildUrl(
+  protected fun buildUrl(
     streamInfo: JsonElement,
     uid: Long,
     time: Instant,
     bitrate: Int? = null,
-    isFlv: Boolean
+    isFlv: Boolean,
   ): String {
     val antiCode =
       streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
-    val streamName = streamInfo.jsonObject["sStreamName"]?.jsonPrimitive?.content ?: return ""
+    var streamName = streamInfo.jsonObject["sStreamName"]?.jsonPrimitive?.content ?: return ""
+
+    if (forceOrigin) {
+      streamName = streamName.replace("-imgplus", "")
+    }
     val url = streamInfo.jsonObject[if (isFlv) "sFlvUrl" else "sHlsUrl"]?.jsonPrimitive?.content ?: return ""
     val urlSuffix =
       streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
@@ -262,7 +283,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
     uid: Long,
     sStreamName: String,
     time: Instant,
-    bitrate: Int? = null
+    bitrate: Int? = null,
   ): String {
     val u = (uid shl 8 or (uid shr 24)) and -0x1
     val query = parseQueryString(anticode.removeSuffix(","))
@@ -272,7 +293,7 @@ class HuyaExtractor(override val http: HttpClient, override val json: Json, over
     val fm = query["fm"]?.decodeBase64()?.split("_")?.get(0)!!
 
     @Suppress("SpellCheckingInspection")
-    val ctype = query["ctype"]!!
+    val ctype = "tars_mp"
     val ss = "$seqId|${ctype}|$PLATFORM_ID".toByteArray().toMD5Hex()
     val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".toByteArray().toMD5Hex()
 

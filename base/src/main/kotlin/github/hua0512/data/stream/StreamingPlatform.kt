@@ -27,13 +27,16 @@
 package github.hua0512.data.stream
 
 
+/**
+ * TODO : Use KSP to generate this class
+ */
 enum class StreamingPlatform(val id: Int) {
   HUYA(0),
   DOUYIN(1),
   DOUYU(2),
   TWITCH(3),
-  PANDALIVE(4),
-  UNKNOWN(Integer.MAX_VALUE);
+  PANDATV(4),
+  UNKNOWN(Int.MAX_VALUE);
 
 
   companion object {

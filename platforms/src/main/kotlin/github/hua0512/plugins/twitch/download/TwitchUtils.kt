@@ -31,6 +31,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.auth.*
 import kotlinx.serialization.json.*
 
 private const val POST_URL = "https://gql.twitch.tv/gql"
@@ -43,7 +44,7 @@ internal suspend fun twitchPostQPL(client: HttpClient, json: Json, data: String,
     header(HttpHeaders.ContentType, "text/plain")
     // auth token is required
     authToken?.let {
-      header(HttpHeaders.Authorization, "Bearer $it")
+      header(HttpHeaders.Authorization, "${AuthScheme.OAuth} $it")
     }
     Extractor.commonHeaders.forEach { (key, value) ->
       header(key, value)

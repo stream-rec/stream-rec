@@ -12,6 +12,9 @@ version = versionName
 dependencies {
   implementation(project(":base"))
   implementation("com.tencent.tars:tars-core:1.7.3")
+  implementation(libs.io.exoquery.pprint)
+  implementation(libs.io.ktor.client.core)
+  implementation(libs.io.ktor.serialization.kotlinx.json)
   implementation(libs.com.google.protobuf.javalite)
   implementation(libs.com.google.protobuf.protobuf.java.util)
   implementation(libs.com.google.protobuf.protobuf.kotlin.lite)

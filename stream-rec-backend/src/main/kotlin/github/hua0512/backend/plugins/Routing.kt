@@ -4,9 +4,9 @@ import github.hua0512.backend.routes.*
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
-import github.hua0512.repo.streamer.StreamDataRepo
-import github.hua0512.repo.streamer.StreamerRepo
-import github.hua0512.repo.uploads.UploadRepo
+import github.hua0512.repo.stream.StreamDataRepo
+import github.hua0512.repo.stream.StreamerRepo
+import github.hua0512.repo.upload.UploadRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*

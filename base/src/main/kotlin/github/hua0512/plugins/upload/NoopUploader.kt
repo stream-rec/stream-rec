@@ -27,6 +27,7 @@
 package github.hua0512.plugins.upload
 
 import github.hua0512.app.App
+import github.hua0512.data.upload.UploadConfig.NoopConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
 import github.hua0512.plugins.upload.base.Upload
@@ -37,10 +38,18 @@ import kotlinx.datetime.Clock
  * @author hua0512
  * @date : 2024/2/9 2:41
  */
-class NoopUploader(app: App) : Upload(app, null) {
-  override suspend fun upload(uploadData: UploadData): UploadResult {
+class NoopUploader(app: App) : Upload<NoopConfig>(app, null) {
+
+  override suspend fun performUpload(uploadData: UploadData): UploadResult {
     val startTime = Clock.System.now().epochSeconds
-    return UploadResult(startTime = startTime, endTime = startTime, isSuccess = true, message = "Noop upload completed")
+    return UploadResult(
+      startTime = startTime,
+      endTime = startTime,
+      isSuccess = true,
+      message = "",
+      uploadData = uploadData,
+      uploadDataId = uploadData.id
+    )
   }
 
 }
