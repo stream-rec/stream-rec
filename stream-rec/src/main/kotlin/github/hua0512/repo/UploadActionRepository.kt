@@ -106,7 +106,7 @@ class UploadActionRepository(
             filter ?: "",
             status = status ?: UploadState.intValues(),
             streamers?.map { it.value } ?: emptyList(),
-            streamers?.isEmpty() ?: true,
+            streamers?.isEmpty() != false,
             sortColumn
           )
         }
@@ -118,7 +118,7 @@ class UploadActionRepository(
             filter ?: "",
             status = status ?: UploadState.intValues(),
             streamers?.map { it.value } ?: emptyList(),
-            streamers?.isEmpty() ?: true,
+            streamers?.isEmpty() != false,
             sortColumn
           )
         }
@@ -139,7 +139,8 @@ class UploadActionRepository(
     uploadDataDao.countAllByFilter(
       status ?: UploadState.intValues(),
       filter ?: "",
-      streamerId ?: emptyList(),
+      streamerId?.map { it.value } ?: emptyList(),
+      streamerId?.isEmpty() != false
     )
   }
 

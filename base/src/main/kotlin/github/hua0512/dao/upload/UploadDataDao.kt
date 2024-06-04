@@ -31,7 +31,6 @@ import androidx.room.Query
 import androidx.room.RewriteQueriesToDropUnusedColumns
 import androidx.room.Transaction
 import github.hua0512.dao.BaseDao
-import github.hua0512.data.StreamerId
 import github.hua0512.data.UploadDataId
 import github.hua0512.data.upload.UploadDataWithStreamAndConfig
 import github.hua0512.data.upload.entity.UploadDataEntity
@@ -171,7 +170,8 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
    * Counts all upload data by filter.
    * @param status The status of the upload data
    * @param filter The filter string
-   * @param streamerIds The stream IDs
+   * @param streamerIds The stream IDs to filter by
+   * @param allStreamers Whether to show all streamers
    * @return The count of upload data
    */
   @Query(
@@ -179,11 +179,11 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
     SELECT COUNT(*) FROM UploadData
     JOIN StreamData ON UploadData.streamDataId = StreamData.id
     WHERE (UploadData.status IN (:status))
-    AND (StreamData.streamerId IN (:streamerIds))
+    AND (:allStreamers OR StreamData.streamerId IN (:streamerIds))
     AND (StreamData.title LIKE '%' || :filter || '%' OR UploadData.filePath LIKE '%' || :filter || '%')
   """
   )
-  suspend fun countAllByFilter(status: Collection<Int>?, filter: String, streamerIds: Collection<StreamerId>): Long
+  suspend fun countAllByFilter(status: Collection<Int>?, filter: String, streamerIds: Collection<Long>, allStreamers: Boolean?): Long
 
 
   /**
