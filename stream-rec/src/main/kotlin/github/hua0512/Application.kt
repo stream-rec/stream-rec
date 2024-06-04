@@ -57,6 +57,7 @@ import kotlin.io.path.pathString
 
 class Application {
   companion object {
+
     init {
       initLogger()
     }
@@ -65,7 +66,6 @@ class Application {
     fun main(args: Array<String>): Unit = runBlocking {
       var server: NettyApplicationEngine? = null
       val appComponent: AppComponent = DaggerAppComponent.create()
-      val downloadService = appComponent.getDownloadService()
 
       // TODO: Remove in the next version
       try {
@@ -84,9 +84,10 @@ class Application {
       Runtime.getRuntime().addShutdownHook(Thread {
         logger.info("Stream-rec shutting down...")
         server?.stop(1000, 1000)
+        Thread.sleep(1000)
         jobScope.cancel()
-        appComponent.getDatabase().close()
         app.releaseAll()
+        appComponent.getDatabase().close()
         EventCenter.stop()
       })
       // wait for the job to finish
@@ -127,7 +128,7 @@ class Application {
         }
         // start the backend server
         launch {
-          val server = backendServer(
+          backendServer(
             json = appComponent.getJson(),
             appComponent.getUserRepo(),
             appComponent.getAppConfigRepository(),
@@ -148,6 +149,7 @@ class Application {
       get() = System.getenv("LOG_LEVEL")?.nonEmptyOrNull().let { Level.valueOf(it) } ?: Level.INFO
 
     private fun initLogger() {
+      val logLevel = LOG_LEVEL
       val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
       loggerContext.reset()
 
@@ -162,7 +164,7 @@ class Application {
         name = "STDOUT"
         encoder = patternEncoder
         addFilter(LevelFilter().apply {
-          setLevel(LOG_LEVEL)
+          setLevel(logLevel)
           onMatch = FilterReply.ACCEPT
           onMismatch = FilterReply.DENY
         })
@@ -192,7 +194,7 @@ class Application {
           it.start()
         }
         addFilter(LevelFilter().apply {
-          setLevel(LOG_LEVEL)
+          setLevel(logLevel)
           onMatch = FilterReply.ACCEPT
           onMismatch = FilterReply.DENY
         })
@@ -202,7 +204,7 @@ class Application {
       loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).apply {
         addAppender(consoleAppender)
         addAppender(fileAppender)
-        level = LOG_LEVEL
+        level = logLevel
       }
     }
 
