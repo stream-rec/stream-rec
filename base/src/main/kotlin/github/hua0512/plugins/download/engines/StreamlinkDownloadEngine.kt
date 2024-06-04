@@ -155,6 +155,8 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     }
 
     handleExitCodeAndStreamer(exitCode, streamer)
+    // ensure the streamlink process is destroyed
+    streamlinkProcess?.destroy()
     streamlinkProcess = null
     process = null
   }
