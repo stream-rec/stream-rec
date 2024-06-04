@@ -1,5 +1,3 @@
-version: '3.7'
-
 networks:
   stream-rec:
 
@@ -17,26 +15,23 @@ services:
     networks:
       - stream-rec
     environment:
-      #    timezone, by default is Europe/Paris. You can change it to any timezone you like.
+      # Timezone, by default is Europe/Paris. You can change it to any timezone you like.
       - TZ=Europe/Paris
-      #      log level, by default is info. Debug logs are useful for debugging, but they can be very verbose.
+      # Log level, by default is info. Debug logs are useful for debugging, but they can be very verbose.
       - LOG_LEVEL=INFO
-      # CONTAINER database path, MUST BE THE SAME AS THE VOLUME TARGET PATH.
+      # CONTAINER database path
       - DB_PATH=/opt/records
-      # CONTAINER download path, MUST BE THE SAME AS THE VOLUME TARGET PATH.
+      # CONTAINER download path
       - DOWNLOAD_PATH=/opt/records
       # JWT secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
       - JWT_SECRET=IU123412987UYASUJKDH1239IUIU
       # LOGIN secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
       - LOGIN_SECRET=123
     volumes:
-      #      - BINDS THE HOST MACHINE PATH TO THE CONTAINER PATH
-      - type: bind
-        #        SOURCE is the path of the host machine, WHERE YOU WANT TO STORE THE RECORDS
-        source: /home/hua/records
-        #        TARGET is the path of the container, WHERE THE RECORDS WILL BE STORED
-        target: /opt/records
-
+      # Host machine path binding to container path, storage path mapping
+      - "./downloads:/opt/records"
+      # Rclone configuration file path binding
+      - "./rclone:/root/.config/rclone"
   # Frontend service
   frontend:
     image: streamrec/stream-rec-front:latest
