@@ -5,7 +5,7 @@ After starting the tool, you will be redirected to the login page. Enter your cr
 The default credentials are set to `stream-rec` for both the username and password. But if you set the `LOGIN_SECRET` environment variable, the
 password will be set to that value.
 
-![login.png](images/en/login.png)
+![login.png](https://github.com/hua0512/stream-rec-front/blob/master/docs/en/login.png)
 
 # 2. General settings
 
@@ -34,6 +34,7 @@ Leave it as default if you are not sure what to do.
 ![platform_settings.png](https://github.com/hua0512/stream-rec-front/blob/master/docs/en/platform_settings.png)
 
 > [!NOTE]\
+> Things to note:
 > - The update button is only attached to the platform you are currently editing. Make sure to click on the `Update settings` button after you finish
     editing each platform's settings.
 
