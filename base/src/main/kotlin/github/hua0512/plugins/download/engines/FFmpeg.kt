@@ -184,7 +184,7 @@ fun buildFFMpegCmd(
   outputPath: String,
 ): Array<String> {
   // ffmpeg input args
-  val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies, exitOnError)
+  val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies, exitOnError = exitOnError)
 
   // default output args
   val defaultFFmpegOutputArgs = buildDefaultOutputArgs(downloadFormat, segmentPart, segmentTime, useSegmentation == true)
