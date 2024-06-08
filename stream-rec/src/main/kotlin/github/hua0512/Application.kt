@@ -179,7 +179,7 @@ class Application {
 
       val timedRollingPolicy = TimeBasedRollingPolicy<ILoggingEvent>().apply {
         context = loggerContext
-        fileNamePattern = "$logFile.%d{MM-dd}.gz"
+        fileNamePattern = "$logFile.%d{yyyy-MM-dd}.gz"
         maxHistory = 7
         setTotalSizeCap(FileSize.valueOf("300MB"))
       }
