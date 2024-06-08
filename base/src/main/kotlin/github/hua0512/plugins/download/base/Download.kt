@@ -377,6 +377,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         engine.start()
         // await children
         danmuJob?.let { stopDanmuJob(it) }
+        // TODO : TEMP FIX RECHECK FILE STATUS
+        val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
+        processSegment(outputPath, danmuPath)
         logger.debug("(${streamer.name}) engine finished")
       } catch (e: Exception) {
         onStreamDownloadError?.invoke(e)
@@ -453,9 +456,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   private fun deleteOutputs(outputPath: Path, danmuPath: Path? = null) {
     outputPath.deleteFile()
-    if (danmuPath != null && danmuPath.exists()) {
-      danmuPath.deleteFile()
-    }
+    danmuPath?.deleteFile()
   }
 
   /**
