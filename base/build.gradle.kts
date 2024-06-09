@@ -25,6 +25,7 @@ dependencies {
   implementation(libs.io.ktor.client.content.negotiation)
   implementation(libs.io.ktor.serialization.kotlinx.json)
   implementation(libs.io.ktor.client.logging)
+  implementation(libs.io.exoquery.pprint)
   testImplementation(libs.bundles.test.jvm)
 }
 
