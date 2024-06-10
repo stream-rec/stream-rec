@@ -44,7 +44,6 @@ import github.hua0512.utils.withIOContext
  * @property app The [App] instance.
  * @property danmu The [DouyinDanmu] instance.
  * @property streamer The [Streamer] instance.
- * @property downloadTitle The title of the downloaded video.
  * @property downloadUrl The URL of the video to be downloaded.
  */
 class Douyin(app: App, danmu: DouyinDanmu, extractor: DouyinExtractor) : Download<DouyinDownloadConfig>(app, danmu, extractor) {
