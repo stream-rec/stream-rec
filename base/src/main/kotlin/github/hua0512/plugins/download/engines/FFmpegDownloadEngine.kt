@@ -27,9 +27,11 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
+import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.download.exceptions.DownloadErrorException
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
@@ -152,9 +154,11 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
         bitrate
       )
       lastOpeningSize = currentSize
+      val bitrate = getBitrate(bitrate)
       onDownloadProgress(newDiff, bitrate)
     } else {
       lastOpeningSize = size
+      val bitrate = getBitrate(bitrate)
       onDownloadProgress(diff, bitrate)
     }
   }
@@ -212,6 +216,15 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     lastOpeningFile = fileName
     lastOpeningFileTime = now
     onDownloadStarted(folder.resolve(fileName).pathString, now)
+  }
+
+
+  protected fun getBitrate(bitrate: String): Double {
+    return try {
+      bitrate.substring(0, bitrate.indexOf("k")).toDouble()
+    } catch (e: Exception) {
+      0.0
+    }
   }
 
 

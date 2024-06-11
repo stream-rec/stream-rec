@@ -29,6 +29,7 @@ package github.hua0512.plugins.download.engines
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
+import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.logger
 import github.hua0512.plugins.download.base.DownloadCallback
 import github.hua0512.utils.rename
@@ -151,11 +152,11 @@ abstract class BaseDownloadEngine {
     callback?.onDownloadStarted(filePath, time)
   }
 
-  protected fun onDownloadProgress(diff: Long, bitrate: String) {
+  protected fun onDownloadProgress(diff: Long, bitrate: Double) {
     callback?.onDownloadProgress(diff, bitrate)
   }
 
-  protected fun onDownloaded(data: FileInfo) {
+  protected fun onDownloaded(data: FileInfo, metaInfo: FlvMetadataInfo? = null) {
     // calculate file size
     val oldPath = Path(data.path)
     // check if the file exists
@@ -172,7 +173,7 @@ abstract class BaseDownloadEngine {
     val fileSize = newPath.fileSize()
     // update the data
     val copy = data.copy(path = newPath.absolutePathString(), size = fileSize)
-    callback?.onDownloaded(copy)
+    callback?.onDownloaded(copy, metaInfo)
     downloads.add(copy)
   }
 

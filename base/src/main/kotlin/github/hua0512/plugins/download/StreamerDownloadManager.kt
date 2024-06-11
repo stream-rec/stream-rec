@@ -35,6 +35,7 @@ import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.base.OnStreamDownloaded
 import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.event.EventCenter
@@ -165,8 +166,8 @@ class StreamerDownloadManager(
     var hasError = false
     // while loop for parted download
     while (!isCancelled.value) {
-      downloadStream(onStreamDownloaded = { stream ->
-        callback?.onStreamDownloaded(streamer, stream)
+      downloadStream(onDownloaded = { stream, metaInfo ->
+        callback?.onStreamDownloaded(streamer, stream, metaInfo != null, metaInfo)
         dataList.add(stream)
       }) {
         logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
@@ -180,7 +181,7 @@ class StreamerDownloadManager(
   }
 
   private suspend inline fun downloadStream(
-    crossinline onStreamDownloaded: (stream: StreamData) -> Unit = {},
+    crossinline onDownloaded: OnStreamDownloaded = { _, _ -> },
     crossinline onStreamDownloadError: (e: Throwable) -> Unit = {},
   ) {
     // streamer is live, start downloading
@@ -189,7 +190,9 @@ class StreamerDownloadManager(
       isDownloading = true
       try {
         with(plugin) {
-          onStreamDownloaded { onStreamDownloaded(it) }
+          onStreamDownloaded { stream, metaInfo ->
+            onDownloaded(stream, metaInfo)
+          }
           download()
         }
         logger.debug("${streamer.name} download finished")

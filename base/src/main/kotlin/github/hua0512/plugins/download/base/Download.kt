@@ -34,6 +34,7 @@ import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.*
+import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.danmu.base.Danmu
@@ -43,6 +44,7 @@ import github.hua0512.plugins.download.ProgressBarManager
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART_PREFIX
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
+import github.hua0512.plugins.download.engines.KotlinDownloadEngine
 import github.hua0512.plugins.download.engines.StreamlinkDownloadEngine
 import github.hua0512.plugins.download.exceptions.DownloadFilePresentException
 import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
@@ -65,6 +67,9 @@ import kotlin.io.path.Path
 import kotlin.io.path.exists
 import kotlin.io.path.fileSize
 import kotlin.io.path.pathString
+
+
+typealias OnStreamDownloaded = (StreamData, FlvMetadataInfo?) -> Unit
 
 abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Danmu, open val extractor: Extractor) {
 
@@ -106,7 +111,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   /**
    * Callback triggered when the stream is downloaded
    */
-  private var onStreamDownloaded: ((StreamData) -> Unit)? = null
+  private var onStreamDownloaded: OnStreamDownloaded? = null
 
   suspend fun init(streamer: Streamer) {
     this.streamer = streamer
@@ -297,34 +302,26 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         )
       }
 
-      override fun onDownloadProgress(diff: Long, bitrate: String) {
+      override fun onDownloadProgress(diff: Long, bitrate: Double) {
         pb?.let {
           it.stepBy(diff)
-          it.extraMessage = if (bitrate.isEmpty()) "Downloading..." else "bitrate: $bitrate"
+          it.extraMessage = if (bitrate == 0.0) "Downloading..." else "bitrate: $bitrate"
           // extract numbers from string
-          if (bitrate.isNotEmpty()) {
-            val bitrateValue = try {
-              bitrate.substring(0, bitrate.indexOf("k")).toDouble()
-            } catch (e: Exception) {
-              0.0
-            }
-            EventCenter.sendEvent(
-              DownloadEvent.DownloadStateUpdate(
-                filePath = "",
-                url = downloadUrl,
-                platform = streamer.platform,
-                duration = it.totalElapsed.toSeconds(),
-                speed = 0.0,
-                bitrate = bitrateValue,
-                fileSize = it.current,
-                streamerId = streamer.id
-              )
+          EventCenter.sendEvent(
+            DownloadEvent.DownloadStateUpdate(
+              filePath = "",
+              url = downloadUrl,
+              platform = streamer.platform,
+              duration = it.totalElapsed.toSeconds(),
+              bitrate = bitrate,
+              fileSize = it.current,
+              streamerId = streamer.id
             )
-          }
+          )
         }
       }
 
-      override fun onDownloaded(data: FileInfo) {
+      override fun onDownloaded(data: FileInfo, metaInfo: FlvMetadataInfo?) {
         logger.debug("({}) downloaded: {}", streamer.name, data)
         val danmuPath = if (isDanmuEnabled) {
           Path(danmu.filePath)
@@ -333,7 +330,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         }
 
         // check file downloaded
-        onFileDownloaded(data, streamData, danmuPath)
+        onFileDownloaded(data, streamData, danmuPath, metaInfo)
       }
 
       // normal exit
@@ -427,10 +424,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     }
   }
 
-  private fun onFileDownloaded(info: FileInfo, streamInfo: StreamData, danmuPath: Path?) {
+  private fun onFileDownloaded(info: FileInfo, streamInfo: StreamData, danmuPath: Path?, metaInfo: FlvMetadataInfo?) {
     // check if the segment is valid
     danmuPath?.let { danmu.finish() }
-    logger.debug("(${streamer.name}) danmu finished : $danmuPath")
+    logger.debug("({}) danmu finished : {}", streamer.name, danmuPath)
     if (processSegment(Path(info.path), danmuPath)) return
     // update stream data
     val stream = streamInfo.copy(
@@ -449,7 +446,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         time = Instant.fromEpochSeconds(info.updatedAt)
       )
     )
-    onStreamDownloaded?.invoke(stream)
+    onStreamDownloaded?.invoke(stream, metaInfo)
   }
 
 
@@ -499,6 +496,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   private fun getDownloadEngine(type: String): BaseDownloadEngine {
     // user selected engine
     return when (type) {
+      "kotlin" -> KotlinDownloadEngine()
       "ffmpeg" -> FFmpegDownloadEngine()
       "streamlink" -> StreamlinkDownloadEngine()
       else -> throw UnsupportedOperationException("$type download engine not supported")
@@ -665,7 +663,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * Set the stream downloaded callback
    * @param callback the callback function
    */
-  fun onStreamDownloaded(callback: (StreamData) -> Unit) {
+  fun onStreamDownloaded(callback: OnStreamDownloaded) {
     this.onStreamDownloaded = callback
   }
 }

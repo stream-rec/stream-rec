@@ -37,6 +37,7 @@ dependencies {
   implementation(project(":base"))
   implementation(project(":platforms"))
   implementation(project(":stream-rec-backend"))
+  implementation(project(":flv-processing"))
   implementation(libs.androidx.sqlite.bundled)
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.compiler)

@@ -1,0 +1,99 @@
+/*
+ * MIT License
+ *
+ * Stream-rec  https://github.com/hua0512/stream-rec
+ *
+ * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package github.hua0512.flv.operators
+
+import github.hua0512.flv.FlvAnalyzer
+import github.hua0512.flv.FlvAnalyzerSizedUpdater
+import github.hua0512.flv.FlvMetaInfoProvider
+import github.hua0512.flv.data.FlvData
+import github.hua0512.flv.data.FlvHeader
+import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.utils.isHeader
+import github.hua0512.flv.utils.logger
+import io.exoquery.pprint
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+
+private const val TAG = "FlvAnalyzerRule"
+
+private val logger = logger(TAG)
+
+
+/**
+ * Extension function to analyze a flow of `FlvData` objects.
+ *
+ * This function processes a stream of `FlvData` objects, analyzing headers and tags,
+ * and updating metadata information using the provided `FlvMetaInfoProvider` and `FlvAnalyzerSizedUpdater`.
+ *
+ * @receiver Flow<FlvData> The flow of `FlvData` objects to be analyzed.
+ * @param infoProvider FlvMetaInfoProvider The provider for metadata information.
+ * @param sizedUpdater FlvAnalyzerSizedUpdater A lambda function to update the size of the analyzer. Default is a no-op.
+ * @return Flow<FlvData> The analyzed flow of `FlvData` objects.
+ * @author hua0512
+ * @date : 2024/9/8 21:03
+ */
+fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, sizedUpdater: FlvAnalyzerSizedUpdater = { _, _, _ -> }): Flow<FlvData> = flow {
+
+  // Index of the current stream being processed
+  var streamIndex = -1
+  // Instance of FlvAnalyzer to perform the analysis
+  val analyzer = FlvAnalyzer(sizedUpdater)
+
+  // Resets the analyzer state
+  fun reset() {
+    analyzer.reset()
+  }
+
+  // Pushes the current metadata information to the infoProvider
+  fun pushMetadata() {
+    val metadataInfo = analyzer.makeMetaInfo()
+    logger.info("push[{}]: {}", streamIndex, pprint(metadataInfo, defaultHeight = 50))
+    infoProvider[streamIndex] = metadataInfo
+  }
+
+  // Collects and processes each FlvData object in the flow
+  collect { value ->
+    if (value.isHeader()) {
+      streamIndex++
+      if (streamIndex > 0) {
+        pushMetadata()
+      }
+      reset()
+      // Analyze the header
+      analyzer.analyzeHeader(value as FlvHeader)
+    } else {
+      // Analyze the tag
+      analyzer.analyzeTag(value as FlvTag)
+    }
+    // Emit the value
+    emit(value)
+  }
+
+  // Push the final metadata information and reset the analyzer
+  pushMetadata()
+  reset()
+}
