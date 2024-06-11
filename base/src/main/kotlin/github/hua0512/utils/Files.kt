@@ -46,7 +46,7 @@ fun Path.deleteFile(): Boolean = try {
     else logger.error("File not found: {}", this)
   }
 } catch (e: Exception) {
-  logger.error("Could not delete file: $this")
+  logger.error("Could not delete file: $this, $e")
   false
 }
 
