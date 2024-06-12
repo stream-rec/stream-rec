@@ -8,12 +8,7 @@ WORKDIR /app
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
 # Add libc6-compat for Android room
-RUN apk add --no-cache libc6-compat
-
-# Install FFmpeg
-RUN apk add --no-cache ffmpeg
-# Install Rclone
-RUN apk add --no-cache rclone
+RUN apk add --no-cache libc6-compat ffmpeg sqlite rclone tzdata
 
 # Install Streamlink
 #RUN apk add --no-cache streamlink --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
@@ -23,12 +18,8 @@ ENV PIPX_BIN_DIR=/usr/bin
 RUN apk add --no-cache python3 py3-pip pipx && \
     pipx install streamlink
 
-# Install SQLite
-RUN apk add --no-cache sqlite
-
 # Set timezone
 ENV TZ ${TZ:-Europe/Paris}
-RUN apk add --no-cache tzdata
 
 EXPOSE 12555
 
