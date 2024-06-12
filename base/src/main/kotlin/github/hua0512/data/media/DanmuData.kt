@@ -26,6 +26,8 @@
 
 package github.hua0512.data.media
 
+import kotlinx.datetime.Instant
+
 /**
  * This is a sealed class that represents a wrapper for Danmu data.
  * A sealed class is used here to represent a restricted class hierarchy.
@@ -52,7 +54,13 @@ sealed class DanmuDataWrapper {
     val content: String,
     val fontSize: Int,
     val serverTime: Long,
-    val clientTime: Double? = null,
-  ) : DanmuDataWrapper()
+    ) : DanmuDataWrapper()
 
 }
+
+
+data class ClientDanmuData(
+  val danmu: DanmuDataWrapper,
+  val videoStartTime: Instant,
+  val clientTime: Double,
+)

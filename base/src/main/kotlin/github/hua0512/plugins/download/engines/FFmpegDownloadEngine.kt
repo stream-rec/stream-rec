@@ -218,7 +218,6 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     val code = withIOContext { process?.waitFor() }
     if (code != 0) {
       logger.error("ffmpeg process exited with code $code")
-      onDownloadError(lastOpeningFile, DownloadErrorException("ffmpeg process exited with code $code"))
     }
     return code == 0
   }

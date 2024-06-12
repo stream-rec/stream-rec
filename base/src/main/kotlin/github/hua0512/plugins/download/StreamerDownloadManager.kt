@@ -80,7 +80,8 @@ class StreamerDownloadManager(
   private val downloadInterval = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
 
   // retry delay for parted downloads
-  private val platformRetryDelay = (streamer.platform.platformConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
+  private val platformRetryDelay =
+    (streamer.platform.platformConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
 
   // max download retries
   private val maxRetry = app.config.maxDownloadRetries
@@ -186,7 +187,10 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun downloadStream(onStreamDownloaded: (stream: StreamData) -> Unit = {}, onStreamDownloadError: (e: Exception) -> Unit = {}) {
+  private suspend inline fun downloadStream(
+    crossinline onStreamDownloaded: (stream: StreamData) -> Unit = {},
+    crossinline onStreamDownloadError: (e: Throwable) -> Unit = {}
+  ) {
     // streamer is live, start downloading
     // while loop for parting the download
     return downloadSemaphore.withPermit {
@@ -194,12 +198,12 @@ class StreamerDownloadManager(
       try {
         with(plugin) {
           onStreamDownloaded { onStreamDownloaded(it) }
-          onStreamDownloadError { onStreamDownloadError(it) }
           download()
         }
         logger.debug("${streamer.name} download finished")
       } catch (e: Exception) {
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
+        onStreamDownloadError(e)
         when (e) {
           is IllegalArgumentException, is UnsupportedOperationException, is InvalidDownloadException -> {
             streamer.isLive = false
