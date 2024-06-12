@@ -29,7 +29,6 @@ package github.hua0512.plugins.douyu.download
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
-import github.hua0512.data.platform.DouyuQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.download.base.Download
@@ -70,7 +69,7 @@ class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<D
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyuDownloadConfig
     val selectedCdn = cdn ?: app.config.douyuConfig.cdn
-    val selectedQuality = quality ?: app.config.douyuConfig.quality ?: DouyuQuality.ORIGIN
+    val selectedQuality = quality ?: app.config.douyuConfig.quality
     if (streams.isEmpty()) {
       throw IllegalStateException("${streamer.name} no stream found")
     }
