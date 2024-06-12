@@ -42,19 +42,19 @@ import kotlinx.serialization.Serializable
 data class DouyinConfigGlobal(
   override val cookies: String? = null,
   override val quality: DouyinQuality = DouyinQuality.origin,
-  override val partedDownloadRetry: Int? = 10,
+  override val partedDownloadRetry: Int = 10,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
-  override val fetchDelay: Long? = 0,
+  override val fetchDelay: Long = 0,
 ) : GlobalPlatformConfig, DouyinConfigDTO
 
 @Serializable
 data class DouyuConfigGlobal(
-  override val cdn: String? = "tct-h5",
+  override val cdn: String = "tct-h5",
   @Serializable(with = DouyuQualitySerializer::class)
-  override val quality: DouyuQuality? = DouyuQuality.ORIGIN,
+  override val quality: DouyuQuality = DouyuQuality.ORIGIN,
   override val cookies: String? = null,
-  override val partedDownloadRetry: Int? = 10,
-  override val fetchDelay: Long? = 0,
+  override val partedDownloadRetry: Int = 10,
+  override val fetchDelay: Long = 0,
 ) : GlobalPlatformConfig, DouyuConfigDTO
 
 
@@ -63,9 +63,9 @@ data class HuyaConfigGlobal(
   override val primaryCdn: String = "AL",
   override val maxBitRate: Int? = 10000,
   override val cookies: String? = null,
-  override val partedDownloadRetry: Int? = 10,
+  override val partedDownloadRetry: Int = 10,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
-  override val fetchDelay: Long? = 0,
+  override val fetchDelay: Long = 0,
   val forceOrigin: Boolean = false,
   val useMobileApi: Boolean = false,
 ) : GlobalPlatformConfig, HuyaConfigDTO
@@ -74,16 +74,16 @@ data class HuyaConfigGlobal(
 data class TwitchConfigGlobal(
   override val authToken: String = "",
   override val quality: TwitchQuality = TwitchQuality.Source,
-  override val partedDownloadRetry: Int? = 10,
+  override val partedDownloadRetry: Int = 10,
   override val cookies: String? = null,
-  override val fetchDelay: Long? = 30,
+  override val fetchDelay: Long = 30,
   val skipAds: Boolean = false,
 ) : GlobalPlatformConfig, TwitchConfigDTO
 
 @Serializable
 data class PandaTvConfigGlobal(
-  override val partedDownloadRetry: Int? = 10,
+  override val partedDownloadRetry: Int = 10,
   override val cookies: String? = null,
   override val quality: PandaTvQuality = PandaTvQuality.Source,
-  override val fetchDelay: Long? = 30,
+  override val fetchDelay: Long = 30,
 ) : GlobalPlatformConfig, PandaTvConfigDTO
