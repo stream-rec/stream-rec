@@ -39,7 +39,7 @@ dependencies {
   implementation(libs.androidx.sqlite.bundled)
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.compiler)
-
+  implementation(libs.me.tongfei.progressbar)
   ksp(libs.com.google.dagger.dagger.compiler)
   testImplementation(libs.bundles.test.jvm)
 }

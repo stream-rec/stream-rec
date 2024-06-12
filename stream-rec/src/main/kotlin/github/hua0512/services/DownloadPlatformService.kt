@@ -118,7 +118,10 @@ class DownloadPlatformService(
   fun cancelStreamer(streamer: Streamer, reason: String? = null) {
     logger.debug("({}) request to cancel streamer: {} reason : {}", platform, streamer.url, reason)
     // check if streamer is present in the list
-    if (!streamers.contains(streamer) && !downloadingStreamers.contains(streamer.url) && !cancelledStreamers.contains(streamer.url)) {
+    if (!streamers.contains(streamer) &&
+      !downloadingStreamers.contains(streamer.url) &&
+      !cancelledStreamers.contains(streamer.url)
+    ) {
       logger.debug("({}) streamer {} not found in the list", platform, streamer.url)
       return
     }
@@ -215,7 +218,7 @@ class DownloadPlatformService(
     val plugin = try {
       PlatformDownloaderFactory.createDownloader(app, streamer.platform, streamer.url)
     } catch (e: Exception) {
-      logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}")
+      logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}, $e")
       EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
       return
     }
