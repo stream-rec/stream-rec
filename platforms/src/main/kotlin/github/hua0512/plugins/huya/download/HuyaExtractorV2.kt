@@ -36,7 +36,7 @@ import kotlinx.serialization.json.*
 /**
  * Huya extractor v2
  *
- * @note Only supports numeric room ids, and only supports mobile bitrates (< 10000 蓝光10M)
+ * @note Only supports numeric room ids
  * @author hua0512
  * @date : 2024/5/21 20:20
  */
@@ -143,8 +143,23 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
       bitrate to displayName
     }
 
+    // get additional qualities (HACK: exsphd)
+    val anticode = baseStreamInfoList.first().jsonObject["sFlvAntiCode"]?.jsonPrimitive?.content
+    val queries = parseQueryString(anticode ?: "")
+    val additionalQualities = queries["exsphd"]?.let { exsphd ->
+      val qualities = exsphd.removeSuffix(",").split(",")
+      qualities.map {
+        val quality = it.split("_")
+        val codec = quality[0]
+        val bitrate = quality[1].toInt()
+        bitrate to codec
+      }.filter {
+        it.first > 10000
+      }
+    } ?: emptyList()
+
     // build stream info
-    val streams = extractLiveStreams(baseStreamInfoList, bitrateList, maxBitRate)
+    val streams = extractLiveStreams(baseStreamInfoList, additionalQualities + bitrateList, maxBitRate)
     return mediaInfo.copy(streams = streams)
   }
 
