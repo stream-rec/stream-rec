@@ -35,6 +35,7 @@ import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.toMD5Hex
 import github.hua0512.utils.withIOContext
 import io.ktor.client.*
+import io.ktor.client.plugins.timeout
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
@@ -109,7 +110,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   }
 
   override suspend fun isLive(): Boolean {
-    val response: HttpResponse = getResponse("$BASE_URL/$roomId")
+    val response: HttpResponse = getResponse("$BASE_URL/$roomId") {
+      timeout {
+        requestTimeoutMillis = 15000
+      }
+    }
     if (response.status != HttpStatusCode.OK) throw IllegalStateException("Invalid response status ${response.status.value} from $url")
 
     htmlResponseBody = response.bodyAsText().apply {

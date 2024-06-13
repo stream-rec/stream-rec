@@ -28,6 +28,7 @@ package github.hua0512.plugins.huya.download
 
 import github.hua0512.data.media.MediaInfo
 import io.ktor.client.*
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -70,6 +71,9 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
   override suspend fun isLive(): Boolean {
     val response = getResponse(MP_BASE_URL) {
+      timeout {
+        requestTimeoutMillis = 15000
+      }
       contentType(ContentType.Application.Json)
       parameter("do", "profileRoom")
       parameter("m", "Live")
