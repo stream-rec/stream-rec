@@ -30,7 +30,8 @@ import github.hua0512.app.App
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.plugins.download.StreamerCallback
+import github.hua0512.plugins.download.DownloadPlatformService
+import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.platformConfig
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
@@ -157,7 +158,8 @@ class DownloadService(
         fetchDelay.inWholeMilliseconds,
         downloadSemaphore,
         callback,
-        platform
+        platform,
+        PlatformDownloaderFactory
       )
     }
     return service

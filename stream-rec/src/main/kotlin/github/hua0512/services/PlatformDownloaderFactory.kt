@@ -34,6 +34,7 @@ import github.hua0512.plugins.douyin.download.DouyinExtractor
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.douyu.download.Douyu
 import github.hua0512.plugins.douyu.download.DouyuExtractor
+import github.hua0512.plugins.download.base.IPlatformDownloaderFactory
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.plugins.huya.download.Huya
 import github.hua0512.plugins.huya.download.HuyaExtractor
@@ -51,9 +52,9 @@ import github.hua0512.plugins.twitch.download.TwitchExtractor
  * @author hua0512
  * @date : 2024/5/17 11:58
  */
-object PlatformDownloaderFactory {
+object PlatformDownloaderFactory : IPlatformDownloaderFactory {
 
-  fun createDownloader(app: App, platform: StreamingPlatform, url: String) = when (platform) {
+  override fun createDownloader(app: App, platform: StreamingPlatform, url: String) = when (platform) {
     StreamingPlatform.HUYA -> {
       val useMobile = app.config.huyaConfig.useMobileApi
       val isNumericUrl = useMobile && url.split("/").last().matches(Regex("\\d+"))

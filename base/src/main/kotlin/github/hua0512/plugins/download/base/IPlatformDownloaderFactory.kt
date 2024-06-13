@@ -24,30 +24,26 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download
+package github.hua0512.plugins.download.base
 
-import github.hua0512.data.stream.StreamData
-import github.hua0512.data.stream.Streamer
+import github.hua0512.app.App
+import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.stream.StreamingPlatform
 
 /**
- * Interface for listening to streamer events
- * @see Streamer
+ * Interface factory for creating platform downloaders
  * @author hua0512
- * @date : 2024/5/25 10:05
+ * @date : 2024/6/13 1:32
  */
-interface StreamerCallback {
+interface IPlatformDownloaderFactory {
 
-  fun onLiveStatusChanged(streamer: Streamer, isLive: Boolean)
+  /**
+   * Create a downloader for the given platform
+   * @param app the app instance
+   * @param platform the platform to download from
+   * @param url the url to download from
+   * @return a downloader instance
+   */
+  fun createDownloader(app: App, platform: StreamingPlatform, url: String): Download<DownloadConfig>
 
-  fun onLastLiveTimeChanged(streamer: Streamer, lastLiveTime: Long)
-
-  fun onDescriptionChanged(streamer: Streamer, description: String)
-
-  fun onAvatarChanged(streamer: Streamer, avatar: String)
-
-  fun onStreamDownloaded(streamer: Streamer, stream: StreamData)
-
-  fun onStreamDownloadFailed(streamer: Streamer, stream: StreamData, e: Exception)
-
-  fun onStreamFinished(streamer: Streamer, streams: List<StreamData>)
 }

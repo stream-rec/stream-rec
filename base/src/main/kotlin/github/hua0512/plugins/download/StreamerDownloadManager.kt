@@ -35,6 +35,7 @@ import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.exceptions.InvalidDownloadException
 import github.hua0512.plugins.event.EventCenter
 import kotlinx.coroutines.*

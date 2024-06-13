@@ -24,15 +24,15 @@
  * SOFTWARE.
  */
 
-package github.hua0512.services
+package github.hua0512.plugins.download
 
 import github.hua0512.app.App
 import github.hua0512.data.event.StreamerEvent.StreamerException
 import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.plugins.download.StreamerCallback
-import github.hua0512.plugins.download.StreamerDownloadManager
+import github.hua0512.plugins.download.base.IPlatformDownloaderFactory
+import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.event.EventCenter
 import io.ktor.util.collections.*
 import kotlinx.coroutines.*
@@ -61,6 +61,7 @@ class DownloadPlatformService(
   private val semaphore: Semaphore,
   private val callback: StreamerCallback,
   private val platform: StreamingPlatform,
+  private val downloadFactory: IPlatformDownloaderFactory,
 ) {
 
   companion object {
@@ -216,7 +217,7 @@ class DownloadPlatformService(
 
   private suspend fun downloadStreamerInternal(streamer: Streamer, onInit: (StreamerDownloadManager) -> Unit = {}) {
     val plugin = try {
-      PlatformDownloaderFactory.createDownloader(app, streamer.platform, streamer.url)
+      downloadFactory.createDownloader(app, streamer.platform, streamer.url)
     } catch (e: Exception) {
       logger.error("${streamer.name} platform not supported by the downloader : ${app.config.engine}, $e")
       EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))

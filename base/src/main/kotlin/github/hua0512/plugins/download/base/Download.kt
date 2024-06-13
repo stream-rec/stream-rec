@@ -37,7 +37,6 @@ import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.download.ProgressBarManager
-import github.hua0512.plugins.download.StreamerCallback
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART_PREFIX
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
