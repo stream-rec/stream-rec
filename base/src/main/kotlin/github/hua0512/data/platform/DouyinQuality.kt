@@ -26,6 +26,15 @@
 
 package github.hua0512.data.platform
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+
+@Serializable(with = DouyinQualitySerializer::class)
 enum class DouyinQuality(val value: String) {
 
   // 原画origin
@@ -49,4 +58,18 @@ enum class DouyinQuality(val value: String) {
   // only audio
   audio("ao"),
 
+}
+
+
+object DouyinQualitySerializer : KSerializer<DouyinQuality> {
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("DouyinQuality", PrimitiveKind.STRING)
+
+  override fun deserialize(decoder: Decoder): DouyinQuality {
+    val value = decoder.decodeString()
+    return DouyinQuality.entries.first { it.value == value }
+  }
+
+  override fun serialize(encoder: Encoder, value: DouyinQuality) {
+    encoder.encodeString(value.value)
+  }
 }
