@@ -28,6 +28,7 @@ package github.hua0512.services
 
 import github.hua0512.app.App
 import github.hua0512.data.event.UploadEvent
+import github.hua0512.data.event.UploadEvent.UploadRetriggered
 import github.hua0512.data.upload.*
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.upload.NoopUploader
@@ -37,6 +38,10 @@ import github.hua0512.plugins.upload.exceptions.UploadInvalidArgumentsException
 import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
@@ -69,6 +74,33 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
    * A semaphore to limit the number of concurrent upload.
    */
   private val uploadSemaphore: Semaphore by lazy { Semaphore(app.config.maxConcurrentUploads) }
+
+
+  /**
+   * Runs the upload service.
+   * This function listens to upload retriggered events and uploads the upload data.
+   */
+  suspend fun run() {
+    EventCenter.events.filterIsInstance<UploadRetriggered>()
+      .onEach {
+        val action = it.uploadData.uploadAction ?: run {
+          logger.error("Upload action not found for upload data: ${it.uploadData.id}")
+          return@onEach
+        }
+        val uploader = PlatformUploaderFactory.create(app, action.uploadConfig)
+        if (uploader is NoopUploader) {
+          return@onEach
+        }
+
+        val results = parallelUpload(listOf(it.uploadData), uploader)
+        assert(results.size == 1)
+      }
+      .catch { e ->
+        logger.error("Failed to re-upload file: ${e.message}")
+      }
+      .collect()
+  }
+
 
   /**
    * Uploads an upload action.

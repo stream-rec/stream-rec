@@ -44,9 +44,8 @@ object EventCenter {
 
   val events = _events.asSharedFlow()
 
-  fun sendEvent(event: Event) {
-    _events.tryEmit(event)
-  }
+  fun sendEvent(event: Event) = _events.tryEmit(event)
+
 
   suspend fun sendEvents(events: List<Event>) {
     events.forEach {

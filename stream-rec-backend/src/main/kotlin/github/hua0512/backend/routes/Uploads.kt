@@ -28,13 +28,16 @@ package github.hua0512.backend.routes
 
 import github.hua0512.data.StreamerId
 import github.hua0512.data.UploadDataId
+import github.hua0512.data.event.UploadEvent
 import github.hua0512.data.upload.UploadState
 import github.hua0512.logger
+import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.upload.UploadRepo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
@@ -116,6 +119,35 @@ fun Route.uploadRoute(json: Json, repo: UploadRepo) {
       } catch (e: Exception) {
         logger.error("Failed to get upload results : ${e.message}")
         call.respond(HttpStatusCode.InternalServerError, "Failed to get upload results : ${e.message}")
+      }
+    }
+
+    post("{id}/retry") {
+      val id = call.parameters["id"]?.toLongOrNull()
+      if (id == null) {
+        call.respond(HttpStatusCode.BadRequest, "Invalid id")
+        return@post
+      }
+      try {
+        val uploadData = repo.getUploadData(UploadDataId(id))
+        if (uploadData == null) {
+          call.respond(HttpStatusCode.NotFound, "Upload data not found")
+          return@post
+        }
+
+        call.respond(
+          EventCenter.sendEvent(
+            UploadEvent.UploadRetriggered(
+              uploadData,
+              uploadData.filePath,
+              uploadData.uploadPlatform,
+              Clock.System.now()
+            )
+          ) == true
+        )
+      } catch (e: Exception) {
+        logger.error("Failed to retrigger upload data : ${e.message}")
+        call.respond(HttpStatusCode.InternalServerError, "Failed to retrigger upload data : ${e.message}")
       }
     }
 

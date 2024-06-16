@@ -26,6 +26,7 @@
 
 package github.hua0512.data.event
 
+import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadPlatform
 import kotlinx.datetime.Instant
 
@@ -62,5 +63,12 @@ sealed class UploadEvent : Event {
     override val platform: UploadPlatform,
     val time: Instant,
     val error: Throwable,
+  ) : UploadEvent()
+
+  data class UploadRetriggered(
+    val uploadData: UploadData,
+    override val filePath: String,
+    override val platform: UploadPlatform,
+    val time: Instant,
   ) : UploadEvent()
 }
