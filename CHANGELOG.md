@@ -4,13 +4,15 @@
 
 - refactor(download): fallback to use synchronized handling
 - feat(huya): add a hack for mobile API to use bitrates higher than 10000
+- feat(upload): add support for retrying upload of failed files
 - frontend: fix sidebar misbehavior
 
 - ---------------------------------------
 
 - 修复(下载): 回退到使用同步处理，解决部分下载问题
 - 增加: 虎牙平台移动API支持高于10000码率的hack
-- 修复: 修复前端侧边栏行为异常
+- 添加: 前后端支持上传失败文件重试
+- 修复: 前端侧边栏行为异常
 
 ## [0.6.6]
 
