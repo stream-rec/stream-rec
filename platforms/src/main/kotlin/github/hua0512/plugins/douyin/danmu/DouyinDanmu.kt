@@ -41,6 +41,7 @@ import github.hua0512.plugins.douyin.download.DouyinExtractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.commonDouyinParams
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.extractDouyinRoomId
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.populateDouyinCookieMissedParams
+import github.hua0512.plugins.download.COMMON_HEADERS
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
@@ -101,7 +102,7 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     val response = withIOContext {
       app.client.get("https://live.douyin.com/webcast/room/web/enter/") {
         headers {
-          Extractor.commonHeaders.forEach { append(it.first, it.second) }
+          COMMON_HEADERS.forEach { append(it.first, it.second) }
           append(HttpHeaders.Referrer, DouyinExtractor.LIVE_DOUYIN_URL)
           append(HttpHeaders.Cookie, cookies)
         }

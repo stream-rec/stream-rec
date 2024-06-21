@@ -27,6 +27,7 @@
 package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
+import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.utils.isWindows
 import io.ktor.client.*
 import io.ktor.client.engine.*
@@ -90,7 +91,11 @@ class App(val json: Json) {
         logger = Logger.DEFAULT
         level = LogLevel.NONE
       }
-      BrowserUserAgent()
+
+      install(UserAgent) {
+        agent = COMMON_USER_AGENT
+      }
+
       install(HttpRequestRetry) {
         retryOnServerErrors(maxRetries = 3)
         exponentialDelay()

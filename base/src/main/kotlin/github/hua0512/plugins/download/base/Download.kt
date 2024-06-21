@@ -36,6 +36,7 @@ import github.hua0512.data.stream.*
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
+import github.hua0512.plugins.download.COMMON_HEADERS
 import github.hua0512.plugins.download.ProgressBarManager
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART_PREFIX
@@ -192,7 +193,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
     // download headers
     val headers = mutableMapOf<String, String>().apply {
-      putAll(Extractor.commonHeaders)
+      putAll(COMMON_HEADERS)
       if (downloadConfig is TwitchConfigDTO) {
         // add twitch headers
         val authToken = downloadConfig.authToken ?: app.config.twitchConfig.authToken

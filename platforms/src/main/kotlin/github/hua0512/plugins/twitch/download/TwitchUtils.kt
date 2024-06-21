@@ -26,7 +26,7 @@
 
 package github.hua0512.plugins.twitch.download
 
-import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.download.COMMON_HEADERS
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -46,7 +46,7 @@ internal suspend fun twitchPostQPL(client: HttpClient, json: Json, data: String,
     authToken?.let {
       header(HttpHeaders.Authorization, "${AuthScheme.OAuth} $it")
     }
-    Extractor.commonHeaders.forEach { (key, value) ->
+    COMMON_HEADERS.forEach { (key, value) ->
       header(key, value)
     }
     contentType(ContentType.Application.Json)

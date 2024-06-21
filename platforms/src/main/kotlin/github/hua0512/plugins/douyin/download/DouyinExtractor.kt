@@ -30,6 +30,8 @@ import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.download.COMMON_HEADERS
+import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.utils.generateRandomString
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
@@ -252,7 +254,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
           commonDouyinParams.forEach { (key, value) ->
             parameter(key, value)
           }
-          commonHeaders.forEach { (key, value) ->
+          COMMON_HEADERS.forEach { (key, value) ->
             header(key, value)
           }
           header(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
