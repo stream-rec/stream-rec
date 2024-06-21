@@ -1,5 +1,5 @@
 [versions]
-ktor = "2.3.11"
+ktor = "2.3.12"
 ksp = "2.0.0-1.0.22"
 kotlin = "2.0.0"
 kotlin-coroutines = "1.8.1"
