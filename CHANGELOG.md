@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.8]
+
+- fix(douyin-danmu) : include signature parameter in request
+
+- ---------------------------------------
+
+- 修复: 斗音弹幕请求缺少签名参数
+
 ## [0.6.7]
 
 - refactor(download): fallback to use synchronized handling
