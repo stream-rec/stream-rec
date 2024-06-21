@@ -40,6 +40,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
+import kotlin.random.Random
 
 /**
  *
@@ -227,7 +228,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
      * @param length The length of the random string to generate
      * @return A random string to be used as the `msToken` parameter in Douyin requests
      */
-    private fun generateDouyinMsToken(length: Int = 107): String {
+    private fun generateDouyinMsToken(length: Int = 116): String {
       synchronized(this) {
         if (MS_TOKEN != null) return MS_TOKEN!!
 
@@ -275,6 +276,17 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       return ttwid
     }
 
+    internal var USER_ID: String? = null
+      get() {
+        if (field != null) return field!!
+        synchronized(this) {
+          if (field == null) {
+            field = Random.nextLong(730_000_000_000_000_0000L, 7_999_999_999_999_999_999L).toString()
+            logger.info("generated douyin user id: $field")
+          }
+        }
+        return field!!
+      }
 
     /**
      * A map of common parameters used for making requests to the Douyin API.
@@ -291,17 +303,24 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
      * - "heartbeatDuration" - The duration of the heartbeat in milliseconds
      */
     internal val commonDouyinParams = mapOf(
-      "aid" to "6383",
+      "app_name" to "douyin_web",
+      "version_code" to "180800",
+      "webcast_sdk_version" to "1.0.14-beta.0",
+      "update_version_code" to "1.0.14-beta.0",
+      "compress" to "gzip",
       "device_platform" to "web",
       "browser_language" to "zh-CN",
       "browser_platform" to "Win32",
-      "browser_name" to "Chrome",
-      "browser_version" to "98.0.4758.102",
-      "compress" to "gzip",
-      "signature" to "00000000",
-      "heartbeatDuration" to "0"
+      "browser_name" to "Mozilla",
+      "browser_version" to COMMON_USER_AGENT.removePrefix("Mozilla/").trim(),
+      "host" to "https://live.douyin.com",
+      "aid" to "6383",
+      "live_id" to "1",
+      "did_rule" to "3",
+      "endpoint" to "live_pc",
+      "identity" to "audience",
+      "heartbeatDuration" to "0",
     )
-
   }
 
 }

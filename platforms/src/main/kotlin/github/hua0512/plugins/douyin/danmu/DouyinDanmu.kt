@@ -30,17 +30,17 @@ import com.google.protobuf.ByteString
 import douyin.Dy
 import douyin.Dy.PushFrame
 import github.hua0512.app.App
-import github.hua0512.data.config.DownloadConfig.DefaultDownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.base.Danmu
-import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.commonDouyinParams
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.extractDouyinRoomId
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.populateDouyinCookieMissedParams
+import github.hua0512.plugins.douyin.download.getSignature
+import github.hua0512.plugins.douyin.download.loadWebmssdk
 import github.hua0512.plugins.download.COMMON_HEADERS
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.nonEmptyOrNull
@@ -57,11 +57,16 @@ import kotlinx.datetime.Instant
  */
 class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
 
-  override var websocketUrl: String = "wss://webcast3-ws-web-lf.douyin.com:443/webcast/im/push/v2/"
+  override var websocketUrl: String = "wss://webcast5-ws-web-hl.douyin.com/webcast/im/push/v2/"
 
   override val heartBeatDelay: Long = 10000
 
   override val heartBeatPack: ByteArray = byteArrayOf()
+
+  init {
+    // load webmssdk js
+    loadWebmssdk()
+  }
 
   override suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean {
     // get room id
@@ -131,6 +136,11 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     }
     requestParams["room_id"] = trueRoomId.toString()
     requestParams["web_rid"] = roomId
+    // generate user id if not exists
+    requestParams["user_unique_id"] = DouyinExtractor.USER_ID!!
+    val signature = getSignature(trueRoomId.toString(), DouyinExtractor.USER_ID)
+    // add signature to request params
+    requestParams["signature"] = signature
     headersMap[HttpHeaders.Cookie] = cookies
     return true
   }

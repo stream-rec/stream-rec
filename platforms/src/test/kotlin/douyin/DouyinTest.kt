@@ -35,6 +35,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.DefaultAsserter.assertEquals
 import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
+import kotlin.time.Duration
 
 /*
  * MIT License
@@ -64,17 +65,17 @@ import kotlin.test.Test
 
 class DouyinTest : BaseTest() {
 
-  override val testUrl = "https://live.douyin.com/557481980778"
+  override val testUrl = "https://live.douyin.com/964752892125"
 
   @Test
-  override fun testRegex() = runTest {
+  override fun testRegex(): Unit = runTest {
     val url = testUrl
     val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url) ?: throw IllegalArgumentException("Invalid url")
     assertEquals("failed to match id", matchResult.groupValues.last(), "217536353956")
   }
 
   @Test
-  override fun testLive() = runTest {
+  override fun testLive(): Unit = runTest {
     val extractor = DouyinExtractor(app.client, app.json, testUrl).apply {
       prepare()
     }
@@ -84,7 +85,7 @@ class DouyinTest : BaseTest() {
   }
 
   @Test
-  fun testDanmu() = runTest {
+  fun testDanmu(): Unit = runTest(timeout = Duration.INFINITE) {
     val danmu = DouyinDanmu(app).apply {
       enableWrite = false
       filePath = "douyin_danmu.txt"
