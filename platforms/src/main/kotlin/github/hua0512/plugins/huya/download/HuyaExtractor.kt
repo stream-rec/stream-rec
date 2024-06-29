@@ -33,7 +33,6 @@ import github.hua0512.plugins.base.Extractor
 import github.hua0512.utils.decodeBase64
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.toMD5Hex
-import github.hua0512.utils.withIOContext
 import io.ktor.client.*
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.setBody
@@ -159,7 +158,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     validateCookie()
 
     // get live status
-    val isLive = withIOContext { isLive() }
+    val isLive = isLive()
 
     // get media info from htmlResponseBody
     val avatarUrl = AVATAR_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1) ?: "".also {
