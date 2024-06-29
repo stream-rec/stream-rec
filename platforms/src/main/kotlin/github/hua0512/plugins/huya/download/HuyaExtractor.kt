@@ -86,6 +86,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   internal var ayyuid: Long = 0
   internal var topsid: Long = 0
   internal var subid: Long = 0
+  internal var uid = 0L
   var forceOrigin = false
 
 
@@ -231,8 +232,15 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     withContext(Dispatchers.Default) {
       gameStreamInfoList.forEach { streamInfo ->
-        val uid = streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull()
-          ?: (12340000L..12349999L).random()
+        if (uid == 0L) {
+          // extract uid from cookies
+          // if not found, use streamer's uid
+          // if still not found, use random uid
+          uid = cookies.nonEmptyOrNull()?.let {
+            val cookie = parseClientCookiesHeader(cookies)
+            cookie["yyuid"]?.toLongOrNull() ?: cookie["udb_uid"]?.toLongOrNull()
+          } ?: streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull() ?: (12340000L..12349999L).random()
+        }
         val cdn = streamInfo.jsonObject["sCdnType"]?.jsonPrimitive?.content ?: ""
 
         val priority = streamInfo.jsonObject["iWebPriorityRate"]?.jsonPrimitive?.int ?: 0
