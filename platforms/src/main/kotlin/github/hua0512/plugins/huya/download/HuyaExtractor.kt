@@ -36,6 +36,7 @@ import github.hua0512.utils.toMD5Hex
 import github.hua0512.utils.withIOContext
 import io.ktor.client.*
 import io.ktor.client.plugins.timeout
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +55,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   Extractor(http, json) {
   companion object {
     const val BASE_URL = "https://www.huya.com"
+    const val COOKIE_URL = "https://udblgn.huya.com/web/cookie/verify"
     const val URL_REGEX = "(?:https?://)?(?:(?:www|m)\\.)?huya\\.com/([a-zA-Z0-9]+)"
     const val ROOM_DATA_REGEX = "var TT_ROOM_DATA = (.*?);"
     const val AVATAR_REGEX = """avatar"\s*:\s*"([^"]+)"""
@@ -74,6 +76,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     )
 
     internal const val PLATFORM_ID = 100
+    private const val APP_ID = 5002
   }
 
   override val regexPattern = URL_REGEX.toRegex()
@@ -87,6 +90,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   internal var topsid: Long = 0
   internal var subid: Long = 0
   internal var uid = 0L
+  private var isCookieVerified = false
   var forceOrigin = false
 
 
@@ -151,6 +155,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   }
 
   override suspend fun extract(): MediaInfo {
+    // validate cookie
+    validateCookie()
 
     // get live status
     val isLive = withIOContext { isLive() }
@@ -328,6 +334,61 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     }
 
     return parameters.build().formUrlEncode()
+  }
+
+  /**
+   * Validate cookie if present
+   * @return true if cookie is valid, false otherwise
+   */
+  protected suspend fun validateCookie(): Boolean {
+    // check if cookie is present
+    if (cookies.isNotEmpty()) {
+      // verify cookie
+      return try {
+        verifyCookie().also {
+          isCookieVerified = it
+          if (!it) {
+            logger.warn("$url failed to verify cookie")
+          }
+        }
+      } catch (e: Exception) {
+        logger.error("Error verifying cookie", e)
+        false
+      }
+    }
+    return true
+  }
+
+
+  private suspend fun verifyCookie(): Boolean {
+    if (isCookieVerified) return true
+
+    // make verify cookie request
+    val response = postResponse(COOKIE_URL) {
+      timeout {
+        requestTimeoutMillis = 15000
+      }
+      // set json body
+      contentType(ContentType.Application.Json)
+      setBody(
+        buildJsonObject {
+          put("appId", APP_ID)
+        }
+      )
+    }
+    if (response.status != HttpStatusCode.OK) {
+      throw IllegalStateException("Invalid response status ${response.status.value} from $COOKIE_URL")
+      return false
+    }
+    val body = response.bodyAsText()
+    val json = json.parseToJsonElement(body).run {
+      if (this is JsonPrimitive) {
+        throw IllegalStateException("Invalid response body from $COOKIE_URL")
+      }
+      jsonObject
+    }
+    val returnCode = json["returnCode"]?.jsonPrimitive?.int ?: 0
+    return returnCode == 0
   }
 
 }

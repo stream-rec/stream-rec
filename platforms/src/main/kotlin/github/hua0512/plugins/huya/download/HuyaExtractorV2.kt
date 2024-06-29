@@ -97,6 +97,9 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
   }
 
   override suspend fun extract(): MediaInfo {
+    // validate cookies
+    validateCookie()
+
     val isLive = isLive()
 
     val data = dataJson["data"]?.jsonObject ?: throw IllegalStateException("data is null from $url")
