@@ -34,7 +34,6 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
 import github.hua0512.utils.nonEmptyOrNull
-import github.hua0512.utils.withIOContext
 
 /**
  * Pandalive live stream downloader.
@@ -55,7 +54,7 @@ class PandaTv(app: App, override val danmu: PandaTvDanmu, override val extractor
     }
 
     val mediaInfo = try {
-      withIOContext { extractor.extract() }
+      extractor.extract()
     } catch (e: Exception) {
       if (e is IllegalArgumentException || e is UnsupportedOperationException) throw e
       logger.error("Error extracting media info", e)

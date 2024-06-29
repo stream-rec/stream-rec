@@ -59,7 +59,7 @@ suspend fun getMd5Crypt(client: HttpClient): String {
   } ?: ""
 
   val url = "https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js"
-  val response = withIOContext { client.get(url) }
+  val response = client.get(url)
   if (response.status.value != 200) {
     throw IllegalStateException("Failed to get MD5CRYPT")
   }

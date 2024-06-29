@@ -34,7 +34,6 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
-import github.hua0512.utils.withIOContext
 
 /**
  * @author hua0512
@@ -63,7 +62,7 @@ class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Downloa
     }
 
     val mediaInfo = try {
-      withIOContext { extractor.extract() }
+      extractor.extract()
     } catch (e: Exception) {
       // throw if illegal argument or unsupported operation
       if (e is IllegalArgumentException || e is UnsupportedOperationException) throw e

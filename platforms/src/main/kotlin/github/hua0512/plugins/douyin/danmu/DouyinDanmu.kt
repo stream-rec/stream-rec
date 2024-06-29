@@ -104,18 +104,16 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
       return false
     }
 
-    val response = withIOContext {
-      app.client.get("https://live.douyin.com/webcast/room/web/enter/") {
-        headers {
-          COMMON_HEADERS.forEach { append(it.first, it.second) }
-          append(HttpHeaders.Referrer, DouyinExtractor.LIVE_DOUYIN_URL)
-          append(HttpHeaders.Cookie, cookies)
-        }
-        commonDouyinParams.forEach { (t, u) ->
-          parameter(t, u)
-        }
-        parameter("web_rid", roomId)
+    val response = app.client.get("https://live.douyin.com/webcast/room/web/enter/") {
+      headers {
+        COMMON_HEADERS.forEach { append(it.first, it.second) }
+        append(HttpHeaders.Referrer, DouyinExtractor.LIVE_DOUYIN_URL)
+        append(HttpHeaders.Cookie, cookies)
       }
+      commonDouyinParams.forEach { (t, u) ->
+        parameter(t, u)
+      }
+      parameter("web_rid", roomId)
     }
 
     if (response.status != HttpStatusCode.OK) {

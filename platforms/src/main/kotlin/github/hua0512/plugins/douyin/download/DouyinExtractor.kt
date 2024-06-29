@@ -34,7 +34,6 @@ import github.hua0512.plugins.download.COMMON_HEADERS
 import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.utils.generateRandomString
 import github.hua0512.utils.nonEmptyOrNull
-import github.hua0512.utils.withIOContext
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -250,17 +249,16 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
      */
     private suspend fun getDouyinTTwid(client: HttpClient): String {
       if (TT_WID != null) return TT_WID!!
-      val response = withIOContext {
-        client.get("${LIVE_DOUYIN_URL}/") {
-          commonDouyinParams.forEach { (key, value) ->
-            parameter(key, value)
-          }
-          COMMON_HEADERS.forEach { (key, value) ->
-            header(key, value)
-          }
-          header(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
+      val response = client.get("${LIVE_DOUYIN_URL}/") {
+        commonDouyinParams.forEach { (key, value) ->
+          parameter(key, value)
         }
+        COMMON_HEADERS.forEach { (key, value) ->
+          header(key, value)
+        }
+        header(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
       }
+
       val cookies = response.headers[HttpHeaders.SetCookie] ?: ""
       val ttwidPattern = "ttwid=([^;]*)".toRegex()
       val ttwid = ttwidPattern.find(cookies)?.groupValues?.get(1) ?: ""
