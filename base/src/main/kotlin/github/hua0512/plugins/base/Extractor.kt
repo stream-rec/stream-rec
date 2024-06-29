@@ -30,7 +30,6 @@ import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.download.COMMON_HEADERS
-import github.hua0512.utils.withIOContext
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -142,33 +141,31 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * get the response from the input url
    *
    * request uses predefined headers and params:
-   * [commonHeaders], [platformHeaders], [platformParams]
+   * [COMMON_HEADERS], [platformHeaders], [platformParams]
    *
    * @param url the input url
    * @param request the request builder
    * @return a [HttpResponse] object
    */
-  suspend fun getResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = withIOContext {
-    http.get(url) {
-      populateCommons()
-      request()
-    }
+  suspend fun getResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = http.get(url) {
+    populateCommons()
+    request()
   }
+
 
   /**
    * post the response from the input url
    * request uses predefined headers and params:
-   * [commonHeaders], [platformHeaders], [platformParams]
+   * [COMMON_HEADERS], [platformHeaders], [platformParams]
    * @param url the input url
    * @param request the request builder
    * @return a [HttpResponse] object
    */
-  suspend fun postResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = withIOContext {
-    http.post(url) {
-      populateCommons()
-      request()
-    }
+  suspend fun postResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = http.post(url) {
+    populateCommons()
+    request()
   }
+
 
   /**
    * populate the common headers and params
