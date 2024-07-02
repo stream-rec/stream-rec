@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.9]
+
+- refactor(danmu): use bilibili danmu format by @hua0512 in https://github.com/hua0512/stream-rec/pull/92
+- feat(huya-extractor): add cookies validation
+- chore(database): remove deprecated sqlDelight dependencies and migration
+
+- ---------------------------------------
+
+- 重构(弹幕): 使用bilibili弹幕格式
+- 增加: 虎牙平台添加cookies验证
+- 移除: 移除过时的sqlDelight依赖和迁移
+
+**Full Changelog**: https://github.com/hua0512/stream-rec/compare/v0.6.8...v0.6.9
+
 ## [0.6.8]
 
 - fix(douyin-danmu) : include signature parameter in request
