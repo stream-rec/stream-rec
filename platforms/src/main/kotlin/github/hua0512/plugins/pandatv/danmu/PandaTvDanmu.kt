@@ -116,6 +116,7 @@ class PandaTvDanmu(app: App) : Danmu(app, enablePing = true) {
     val createTime = createTimeRegex.find(msg)?.groupValues?.get(1)?.toLongOrNull() ?: 0
     return listOf(
       DanmuData(
+        uid = 0,
         sender = sender,
         color = 0,
         content = message,

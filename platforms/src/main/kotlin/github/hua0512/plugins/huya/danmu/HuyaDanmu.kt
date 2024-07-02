@@ -126,6 +126,7 @@ class HuyaDanmu(app: App) : Danmu(app, enablePing = false) {
           // huya danmu contains only one danmu
           return listOf(
             DanmuData(
+              msgNotice.senderInfo.lUid,
               msgNotice.senderInfo.sNickName,
               color = msgNotice.tBulletFormat.iFontColor,
               content = content,
