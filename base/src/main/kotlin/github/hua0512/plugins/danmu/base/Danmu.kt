@@ -70,8 +70,12 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     @JvmStatic
     protected val logger: Logger = LoggerFactory.getLogger(Danmu::class.java)
 
-    private const val XML_START = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n"
-    private const val XML_END = "</root>"
+    private const val XML_START = """<?xml version="1.0" encoding="UTF-8"?>
+      <?xml-stylesheet type="text/xsl" href="#s"?>
+<i>
+
+"""
+    private const val XML_END = "</i>"
   }
 
   /**
