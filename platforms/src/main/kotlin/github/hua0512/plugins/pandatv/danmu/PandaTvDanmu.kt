@@ -49,6 +49,7 @@ class PandaTvDanmu(app: App) : Danmu(app, enablePing = true) {
     private val msgRegex = Regex("\"message\":\"(.+?)\"")
     private val senderRegex = Regex("\"nk\":\"(.+?)\"")
     private val createTimeRegex = Regex("\"created_at\":(\\d+)")
+    private val idxRegex = Regex("\"idx\":\"(\\d+)\"")
     private const val DANMU_URL = "wss://chat-ws.neolive.kr/connection/websocket"
   }
 
@@ -114,9 +115,10 @@ class PandaTvDanmu(app: App) : Danmu(app, enablePing = true) {
     val message = msgRegex.find(msg)?.groupValues?.get(1) ?: return emptyList()
     val sender = senderRegex.find(msg)?.groupValues?.get(1) ?: ""
     val createTime = createTimeRegex.find(msg)?.groupValues?.get(1)?.toLongOrNull() ?: 0
+    val idx: Long = idxRegex.find(msg)?.groupValues?.get(1)?.toLong() ?: 0L
     return listOf(
       DanmuData(
-        uid = 0,
+        uid = idx,
         sender = sender,
         color = 0,
         content = message,
