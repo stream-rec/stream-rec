@@ -70,8 +70,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     @JvmStatic
     protected val logger: Logger = LoggerFactory.getLogger(Danmu::class.java)
 
-    private const val XML_START = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<root>\n"
-    private const val XML_END = "</root>"
+    private const val XML_START = """<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="#s"?>
+<i>
+"""
+    private const val XML_END = "</i>"
   }
 
   /**
@@ -327,11 +330,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
             .replace("\n", "&#10;")
             .replace("\r", "&#13;")
         }
-        append(
-          """
-                  <d p="${time},1,25,$color,0,0,0,0">${content}</d>
-                """.trimIndent()
-        )
+        // append tab
+        append("\t")
+        // append danmu content
+        append("""<d p="$time,1,25,$color,${danmu.serverTime},0,${danmu.uid},0" user="${danmu.sender}">${content}</d>""")
+        // append newline
         append("\n")
       }
     }

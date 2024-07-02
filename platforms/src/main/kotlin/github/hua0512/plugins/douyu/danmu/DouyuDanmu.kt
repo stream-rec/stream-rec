@@ -144,6 +144,7 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
         val decoded = DouyuSTT.deserialize(it)
         val danmu = if (decoded is Map<*, *>) {
           DanmuDataWrapper.DanmuData(
+            uid = (decoded["uid"] ?: decoded["hashid"]).toString().toLong(),
             sender = decoded["nn"] as String,
             color = 0,
             content = decoded["txt"] as String,
@@ -154,6 +155,7 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
           // decode danmu using regex
           val decodedString = it.toString()
           DanmuDataWrapper.DanmuData(
+            uid = decodedString.substringAfter("uid=").substringBefore(",").toLong(),
             sender = decodedString.substringAfter("nn=").substringBefore(","),
             color = 0,
             content = decodedString.substringAfter("txt=").substringBefore(","),

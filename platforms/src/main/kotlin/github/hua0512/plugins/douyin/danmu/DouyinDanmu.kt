@@ -174,6 +174,7 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
             if (this.isNullOrEmpty()) -1 else this.toInt(16)
           }
           DanmuData(
+            chatMessage.user.id,
             chatMessage.user.nickNameBytes.toStringUtf8(),
             textColor,
             chatMessage.contentBytes.toStringUtf8(),

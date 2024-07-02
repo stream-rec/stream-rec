@@ -34,6 +34,7 @@ import github.hua0512.plugins.douyu.download.extractDouyunRidFromUrl
 import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.time.Duration
 
 /*
  * MIT License
@@ -99,7 +100,7 @@ class DouyuTest : BaseTest() {
   }
 
   @Test
-  fun testDanmu() = runTest {
+  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
     val danmu = DouyuDanmu(app).apply {
       rid = "8984762"
       enableWrite = false
