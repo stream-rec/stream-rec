@@ -1,7 +1,6 @@
 plugins {
   alias(libs.plugins.kotlin.jvm)
   alias(libs.plugins.kotlin.serialization)
-  alias(libs.plugins.app.cash.sqldelight)
   alias(libs.plugins.ksp)
   alias(libs.plugins.room)
 }
@@ -18,9 +17,6 @@ dependencies {
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.androidx.room.runtime)
   ksp(libs.androidx.room.compiler)
-  api(libs.app.cash.sqldelight.sqlite.driver)
-  api(libs.app.cash.sqldelight.coroutines.extensions)
-  api(libs.app.cash.sqldelight.primitive.adapters)
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.me.tongfei.progressbar)
   implementation(libs.io.ktor.client.core)
@@ -30,14 +26,6 @@ dependencies {
   implementation(libs.io.ktor.serialization.kotlinx.json)
   implementation(libs.io.ktor.client.logging)
   testImplementation(libs.bundles.test.jvm)
-}
-
-sqldelight {
-  databases {
-    create("StreamRecDatabase") {
-      packageName.set("github.hua0512")
-    }
-  }
 }
 
 room {

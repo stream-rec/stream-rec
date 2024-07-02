@@ -41,11 +41,9 @@ import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.dao.user.UserDao
 import github.hua0512.logger
 import github.hua0512.repo.LocalDataSource
-import github.hua0512.utils.deleteFile
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 import kotlin.io.path.Path
-import kotlin.io.path.copyTo
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.pathString
 
@@ -65,25 +63,8 @@ class DatabaseModule {
       it.createParentDirectories()
       logger.info("Database path: ${it.pathString}")
     }
-    firstRun = LocalDataSource.isFirstRun()
 
-    // TODO : Remove deprecated sqldelight in next release
-    if (!firstRun) {
-      // if not first run, check if type file exists
-      val dbType = LocalDataSource.getDbType()
-      // if db type is not room, migrate from sqldelight to room
-      if (dbType != "room") {
-        logger.info("Database type is $dbType, migrating to room")
-        // copy a bak file
-        val bakPath = Path("${path.pathString}.bak")
-        path.copyTo(bakPath, overwrite = true)
-        // remove sqldelight db
-        path.deleteFile()
-      }
-    } else {
-      LocalDataSource.writeDbVersion(AppDatabase.DATABASE_VERSION)
-      LocalDataSource.writeDbType("room")
-    }
+    firstRun = LocalDataSource.isFirstRun()
 
     val builder = Room.databaseBuilder<AppDatabase>(
       name = path.pathString

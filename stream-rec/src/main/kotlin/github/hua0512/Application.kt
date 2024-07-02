@@ -40,13 +40,12 @@ import github.hua0512.app.App
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
 import github.hua0512.backend.backendServer
-import github.hua0512.dao.startMigration
 import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.utils.nonEmptyOrNull
-import io.ktor.server.netty.*
+import io.ktor.server.engine.ApplicationEngine
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -62,22 +61,18 @@ class Application {
       initLogger()
     }
 
+    /**
+     * Backend server instance
+     */
+    private var server: ApplicationEngine? = null
+
     @JvmStatic
     fun main(args: Array<String>): Unit = runBlocking {
-      var server: NettyApplicationEngine? = null
       val appComponent: AppComponent = DaggerAppComponent.create()
-
-      // TODO: Remove in the next version
-      try {
-        startMigration(appComponent.getDatabase(), appComponent.getJson())
-      } catch (e: Exception) {
-        logger.error("Migration failed", e)
-        throw e
-      }
 
       val app = appComponent.getAppConfig()
 
-      val jobScope = initComponents(this.coroutineContext, appComponent, app, initializeServer = { server = it })
+      val jobScope = initComponents(this.coroutineContext, appComponent, app)
 
       // start the app
       // add shutdown hook
@@ -89,16 +84,16 @@ class Application {
         app.releaseAll()
         appComponent.getDatabase().close()
         EventCenter.stop()
+        server = null
       })
       // wait for the job to finish
       jobScope.coroutineContext[Job]?.join()
     }
 
-    private suspend fun initComponents(
+    private suspend inline fun initComponents(
       context: CoroutineContext,
       appComponent: AppComponent,
       app: App,
-      initializeServer: (NettyApplicationEngine) -> Unit = {},
     ): CoroutineScope {
       val scope = CoroutineScope(context + Dispatchers.IO + SupervisorJob())
       val appConfigRepository = appComponent.getAppConfigRepository()
@@ -134,7 +129,7 @@ class Application {
         }
         // start the backend server
         launch {
-          backendServer(
+          server = backendServer(
             json = appComponent.getJson(),
             appComponent.getUserRepo(),
             appComponent.getAppConfigRepository(),
@@ -144,7 +139,6 @@ class Application {
             appComponent.getUploadRepo(),
           ).apply {
             start()
-            initializeServer(this)
           }
         }
       }

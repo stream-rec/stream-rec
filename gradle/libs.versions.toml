@@ -5,7 +5,6 @@ kotlin = "2.0.0"
 kotlin-coroutines = "1.8.1"
 logback = "1.5.6"
 dagger = "2.51.1"
-sqldelight = "2.0.2"
 protobuf = "4.27.2"
 androidx-room = "2.7.0-alpha04"
 androidx-sqlite = "2.5.0-alpha04"
@@ -18,10 +17,6 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "androidx-sqlite" }
 androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "androidx-sqlite" }
 androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framework", version.ref = "androidx-sqlite" }
-
-app-cash-sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
-app-cash-sqldelight-coroutines-extensions = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
-app-cash-sqldelight-primitive-adapters = { module = "app.cash.sqldelight:primitive-adapters", version.ref = "sqldelight" }
 
 io-exoquery-pprint = "io.exoquery:pprint-kotlin:2.0.2"
 
@@ -80,7 +75,6 @@ room = { id = "androidx.room", version.ref = "androidx-room" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
-app-cash-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 
 [bundles]
 

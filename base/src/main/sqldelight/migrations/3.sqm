@@ -1,1 +1,0 @@
-ALTER TABLE app_config ADD COLUMN useBuiltInSegmenter INTEGER NOT NULL DEFAULT 0;
