@@ -1,4 +1,4 @@
-FROM gradle:8.7-jdk21-alpine as builder
+FROM gradle:8.8-jdk21-alpine as builder
 WORKDIR /app
 COPY . .
 RUN gradle stream-rec:build -x test --no-daemon
