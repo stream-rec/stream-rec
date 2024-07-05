@@ -26,9 +26,11 @@
 
 package github.hua0512.plugins.douyu.download
 
+import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
 import github.hua0512.plugins.douyu.download.DouyuExtractor.Companion.logger
 import github.hua0512.utils.generateRandomString
-import github.hua0512.utils.withIOContext
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -50,20 +52,14 @@ import javax.script.ScriptEngineManager
 var MD5CRYPT = ""
 
 
-suspend fun getMd5Crypt(client: HttpClient): String {
+internal fun getMd5Crypt(): String {
   if (MD5CRYPT.isNotEmpty()) return MD5CRYPT
 
   // get from resources
-  MD5CRYPT = withIOContext { DouyuExtractor::class.java.getResource("crypto-js-md5.min.js")?.readText() }?.let {
-    return it
-  } ?: ""
-
-  val url = "https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js"
-  val response = client.get(url)
-  if (response.status.value != 200) {
-    throw IllegalStateException("Failed to get MD5CRYPT")
+  MD5CRYPT = synchronized(MD5CRYPT) {
+    DouyuExtractor::class.java.getResourceAsStream("/crypto-js-md5.min.js")?.bufferedReader()?.readText()
+      ?: throw InvalidExtractionInitializationException("Failed to load crypto-js-md5.min.js")
   }
-  MD5CRYPT = response.bodyAsText()
   return MD5CRYPT
 }
 
@@ -79,13 +75,13 @@ internal suspend fun HttpClient.getDouyuH5Enc(json: Json, body: String, rid: Str
       header(HttpHeaders.Referrer, DouyuExtractor.DOUYU_URL)
     }
     if (data.status != HttpStatusCode.OK) {
-      throw IllegalStateException("Failed to get douyu h5 enc due to status code ${data.status}")
+      throw InvalidExtractionResponseException("Failed to get douyu h5 enc due to status code ${data.status}")
     }
     val dataBody = data.bodyAsText()
     val jsonText = json.parseToJsonElement(dataBody)
     val error = jsonText.jsonObject["error"]?.jsonPrimitive?.intOrNull ?: throw IllegalStateException("Failed to get douyu h5 enc")
     if (error != 0) {
-      throw IllegalStateException("Failed to get douyu h5 enc due to error code $error")
+      throw InvalidExtractionParamsException("Failed to get douyu h5 enc due to error code $error")
     }
     jsEnc =
       jsonText.jsonObject["data"]?.jsonObject?.get(rid)?.jsonPrimitive?.content ?: throw IllegalStateException("Failed to get douyu h5 enc data")
@@ -164,7 +160,7 @@ internal fun ub98484234(jsEnc: String, rid: String): Map<String, Any?> {
     logger.trace(jsBuilder.toString())
     jsEngine.eval(jsBuilder.toString())
   } catch (e: Exception) {
-    throw IllegalStateException("Failed to load js", e)
+    throw InvalidExtractionParamsException("Failed to load js, error: ${e.message}")
   }
 
   val did = getRandomUuidHex()
@@ -174,7 +170,7 @@ internal fun ub98484234(jsEnc: String, rid: String): Map<String, Any?> {
   val result = try {
     jsEngine.eval("ub98484234('$rid', '$did', '$tt')") as Map<String, Any>
   } catch (e: Exception) {
-    throw IllegalStateException("Failed to eval js", e)
+    throw InvalidExtractionParamsException("Failed to eval js, error: ${e.message}")
   }
 
   val ub98484234 = mutableMapOf<String, Any>().apply {
@@ -198,8 +194,7 @@ private fun getRandomUuidHex(): String {
 }
 
 
-fun extractDouyunRidFromUrl(url: String): String? {
+internal fun extractDouyunRidFromUrl(url: String): String? {
   // extract rid from url param
-  val matchResult = parseQueryString(url.substringAfter("?"))["rid"]
-  return matchResult
+  return parseQueryString(url.substringAfter("?"))["rid"]
 }

@@ -32,6 +32,7 @@ import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
 import github.hua0512.data.platform.TwitchQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
 
@@ -52,24 +53,16 @@ class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Downloa
     authToken = app.config.twitchConfig.authToken,
   )
 
-  override suspend fun shouldDownload(): Boolean {
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
     val authToken = (config.authToken?.nonEmptyOrNull() ?: app.config.twitchConfig.authToken).nonEmptyOrNull()
-      ?: throw UnsupportedOperationException("Twitch requires an auth token to download")
+      ?: throw FatalDownloadErrorException("Twitch requires an auth token to download")
     (extractor as TwitchExtractor).authToken = authToken
 
     (config.cookies ?: app.config.twitchConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
 
-    val mediaInfo = try {
-      extractor.extract()
-    } catch (e: Exception) {
-      // throw if illegal argument or unsupported operation
-      if (e is IllegalArgumentException || e is UnsupportedOperationException) throw e
-      logger.error("Error extracting media info", e)
-      return false
-    }
-    return getStreamInfo(mediaInfo, streamer, config)
+    return super.shouldDownload(onLive)
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {

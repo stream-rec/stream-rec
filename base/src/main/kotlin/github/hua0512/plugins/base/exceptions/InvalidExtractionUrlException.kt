@@ -24,12 +24,12 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.exceptions
+package github.hua0512.plugins.base.exceptions
 
 /**
- * Exception thrown when the download size is not enough
+ * Exception thrown when the extraction url is invalid
  * @author hua0512
- * @date : 2024/5/16 20:43
+ * @date : 2024/7/5 14:13
  */
-class InsufficientDownloadSizeException(override val message: String) : FatalDownloadErrorException(message) {
+class InvalidExtractionUrlException(override val message: String) : IllegalArgumentException(message) {
 }

@@ -39,7 +39,9 @@ import github.hua0512.utils.nonEmptyOrNull
  * @author hua0512
  * @date : 2024/3/23 0:06
  */
-class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<DouyuDownloadConfig>(app, danmu = danmu, extractor = extractor) {
+class Douyu(app: App, override val danmu: DouyuDanmu, override val extractor: DouyuExtractor) :
+  Download<DouyuDownloadConfig>(app, danmu = danmu, extractor = extractor) {
+
   override fun createDownloadConfig(): DouyuDownloadConfig {
     return DouyuDownloadConfig(
       app.config.douyuConfig.cdn,
@@ -47,22 +49,16 @@ class Douyu(app: App, danmu: DouyuDanmu, extractor: DouyuExtractor) : Download<D
     )
   }
 
-  override suspend fun shouldDownload(): Boolean {
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
     (config.cookies ?: app.config.douyuConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
-    (extractor as DouyuExtractor).selectedCdn = (config.cdn ?: app.config.douyuConfig.cdn) ?: "tct-h5"
-    val mediaInfo = try {
-      extractor.extract()
-    } catch (e: Exception) {
-      logger.error("Error extracting media info", e)
-      return false
+    extractor.selectedCdn = (config.cdn ?: app.config.douyuConfig.cdn)
+    return super.shouldDownload {
+      onLive()
+      // bind rid to avoid second time extraction
+      danmu.rid = extractor.rid
     }
-    // bind rid to avoid second time extraction
-    (danmu as DouyuDanmu).rid = (extractor as DouyuExtractor).rid
-
-    // update stream info
-    return getStreamInfo(mediaInfo, streamer, config)
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {

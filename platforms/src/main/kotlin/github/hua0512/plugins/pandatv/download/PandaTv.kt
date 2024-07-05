@@ -48,26 +48,19 @@ class PandaTv(app: App, override val danmu: PandaTvDanmu, override val extractor
     cookies = app.config.pandaTvConfig.cookies,
   )
 
-  override suspend fun shouldDownload(): Boolean {
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
     (config.cookies ?: app.config.pandaTvConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
 
-    val mediaInfo = try {
-      extractor.extract()
-    } catch (e: Exception) {
-      if (e is IllegalArgumentException || e is UnsupportedOperationException) throw e
-      logger.error("Error extracting media info", e)
-      return false
-    }
-    if (mediaInfo.live) {
+    return super.shouldDownload {
+      onLive()
       // init danmu
       danmu.apply {
         userIdx = extractor.userIdx
         token = extractor.token
       }
     }
-    return getStreamInfo(mediaInfo, streamer, config)
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {

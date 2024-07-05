@@ -31,6 +31,8 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.TwitchQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import io.ktor.client.*
 import io.ktor.client.request.*
 import kotlinx.serialization.json.*
@@ -57,8 +59,15 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   internal lateinit var authToken: String
 
+  override fun match(): Boolean {
+    return super.match().also {
+      if (it) {
+        id = regexPattern.find(url)?.groupValues?.get(1) ?: throw InvalidExtractionUrlException("Failed to extract id from Twitch url, url: $url")
+      }
+    }
+  }
+
   override suspend fun isLive(): Boolean {
-    id = regexPattern.find(url)?.groupValues?.get(1) ?: throw IllegalArgumentException("Failed to extract id from Twitch url, url: $url")
     // queries
     val queries = arrayOf(
       buildPersistedQueryRequest(
@@ -80,8 +89,9 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
     )
     val response = twitchPostQPL(http, json, queries.contentToString(), authToken)
     val data =
-      response.jsonArray[1].jsonObject["data"]?.jsonObject ?: throw IllegalArgumentException("($id) failed to get stream data, response: $response")
-    val user = data["user"] as? JsonObject ?: throw IllegalArgumentException("($id) failed to get stream user metadata, response: $response")
+      response.jsonArray[1].jsonObject["data"]?.jsonObject
+        ?: throw InvalidExtractionParamsException("($id) failed to get stream data, response: $response")
+    val user = data["user"] as? JsonObject ?: throw InvalidExtractionParamsException("($id) failed to get stream user metadata, response: $response")
 
     val stream = user["stream"] ?: return false
     // if stream is not live, stream is a JsonNull
@@ -131,7 +141,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
     )
 
     val accessToken = accessTokenResponse.jsonObject["data"]?.jsonObject?.get("streamPlaybackAccessToken")?.jsonObject
-      ?: throw IllegalStateException("($id) failed to get stream playback access token, response: $accessTokenResponse")
+      ?: throw InvalidExtractionParamsException("($id) failed to get stream playback access token, response: $accessTokenResponse")
 
     val valueToken = accessToken["value"]?.jsonPrimitive?.content ?: ""
     val signature = accessToken["signature"]?.jsonPrimitive?.content ?: ""

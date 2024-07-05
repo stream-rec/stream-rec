@@ -27,6 +27,9 @@
 package github.hua0512.plugins.huya.download
 
 import github.hua0512.data.media.MediaInfo
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import io.ktor.client.*
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
@@ -63,7 +66,7 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
     // check if the room id is numeric
     if (!roomId.matches(Regex("\\d+"))) {
-      throw IllegalArgumentException("This extractor only supports numeric room ids")
+      throw InvalidExtractionUrlException("This extractor only supports numeric room ids")
     }
 
     return result
@@ -80,16 +83,16 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
       parameter("roomid", roomId)
     }
 
-    if (response.status != HttpStatusCode.OK) throw IllegalStateException("Invalid response status ${response.status.value} from $url")
+    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $url")
 
     dataJson = json.parseToJsonElement(response.bodyAsText()).jsonObject
 
     val status = dataJson["status"]?.jsonPrimitive?.int
     val message = dataJson["message"]?.jsonPrimitive?.content
     if (status != 200) {
-      throw IllegalStateException("Invalid status code $status from $url, message: $message")
+      throw InvalidExtractionParamsException("Invalid status code $status from $url, message: $message")
     }
-    val data = dataJson["data"]?.jsonObject ?: throw IllegalStateException("data is null from $url")
+    val data = dataJson["data"]?.jsonObject ?: throw InvalidExtractionParamsException("data is null from $url")
     val realRoomStatus = data["realLiveStatus"]?.jsonPrimitive?.content ?: "OFF"
     val liveStatus = data["liveStatus"]?.jsonPrimitive?.content ?: "OFF"
 
@@ -102,7 +105,7 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
     val isLive = isLive()
 
-    val data = dataJson["data"]?.jsonObject ?: throw IllegalStateException("data is null from $url")
+    val data = dataJson["data"]?.jsonObject ?: throw InvalidExtractionParamsException("data is null from $url")
     val profileInfo = data.jsonObject["profileInfo"]?.jsonObject
 
     // get danmu properties
@@ -130,16 +133,17 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     if (!isLive) return mediaInfo
 
     // get stream info
-    val streamJson = data["stream"]?.jsonObject ?: throw IllegalStateException("stream is null from $url")
-    val baseStreamInfoList = streamJson["baseSteamInfoList"]?.jsonArray ?: throw IllegalStateException("baseStreamInfoList is null from $url")
+    val streamJson = data["stream"]?.jsonObject ?: throw InvalidExtractionParamsException("stream is null from $url")
+    val baseStreamInfoList =
+      streamJson["baseSteamInfoList"]?.jsonArray ?: throw InvalidExtractionParamsException("baseStreamInfoList is null from $url")
     if (baseStreamInfoList.isEmpty()) {
-      throw IllegalStateException("baseStreamInfoList is empty from $url")
+      throw InvalidExtractionParamsException("baseStreamInfoList is empty from $url")
     }
 
     // get bitrate list
     val bitrateInfo = livedata?.get("bitRateInfo")?.jsonPrimitive?.content?.run {
       json.parseToJsonElement(this).jsonArray
-    } ?: throw IllegalStateException("bitRateInfo is null from $url")
+    } ?: throw InvalidExtractionParamsException("bitRateInfo is null from $url")
 
     val maxBitRate = livedata["bitRate"]?.jsonPrimitive?.int ?: 0
 

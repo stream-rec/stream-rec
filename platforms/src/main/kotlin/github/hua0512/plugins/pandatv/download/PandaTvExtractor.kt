@@ -28,6 +28,8 @@ package github.hua0512.plugins.pandatv.download
 
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -60,6 +62,12 @@ class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) :
     platformHeaders[HttpHeaders.Referrer] = URL
   }
 
+  override fun match(): Boolean {
+    return super.match().also {
+      if (it) id = regexPattern.find(url)?.groupValues?.get(1) ?: throw InvalidExtractionUrlException("Invalid url $url")
+    }
+  }
+
   override suspend fun isLive(): Boolean {
 //    val response = getResponse(url)
 //    if (response.status != HttpStatusCode.OK) {
@@ -70,8 +78,6 @@ class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) :
 //    id = ID_REGEX.toRegex().find(body)?.groups?.get(4)?.value ?: ""
 //
 //    val roomPwd = ""
-
-    id = regexPattern.find(url)?.groupValues?.get(1) ?: throw IllegalArgumentException("Failed to extract id from Pandalive url, url: $url")
     val liveResponse = postResponse(LIVE_API) {
       // form encoded body
       contentType(ContentType.Application.FormUrlEncoded)
@@ -118,7 +124,7 @@ class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) :
     // get first available stream
     val hlsUrl = hlsKeys.firstNotNullOfOrNull { key ->
       playList[key]?.jsonArray?.firstOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content
-    } ?: throw IllegalArgumentException("Failed to get hls stream url")
+    } ?: throw InvalidExtractionParamsException("Failed to get hls stream url from $url")
 
     // get hls stream info
     val hlsResponse = getResponse(hlsUrl)

@@ -27,9 +27,16 @@
 package github.hua0512.plugins.download.exceptions
 
 /**
- * Exception thrown when the download size is not enough
+ * Fatal download error exception, thrown when a fatal error occurs during download
  * @author hua0512
- * @date : 2024/5/16 20:43
+ * @date : 2024/5/5 21:44
  */
-class InsufficientDownloadSizeException(override val message: String) : FatalDownloadErrorException(message) {
+open class FatalDownloadErrorException(override val message: String) : IllegalStateException(message) {
+
+  companion object {
+    @JvmStatic
+    fun from(e: Exception): FatalDownloadErrorException {
+      return FatalDownloadErrorException(e.message ?: "Unknown error")
+    }
+  }
 }

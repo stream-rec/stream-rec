@@ -36,7 +36,7 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.download.base.StreamerCallback
-import github.hua0512.plugins.download.exceptions.InvalidDownloadException
+import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.event.EventCenter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -141,18 +141,9 @@ class StreamerDownloadManager(
   }
 
   private suspend fun checkStreamerLiveStatus(): Boolean {
-    return try {
-      // check if streamer is live
-      plugin.shouldDownload()
-    } catch (e: Exception) {
-      when (e) {
-        is IllegalArgumentException -> throw e // rethrow the exception
-        else -> {
-          logger.error("${streamer.name} error while checking if streamer is live : ${e.message}")
-          false
-        }
-      }
-    }
+    // check if streamer is live
+    // only InvalidExtractionUrlException is thrown if the url is invalid
+    return plugin.shouldDownload()
   }
 
   private suspend fun handleLiveStreamer() {
@@ -190,7 +181,7 @@ class StreamerDownloadManager(
 
   private suspend inline fun downloadStream(
     crossinline onStreamDownloaded: (stream: StreamData) -> Unit = {},
-    crossinline onStreamDownloadError: (e: Throwable) -> Unit = {}
+    crossinline onStreamDownloadError: (e: Throwable) -> Unit = {},
   ) {
     // streamer is live, start downloading
     // while loop for parting the download
@@ -204,23 +195,17 @@ class StreamerDownloadManager(
         logger.debug("${streamer.name} download finished")
       } catch (e: Exception) {
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
-        onStreamDownloadError(e)
+
         when (e) {
-          is IllegalArgumentException, is UnsupportedOperationException, is InvalidDownloadException -> {
+          // in those cases, cancel the download and throw the exception
+          is FatalDownloadErrorException, is CancellationException -> {
             streamer.isLive = false
             callback?.onLiveStatusChanged(streamer, false)
-            logger.error("${streamer.name} invalid url or invalid engine : ${e.message}")
+            logger.error("${streamer.name} invalid exception : ${e.message}")
             throw e
           }
 
-          is CancellationException -> {
-            isCancelled.value = true
-            throw e
-          }
-
-          else -> {
-            logger.error("${streamer.name} Error while getting stream data : ${e.message}")
-          }
+          else -> onStreamDownloadError(e)
         }
       } finally {
         isDownloading = false
@@ -295,7 +280,6 @@ class StreamerDownloadManager(
   }
 
   private suspend fun stop(): Boolean {
-    isCancelled.value = true
     return plugin.stopDownload()
   }
 
