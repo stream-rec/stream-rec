@@ -31,8 +31,8 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
 import github.hua0512.data.platform.TwitchQuality
 import github.hua0512.data.stream.StreamInfo
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.base.Download
-import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
 
@@ -55,7 +55,7 @@ class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Downloa
 
   override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
     val authToken = (config.authToken?.nonEmptyOrNull() ?: app.config.twitchConfig.authToken).nonEmptyOrNull()
-      ?: throw FatalDownloadErrorException("Twitch requires an auth token to download")
+      ?: throw InvalidExtractionUrlException("Twitch requires an auth token to download")
     (extractor as TwitchExtractor).authToken = authToken
 
     (config.cookies ?: app.config.twitchConfig.cookies)?.nonEmptyOrNull()?.also {
