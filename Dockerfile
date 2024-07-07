@@ -1,4 +1,4 @@
-FROM gradle:8.8-jdk21-alpine as builder
+FROM gradle:8.8-jdk21-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN gradle stream-rec:build -x test --no-daemon
@@ -32,7 +32,7 @@ RUN curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
 RUN pip3 install streamlink
 
 # Set timezone
-ENV TZ ${TZ:-Europe/Paris}
+ENV TZ=${TZ:-Europe/Paris}
 
 EXPOSE 12555
 
