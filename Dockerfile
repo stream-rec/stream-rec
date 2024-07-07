@@ -9,12 +9,12 @@ COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
 # Install dependencies
 RUN yum update -y && \
-    yum install -y unzip tar python3 python3-pip which xz tzdata && \
+    yum install -y unzip tar python3 python3-pip which xz tzdata nscd && \
     yum clean all && \
     rm -rf /var/cache/yum
 
 # Install ffmpeg
-RUN curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-i686-static.tar.xz | tar -xJ && \
+RUN curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar -xJ && \
     mv ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
     mv ffmpeg-*-static/ffprobe /usr/local/bin/ && \
     rm -rf ffmpeg-*-static
