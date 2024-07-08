@@ -20,7 +20,7 @@ dependencies {
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.me.tongfei.progressbar)
   implementation(libs.io.ktor.client.core)
-  implementation(libs.io.ktor.client.cio)
+  implementation(libs.io.ktor.client.okhttp)
   implementation(libs.io.ktor.client.encoding)
   implementation(libs.io.ktor.client.content.negotiation)
   implementation(libs.io.ktor.serialization.kotlinx.json)

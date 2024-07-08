@@ -36,7 +36,6 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
-import io.ktor.client.plugins.websocket.cio.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.websocket.*
@@ -195,13 +194,13 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       } else {
         val urlBuilder = URLBuilder(websocketUrl)
         if (urlBuilder.protocol.isSecure()) {
-          app.client.wssRaw(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
+          app.client.wss(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
             fillRequest()
           }) {
             processSession()
           }
         } else {
-          app.client.wsRaw(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
+          app.client.ws(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
             fillRequest()
           }) {
             processSession()

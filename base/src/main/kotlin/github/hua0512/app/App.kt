@@ -28,10 +28,11 @@ package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.download.COMMON_USER_AGENT
+import github.hua0512.utils.RemoveWebSocketExtensionsInterceptor
 import github.hua0512.utils.isWindows
 import io.ktor.client.*
 import io.ktor.client.engine.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -74,7 +75,7 @@ class App(val json: Json) {
   }
 
   val client by lazy {
-    HttpClient(CIO) {
+    HttpClient(OkHttp) {
       engine {
         pipelining = true
         // Configure proxy
@@ -85,6 +86,10 @@ class App(val json: Json) {
           val httpProxyUrl = Url(httpProxy)
           logger.info("Using HTTP proxy: {}", httpProxyUrl)
           proxy = ProxyBuilder.http(httpProxyUrl)
+        }
+        config {
+          // Workaround for: https://youtrack.jetbrains.com/issue/KTOR-6266/OkHttp-Remove-the-default-WebSocket-extension-header-Sec-WebSocket-Extensions
+          addInterceptor(RemoveWebSocketExtensionsInterceptor())
         }
       }
       install(Logging) {
