@@ -9,7 +9,7 @@ COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
 # Install dependencies
 RUN yum update -y && \
-    yum install -y unzip tar python3 python3-pip which xz tzdata nscd && \
+    yum install -y unzip tar python3 python3-pip which xz tzdata nscd findutils && \
     systemctl enable nscd && \
     pip3 install streamlink && \
     yum clean all && \
