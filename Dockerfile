@@ -10,6 +10,8 @@ COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 # Install dependencies
 RUN yum update -y && \
     yum install -y unzip tar python3 python3-pip which xz tzdata nscd && \
+    systemctl enable nscd && \
+    pip3 install streamlink && \
     yum clean all && \
     rm -rf /var/cache/yum
 
@@ -28,12 +30,9 @@ RUN curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
     chmod 755 /usr/bin/rclone && \
     rm -rf /rclone-current-linux-amd64.zip /rclone-*-linux-amd64
 
-# Install streamlink
-RUN pip3 install streamlink
-
 # Set timezone
 ENV TZ=${TZ:-Europe/Paris}
 
 EXPOSE 12555
 
-CMD ["java", "-jar", "app.jar"]
+CMD nscd && java -jar app.jar
