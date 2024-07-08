@@ -30,6 +30,8 @@ import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
 import io.exoquery.pprint
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -51,6 +53,12 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
 
   companion object {
+
+    init {
+      // initialize MD5 js encryption
+      getMd5Crypt()
+    }
+
     @JvmStatic
     internal val logger: Logger = LoggerFactory.getLogger(DouyuExtractor::class.java)
     internal const val DOUYU_URL = "https://www.douyu.com"
@@ -83,17 +91,10 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
   override val regexPattern: Regex = Regex("""^https:\/\/www\.douyu\.com.*""")
 
-
-  override suspend fun prepare() {
-    super.prepare()
-    // initialize MD5 js encryption
-    getMd5Crypt(http)
-  }
-
   override suspend fun isLive(): Boolean {
     val response = getResponse(url)
     if (response.status != HttpStatusCode.OK) {
-      throw IllegalStateException("$url failed to get html")
+      throw InvalidExtractionResponseException("$url failed to get html : ${response.status}")
     }
     htmlText = response.bodyAsText()
     logger.trace("{}", htmlText)
@@ -179,7 +180,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       }
     }
     if (liveDataResponse.status != HttpStatusCode.OK) {
-      throw IllegalStateException("$url failed to get live data")
+      throw InvalidExtractionResponseException("$url failed to get live data : ${liveDataResponse.status}")
     }
 
     val liveDataJson = json.parseToJsonElement(liveDataResponse.bodyAsText())
@@ -189,7 +190,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
     if (error != 0) {
       val msg = liveDataJson.jsonObject["msg"]?.jsonPrimitive?.content
-      throw IllegalStateException("$url failed to get live data, error code $error, msg: $msg")
+      throw InvalidExtractionParamsException("$url failed to get live data, error code $error, msg: $msg")
     }
 
     // current live data, should be the first one, with highest bitrate and quality

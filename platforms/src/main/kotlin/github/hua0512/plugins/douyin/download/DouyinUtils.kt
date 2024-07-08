@@ -27,6 +27,7 @@
 package github.hua0512.plugins.douyin.download
 
 import github.hua0512.logger
+import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.utils.toMD5Hex
 import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory
@@ -48,7 +49,7 @@ internal fun loadWebmssdk(): String {
   synchronized(SDK_JS) {
     DouyinExtractor::class.java.getResourceAsStream("/douyin-webmssdk.js")?.bufferedReader()?.use {
       SDK_JS = it.readText()
-    } ?: throw IllegalStateException("Failed to load webmssdk")
+    } ?: throw InvalidExtractionInitializationException("Failed to load douyin webmssdk")
 
   }
   return SDK_JS
@@ -97,6 +98,6 @@ internal suspend fun getSignature(roomId: String, userId: String? = DouyinExtrac
       logger.debug("Signature: {}", it)
     }
   } catch (e: Exception) {
-    throw IllegalStateException("Failed to get signature", e)
+    throw InvalidExtractionInitializationException("Failed to get signature, error: ${e.message}")
   }
 }

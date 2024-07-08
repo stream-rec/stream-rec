@@ -83,7 +83,7 @@ class DouyuTest : BaseTest() {
   }
 
   @Test
-  override fun testLive() = runTest {
+  override fun testLive(): Unit = runTest {
     val extractor = DouyuExtractor(app.client, app.json, testUrl).apply {
       prepare()
     }
@@ -100,7 +100,7 @@ class DouyuTest : BaseTest() {
   }
 
   @Test
-  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+  fun testDanmu(): Unit = runTest(timeout = Duration.INFINITE) {
     val danmu = DouyuDanmu(app).apply {
       rid = "8984762"
       enableWrite = false
@@ -114,7 +114,7 @@ class DouyuTest : BaseTest() {
   }
 
   @Test
-  fun testExtractRidFromUrl() = runTest {
+  fun testExtractRidFromUrl(): Unit = runTest {
     val rid = extractDouyunRidFromUrl(testUrl)
     assert(rid == "8984762")
   }

@@ -31,5 +31,5 @@ package github.hua0512.plugins.download.exceptions
  * @author hua0512
  * @date : 2024/5/16 20:45
  */
-class DownloadFilePresentException(override val message: String) : InvalidDownloadException(message) {
+class DownloadFilePresentException(override val message: String) : FatalDownloadErrorException(message) {
 }

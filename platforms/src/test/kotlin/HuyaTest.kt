@@ -65,7 +65,7 @@ class HuyaTest {
     assertEquals(matchResult.groupValues.last(), "https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310")
   }
 
-  private val streamingUrl = "https://www.huya.com/991111"
+  private val streamingUrl = "https://www.huya.com/660000"
 
   private val app = App(Json).apply {
     updateConfig(AppConfig(huyaConfig = HuyaConfigGlobal(sourceFormat = VideoFormat.hls, primaryCdn = "HW")))
@@ -111,9 +111,9 @@ class HuyaTest {
     val danmu = HuyaDanmu(app).apply {
       enableWrite = false
       filePath = "huya_danmu.txt"
-      ayyuid = 35184452693589
-      topsid = 1199536199401
-      subid = 1199536199401
+      ayyuid = 1486578378
+      topsid = 1346609715
+      subid = 1346609715
     }
     val init = danmu.init(Streamer(0, "test", streamingUrl))
     danmu.fetchDanmu()

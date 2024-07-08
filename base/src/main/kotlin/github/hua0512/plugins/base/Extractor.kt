@@ -29,6 +29,7 @@ package github.hua0512.plugins.base
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.COMMON_HEADERS
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -111,10 +112,11 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
 
   /**
    * Initialize the extractor
+   * @throws IllegalArgumentException if the url does not match the pattern
    */
   open suspend fun prepare() {
     if (!match()) {
-      throw IllegalArgumentException("The url $url does not match the pattern")
+      throw InvalidExtractionUrlException("The url $url does not match the pattern")
     }
   }
 

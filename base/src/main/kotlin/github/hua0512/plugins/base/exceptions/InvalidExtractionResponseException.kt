@@ -24,12 +24,12 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.exceptions
+package github.hua0512.plugins.base.exceptions
 
 /**
- * Invalid download exception
+ * Exception thrown when the extraction response is invalid
  * @author hua0512
- * @date : 2024/5/17 17:59
+ * @date : 2024/7/5 14:15
  */
-open class InvalidDownloadException(message: String) : DownloadErrorException(message) {
+class InvalidExtractionResponseException(override val message: String) : IllegalArgumentException(message) {
 }

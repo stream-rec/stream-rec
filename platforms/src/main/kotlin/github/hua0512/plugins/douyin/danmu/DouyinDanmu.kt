@@ -52,6 +52,7 @@ import io.ktor.websocket.*
 import kotlinx.datetime.Instant
 
 /**
+ * Douyin danmu client
  * @author hua0512
  * @date : 2024/2/9 13:48
  */
@@ -63,10 +64,13 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
 
   override val heartBeatPack: ByteArray = byteArrayOf()
 
-  init {
-    // load webmssdk js
-    loadWebmssdk()
+  companion object {
+    init {
+      // load webmssdk js
+      loadWebmssdk()
+    }
   }
+
 
   override suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean {
     // get room id

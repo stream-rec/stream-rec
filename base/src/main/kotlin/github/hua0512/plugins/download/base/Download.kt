@@ -34,6 +34,7 @@ import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.*
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.download.COMMON_HEADERS
@@ -43,6 +44,7 @@ import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.StreamlinkDownloadEngine
 import github.hua0512.plugins.download.exceptions.DownloadFilePresentException
+import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.*
@@ -126,7 +128,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           it.onPartedDownload = this.onPartedDownload ?: emptyList()
           it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
         }
-      } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config")
+      } ?: throw FatalDownloadErrorException("${streamer.name} has template streamer but no download config")
     } else {
       @Suppress("UNCHECKED_CAST")
       streamer.downloadConfig as? T ?: createDownloadConfig()
@@ -139,8 +141,28 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   /**
    * Check if the stream should be downloaded
    * @return true if the stream should be downloaded, false otherwise
+   * @throws InvalidExtractionUrlException if the url is invalid
    */
-  abstract suspend fun shouldDownload(): Boolean
+  open suspend fun shouldDownload(onLive: () -> Unit = {}): Boolean {
+    val mediaInfo = try {
+      withContext(Dispatchers.Default) {
+        extractor.extract()
+      }
+    } catch (e: Exception) {
+      logger.error("Error extracting media info", e)
+      when (e) {
+        // throw if url is invalid
+        is InvalidExtractionUrlException -> {
+          throw e
+        }
+      }
+      return false
+    }
+    if (mediaInfo.live) {
+      onLive()
+    }
+    return getStreamInfo(mediaInfo, streamer, config)
+  }
 
   /**
    * Download the stream
@@ -148,12 +170,12 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   suspend fun download() = supervisorScope {
     // check if downloadUrl is valid
-    if (downloadUrl.isEmpty()) throw IllegalArgumentException("(${streamer.name}) downloadUrl is required")
+    if (downloadUrl.isEmpty()) throw FatalDownloadErrorException("(${streamer.name}) downloadUrl is required")
 
     // download config is required and its should not be null
     val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig ?: run {
       logger.error("(${streamer.name}) download config is required")
-      throw IllegalArgumentException("(${streamer.name}) download config is required")
+      throw FatalDownloadErrorException("(${streamer.name}) download config is required")
     }
 
     val fileFormat = downloadConfig.outputFileFormat ?: app.config.outputFileFormat
@@ -201,7 +223,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       }
     }
 
-    var hasError = false
+    var exception: Exception? = null
 
 
     val streamerCallback = object : DownloadCallback {
@@ -322,7 +344,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
         // then it means that download has failed (no file is created)
         logger.error("${streamer.name} download failed")
-        hasError = true
+        exception = e
       }
 
       override fun onDownloadCancelled() {
@@ -372,8 +394,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     try {
       engine.start()
     } finally {
+      ProgressBarManager.deleteProgressBar(streamer.url)
+      engine.clean()
       // process danmu
-      if (hasError) {
+      if (exception != null) {
         danmuJob?.let {
           danmu.finish()
           // stop danmu job
@@ -382,14 +406,13 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           // delete danmu as invalid download
           file.deleteFile()
         }
+        throw exception
       } else {
         danmuJob?.let {
           stopDanmuJob(it)
         }
       }
       danmuJob = null
-      ProgressBarManager.deleteProgressBar(streamer.url)
-      engine.clean()
     }
   }
 

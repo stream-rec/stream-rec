@@ -30,6 +30,9 @@ import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.utils.decodeBase64
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.toMD5Hex
@@ -104,10 +107,10 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       val matchResult = regexPattern.find(url) ?: return false
       matchResult.groupValues.last()
     } catch (e: Exception) {
-      throw IllegalArgumentException("Invalid url $url for $this, ${e.message}")
+      throw InvalidExtractionUrlException("Invalid url $url, ${e.message}")
     }
     if (roomId.isEmpty()) {
-      throw IllegalArgumentException("Unable to extract roomId from $url")
+      throw InvalidExtractionUrlException("Invalid empty roomId, $url")
     }
 
     return true
@@ -119,14 +122,14 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         requestTimeoutMillis = 15000
       }
     }
-    if (response.status != HttpStatusCode.OK) throw IllegalStateException("Invalid response status ${response.status.value} from $url")
+    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $url")
 
     htmlResponseBody = response.bodyAsText().apply {
       if (isEmpty()) {
-        throw IllegalArgumentException("Empty response body from $url")
+        throw InvalidExtractionParamsException("Empty response body from $url")
       }
       if (contains("找不到这个主播")) {
-        throw IllegalArgumentException("invalid url, no such streamer")
+        throw InvalidExtractionParamsException("$url invalid url, no such streamer")
       }
     }
 
@@ -136,19 +139,19 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     val matchResult = ROOM_DATA_REGEX.toRegex().find(htmlResponseBody)?.also {
       if (it.value.isEmpty()) {
-        throw IllegalStateException("Empty TT_ROOM_DATA from $url")
+        throw InvalidExtractionParamsException("Empty TT_ROOM_DATA from $url")
       }
-    } ?: throw IllegalStateException("Unable to extract TT_ROOM_DATA from $url")
+    } ?: throw InvalidExtractionParamsException("Unable to extract TT_ROOM_DATA from $url")
 
     val matchJson = matchResult.groupValues[1].apply {
       if (isEmpty()) {
-        throw IllegalStateException("Empty TT_ROOM_DATA content from $url")
+        throw InvalidExtractionParamsException("Empty TT_ROOM_DATA content from $url")
       }
     }
     val stateRegex = STATE_REGEX.toRegex()
     val state = stateRegex.find(matchJson)?.groupValues?.get(1) ?: ""
     if (state.isEmpty()) {
-      throw IllegalStateException("Unable to extract state from $url")
+      throw InvalidExtractionParamsException("Unable to extract state from $url")
     }
     return state == "ON"
   }
@@ -190,25 +193,25 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     if (!isLive) return mediaInfo
 
     val streamRegex = STREAM_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1) ?: "".also {
-      throw IllegalStateException("Unable to extract stream from $url")
+      throw InvalidExtractionParamsException("Unable to extract stream from $url")
     }
 
     val streamJson = json.parseToJsonElement(streamRegex).jsonObject
 
     val vMultiStreamInfo =
-      streamJson["vMultiStreamInfo"] ?: throw IllegalStateException("$url vMultiStreamInfo is null")
+      streamJson["vMultiStreamInfo"] ?: throw InvalidExtractionParamsException("$url vMultiStreamInfo is null")
 
     val data =
-      streamJson["data"]?.jsonArray?.getOrNull(0)?.jsonObject ?: throw IllegalStateException("$url data is null")
+      streamJson["data"]?.jsonArray?.getOrNull(0)?.jsonObject ?: throw InvalidExtractionParamsException("$url data is null")
 
 
-    val gameLiveInfo = data["gameLiveInfo"]?.jsonObject ?: throw IllegalStateException("$url gameLiveInfo is null")
+    val gameLiveInfo = data["gameLiveInfo"]?.jsonObject ?: throw InvalidExtractionParamsException("$url gameLiveInfo is null")
 
 
     val gameStreamInfoList = data["gameStreamInfoList"]?.jsonArray.run {
       if (isNullOrEmpty()) null
       else this
-    } ?: throw IllegalStateException("$url gameStreamInfoList is null")
+    } ?: throw InvalidExtractionParamsException("$url gameStreamInfoList is null")
 
     // default bitrate
     val defaultBitrate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0
@@ -376,13 +379,13 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       )
     }
     if (response.status != HttpStatusCode.OK) {
-      throw IllegalStateException("Invalid response status ${response.status.value} from $COOKIE_URL")
+      throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $COOKIE_URL")
       return false
     }
     val body = response.bodyAsText()
     val json = json.parseToJsonElement(body).run {
       if (this is JsonPrimitive) {
-        throw IllegalStateException("Invalid response body from $COOKIE_URL")
+        throw InvalidExtractionParamsException("Invalid response body from $COOKIE_URL")
       }
       jsonObject
     }

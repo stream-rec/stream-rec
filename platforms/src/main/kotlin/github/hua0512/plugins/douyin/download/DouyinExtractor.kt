@@ -30,6 +30,9 @@ import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.COMMON_HEADERS
 import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.utils.generateRandomString
@@ -74,7 +77,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     val response = getResponse("${LIVE_DOUYIN_URL}/webcast/room/web/enter/") {
       parameter("web_rid", roomId)
     }
-    if (response.status != HttpStatusCode.OK) throw IllegalStateException("$url failed to get live data")
+    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("$url failed to get live data with status code ${response.status}")
     val data = response.bodyAsText()
     jsonData = json.parseToJsonElement(data)
     val liveData = jsonData.jsonObject["data"]?.jsonObject?.get("data")?.jsonArray?.get(0)?.jsonObject ?: run {
@@ -126,10 +129,11 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     }
 
     val streamDataJson = pullData["stream_data"]?.jsonPrimitive?.content
-      ?: throw IllegalStateException("$url failed to get stream data")
+      ?: throw InvalidExtractionParamsException("$url failed to get stream data json")
 
     val streamsData =
-      json.parseToJsonElement(streamDataJson).jsonObject["data"]?.jsonObject ?: throw IllegalStateException("$url failed to get stream data")
+      json.parseToJsonElement(streamDataJson).jsonObject["data"]?.jsonObject
+        ?: throw InvalidExtractionParamsException("$url failed to get stream data")
 
     val streams = qualities?.flatMap { (sdkKey, name, bitrate) ->
       val stream = streamsData[sdkKey]?.jsonObject ?: return@flatMap emptyList()
@@ -185,8 +189,8 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
           logger.error("Failed to get douyin room id from url: $url")
           return null
         }
-      } catch (e: Exception) {
-        throw IllegalArgumentException("Failed to get douyin room id from url: $url")
+      } catch (_: Exception) {
+        throw InvalidExtractionUrlException("Failed to get douyin room id from url: $url")
       }
     }
 
@@ -263,7 +267,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       val ttwidPattern = "ttwid=([^;]*)".toRegex()
       val ttwid = ttwidPattern.find(cookies)?.groupValues?.get(1) ?: ""
       if (ttwid.isEmpty()) {
-        throw Exception("Failed to get ttwid from cookies")
+        throw InvalidExtractionParamsException("Failed to get ttwid from cookies")
       }
       synchronized(this) {
         if (TT_WID == null) {

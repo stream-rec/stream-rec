@@ -52,28 +52,19 @@ class Huya(app: App, override val danmu: HuyaDanmu, override val extractor: Huya
     )
   }
 
-  override suspend fun shouldDownload(): Boolean {
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
     (config.cookies ?: app.config.huyaConfig.cookies)?.nonEmptyOrNull()?.also {
       extractor.cookies = it
     }
-
-    val mediaInfo = try {
-      withContext(Dispatchers.Default) {
-        extractor.extract()
+    return super.shouldDownload {
+      onLive()
+      // bind danmu properties
+      with(danmu) {
+        ayyuid = extractor.ayyuid
+        topsid = extractor.topsid
+        subid = extractor.subid
       }
-    } catch (e: Exception) {
-      logger.error("Error extracting media info", e)
-      return false
     }
-    // bind danmu properties
-    with(danmu) {
-      ayyuid = extractor.ayyuid
-      topsid = extractor.topsid
-      subid = extractor.subid
-    }
-
-    // update stream info
-    return getStreamInfo(mediaInfo, streamer, config)
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
