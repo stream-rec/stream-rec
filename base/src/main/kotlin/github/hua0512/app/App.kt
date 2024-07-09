@@ -123,9 +123,7 @@ class App(val json: Json) {
         connectTimeoutMillis = 5000
         socketTimeoutMillis = 30.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
       }
-      install(WebSockets) {
-        pingInterval = 10_000
-      }
+      install(WebSockets)
     }
   }
 

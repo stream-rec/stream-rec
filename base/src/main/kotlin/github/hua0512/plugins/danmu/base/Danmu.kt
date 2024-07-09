@@ -189,6 +189,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         app.client.webSocket(websocketUrl, request = {
           fillRequest()
         }) {
+          pingIntervalMillis = heartBeatDelay
           processSession()
         }
       } else {
