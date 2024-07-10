@@ -321,19 +321,12 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         val danmu = data.danmu as DanmuData
         val time = data.clientTime
         val color = if (danmu.color == -1) "16777215" else danmu.color
-        val content = danmu.content.run {
-          replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&apos;")
-            .replace("\n", "&#10;")
-            .replace("\r", "&#13;")
-        }
+        val content = danmu.content.replaceToXmlFriendly()
+        val sender = danmu.sender.replaceToXmlFriendly()
         // append tab
         append("\t")
         // append danmu content
-        append("""<d p="$time,1,25,$color,${danmu.serverTime},0,${danmu.uid},0" user="${danmu.sender}">${content}</d>""")
+        append("""<d p="$time,1,25,$color,${danmu.serverTime},0,${danmu.uid},0" user="$sender">${content}</d>""")
         // append newline
         append("\n")
       }
@@ -341,6 +334,19 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     write(xmlContent.toByteArray())
     flush()
   }
+
+  /**
+   * Replaces special characters in the given string with their XML-friendly counterparts.
+   * @receiver String the string to be replaced
+   * @return String the XML-friendly string
+   */
+  private fun String.replaceToXmlFriendly(): String = this.replace("&", "&amp;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
+    .replace("\"", "&quot;")
+    .replace("'", "&apos;")
+    .replace("\n", "&#10;")
+    .replace("\r", "&#13;")
 
   /**
    * Launches a coroutine to send heartbeats on the given WebSocket session.
