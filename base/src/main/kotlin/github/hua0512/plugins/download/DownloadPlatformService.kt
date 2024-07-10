@@ -79,7 +79,7 @@ class DownloadPlatformService(
   private val streamers = mutableListOf<Streamer>()
   private val cancelledStreamers = ConcurrentSet<String>()
   private val downloadingStreamers = ConcurrentSet<String>()
-  private val cancellationChannels = ConcurrentHashMap<String, Channel<String?>>()
+  private val managers = ConcurrentHashMap<String, StreamerDownloadManager>()
 
   /**
    * Streamer channel with a capacity of MAX_STREAMERS
@@ -116,7 +116,7 @@ class DownloadPlatformService(
    * Cancel streamer download
    * @param streamer the streamer to cancel
    */
-  fun cancelStreamer(streamer: Streamer, reason: String? = null) {
+  suspend fun cancelStreamer(streamer: Streamer, reason: String? = null) {
     logger.debug("({}) request to cancel streamer: {} reason : {}", platform, streamer.url, reason)
     // check if streamer is present in the list
     if (!streamers.contains(streamer) &&
@@ -128,7 +128,26 @@ class DownloadPlatformService(
     }
 
     cancelledStreamers.add(streamer.url)
-    cancellationChannels[streamer.url]?.trySend(reason)
+    logger.debug("({}), streamer {} received cancellation signal : {}", platform, streamer.url, reason)
+    managers[streamer.url]?.cancelBlocking()
+
+    EventCenter.sendEvent(
+      StreamerRecordStop(
+        streamer.name,
+        streamer.url,
+        streamer.platform,
+        Clock.System.now(),
+        reason = CancellationException("Download cancelled : $reason")
+      )
+    )
+
+    // wait for the streamer to be removed from the list
+    // set a timeout of 10 seconds
+    withTimeoutOrNull(10_000) {
+      while (streamers.contains(streamer) || downloadingStreamers.contains(streamer.url)) {
+        delay(100)
+      }
+    }
   }
 
   /**
@@ -152,11 +171,8 @@ class DownloadPlatformService(
         }
 
         logger.debug("({}) adding streamer: {}, {}", it.platform, it.name, it.url)
-        // streamer cancellation channel
-        val cancellationChannel = Channel<String?>(Channel.CONFLATED)
 
         streamers += it
-        cancellationChannels[it.url] = cancellationChannel
 
         startDownloadJob(it)
         // delay before adding next streamer
@@ -182,40 +198,17 @@ class DownloadPlatformService(
     logger.debug("({}) downloading streamer: {}, {}", platform, streamer.name, streamer.url)
 
     downloadingStreamers.add(streamer.url)
-    val cancellationChannel = cancellationChannels[streamer.url]
 
     try {
       // download streamer job
-      var manager: StreamerDownloadManager? = null
-      val downloadJob = async {
-        downloadStreamerInternal(streamer) {
-          manager = it
-        }
-      }
-      val reason = cancellationChannel?.receive()
-      logger.debug("({}), streamer {} received cancellation signal : {}", platform, streamer.url, reason)
-      // received cancellation signal
-      // handle cancellation
-      manager?.cancel()
-      downloadJob.join()
-
-      EventCenter.sendEvent(
-        StreamerRecordStop(
-          streamer.name,
-          streamer.url,
-          streamer.platform,
-          Clock.System.now(),
-          reason = CancellationException("Download cancelled : $reason")
-        )
-      )
+      downloadStreamerInternal(streamer)
     } finally {
       streamers.remove(streamer)
-      cancellationChannels.remove(streamer.url)
       downloadingStreamers.remove(streamer.url)
     }
   }
 
-  private suspend fun downloadStreamerInternal(streamer: Streamer, onInit: (StreamerDownloadManager) -> Unit = {}) {
+  private suspend fun downloadStreamerInternal(streamer: Streamer) {
     val plugin = try {
       downloadFactory.createDownloader(app, streamer.platform, streamer.url)
     } catch (e: Exception) {
@@ -231,15 +224,16 @@ class DownloadPlatformService(
     ).apply {
       init(callback)
     }
-    onInit(streamerDownload)
+    managers[streamer.url] = streamerDownload
     streamerDownload.start()
   }
 
   fun cancel() {
     // send cancellation signal to all streamers
-    cancellationChannels.forEach { (_, channel) ->
-      channel.trySend("App shutdown")
+    managers.forEach { (_, channel) ->
+      channel.cancel()
     }
+    managers.clear()
   }
 
 }

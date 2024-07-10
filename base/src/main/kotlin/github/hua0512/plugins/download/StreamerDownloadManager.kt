@@ -288,6 +288,11 @@ class StreamerDownloadManager(
     isCancelled.value = true
   }
 
+  suspend fun cancelBlocking() {
+    logger.info("Cancelling download for ${streamer.name}, isDownloading : $isDownloading")
+    isCancelled.emit(true)
+  }
+
 
   fun setCallback(callback: StreamerCallback) {
     this.callback = callback
