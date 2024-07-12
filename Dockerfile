@@ -28,13 +28,20 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     rm -rf ffmpeg-*-static
 
 # Install rclone with architecture check
-RUN curl -O https://downloads.rclone.org/rclone-current-linux-$(uname -m).zip && \
-    unzip rclone-current-linux-$(uname -m).zip && \
-    cd rclone-*-linux-$(uname -m) && \
-    cp rclone /usr/bin/ && \
-    chown root:root /usr/bin/rclone && \
-    chmod 755 /usr/bin/rclone && \
-    rm -rf /rclone-current-linux-$(uname -m).zip /rclone-*-linux-$(uname -m)
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+      curl -L https://downloads.rclone.org/rclone-current-linux-amd64.zip -o rclone.zip && \
+      unzip rclone.zip && \
+      mv rclone-*-linux-amd64/rclone /usr/bin/ && \
+      chown root:root /usr/bin/rclone && \
+      chmod 755 /usr/bin/rclone \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
+      curl -L https://downloads.rclone.org/rclone-current-linux-arm64.zip -o rclone.zip && \
+      unzip rclone.zip && \
+      mv rclone-*-linux-arm64/rclone /usr/bin/ && \
+      chown root:root /usr/bin/rclone && \
+      chmod 755 /usr/bin/rclone; \
+    fi && \
+    rm -rf rclone-*
 
 # Set timezone
 ENV TZ=${TZ:-Europe/Paris}
