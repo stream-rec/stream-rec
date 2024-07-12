@@ -436,6 +436,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     // reset replay cache
     headersMap.clear()
     requestParams.clear()
+    buffer.clear()
   }
 
   /**
