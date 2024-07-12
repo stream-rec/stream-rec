@@ -74,6 +74,8 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
 <i>
 """
     private const val XML_END = "</i>"
+
+    private const val BUFFER_SIZE = 20
   }
 
   /**
@@ -138,6 +140,16 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    * Write lock
    */
   private val writeLock: ReentrantLock = ReentrantLock()
+
+  /**
+   * Danmu buffer
+   */
+  private val buffer = mutableListOf<ClientDanmuData>()
+
+  /**
+   * Buffer lock
+   */
+  private val bufferLock = ReentrantLock()
 
   /**
    * Initialize danmu
@@ -260,9 +272,9 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         }
       }
       .flowOn(Dispatchers.Default)
-      .buffer(20)
+      .buffer()
       .onEach {
-        fos.writeToDanmu(it)
+        addToBuffer(it)
       }
       .catch {
         logger.error("$filePath write error: ${it.message}")
@@ -275,7 +287,13 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
           val file = File(filePath)
           if (file.exists()) {
             try {
-              fos.writeEndXml()
+              // ensure remaining danmu is written
+              writeRemainingDanmu()
+              with(fos) {
+                flush()
+                writeEndXml()
+                close()
+              }
             } catch (e: Exception) {
 
             }
@@ -298,25 +316,41 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   }
 
   /**
+   * Adds the given [ClientDanmuData] object to the buffer and writes the buffer to the output stream if it is full.
+   * @param data The [ClientDanmuData] object to be added to the buffer.
+   */
+  private fun addToBuffer(data: ClientDanmuData) {
+    bufferLock.withLock {
+      buffer.add(data)
+      if (buffer.size >= BUFFER_SIZE) {
+        fos.writeToDanmu(buffer)
+        buffer.clear()
+      }
+    }
+  }
+
+  /**
    * Writes the given [DanmuData] object to the given [OutputStream].
    *
-   * @param data The [DanmuData] object to be written.
+   * @param batch The [DanmuData] object to be written.
    */
   @Synchronized
-  private fun OutputStream.writeToDanmu(data: ClientDanmuData) {
+  private fun OutputStream.writeToDanmu(batch: Collection<ClientDanmuData>) {
     if (!enableWrite) return
     val xmlContent = buildString {
-      val danmu = data.danmu as DanmuData
-      val time = data.clientTime
-      val color = if (danmu.color == -1) "16777215" else danmu.color
-      val content = danmu.content.replaceToXmlFriendly()
-      val sender = danmu.sender.replaceToXmlFriendly()
-      // append tab
-      append("\t")
-      // append danmu content
-      append("""<d p="$time,1,25,$color,${danmu.serverTime},0,${danmu.uid},0" user="$sender">${content}</d>""")
-      // append newline
-      append("\n")
+      for (data in batch) {
+        val danmu = data.danmu as DanmuData
+        val time = data.clientTime
+        val color = if (danmu.color == -1) "16777215" else danmu.color
+        val content = danmu.content.replaceToXmlFriendly()
+        val sender = danmu.sender.replaceToXmlFriendly()
+        // append tab
+        append("\t")
+        // append danmu content
+        append("""<d p="$time,1,25,$color,${danmu.serverTime},0,${danmu.uid},0" user="$sender">${content}</d>""")
+        // append newline
+        append("\n")
+      }
     }
     write(xmlContent.toByteArray())
     flush()
@@ -366,9 +400,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    */
   @Synchronized
   fun finish() {
+    val exists = File(filePath).exists()
+    if (!exists) return
     writeLock.withLock {
-      val exists = File(filePath).exists()
-      if (!exists) return
+      // ensure remaining danmu is written
+      writeRemainingDanmu()
       fos.flush()
       enableWrite = false
       fos.writeEndXml()
@@ -376,6 +412,18 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         fos.close()
       } catch (e: Exception) {
         // ignore
+      }
+    }
+  }
+
+  /**
+   * Write remaining danmu to file
+   */
+  private fun writeRemainingDanmu() {
+    bufferLock.withLock {
+      if (buffer.isNotEmpty()) {
+        fos.writeToDanmu(buffer)
+        buffer.clear()
       }
     }
   }
