@@ -366,9 +366,9 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    */
   @Synchronized
   fun finish() {
+    val exists = File(filePath).exists()
+    if (!exists) return
     writeLock.withLock {
-      val exists = File(filePath).exists()
-      if (!exists) return
       fos.flush()
       enableWrite = false
       fos.writeEndXml()
