@@ -15,24 +15,37 @@ RUN yum update -y && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-# Install ffmpeg
-RUN curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar -xJ && \
-    mv ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
-    mv ffmpeg-*-static/ffprobe /usr/local/bin/ && \
+# Install ffmpeg with architecture check
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+      curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar -xJ && \
+      mv ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
+      mv ffmpeg-*-static/ffprobe /usr/local/bin/; \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
+      curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz | tar -xJ && \
+      mv ffmpeg-*-static/ffmpeg /usr/local/bin/ && \
+      mv ffmpeg-*-static/ffprobe /usr/local/bin/; \
+    fi && \
     rm -rf ffmpeg-*-static
 
-# Install rclone
-RUN curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
-    unzip rclone-current-linux-amd64.zip && \
-    cd rclone-*-linux-amd64 && \
-    cp rclone /usr/bin/ && \
-    chown root:root /usr/bin/rclone && \
-    chmod 755 /usr/bin/rclone && \
-    rm -rf /rclone-current-linux-amd64.zip /rclone-*-linux-amd64
+# Install rclone with architecture check
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+      curl -L https://downloads.rclone.org/rclone-current-linux-amd64.zip -o rclone.zip && \
+      unzip rclone.zip && \
+      mv rclone-*-linux-amd64/rclone /usr/bin/ && \
+      chown root:root /usr/bin/rclone && \
+      chmod 755 /usr/bin/rclone; \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
+      curl -L https://downloads.rclone.org/rclone-current-linux-arm64.zip -o rclone.zip && \
+      unzip rclone.zip && \
+      mv rclone-*-linux-arm64/rclone /usr/bin/ && \
+      chown root:root /usr/bin/rclone && \
+      chmod 755 /usr/bin/rclone; \
+    fi && \
+    rm -rf rclone-*
 
 # Set timezone
 ENV TZ=${TZ:-Europe/Paris}
 
 EXPOSE 12555
 
-CMD nscd && java -jar app.jar
+CMD ["sh", "-c", "nscd && java -jar app.jar"]

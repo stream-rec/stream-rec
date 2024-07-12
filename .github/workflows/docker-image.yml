@@ -30,6 +30,7 @@ jobs:
           context: .
           push: true
           tags: streamrec/stream-rec:latest
+          platforms: linux/amd64,linux/arm64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
       - # Temp fix
