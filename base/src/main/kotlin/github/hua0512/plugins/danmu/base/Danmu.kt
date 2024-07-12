@@ -235,7 +235,6 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     sendHello(this)
     // launch a coroutine to send heart beat
     launchHeartBeatJob(this)
-    val buffer = mutableListOf<ClientDanmuData>()
     // receive incoming
     incoming.receiveAsFlow()
       .flatMapConcat { frame ->
@@ -249,12 +248,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
                   // calculate delta time
                   val delta = danmu.calculateDelta()
                   // emit danmu to write to file
-                  buffer.add(ClientDanmuData(danmu, videoStartTime, delta))
-
-                  if (buffer.size >= 20) {
-                    emit(buffer.toList())
-                    buffer.clear()
-                  }
+                  emit(ClientDanmuData(danmu, videoStartTime, delta))
                 }
 
                 else -> logger.error("Unsupported danmu data: {}", danmu)
@@ -266,15 +260,9 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         }
       }
       .flowOn(Dispatchers.Default)
+      .buffer(20)
       .onEach {
-        val data = it.map {
-          // case when a videoStartTime update occurred
-          if (it.videoStartTime != this@Danmu.videoStartTime) {
-            it.copy(clientTime = 0.0)
-          } else it
-        }
-        // discard negatives
-        fos.writeToDanmu(data)
+        fos.writeToDanmu(it)
       }
       .catch {
         logger.error("$filePath write error: ${it.message}")
@@ -312,24 +300,23 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   /**
    * Writes the given [DanmuData] object to the given [OutputStream].
    *
-   * @param batch The list of [DanmuData] objects to be written to the output stream.
+   * @param data The [DanmuData] object to be written.
    */
-  private fun OutputStream.writeToDanmu(batch: List<ClientDanmuData>) {
+  @Synchronized
+  private fun OutputStream.writeToDanmu(data: ClientDanmuData) {
     if (!enableWrite) return
     val xmlContent = buildString {
-      for (data in batch) {
-        val danmu = data.danmu as DanmuData
-        val time = data.clientTime
-        val color = if (danmu.color == -1) "16777215" else danmu.color
-        val content = danmu.content.replaceToXmlFriendly()
-        val sender = danmu.sender.replaceToXmlFriendly()
-        // append tab
-        append("\t")
-        // append danmu content
-        append("""<d p="$time,1,25,$color,${danmu.serverTime},0,${danmu.uid},0" user="$sender">${content}</d>""")
-        // append newline
-        append("\n")
-      }
+      val danmu = data.danmu as DanmuData
+      val time = data.clientTime
+      val color = if (danmu.color == -1) "16777215" else danmu.color
+      val content = danmu.content.replaceToXmlFriendly()
+      val sender = danmu.sender.replaceToXmlFriendly()
+      // append tab
+      append("\t")
+      // append danmu content
+      append("""<d p="$time,1,25,$color,${danmu.serverTime},0,${danmu.uid},0" user="$sender">${content}</d>""")
+      // append newline
+      append("\n")
     }
     write(xmlContent.toByteArray())
     flush()
@@ -377,6 +364,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   /**
    * Finish current danmu write
    */
+  @Synchronized
   fun finish() {
     writeLock.withLock {
       val exists = File(filePath).exists()
