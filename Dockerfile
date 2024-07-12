@@ -33,7 +33,7 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
       unzip rclone.zip && \
       mv rclone-*-linux-amd64/rclone /usr/bin/ && \
       chown root:root /usr/bin/rclone && \
-      chmod 755 /usr/bin/rclone \
+      chmod 755 /usr/bin/rclone; \
     elif [ "$(uname -m)" = "aarch64" ]; then \
       curl -L https://downloads.rclone.org/rclone-current-linux-arm64.zip -o rclone.zip && \
       unzip rclone.zip && \
