@@ -54,7 +54,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   override val regexPattern: Regex = URL_REGEX.toRegex()
 
-  private lateinit var roomId: String
+  private lateinit var webRid: String
 
   private var jsonData: JsonElement = JsonNull
 
@@ -66,7 +66,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   }
 
   override fun match(): Boolean {
-    roomId = extractDouyinRoomId(url) ?: return false
+    webRid = extractDouyinWebRid(url) ?: return false
     return true
   }
 
@@ -75,7 +75,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     cookies = cookies.nonEmptyOrNull().apply { populateDouyinCookieMissedParams(cookies, http) }
       ?: populateDouyinCookieMissedParams(cookies, http)
     val response = getResponse("${LIVE_DOUYIN_URL}/webcast/room/web/enter/") {
-      parameter("web_rid", roomId)
+      parameter("web_rid", webRid)
     }
     if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("$url failed to get live data with status code ${response.status}")
     val data = response.bodyAsText()
@@ -176,12 +176,12 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     private var MS_TOKEN: String? = null
 
     /**
-     * Extracts the Douyin room ID from the specified URL.
+     * Extracts the Douyin webrid from the specified URL.
      *
-     * @param url The URL from which to extract the Douyin room ID
-     * @return The Douyin room ID, or `null` if the room ID could not be extracted
+     * @param url The URL from which to extract the Douyin webrid
+     * @return The Douyin room ID, or `null` if the webrid could not be extracted
      */
-    internal fun extractDouyinRoomId(url: String): String? {
+    internal fun extractDouyinWebRid(url: String): String? {
       if (url.isEmpty()) return null
       return try {
         val roomIdPattern = URL_REGEX.toRegex()
