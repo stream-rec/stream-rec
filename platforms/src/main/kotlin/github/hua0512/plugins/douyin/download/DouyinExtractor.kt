@@ -167,7 +167,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   }
 
   companion object {
-    const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9]+)"
+    const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9_]+)"
     const val LIVE_DOUYIN_URL = "https://live.douyin.com"
 
     // cookie parameters
