@@ -54,7 +54,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   override val regexPattern: Regex = URL_REGEX.toRegex()
 
-  private lateinit var roomId: String
+  private lateinit var webRid: String
 
   private var jsonData: JsonElement = JsonNull
 
@@ -66,7 +66,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   }
 
   override fun match(): Boolean {
-    roomId = extractDouyinRoomId(url) ?: return false
+    webRid = extractDouyinWebRid(url) ?: return false
     return true
   }
 
@@ -75,7 +75,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     cookies = cookies.nonEmptyOrNull().apply { populateDouyinCookieMissedParams(cookies, http) }
       ?: populateDouyinCookieMissedParams(cookies, http)
     val response = getResponse("${LIVE_DOUYIN_URL}/webcast/room/web/enter/") {
-      parameter("web_rid", roomId)
+      parameter("web_rid", webRid)
     }
     if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("$url failed to get live data with status code ${response.status}")
     val data = response.bodyAsText()
@@ -167,8 +167,10 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   }
 
   companion object {
-    const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9]+)"
+    const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9_]+)"
     const val LIVE_DOUYIN_URL = "https://live.douyin.com"
+
+    internal const val SDK_VERSION = "1.0.14-beta.0"
 
     // cookie parameters
     private var NONCE: String? = null
@@ -176,12 +178,12 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     private var MS_TOKEN: String? = null
 
     /**
-     * Extracts the Douyin room ID from the specified URL.
+     * Extracts the Douyin webrid from the specified URL.
      *
-     * @param url The URL from which to extract the Douyin room ID
-     * @return The Douyin room ID, or `null` if the room ID could not be extracted
+     * @param url The URL from which to extract the Douyin webrid
+     * @return The Douyin room ID, or `null` if the webrid could not be extracted
      */
-    internal fun extractDouyinRoomId(url: String): String? {
+    internal fun extractDouyinWebRid(url: String): String? {
       if (url.isEmpty()) return null
       return try {
         val roomIdPattern = URL_REGEX.toRegex()
@@ -307,8 +309,8 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     internal val commonDouyinParams = mapOf(
       "app_name" to "douyin_web",
       "version_code" to "180800",
-      "webcast_sdk_version" to "1.0.14-beta.0",
-      "update_version_code" to "1.0.14-beta.0",
+      "webcast_sdk_version" to SDK_VERSION,
+      "update_version_code" to SDK_VERSION,
       "compress" to "gzip",
       "device_platform" to "web",
       "browser_language" to "zh-CN",

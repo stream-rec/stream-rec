@@ -37,7 +37,7 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.douyin.download.DouyinExtractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.commonDouyinParams
-import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.extractDouyinRoomId
+import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.extractDouyinWebRid
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.populateDouyinCookieMissedParams
 import github.hua0512.plugins.douyin.download.getSignature
 import github.hua0512.plugins.douyin.download.loadWebmssdk
@@ -74,7 +74,7 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
 
   override suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean {
     // get room id
-    val roomId = extractDouyinRoomId(streamer.url) ?: return false
+    val roomId = extractDouyinWebRid(streamer.url) ?: return false
 
     val config: DouyinDownloadConfig = if (streamer.templateStreamer != null) {
       // try to get templates download config
