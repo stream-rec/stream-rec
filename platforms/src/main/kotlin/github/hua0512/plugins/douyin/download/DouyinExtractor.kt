@@ -170,6 +170,8 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9_]+)"
     const val LIVE_DOUYIN_URL = "https://live.douyin.com"
 
+    internal const val SDK_VERSION = "1.0.14-beta.0"
+
     // cookie parameters
     private var NONCE: String? = null
     private var TT_WID: String? = null
@@ -307,8 +309,8 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     internal val commonDouyinParams = mapOf(
       "app_name" to "douyin_web",
       "version_code" to "180800",
-      "webcast_sdk_version" to "1.0.14-beta.0",
-      "update_version_code" to "1.0.14-beta.0",
+      "webcast_sdk_version" to SDK_VERSION,
+      "update_version_code" to SDK_VERSION,
       "compress" to "gzip",
       "device_platform" to "web",
       "browser_language" to "zh-CN",
