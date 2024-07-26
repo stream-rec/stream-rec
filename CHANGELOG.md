@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.7.0]
+
+* build(Dockerfile): change to use `amazoncorretto:21-al2023-headless` as runtime image by @hua0512 in https://github.com/hua0512/stream-rec/pull/94
+* chore(http): change to use OkHttp engine instead by @hua0512 in https://github.com/hua0512/stream-rec/pull/96
+* refactor(download): manage exceptions properly by @hua0512 in https://github.com/hua0512/stream-rec/pull/97
+* fix(download): suspend for streamer's cancel action by @hua0512 in https://github.com/hua0512/stream-rec/pull/100
+* fix(danmu): extract xml-friendly string replacement into separat… by @hua0512 in https://github.com/hua0512/stream-rec/pull/102
+* build(deps): bump androidx-sqlite from 2.5.0-alpha04 to 2.5.0-alpha05 by @dependabot in https://github.com/hua0512/stream-rec/pull/104
+* build(deps): bump androidx-room from 2.7.0-alpha04 to 2.7.0-alpha05 by @dependabot in https://github.com/hua0512/stream-rec/pull/103
+* build: support arm64 architecture by @hua0512 in https://github.com/hua0512/stream-rec/pull/107
+* build(deps): bump com.google.devtools.ksp from 2.0.0-1.0.22 to 2.0.0-1.0.23 by @dependabot in https://github.com/hua0512/stream-rec/pull/106
+* refactor(danmu): buffered write by @hua0512 in https://github.com/hua0512/stream-rec/pull/109
+* refactor(code): change Douyin 'roomId' to 'webRid' by @hua0512 in https://github.com/hua0512/stream-rec/pull/110
+* feat(backend): implement batch delete for stream and upload data by @hua0512 in https://github.com/hua0512/stream-rec/pull/111
+
+- ---------------------------------------
+
+* 构建(Dockerfile): 更改为使用`amazoncorretto:21-al2023-headless`作为运行时镜像
+* 构建(Dockerfile): 支持arm64架构
+* 重构(http): 更改为使用OkHttp引擎
+* 修复(下载): 取消正在下载的任务后，无法再次启用下载
+* 修复(弹幕): 替换弹幕发送者的名称为xml友好的字符串
+* 修复(弹幕): 分段结束前写入缓冲区
+* 修复(抖音): 支持'_' 直播间
+* 增加(前/后端): 支持批量删除录播和上传日记
+
+**Full Changelog**: https://github.com/hua0512/stream-rec/compare/v0.6.9...v0.7.0
+
 ## [0.6.9]
 
 - refactor(danmu): use bilibili danmu format by @hua0512 in https://github.com/hua0512/stream-rec/pull/92
