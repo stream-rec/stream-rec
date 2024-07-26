@@ -55,6 +55,7 @@ interface UploadRepo {
   suspend fun getUploadData(uploadDataId: UploadDataId): UploadData?
   suspend fun updateUploadData(uploadData: UploadData): Boolean
   suspend fun deleteUploadData(uploadData: UploadData)
+  suspend fun deleteUploadData(ids: List<UploadDataId>)
   suspend fun getUploadDataResults(uploadDataId: UploadDataId): List<UploadResult>
   suspend fun getAllUploadResults(): List<UploadResult>
   suspend fun deleteUploadResult(result: UploadResult): Boolean

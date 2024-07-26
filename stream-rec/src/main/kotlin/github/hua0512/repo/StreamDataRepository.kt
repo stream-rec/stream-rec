@@ -132,4 +132,11 @@ class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDa
     val streamData = StreamDataEntity(id = id.value, "", outputFilePath = "")
     dao.delete(streamData) == 1
   }
+
+  override suspend fun delete(ids: List<StreamDataId>): Boolean {
+    return withIOContext {
+      val streamData = ids.map { StreamDataEntity(id = it.value, "", outputFilePath = "") }
+      dao.delete(streamData) == ids.size
+    }
+  }
 }

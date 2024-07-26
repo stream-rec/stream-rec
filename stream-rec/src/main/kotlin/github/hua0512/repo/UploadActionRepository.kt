@@ -37,6 +37,7 @@ import github.hua0512.data.UploadDataId
 import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.upload.*
+import github.hua0512.data.upload.entity.UploadDataEntity
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
@@ -296,6 +297,12 @@ class UploadActionRepository(
         throw IllegalArgumentException("Upload data ID is required for deletion.")
       }
       uploadDataDao.delete(uploadData.toEntity())
+    }
+  }
+
+  override suspend fun deleteUploadData(ids: List<UploadDataId>) {
+    return withIOContext {
+      uploadDataDao.delete(ids.map { UploadDataEntity(it.value, "", UploadState.NOT_STARTED, 0, 0) })
     }
   }
 
