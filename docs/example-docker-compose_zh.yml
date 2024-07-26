@@ -64,9 +64,8 @@ services:
       - API_URL=http://backend:12555/api
       # 加密密钥，用于next-auth，您可以将其更改为任何您喜欢的字符串
       - NEXTAUTH_SECRET=21312312
-      # NEXTAUTH_URL，服务器URL。 如果您不知道自己在做什么，请不要更改它。
-      # 大多数情况下，您不需要更改它。 这是next-auth内部使用的url。
-      # 即使您将前端部署在不同的服务器上，也不需要更改它。
+      # 客户端访问url。 用于next-auth重定向登录页面。
+      # 这应该使用部署服务器的前端地址。
       # 确保端口与前端端口相同。
       - NEXTAUTH_URL=http://localhost:15275/
       # WS_API_URL，客户端websocket url。 用于实时状态更新。

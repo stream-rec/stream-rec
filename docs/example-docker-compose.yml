@@ -53,9 +53,8 @@ services:
       - API_URL=http://backend:12555/api
       # Secret for next-auth, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
       - NEXTAUTH_SECRET=21312312
-      # NEXTAUTH_URL, SERVER URL. DO NOT CHANGE IT if you don't know what you are doing.
-      # Most of the time, you don't need to change it. This is the url used INTERNALLY by next-auth.
-      # Even when you deploy the frontend on a different server, you don't need to change it.
+      # CLIENT url, used by next-auth to redirect login page.
+      # Should be the address which the user types in the browser to access the frontend.
       # Make sure the port is the same as the frontend port.
       - NEXTAUTH_URL=http://localhost:15275/
       # WS_API_URL, CLIENT websocket url. Used for live status updates.
