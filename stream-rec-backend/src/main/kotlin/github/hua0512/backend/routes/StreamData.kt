@@ -95,9 +95,27 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
       try {
         streamsRepo.delete(StreamDataId(id))
       } catch (e: Exception) {
+        e.printStackTrace()
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete stream data")
         return@delete
       }
+      call.respond(HttpStatusCode.OK, "Stream data deleted")
+    }
+
+    delete("/batch") {
+      val ids = call.request.queryParameters["ids"]?.split(",")?.mapNotNull { it.toLongOrNull() }
+      if (ids.isNullOrEmpty()) {
+        call.respond(HttpStatusCode.BadRequest, "Invalid ids")
+        return@delete
+      }
+      try {
+        streamsRepo.delete(ids.map { StreamDataId(it) })
+      } catch (e: Exception) {
+        e.printStackTrace()
+        call.respond(HttpStatusCode.InternalServerError, "Failed to delete stream data")
+        return@delete
+      }
+
       call.respond(HttpStatusCode.OK, "Stream data deleted")
     }
   }

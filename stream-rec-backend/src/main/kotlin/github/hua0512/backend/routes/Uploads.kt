@@ -180,5 +180,21 @@ fun Route.uploadRoute(json: Json, repo: UploadRepo) {
       }
       call.respond(HttpStatusCode.OK)
     }
+
+    delete("/batch") {
+      val ids = call.request.queryParameters["ids"]?.split(",")?.mapNotNull { it.toLongOrNull() }
+      if (ids.isNullOrEmpty()) {
+        call.respond(HttpStatusCode.BadRequest, "Invalid ids")
+        return@delete
+      }
+      try {
+        repo.deleteUploadData(ids.map { UploadDataId(it) })
+      } catch (e: Exception) {
+        logger.error("Failed to delete upload data : ${e.message}")
+        call.respond(HttpStatusCode.InternalServerError, "Failed to delete upload data : ${e.message}")
+        return@delete
+      }
+      call.respond(HttpStatusCode.OK)
+    }
   }
 }

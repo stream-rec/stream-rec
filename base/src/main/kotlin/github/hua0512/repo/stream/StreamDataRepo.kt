@@ -60,5 +60,7 @@ interface StreamDataRepo {
 
 
   suspend fun save(streamData: StreamData): StreamData
+
   suspend fun delete(id: StreamDataId): Boolean
+  suspend fun delete(ids: List<StreamDataId>): Boolean
 }
