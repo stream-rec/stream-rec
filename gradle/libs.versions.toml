@@ -1,6 +1,6 @@
 [versions]
 ktor = "2.3.12"
-ksp = "2.0.0-1.0.23"
+ksp = "2.0.0-1.0.24"
 kotlin = "2.0.0"
 kotlin-coroutines = "1.8.1"
 logback = "1.5.6"
