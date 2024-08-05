@@ -162,20 +162,20 @@ class StreamerDownloadManager(
     }
     streamer.isLive = true
     updateLastLiveTime()
+    var hasError = false
     // while loop for parted download
-    var breakLoop = false
-    while (!breakLoop && !isCancelled.value) {
+    while (!isCancelled.value) {
       downloadStream(onStreamDownloaded = { stream ->
         callback?.onStreamDownloaded(streamer, stream)
         dataList.add(stream)
       }) {
         logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
-        breakLoop = true
+        hasError = true
       }
-      if (breakLoop) break
+      // break the loop if error occurred or download is cancelled
+      if (hasError || isCancelled.value) break
 
-      if (!isCancelled.value) delay(platformRetryDelay)
-      else break
+      delay(platformRetryDelay)
     }
   }
 
