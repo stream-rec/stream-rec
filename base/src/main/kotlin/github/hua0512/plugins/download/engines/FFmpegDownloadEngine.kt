@@ -30,6 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.download.exceptions.DownloadErrorException
+import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.withIOContext
@@ -82,8 +83,17 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   override suspend fun start() {
     initPath()
     // ffmpeg running commands
-    val cmds =
-      buildFFMpegCmd(headers, cookies, downloadUrl!!, downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, detectErrors, outputFileName)
+    val cmds = buildFFMpegCmd(
+      headers,
+      cookies,
+      downloadUrl!!,
+      downloadFormat!!,
+      fileLimitSize,
+      fileLimitDuration,
+      useSegmenter,
+      detectErrors,
+      outputFileName
+    )
 
     val streamer = streamer!!
     logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
@@ -156,6 +166,12 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       // check if the file exists
       if (file.exists()) {
         onDownloaded(FileInfo(file.pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
+        // delete 'core' file (ffmpeg error file) if it exists as we don't need it
+        // only generated when static ffmpeg build is used
+        val coreFile = outputFolder.resolve("core")
+        if (coreFile.exists()) {
+          coreFile.deleteFile()
+        }
         onDownloadFinished()
       } else {
         onDownloadError(file.pathString, DownloadErrorException("ffmpeg download failed"))
