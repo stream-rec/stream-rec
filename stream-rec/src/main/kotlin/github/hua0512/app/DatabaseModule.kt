@@ -31,6 +31,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.AppDatabase
+import github.hua0512.dao.Migrate3To4
 import github.hua0512.dao.config.AppConfigDao
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
@@ -71,6 +72,7 @@ class DatabaseModule {
     )
 
     return builder
+      .addMigrations(Migrate3To4)
       .fallbackToDestructiveMigration(false)
       .setDriver(BundledSQLiteDriver())
       .setQueryCoroutineContext(Dispatchers.IO)
