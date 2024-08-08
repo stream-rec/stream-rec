@@ -29,6 +29,10 @@ package github.hua0512.dao
 import androidx.room.DeleteColumn
 import androidx.room.RenameColumn
 import androidx.room.migration.AutoMigrationSpec
+import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.use
+import github.hua0512.utils.md5
 
 /**
  * This file contains all the room migrations
@@ -50,3 +54,32 @@ import androidx.room.migration.AutoMigrationSpec
   )
 )
 class Migrate1To2 : AutoMigrationSpec
+
+object Migrate3To4 : Migration(3, 4) {
+
+  override fun migrate(connection: SQLiteConnection) {
+    connection.apply {
+      // fetch all rows of user table
+      val statement = prepare("SELECT * FROM user")
+      statement.use {
+        while (it.step()) {
+          val idIndex = it.getColumnNames().indexOf("id")
+          val passwordIndex = it.getColumnNames().indexOf("password")
+          val id = it.getText(idIndex)
+          val password = it.getText(passwordIndex)
+
+          // hash password
+          val hashedPassword = password.md5()
+
+          // update password
+          val updateStatement = prepare("UPDATE user SET password = ? WHERE id = ?")
+          updateStatement.use {
+            it.bindText(1, hashedPassword)
+            it.bindText(2, id)
+            it.step()
+          }
+        }
+      }
+    }
+  }
+}
