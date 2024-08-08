@@ -28,6 +28,7 @@ package github.hua0512.utils
 
 import kotlinx.datetime.*
 import kotlinx.datetime.TimeZone
+import java.security.MessageDigest
 import java.util.*
 
 
@@ -106,4 +107,9 @@ fun generateRandomString(length: Int, noNumeric: Boolean = true): String {
  */
 fun String.decodeBase64(): String {
   return String(Base64.getDecoder().decode(this))
+}
+
+fun String.md5(): String {
+  val bytes = MessageDigest.getInstance("MD5").digest(this.toByteArray())
+  return bytes.joinToString("") { "%02x".format(it) }
 }
