@@ -32,6 +32,7 @@ import github.hua0512.data.AppConfigId
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.user.UserEntity
 import github.hua0512.logger
+import github.hua0512.utils.md5
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -43,6 +44,11 @@ import kotlinx.coroutines.flow.map
  * @date : 2024/2/18 23:55
  */
 class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: UserDao) : LocalDataSource {
+
+  private companion object {
+    private const val DEFAULT_PASSWORD = "stream-rec"
+  }
+
   override suspend fun streamAppConfig(): Flow<AppConfig> {
     return dao.streamLatest()?.map {
       AppConfig(it)
@@ -53,7 +59,7 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: Us
   override suspend fun getAppConfig(): AppConfig = withIOContext {
     dao.getById(AppConfigId(1))?.let { AppConfig(it) } ?: AppConfig().apply {
       logger.info("First time running the app, creating default app config")
-      val user = UserEntity(0, "stream-rec", System.getenv("LOGIN_SECRET") ?: "stream-rec", "ADMIN", isActive = true)
+      val user = UserEntity(0, "stream-rec", System.getenv("LOGIN_SECRET") ?: DEFAULT_PASSWORD.md5(), "ADMIN", isActive = true)
       userDao.insert(user)
       saveAppConfig(this)
     }
