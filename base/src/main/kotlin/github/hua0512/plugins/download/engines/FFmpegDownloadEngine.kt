@@ -217,6 +217,10 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
 
   protected open fun sendStopSignal() {
     ous?.apply {
+      // check if the process is still running
+      if (process?.isAlive == false) {
+        return
+      }
       try {
         write("q\n".toByteArray())
         flush()
