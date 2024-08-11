@@ -46,7 +46,9 @@ import kotlinx.coroutines.flow.map
 class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: UserDao) : LocalDataSource {
 
   private companion object {
-    private const val DEFAULT_PASSWORD = "stream-rec"
+    private const val DEFAULT_USER = "stream-rec"
+    private const val DEFAULT_PASSWORD = DEFAULT_USER
+    private const val DEFAULT_ROLE = "ADMIN"
   }
 
   override suspend fun streamAppConfig(): Flow<AppConfig> {
@@ -60,8 +62,9 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: Us
     dao.getById(AppConfigId(1))?.let { AppConfig(it) } ?: AppConfig().apply {
       logger.info("First time running the app, creating default app config")
       val password = System.getenv("LOGIN_SECRET") ?: DEFAULT_PASSWORD
-      val user = UserEntity(0, "stream-rec", password.md5(), "ADMIN", isActive = true)
+      val user = UserEntity(0, DEFAULT_USER, password.md5(), DEFAULT_ROLE, isActive = true, isFirstUsePassword = true)
       userDao.insert(user)
+      logger.info("Default user created: $DEFAULT_USER, password: $password")
       saveAppConfig(this)
     }
   }

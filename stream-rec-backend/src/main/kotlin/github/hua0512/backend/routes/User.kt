@@ -36,6 +36,8 @@ import github.hua0512.data.user.User
 import github.hua0512.logger
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.UserRepo
+import github.hua0512.utils.generateRandomString
+import github.hua0512.utils.md5
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -77,6 +79,8 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
         val responseBody = buildJsonObject {
           put("token", token)
           put("validTo", validTo.toKotlinInstant().toEpochMilliseconds())
+          put("isFirstUsePassword", user.isFirstUsePassword)
+          put("role", user.role)
         }
         call.respond(HttpStatusCode.OK, responseBody)
         EventCenter.sendEvent(UserLogin(user.username, Clock.System.now()))
@@ -89,10 +93,18 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
 
     post("/recover") {
       val json: JsonElement = call.receive()
-      val userName = json.jsonObject["username"]?.jsonPrimitive?.content ?: return@post call.respond(HttpStatusCode.BadRequest, "User not found")
-      val user = userRepo.getUserByName(userName) ?: return@post call.respond(HttpStatusCode.BadRequest, "User not found")
-      logger.info("${user.username} password: ${user.password}")
-      call.respond(HttpStatusCode.OK, "Password logged in console")
+      val userName = json.jsonObject["username"]?.jsonPrimitive?.content ?: return@post call.respond(
+        HttpStatusCode.BadRequest,
+        "User not found"
+      )
+      val user =
+        userRepo.getUserByName(userName) ?: return@post call.respond(HttpStatusCode.BadRequest, "User not found")
+      // generate a random password
+      val newPassword = generateRandomString(12)
+      // update user password
+      userRepo.updateUser(user.copy(password = newPassword.md5(), isFirstUsePassword = true))
+      logger.info("${user.username} password: $newPassword")
+      call.respond(HttpStatusCode.OK, "New password logged in console")
     }
   }
 }
