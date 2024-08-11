@@ -59,7 +59,8 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: Us
   override suspend fun getAppConfig(): AppConfig = withIOContext {
     dao.getById(AppConfigId(1))?.let { AppConfig(it) } ?: AppConfig().apply {
       logger.info("First time running the app, creating default app config")
-      val user = UserEntity(0, "stream-rec", System.getenv("LOGIN_SECRET") ?: DEFAULT_PASSWORD.md5(), "ADMIN", isActive = true)
+      val password = System.getenv("LOGIN_SECRET") ?: DEFAULT_PASSWORD
+      val user = UserEntity(0, "stream-rec", password.md5(), "ADMIN", isActive = true)
       userDao.insert(user)
       saveAppConfig(this)
     }
