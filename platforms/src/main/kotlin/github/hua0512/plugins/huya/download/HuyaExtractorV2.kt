@@ -48,6 +48,8 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
   companion object {
     private const val MP_BASE_URL = "https://mp.huya.com/cache.php"
+
+    private const val TARS_CTYPE = "tars_mp"
   }
 
   override val regexPattern = URL_REGEX.toRegex()
@@ -170,7 +172,7 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     } ?: emptyList()
 
     // build stream info
-    val streams = extractLiveStreams(baseStreamInfoList, additionalQualities + bitrateList, maxBitRate)
+    val streams = extractLiveStreams(baseStreamInfoList, additionalQualities + bitrateList, maxBitRate, TARS_CTYPE)
     return mediaInfo.copy(streams = streams)
   }
 

@@ -233,6 +233,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     gameStreamInfoList: JsonArray,
     bitrateList: List<Pair<Int, String>>,
     maxBitRate: Int,
+    ctype: String? = null,
   ): MutableList<StreamInfo> {
     // build stream info
     val streams = mutableListOf<StreamInfo>()
@@ -254,7 +255,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         val priority = streamInfo.jsonObject["iWebPriorityRate"]?.jsonPrimitive?.int ?: 0
 
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
-          val streamUrl = buildUrl(streamInfo, uid, time, null, isFlv).nonEmptyOrNull() ?: return@buildLoop
+          val streamUrl = buildUrl(streamInfo, uid, time, null, isFlv, ctype).nonEmptyOrNull() ?: return@buildLoop
           bitrateList.forEach { (bitrate, displayName) ->
             // Skip HDR streams as they are not supported
             if (displayName.contains("HDR")) return@forEach
@@ -284,6 +285,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     time: Instant,
     bitrate: Int? = null,
     isFlv: Boolean,
+    ctype: String? = null,
   ): String {
     val antiCode =
       streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
@@ -296,7 +298,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val urlSuffix =
       streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
 
-    return "$url/$streamName.$urlSuffix" + "?" + buildQuery(antiCode, uid, streamName, time, bitrate)
+    return "$url/$streamName.$urlSuffix" + "?" + buildQuery(antiCode, uid, streamName, time, ctype, bitrate)
   }
 
   private fun buildQuery(
@@ -304,6 +306,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     uid: Long,
     sStreamName: String,
     time: Instant,
+    ctype: String? = null,
     bitrate: Int? = null,
   ): String {
     val u = (uid shl 8 or (uid shr 24)) and -0x1
@@ -314,7 +317,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val fm = query["fm"]?.decodeBase64()?.split("_")?.get(0)!!
 
     @Suppress("SpellCheckingInspection")
-    val ctype = "tars_mp"
+    val ctype = ctype ?: query["ctype"]!!
     val ss = "$seqId|${ctype}|$PLATFORM_ID".toByteArray().toMD5Hex()
     val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".toByteArray().toMD5Hex()
 
