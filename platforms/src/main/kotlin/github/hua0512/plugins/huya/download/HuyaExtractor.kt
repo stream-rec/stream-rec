@@ -79,6 +79,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     )
 
     private const val APP_ID = 5002
+    private const val WEB_PLATFORM_ID = 100
   }
 
   override val regexPattern = URL_REGEX.toRegex()
@@ -103,9 +104,6 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       platformHeaders[it.first] = it.second
     }
   }
-
-  protected open val platformId = 100
-
 
   override fun match(): Boolean {
     roomId = try {
@@ -322,6 +320,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val seqId = ct + uid
     val fm = query["fm"]?.decodeBase64()?.split("_")?.get(0)!!
 
+    val platformId = query["t"]?.toInt() ?: WEB_PLATFORM_ID
     @Suppress("SpellCheckingInspection")
     val ctype = ctype ?: query["ctype"]!!
     val ss = "$seqId|${ctype}|$platformId".toByteArray().toMD5Hex()

@@ -52,8 +52,6 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     private const val TARS_CTYPE = "tars_mp"
   }
 
-  override val platformId: Int = 102
-
   override val regexPattern = URL_REGEX.toRegex()
 
   private lateinit var dataJson: JsonObject
