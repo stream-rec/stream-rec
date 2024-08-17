@@ -113,9 +113,10 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     val profileInfo = data.jsonObject["profileInfo"]?.jsonObject
 
     // get danmu properties
-    ayyuid = profileInfo?.get("yyid")?.jsonPrimitive?.long ?: 0
-    topsid = data["chTopId"]?.jsonPrimitive?.long ?: 0
-    subid = data["subChId"]?.jsonPrimitive?.long ?: 0
+//    ayyuid = profileInfo?.get("yyid")?.jsonPrimitive?.long ?: 0
+//    topsid = data["chTopId"]?.jsonPrimitive?.long ?: 0
+//    subid = data["subChId"]?.jsonPrimitive?.long ?: 0
+    presenterUid = profileInfo?.get("uid")?.jsonPrimitive?.long ?: 0
     // get avatar
     val avatarUrl = profileInfo?.get("avatar180")?.jsonPrimitive?.content ?: ""
     // get streamer name

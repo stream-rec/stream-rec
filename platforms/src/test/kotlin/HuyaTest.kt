@@ -111,9 +111,7 @@ class HuyaTest {
     val danmu = HuyaDanmu(app).apply {
       enableWrite = false
       filePath = "huya_danmu.txt"
-      ayyuid = 1486578378
-      topsid = 1346609715
-      subid = 1346609715
+      presenterUid = 1346609715
     }
     val init = danmu.init(Streamer(0, "test", streamingUrl))
     danmu.fetchDanmu()

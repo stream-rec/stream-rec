@@ -70,6 +70,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     const val AYYUID_REGEX = "yyid\":\"?(\\d+)\"?"
     const val TOPSID_REGEX = "lChannelId\":\"?(\\d+)\"?"
     const val SUBID_REGEX = "lSubChannelId\":\"?(\\d+)\"?"
+    const val PRESENTER_UID_REGEX = "lPresenterUid\":\"?(\\d+)\"?"
 
 
     internal val requestHeaders = arrayOf(
@@ -86,11 +87,13 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   private val ayyuidPattern = AYYUID_REGEX.toRegex()
   private val topsidPattern = TOPSID_REGEX.toRegex()
   private val subidPattern = SUBID_REGEX.toRegex()
+  private val presenterUidPattern = PRESENTER_UID_REGEX.toRegex()
 
-  internal var ayyuid: Long = 0
-  internal var topsid: Long = 0
-  internal var subid: Long = 0
-  internal var uid = 0L
+  //  internal var ayyuid: Long = 0
+//  internal var topsid: Long = 0
+//  internal var subid: Long = 0
+  internal var presenterUid: Long = 0
+  internal var userId = 0L
   private var isCookieVerified = false
   var forceOrigin = false
 
@@ -135,10 +138,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       }
     }
 
-    ayyuid = ayyuidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
-    topsid = topsidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
-    subid = subidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
-
+//    ayyuid = ayyuidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+//    topsid = topsidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+//    subid = subidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+    presenterUid = presenterUidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+    
     val matchResult = ROOM_DATA_REGEX.toRegex().find(htmlResponseBody)?.also {
       if (it.value.isEmpty()) {
         throw InvalidExtractionParamsException("Empty TT_ROOM_DATA from $url")
@@ -243,11 +247,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     withContext(Dispatchers.Default) {
       gameStreamInfoList.forEach { streamInfo ->
-        if (uid == 0L) {
+        if (userId == 0L) {
           // extract uid from cookies
           // if not found, use streamer's uid
           // if still not found, use random uid
-          uid = cookies.nonEmptyOrNull()?.let {
+          userId = cookies.nonEmptyOrNull()?.let {
             val cookie = parseClientCookiesHeader(cookies)
             cookie["yyuid"]?.toLongOrNull() ?: cookie["udb_uid"]?.toLongOrNull()
           } ?: streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull() ?: (12340000L..12349999L).random()
@@ -257,7 +261,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         val priority = streamInfo.jsonObject["iWebPriorityRate"]?.jsonPrimitive?.int ?: 0
 
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
-          val streamUrl = buildUrl(streamInfo, uid, time, null, isFlv, ctype).nonEmptyOrNull() ?: return@buildLoop
+          val streamUrl = buildUrl(streamInfo, userId, time, null, isFlv, ctype).nonEmptyOrNull() ?: return@buildLoop
           bitrateList.forEach { (bitrate, displayName) ->
             // Skip HDR streams as they are not supported
             if (displayName.contains("HDR")) return@forEach
