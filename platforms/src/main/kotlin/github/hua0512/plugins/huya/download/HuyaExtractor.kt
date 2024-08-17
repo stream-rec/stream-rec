@@ -77,7 +77,6 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       HttpHeaders.Referrer to BASE_URL
     )
 
-    internal const val PLATFORM_ID = 100
     private const val APP_ID = 5002
   }
 
@@ -101,6 +100,9 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       platformHeaders[it.first] = it.second
     }
   }
+
+  protected open val platformId = 100
+
 
   override fun match(): Boolean {
     roomId = try {
@@ -318,7 +320,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     @Suppress("SpellCheckingInspection")
     val ctype = ctype ?: query["ctype"]!!
-    val ss = "$seqId|${ctype}|$PLATFORM_ID".toByteArray().toMD5Hex()
+    val ss = "$seqId|${ctype}|$platformId".toByteArray().toMD5Hex()
     val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".toByteArray().toMD5Hex()
 
     val parameters = ParametersBuilder().apply {
@@ -328,7 +330,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       append("ctype", ctype)
       append("fs", query["fs"]!!)
       append("u", u.toString())
-      append("t", PLATFORM_ID.toString())
+      append("t", platformId.toString())
       append("ver", "1")
       append("uuid", ((ct % 1e10 + Random.nextDouble()) * 1e3 % 0xffffffff).toInt().toString())
       // fixed 264 codec
