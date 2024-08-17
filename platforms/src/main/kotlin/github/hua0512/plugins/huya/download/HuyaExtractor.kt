@@ -140,7 +140,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 //    topsid = topsidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
 //    subid = subidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
     presenterUid = presenterUidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
-    
+
     val matchResult = ROOM_DATA_REGEX.toRegex().find(htmlResponseBody)?.also {
       if (it.value.isEmpty()) {
         throw InvalidExtractionParamsException("Empty TT_ROOM_DATA from $url")
@@ -237,7 +237,6 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     gameStreamInfoList: JsonArray,
     bitrateList: List<Pair<Int, String>>,
     maxBitRate: Int,
-    ctype: String? = null,
   ): MutableList<StreamInfo> {
     // build stream info
     val streams = mutableListOf<StreamInfo>()
@@ -259,7 +258,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         val priority = streamInfo.jsonObject["iWebPriorityRate"]?.jsonPrimitive?.int ?: 0
 
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
-          val streamUrl = buildUrl(streamInfo, userId, time, null, isFlv, ctype).nonEmptyOrNull() ?: return@buildLoop
+          val streamUrl = buildUrl(streamInfo, userId, time, null, isFlv).nonEmptyOrNull() ?: return@buildLoop
           bitrateList.forEach { (bitrate, displayName) ->
             // Skip HDR streams as they are not supported
             if (displayName.contains("HDR")) return@forEach
@@ -289,7 +288,6 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     time: Instant,
     bitrate: Int? = null,
     isFlv: Boolean,
-    ctype: String? = null,
   ): String {
     val antiCode =
       streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
@@ -302,7 +300,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val urlSuffix =
       streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
 
-    return "$url/$streamName.$urlSuffix" + "?" + buildQuery(antiCode, uid, streamName, time, ctype, bitrate)
+    return "$url/$streamName.$urlSuffix" + "?" + buildQuery(antiCode, uid, streamName, time, bitrate)
   }
 
   private fun buildQuery(
@@ -310,7 +308,6 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     uid: Long,
     sStreamName: String,
     time: Instant,
-    ctype: String? = null,
     bitrate: Int? = null,
   ): String {
     val u = (uid shl 8 or (uid shr 24)) and -0x1
@@ -321,8 +318,9 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val fm = query["fm"]?.decodeBase64()?.split("_")?.get(0)!!
 
     val platformId = query["t"]?.toInt() ?: WEB_PLATFORM_ID
+
     @Suppress("SpellCheckingInspection")
-    val ctype = ctype ?: query["ctype"]!!
+    val ctype = query["ctype"]!!
     val ss = "$seqId|${ctype}|$platformId".toByteArray().toMD5Hex()
     val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".toByteArray().toMD5Hex()
 
