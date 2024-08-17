@@ -90,7 +90,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   internal var ayyuid: Long = 0
   internal var topsid: Long = 0
   internal var subid: Long = 0
-  internal var uid = 0L
+  internal var userId = 0L
   private var isCookieVerified = false
   var forceOrigin = false
 
@@ -243,11 +243,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     withContext(Dispatchers.Default) {
       gameStreamInfoList.forEach { streamInfo ->
-        if (uid == 0L) {
+        if (userId == 0L) {
           // extract uid from cookies
           // if not found, use streamer's uid
           // if still not found, use random uid
-          uid = cookies.nonEmptyOrNull()?.let {
+          userId = cookies.nonEmptyOrNull()?.let {
             val cookie = parseClientCookiesHeader(cookies)
             cookie["yyuid"]?.toLongOrNull() ?: cookie["udb_uid"]?.toLongOrNull()
           } ?: streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull() ?: (12340000L..12349999L).random()
@@ -257,7 +257,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         val priority = streamInfo.jsonObject["iWebPriorityRate"]?.jsonPrimitive?.int ?: 0
 
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
-          val streamUrl = buildUrl(streamInfo, uid, time, null, isFlv, ctype).nonEmptyOrNull() ?: return@buildLoop
+          val streamUrl = buildUrl(streamInfo, userId, time, null, isFlv, ctype).nonEmptyOrNull() ?: return@buildLoop
           bitrateList.forEach { (bitrate, displayName) ->
             // Skip HDR streams as they are not supported
             if (displayName.contains("HDR")) return@forEach
