@@ -105,19 +105,34 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     if (!isLive) return mediaInfo
 
     // avatar is not available when not live
-    val avatar = owner?.jsonObject?.get("avatar_thumb")?.jsonObject?.get("url_list")?.jsonArray?.getOrNull(0)?.jsonPrimitive?.content ?: run {
-      logger.debug("$url unable to get avatar")
-      ""
-    }
+    val avatar =
+      owner?.jsonObject?.get("avatar_thumb")?.jsonObject?.get("url_list")?.jsonArray?.getOrNull(0)?.jsonPrimitive?.content
+        ?: run {
+          logger.debug("$url unable to get avatar")
+          ""
+        }
 
     val cover = liveData["cover"]!!.jsonObject["url_list"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.content ?: run {
       logger.debug("$url unable to get cover")
       ""
     }
 
-    val pullData = liveData["stream_url"]!!.jsonObject["live_core_sdk_data"]!!.jsonObject["pull_data"]?.jsonObject ?: run {
-      logger.debug("$url unable to get stream data")
+    val liveCoreSdkData = liveData["stream_url"]!!.jsonObject["live_core_sdk_data"]?.jsonObject ?: run {
+      logger.debug("$url unable to get live core sdk data")
       return mediaInfo.copy(coverUrl = cover)
+    }
+
+    // check if pull_datas is available (double screen streams)
+    val pullDatas = liveData["stream_url"]!!.jsonObject["pull_datas"]?.jsonObject
+
+    val pullData = if (pullDatas != null && pullDatas.isNotEmpty()) {
+      // use the first pull_data
+      pullDatas.entries.first().value.jsonObject
+    } else {
+      liveCoreSdkData["pull_data"]?.jsonObject ?: run {
+        logger.debug("$url unable to get stream data")
+        return mediaInfo.copy(coverUrl = cover)
+      }
     }
 
     val qualities = pullData["options"]!!.jsonObject["qualities"]?.jsonArray?.map {
