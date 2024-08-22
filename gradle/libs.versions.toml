@@ -1,7 +1,7 @@
 [versions]
 ktor = "2.3.12"
 ksp = "2.0.20-1.0.24"
-kotlin = "2.0.10"
+kotlin = "2.0.20"
 kotlin-coroutines = "1.8.1"
 logback = "1.5.7"
 dagger = "2.52"
