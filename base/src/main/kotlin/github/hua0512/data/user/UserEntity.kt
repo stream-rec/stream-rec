@@ -47,6 +47,6 @@ data class UserEntity(
   val role: String = "user",
   @ColumnInfo(name = "is_active", defaultValue = "0")
   val isActive: Boolean = false,
-  @ColumnInfo(name = "is_first_use_password", defaultValue = "1")
-  val isFirstUsePassword: Boolean = true
+  @ColumnInfo(name = "is_first_use_password", defaultValue = "0")
+  val isFirstUsePassword: Boolean = false,
 )

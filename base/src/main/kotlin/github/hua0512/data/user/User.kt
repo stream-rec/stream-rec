@@ -40,7 +40,7 @@ data class User(
   val password: String,
   val role: String = "USER",
   val isActive: Boolean = false,
-  val isFirstUsePassword: Boolean = true
+  val isFirstUsePassword: Boolean = false,
 ) {
 
   constructor(entity: UserEntity) : this(
