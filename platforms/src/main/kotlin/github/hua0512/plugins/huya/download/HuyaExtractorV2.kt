@@ -117,19 +117,36 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     val avatarUrl = profileInfo?.get("avatar180")?.jsonPrimitive?.content ?: ""
     // get streamer name
     val streamerName = profileInfo?.get("nick")?.jsonPrimitive?.content ?: ""
-    val livedata = data["liveData"]?.jsonObject
+
+    var mediaInfo = MediaInfo(
+      site = BASE_URL,
+      title = "",
+      artist = streamerName,
+      coverUrl = "",
+      artistImageUrl = "",
+      live = isLive,
+    )
+
+    var livedata = data["liveData"]
+
+    // there is not livedata if not live or livestatus is FREEZE
+    if (livedata is JsonNull) {
+      return mediaInfo
+    }
+
+    livedata = livedata?.jsonObject
+
     // get stream title and cover
     val streamTitle = livedata?.get("introduction")?.jsonPrimitive?.content ?: ""
     val coverUrl = livedata?.get("screenshot")?.jsonPrimitive?.content ?: ""
 
-    val mediaInfo = MediaInfo(
-      site = BASE_URL,
+    // update media info
+    mediaInfo = mediaInfo.copy(
       title = streamTitle,
-      artist = streamerName,
       coverUrl = coverUrl,
-      artistImageUrl = avatarUrl,
-      live = isLive,
+      artistImageUrl = avatarUrl
     )
+
     // if not live, return basic media info
     if (!isLive) return mediaInfo
 

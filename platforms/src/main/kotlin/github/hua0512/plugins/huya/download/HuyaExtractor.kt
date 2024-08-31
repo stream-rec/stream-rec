@@ -134,6 +134,9 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       if (contains("找不到这个主播")) {
         throw InvalidExtractionParamsException("$url invalid url, no such streamer")
       }
+      if (contains("该主播涉嫌违规，正在整改中")) {
+        throw InvalidExtractionParamsException("$url invalid url, streamer is banned")
+      }
     }
 
 //    ayyuid = ayyuidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
