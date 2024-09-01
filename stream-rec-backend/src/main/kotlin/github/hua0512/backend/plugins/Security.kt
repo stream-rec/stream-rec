@@ -13,8 +13,8 @@ import kotlinx.datetime.Clock
 
 const val jwtAudience = "stream-rec"
 const val jwtDomain = "https://github.com/hua0512/stream-rec/"
-val jwtSecret by lazy { LocalDataSource.getJwtSecret() }
-val jwtRealm = "stream-rec-jwt-realm"
+internal val jwtSecret by lazy { LocalDataSource.getJwtSecret() }
+const val jwtRealm = "stream-rec-jwt-realm"
 
 fun Application.configureSecurity() {
   authentication {

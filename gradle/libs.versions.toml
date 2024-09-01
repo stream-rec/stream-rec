@@ -18,6 +18,8 @@ androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "a
 androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "androidx-sqlite" }
 androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framework", version.ref = "androidx-sqlite" }
 
+at-favre-lib-bcrypt = "at.favre.lib:bcrypt:0.10.2"
+
 io-exoquery-pprint = "io.exoquery:pprint-kotlin:2.0.2"
 
 io-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

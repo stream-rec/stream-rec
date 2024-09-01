@@ -27,6 +27,7 @@ ktor {
 }
 
 dependencies {
+  implementation(libs.at.favre.lib.bcrypt)
   implementation(libs.ch.qos.logback.classic)
   implementation(libs.io.ktor.client.core)
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)

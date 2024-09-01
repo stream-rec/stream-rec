@@ -38,8 +38,10 @@ data class User(
   val id: Long = 0,
   val username: String,
   val password: String,
-  val role: String = "user",
+  val role: String = "USER",
   val isActive: Boolean = false,
+  val isFirstUsePassword: Boolean = false,
+  val isBcrypt: Boolean = false,
 ) {
 
   constructor(entity: UserEntity) : this(
@@ -47,7 +49,9 @@ data class User(
     username = entity.username,
     password = entity.password,
     role = entity.role,
-    isActive = entity.isActive
+    isActive = entity.isActive,
+    isFirstUsePassword = entity.isFirstUsePassword,
+    isBcrypt = entity.isBcrypt,
   )
 
   fun toEntity() = UserEntity(
@@ -55,6 +59,8 @@ data class User(
     username = username,
     password = password,
     role = role,
-    isActive = isActive
+    isActive = isActive,
+    isFirstUsePassword = isFirstUsePassword,
+    isBcrypt = isBcrypt,
   )
 }
