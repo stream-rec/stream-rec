@@ -166,12 +166,6 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       // check if the file exists
       if (file.exists()) {
         onDownloaded(FileInfo(file.pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
-        // delete 'core' file (ffmpeg error file) if it exists as we don't need it
-        // only generated when static ffmpeg build is used
-        val coreFile = outputFolder.resolve("core")
-        if (coreFile.exists()) {
-          coreFile.deleteFile()
-        }
         onDownloadFinished()
       } else {
         onDownloadError(file.pathString, DownloadErrorException("ffmpeg download failed"))
@@ -180,6 +174,12 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       // case when download is successful (exit code is 0)
       onDownloaded(FileInfo(file.pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
       onDownloadFinished()
+    }
+
+    // delete 'core' file (ffmpeg error file) if it exists as we don't need it
+    val coreFile = outputFolder.resolve("core")
+    if (coreFile.exists()) {
+      coreFile.deleteFile()
     }
   }
 
