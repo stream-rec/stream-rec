@@ -43,6 +43,14 @@ import kotlin.io.path.pathString
 interface LocalDataSource {
 
   companion object {
+
+    const val DEFAULT_PASSWORD_COST = 12
+
+    const val DEFAULT_USER = "stream-rec"
+    const val DEFAULT_PASSWORD = DEFAULT_USER
+    const val DEFAULT_ROLE = "ADMIN"
+
+
     fun getDefaultPath(): String {
       val envPath = System.getenv("DB_PATH") ?: System.getProperty("user.dir")
       val path = Path(envPath, "db").resolve("stream-rec.db")

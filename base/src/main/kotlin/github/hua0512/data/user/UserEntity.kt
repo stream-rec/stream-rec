@@ -49,4 +49,6 @@ data class UserEntity(
   val isActive: Boolean = false,
   @ColumnInfo(name = "is_first_use_password", defaultValue = "0")
   val isFirstUsePassword: Boolean = false,
+  @ColumnInfo(name = "is_bcrypt", defaultValue = "0")
+  val isBcrypt: Boolean = false,
 )

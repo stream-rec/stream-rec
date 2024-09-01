@@ -26,6 +26,7 @@
 
 package github.hua0512.backend.routes
 
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import github.hua0512.backend.plugins.jwtAudience
@@ -36,6 +37,7 @@ import github.hua0512.data.event.UserEvent.UserLogin
 import github.hua0512.data.user.User
 import github.hua0512.logger
 import github.hua0512.plugins.event.EventCenter
+import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_PASSWORD_COST
 import github.hua0512.repo.UserRepo
 import github.hua0512.utils.generateRandomString
 import github.hua0512.utils.md5
@@ -50,6 +52,7 @@ import kotlinx.datetime.toJavaInstant
 import kotlinx.serialization.json.*
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
+
 
 /**
  * User route
@@ -66,11 +69,26 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
           call.respond(HttpStatusCode.BadRequest, "User not found")
           return@post
         }
-        val hashedPassword = body.password.md5()
-        if (user.password != hashedPassword) {
+
+        val isPasswordCorrect = if (user.isBcrypt) {
+          BCrypt.verifyer().verify(body.password.toCharArray(), user.password).verified
+        } else {
+          user.password == body.password.md5()
+        }
+
+        if (!isPasswordCorrect) {
           call.respond(HttpStatusCode.BadRequest, "Password incorrect")
           return@post
         }
+
+        // update password to bcrypt (database versions 4 and 5)
+        if (!user.isBcrypt) {
+          val newPassword = BCrypt.withDefaults().hashToString(DEFAULT_PASSWORD_COST, body.password.toCharArray())
+          userRepo.updateUser(user.copy(password = newPassword, isBcrypt = true))
+          logger.debug("User ${user.username} password updated to bcrypt")
+        }
+
+
         val validTo = Clock.System.now().plus(7.toDuration(DurationUnit.DAYS))
         val token = JWT.create()
           .withAudience(jwtAudience)
@@ -103,9 +121,10 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
       val user =
         userRepo.getUserByName(userName) ?: return@post call.respond(HttpStatusCode.BadRequest, "User not found")
       // generate a random password
-      val newPassword = generateRandomString(12)
+      val newPassword = generateRandomString(DEFAULT_PASSWORD_COST)
       // update user password
-      userRepo.updateUser(user.copy(password = newPassword.md5(), isFirstUsePassword = true))
+      val hashedPassword = BCrypt.withDefaults().hashToString(DEFAULT_PASSWORD_COST, newPassword.toCharArray())
+      userRepo.updateUser(user.copy(password = hashedPassword, isFirstUsePassword = true, isBcrypt = true))
       logger.info("${user.username} password: $newPassword")
       call.respond(HttpStatusCode.OK, "New password logged in console")
     }
@@ -118,16 +137,23 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
         val user = userRepo.getUserById(UserId(id.toLong())) ?: return@put call.respond(HttpStatusCode.BadRequest, "User not found")
         val body = call.receive<JsonObject>()
 
-        val hashedPassword = body["password"]?.jsonPrimitive?.content?.md5()
+        val password = body["password"]?.jsonPrimitive?.content
           ?: return@put call.respond(HttpStatusCode.BadRequest, "Password not found")
 
-        if (user.password != hashedPassword) {
+        val isPasswordCorrect = if (user.isBcrypt) {
+          BCrypt.verifyer().verify(password.toCharArray(), user.password).verified
+        } else {
+          user.password == password.md5()
+        }
+
+        if (!isPasswordCorrect) {
           call.respond(HttpStatusCode.BadRequest, "Password incorrect")
           return@put
         }
 
         val newPassword = body["newPassword"]?.jsonPrimitive?.content ?: return@put call.respond(HttpStatusCode.BadRequest, "New password not found")
-        userRepo.updateUser(user.copy(password = newPassword, isFirstUsePassword = false))
+        val hashedNewPassword = BCrypt.withDefaults().hashToString(DEFAULT_PASSWORD_COST, newPassword.toCharArray())
+        userRepo.updateUser(user.copy(password = hashedNewPassword, isFirstUsePassword = false, isBcrypt = true))
         call.respond(HttpStatusCode.OK, "Password changed")
       }
     }

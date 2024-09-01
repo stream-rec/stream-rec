@@ -26,13 +26,17 @@
 
 package github.hua0512.repo
 
+import at.favre.lib.crypto.bcrypt.BCrypt
 import github.hua0512.dao.config.AppConfigDao
 import github.hua0512.dao.user.UserDao
 import github.hua0512.data.AppConfigId
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.user.UserEntity
 import github.hua0512.logger
-import github.hua0512.utils.md5
+import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_PASSWORD
+import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_PASSWORD_COST
+import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_ROLE
+import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_USER
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -45,12 +49,6 @@ import kotlinx.coroutines.flow.map
  */
 class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: UserDao) : LocalDataSource {
 
-  private companion object {
-    private const val DEFAULT_USER = "stream-rec"
-    private const val DEFAULT_PASSWORD = DEFAULT_USER
-    private const val DEFAULT_ROLE = "ADMIN"
-  }
-
   override suspend fun streamAppConfig(): Flow<AppConfig> {
     return dao.streamLatest()?.map {
       AppConfig(it)
@@ -62,7 +60,8 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: Us
     dao.getById(AppConfigId(1))?.let { AppConfig(it) } ?: AppConfig().apply {
       logger.info("First time running the app, creating default app config")
       val password = System.getenv("LOGIN_SECRET") ?: DEFAULT_PASSWORD
-      val user = UserEntity(0, DEFAULT_USER, password.md5(), DEFAULT_ROLE, isActive = true, isFirstUsePassword = true)
+      val hashedPassword = BCrypt.withDefaults().hashToString(DEFAULT_PASSWORD_COST, password.toCharArray())
+      val user = UserEntity(0, DEFAULT_USER, hashedPassword, DEFAULT_ROLE, isActive = true, isFirstUsePassword = true, isBcrypt = true)
       userDao.insert(user)
       logger.info("Default user created: $DEFAULT_USER, password: $password")
       saveAppConfig(this)
