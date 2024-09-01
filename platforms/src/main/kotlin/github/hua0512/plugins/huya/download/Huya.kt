@@ -60,9 +60,7 @@ class Huya(app: App, override val danmu: HuyaDanmu, override val extractor: Huya
       onLive()
       // bind danmu properties
       with(danmu) {
-        ayyuid = extractor.ayyuid
-        topsid = extractor.topsid
-        subid = extractor.subid
+        presenterUid = extractor.presenterUid
       }
     }
   }

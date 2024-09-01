@@ -70,6 +70,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     const val AYYUID_REGEX = "yyid\":\"?(\\d+)\"?"
     const val TOPSID_REGEX = "lChannelId\":\"?(\\d+)\"?"
     const val SUBID_REGEX = "lSubChannelId\":\"?(\\d+)\"?"
+    const val PRESENTER_UID_REGEX = "lPresenterUid\":\"?(\\d+)\"?"
 
 
     internal val requestHeaders = arrayOf(
@@ -77,8 +78,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       HttpHeaders.Referrer to BASE_URL
     )
 
-    internal const val PLATFORM_ID = 100
     private const val APP_ID = 5002
+    private const val WEB_PLATFORM_ID = 100
   }
 
   override val regexPattern = URL_REGEX.toRegex()
@@ -87,11 +88,13 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   private val ayyuidPattern = AYYUID_REGEX.toRegex()
   private val topsidPattern = TOPSID_REGEX.toRegex()
   private val subidPattern = SUBID_REGEX.toRegex()
+  private val presenterUidPattern = PRESENTER_UID_REGEX.toRegex()
 
-  internal var ayyuid: Long = 0
-  internal var topsid: Long = 0
-  internal var subid: Long = 0
-  internal var uid = 0L
+  //  internal var ayyuid: Long = 0
+//  internal var topsid: Long = 0
+//  internal var subid: Long = 0
+  internal var presenterUid: Long = 0
+  internal var userId = 0L
   private var isCookieVerified = false
   var forceOrigin = false
 
@@ -131,11 +134,15 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       if (contains("找不到这个主播")) {
         throw InvalidExtractionParamsException("$url invalid url, no such streamer")
       }
+      if (contains("该主播涉嫌违规，正在整改中")) {
+        throw InvalidExtractionParamsException("$url invalid url, streamer is banned")
+      }
     }
 
-    ayyuid = ayyuidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
-    topsid = topsidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
-    subid = subidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+//    ayyuid = ayyuidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+//    topsid = topsidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+//    subid = subidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
+    presenterUid = presenterUidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
 
     val matchResult = ROOM_DATA_REGEX.toRegex().find(htmlResponseBody)?.also {
       if (it.value.isEmpty()) {
@@ -240,11 +247,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     withContext(Dispatchers.Default) {
       gameStreamInfoList.forEach { streamInfo ->
-        if (uid == 0L) {
+        if (userId == 0L) {
           // extract uid from cookies
           // if not found, use streamer's uid
           // if still not found, use random uid
-          uid = cookies.nonEmptyOrNull()?.let {
+          userId = cookies.nonEmptyOrNull()?.let {
             val cookie = parseClientCookiesHeader(cookies)
             cookie["yyuid"]?.toLongOrNull() ?: cookie["udb_uid"]?.toLongOrNull()
           } ?: streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull() ?: (12340000L..12349999L).random()
@@ -254,7 +261,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         val priority = streamInfo.jsonObject["iWebPriorityRate"]?.jsonPrimitive?.int ?: 0
 
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
-          val streamUrl = buildUrl(streamInfo, uid, time, null, isFlv).nonEmptyOrNull() ?: return@buildLoop
+          val streamUrl = buildUrl(streamInfo, userId, time, null, isFlv).nonEmptyOrNull() ?: return@buildLoop
           bitrateList.forEach { (bitrate, displayName) ->
             // Skip HDR streams as they are not supported
             if (displayName.contains("HDR")) return@forEach
@@ -313,9 +320,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val seqId = ct + uid
     val fm = query["fm"]?.decodeBase64()?.split("_")?.get(0)!!
 
+    val platformId = query["t"]?.toInt() ?: WEB_PLATFORM_ID
+
     @Suppress("SpellCheckingInspection")
-    val ctype = "tars_mp"
-    val ss = "$seqId|${ctype}|$PLATFORM_ID".toByteArray().toMD5Hex()
+    val ctype = query["ctype"]!!
+    val ss = "$seqId|${ctype}|$platformId".toByteArray().toMD5Hex()
     val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".toByteArray().toMD5Hex()
 
     val parameters = ParametersBuilder().apply {
@@ -325,7 +334,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       append("ctype", ctype)
       append("fs", query["fs"]!!)
       append("u", u.toString())
-      append("t", PLATFORM_ID.toString())
+      append("t", platformId.toString())
       append("ver", "1")
       append("uuid", ((ct % 1e10 + Random.nextDouble()) * 1e3 % 0xffffffff).toInt().toString())
       // fixed 264 codec
