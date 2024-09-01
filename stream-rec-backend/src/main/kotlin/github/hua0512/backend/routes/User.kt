@@ -31,6 +31,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import github.hua0512.backend.plugins.jwtAudience
 import github.hua0512.backend.plugins.jwtDomain
 import github.hua0512.backend.plugins.jwtSecret
+import github.hua0512.data.UserId
 import github.hua0512.data.event.UserEvent.UserLogin
 import github.hua0512.data.user.User
 import github.hua0512.logger
@@ -40,12 +41,12 @@ import github.hua0512.utils.generateRandomString
 import github.hua0512.utils.md5
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.authenticate
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.toJavaInstant
-import kotlinx.datetime.toKotlinInstant
 import kotlinx.serialization.json.*
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -69,18 +70,19 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
           call.respond(HttpStatusCode.BadRequest, "Password incorrect")
           return@post
         }
-        val validTo = Clock.System.now().plus(7.toDuration(DurationUnit.DAYS)).toJavaInstant()
+        val validTo = Clock.System.now().plus(7.toDuration(DurationUnit.DAYS))
         val token = JWT.create()
           .withAudience(jwtAudience)
           .withIssuer(jwtDomain)
           .withClaim("username", user.username)
-          .withExpiresAt(validTo)
+          .withExpiresAt(validTo.toJavaInstant())
           .sign(Algorithm.HMAC256(jwtSecret))
         val responseBody = buildJsonObject {
           put("token", token)
-          put("validTo", validTo.toKotlinInstant().toEpochMilliseconds())
+          put("validTo", validTo.toEpochMilliseconds())
           put("isFirstUsePassword", user.isFirstUsePassword)
           put("role", user.role)
+          put("id", user.id)
         }
         call.respond(HttpStatusCode.OK, responseBody)
         EventCenter.sendEvent(UserLogin(user.username, Clock.System.now()))
@@ -105,6 +107,25 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
       userRepo.updateUser(user.copy(password = newPassword.md5(), isFirstUsePassword = true))
       logger.info("${user.username} password: $newPassword")
       call.respond(HttpStatusCode.OK, "New password logged in console")
+    }
+  }
+
+  authenticate("auth-jwt") {
+    route("/user") {
+      put("/{id}/password") {
+        val id = call.parameters["id"]?.toIntOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest, "Invalid id")
+        val user = userRepo.getUserById(UserId(id.toLong())) ?: return@put call.respond(HttpStatusCode.BadRequest, "User not found")
+        val body = call.receive<JsonObject>()
+
+        if (user.password != body["password"]?.jsonPrimitive?.content) {
+          call.respond(HttpStatusCode.BadRequest, "Password incorrect")
+          return@put
+        }
+
+        val newPassword = body["newPassword"]?.jsonPrimitive?.content ?: return@put call.respond(HttpStatusCode.BadRequest, "New password not found")
+        userRepo.updateUser(user.copy(password = newPassword, isFirstUsePassword = false))
+        call.respond(HttpStatusCode.OK, "Password changed")
+      }
     }
   }
 }
