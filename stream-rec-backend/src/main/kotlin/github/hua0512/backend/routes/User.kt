@@ -66,7 +66,8 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
           call.respond(HttpStatusCode.BadRequest, "User not found")
           return@post
         }
-        if (user.password != body.password) {
+        val hashedPassword = body.password.md5()
+        if (user.password != hashedPassword) {
           call.respond(HttpStatusCode.BadRequest, "Password incorrect")
           return@post
         }
@@ -117,7 +118,10 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
         val user = userRepo.getUserById(UserId(id.toLong())) ?: return@put call.respond(HttpStatusCode.BadRequest, "User not found")
         val body = call.receive<JsonObject>()
 
-        if (user.password != body["password"]?.jsonPrimitive?.content) {
+        val hashedPassword = body["password"]?.jsonPrimitive?.content?.md5()
+          ?: return@put call.respond(HttpStatusCode.BadRequest, "Password not found")
+
+        if (user.password != hashedPassword) {
           call.respond(HttpStatusCode.BadRequest, "Password incorrect")
           return@put
         }
