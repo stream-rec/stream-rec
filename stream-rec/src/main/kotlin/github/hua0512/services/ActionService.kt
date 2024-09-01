@@ -43,6 +43,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import kotlin.io.path.Path
+import kotlin.io.path.copyTo
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.moveTo
 import kotlin.io.path.name
@@ -165,6 +166,18 @@ class ActionService(private val app: App, private val uploadService: UploadServi
         dataList.forEach { data ->
           val file = Path(data.filePath)
           file.deleteFile()
+        }
+      }
+
+      is CopyAction -> {
+        dataList.forEach {
+          val file = Path(it.filePath)
+          val dest = Path(this.destination)
+          val destFile = dest.resolve(file.name).apply {
+            createParentDirectories()
+          }
+          file.copyTo(destFile)
+          logger.info("Copied $file to $destFile")
         }
       }
 
