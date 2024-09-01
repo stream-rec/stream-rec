@@ -31,6 +31,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Sealed class for actions that can be performed after a stream is downloaded
  * @author hua0512
  * @date : 2024/2/13 13:26
  */
@@ -69,4 +70,11 @@ sealed class Action {
   @Serializable
   @SerialName("move")
   data class MoveAction(val destination: String, override val enabled: Boolean = true) : Action()
+
+  /**
+   * Action to copy the file to a destination
+   */
+  @Serializable
+  @SerialName("copy")
+  data class CopyAction(val destination: String, override val enabled: Boolean = true) : Action()
 }
