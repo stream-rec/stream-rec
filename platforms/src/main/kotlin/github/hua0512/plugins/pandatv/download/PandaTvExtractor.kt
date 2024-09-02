@@ -59,6 +59,7 @@ class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) :
   lateinit var response: JsonObject
 
   init {
+    platformHeaders[HttpHeaders.Origin] = URL
     platformHeaders[HttpHeaders.Referrer] = URL
   }
 
@@ -97,8 +98,8 @@ class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) :
     val result = response["result"] as? JsonPrimitive ?: return false
     // check if the stream is live
     val media = response["media"] as? JsonObject ?: return false
-    val live = media["isLive"]?.jsonPrimitive?.booleanOrNull ?: false
-    val isPwd = media["isPw"]?.jsonPrimitive?.booleanOrNull ?: false
+    val live = media["isLive"]?.jsonPrimitive?.booleanOrNull == true
+    val isPwd = media["isPw"]?.jsonPrimitive?.booleanOrNull == true
     if (live && isPwd) {
       logger.error("$url is password protected")
       return false
