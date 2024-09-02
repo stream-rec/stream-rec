@@ -28,6 +28,7 @@ package github.hua0512.plugins.download.base
 
 import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.dto.platform.PandaTvConfigDTO
 import github.hua0512.data.dto.platform.TwitchConfigDTO
 import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
@@ -216,10 +217,20 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     // download headers
     val headers = mutableMapOf<String, String>().apply {
       putAll(COMMON_HEADERS)
-      if (downloadConfig is TwitchConfigDTO) {
-        // add twitch headers
-        val authToken = downloadConfig.authToken ?: app.config.twitchConfig.authToken
-        put(HttpHeaders.Authorization, "${AuthScheme.OAuth} $authToken")
+      when (downloadConfig) {
+        is TwitchConfigDTO -> {
+          val authToken = downloadConfig.authToken ?: app.config.twitchConfig.authToken
+          put(HttpHeaders.Authorization, "${AuthScheme.OAuth} $authToken")
+        }
+
+        is PandaTvConfigDTO -> {
+          put(HttpHeaders.Origin, "https://www.pandalive.co.kr")
+          put(HttpHeaders.Referrer, "https://www.pandalive.co.kr")
+        }
+
+        else -> {
+          // do nothing
+        }
       }
     }
 
