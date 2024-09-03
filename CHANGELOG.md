@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.7.1]
+
+## What's Changed
+
+* build(deps): bump com.google.devtools.ksp from 2.0.0-1.0.23 to 2.0.0-1.0.24 by @dependabot in https://github.com/hua0512/stream-rec/pull/113
+* build(deps): bump protobuf from 4.27.2 to 4.27.3 by @dependabot in https://github.com/hua0512/stream-rec/pull/114
+* build(deps): bump dagger from 2.51.1 to 2.52 by @dependabot in https://github.com/hua0512/stream-rec/pull/118
+* build(deps): bump com.google.devtools.ksp from 2.0.0-1.0.24 to 2.0.10-1.0.24 by @dependabot in https://github.com/hua0512/stream-rec/pull/120
+* build(deps): bump kotlin from 2.0.0 to 2.0.10 by @dependabot in https://github.com/hua0512/stream-rec/pull/119
+* build(deps): bump androidx-room from 2.7.0-alpha05 to 2.7.0-alpha06 by @dependabot in https://github.com/hua0512/stream-rec/pull/122
+* build(deps): bump androidx-sqlite from 2.5.0-alpha05 to 2.5.0-alpha06 by @dependabot in https://github.com/hua0512/stream-rec/pull/121
+* feat(db): hash user password with md5 by @hua0512 in https://github.com/hua0512/stream-rec/pull/123
+* build(deps): bump org.junit.jupiter:junit-jupiter from 5.10.3 to 5.11.0 by @dependabot in https://github.com/hua0512/stream-rec/pull/125
+* build(deps): bump ch.qos.logback:logback-classic from 1.5.6 to 1.5.7 by @dependabot in https://github.com/hua0512/stream-rec/pull/126
+* refactor(huya-danmu): use reversed-engineered danmu registration workflow by @hua0512 in https://github.com/hua0512/stream-rec/pull/127
+* feat(douyin-extractor): add support for double screen streams by @hua0512 in https://github.com/hua0512/stream-rec/pull/128
+* ci(docker): merge and enhance Docker workflows by @hua0512 in https://github.com/hua0512/stream-rec/pull/130
+* build(deps): bump org.jetbrains.kotlinx:kotlinx-datetime from 0.6.0 to 0.6.1 by @dependabot in https://github.com/hua0512/stream-rec/pull/133
+* build(deps): bump androidx-sqlite from 2.5.0-alpha06 to 2.5.0-alpha07 by @dependabot in https://github.com/hua0512/stream-rec/pull/134
+* build(deps): bump androidx-room from 2.7.0-alpha06 to 2.7.0-alpha07 by @dependabot in https://github.com/hua0512/stream-rec/pull/135
+* build(deps): bump com.google.devtools.ksp from 2.0.10-1.0.24 to 2.0.20-1.0.24 by @dependabot in https://github.com/hua0512/stream-rec/pull/136
+* build(deps): bump kotlin from 2.0.10 to 2.0.20 by @dependabot in https://github.com/hua0512/stream-rec/pull/137
+* build(deps): bump org.mockito:mockito-core from 5.12.0 to 5.13.0 by @dependabot in https://github.com/hua0512/stream-rec/pull/138
+* build(deps): bump org.jetbrains.kotlinx:kotlinx-serialization-json from 1.7.1 to 1.7.2 by @dependabot
+  in https://github.com/hua0512/stream-rec/pull/141
+* build(deps): bump protobuf from 4.27.3 to 4.28.0 by @dependabot in https://github.com/hua0512/stream-rec/pull/139
+* build(deps): bump org.jetbrains.kotlinx:kotlinx-serialization-protobuf from 1.7.1 to 1.7.2 by @dependabot
+  in https://github.com/hua0512/stream-rec/pull/140
+* feat(user): enhance user management and password recovery by @hua0512 in https://github.com/hua0512/stream-rec/pull/129
+* fix(ffmpeg): move deletion of `core` file to proper location by @hua0512 in https://github.com/hua0512/stream-rec/pull/142
+* feat(ActionService): add copy action by @hua0512 in https://github.com/hua0512/stream-rec/pull/143
+* fix(pandatv-extractor): missing origin header by @hua0512 in https://github.com/hua0512/stream-rec/pull/144
+
+- ---------------------------------------
+
+* 构建(deps): 更新依赖
+* 重构(用户): 优化重置密码流程
+* 增加(数据库): 使用bcrypt加密用户密码
+* 添加(抖音): 支持双屏直播
+* 修复(FFMPEG): 自动删除`core`文件
+* 添加(后处理): 添加复制后处理
+* 修复(pandatv): 修复录制
+* 重构(虎牙弹幕): 优化弹幕注册流程，使用官方流程
+
+**Full Changelog**: https://github.com/hua0512/stream-rec/compare/v0.7.0...v0.7.1
+
 ## [0.7.0]
 
 * build(Dockerfile): change to use `amazoncorretto:21-al2023-headless` as runtime image by @hua0512 in https://github.com/hua0512/stream-rec/pull/94
