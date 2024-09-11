@@ -88,6 +88,8 @@ class FlvAnalyzer(private val sizedUpdater: FlvAnalyzerSizedUpdater = { _, _, _ 
 
   private var headerSize = 0
 
+  private var startTimestamp: Long = 0
+
 
   val durationFlow = MutableStateFlow<Float>(0f)
 
@@ -121,6 +123,17 @@ class FlvAnalyzer(private val sizedUpdater: FlvAnalyzerSizedUpdater = { _, _, _ 
       return try {
         videoDataSize * 8f / lastVideoTimestamp
       } catch (e: Exception) {
+        0.0f
+      }
+    }
+
+  val downloadBitrate: Float
+    get() {
+      val currentTime = System.currentTimeMillis()
+      val elapsedTime = currentTime - startTimestamp
+      return if (elapsedTime > 0) {
+        (fileSize * 8) / (elapsedTime / 1000) / 1024f // kbps
+      } else {
         0.0f
       }
     }
@@ -180,11 +193,14 @@ class FlvAnalyzer(private val sizedUpdater: FlvAnalyzerSizedUpdater = { _, _, _ 
     videoInfo = null
     headerSize = 0
     durationFlow.value = 0f
+    startTimestamp = 0
     sizedUpdater(0, 0f, 0f)
   }
 
+
   fun analyzeHeader(header: FlvHeader) {
     this.headerSize = header.headerSize.toInt()
+    this.startTimestamp = System.currentTimeMillis()
     sizedUpdater(fileSize, durationFlow.value, 0f)
   }
 
@@ -201,8 +217,7 @@ class FlvAnalyzer(private val sizedUpdater: FlvAnalyzerSizedUpdater = { _, _, _ 
     dataSize += tag.header.dataSize.toLong()
     lastTimestamp = tag.header.timestamp
     durationFlow.value = lastTimestamp / 1000f
-    val bitrate = (audioDataSize + videoDataSize) * 8f / lastTimestamp
-    sizedUpdater(fileSize, durationFlow.value, bitrate)
+    sizedUpdater(fileSize, durationFlow.value, downloadBitrate)
   }
 
   private fun analyzeScriptTag(tag: FlvTag) {
