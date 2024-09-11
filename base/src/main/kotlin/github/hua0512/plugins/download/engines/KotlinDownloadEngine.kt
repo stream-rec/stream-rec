@@ -34,6 +34,7 @@ import github.hua0512.flv.operators.PathProvider
 import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
+import github.hua0512.flv.utils.asStreamFlow
 import github.hua0512.logger
 import github.hua0512.utils.replacePlaceholders
 import io.ktor.client.HttpClient

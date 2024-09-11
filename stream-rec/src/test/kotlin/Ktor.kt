@@ -4,7 +4,7 @@ import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
-import github.hua0512.plugins.download.engines.asStreamFlow
+import github.hua0512.flv.utils.asStreamFlow
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel

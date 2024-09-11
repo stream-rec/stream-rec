@@ -24,13 +24,12 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.engines
+package github.hua0512.flv.utils
 
 import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.exceptions.FlvErrorException
-import github.hua0512.flv.utils.createEndOfSequenceTag
 import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
