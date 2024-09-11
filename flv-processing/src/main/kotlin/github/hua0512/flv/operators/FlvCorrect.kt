@@ -91,7 +91,7 @@ internal fun Flow<FlvData>.correct(): Flow<FlvData> = flow {
         if (item.num != 1) {
           logger.warn("Script tag timestamp is not 0: {}", item)
         }
-        item.copy(header = item.header.copy(timestamp = 0), num = 1)
+        item.copy(header = item.header.copy(timestamp = 0))
       } else item
       emit(scriptTag)
       return@collect
