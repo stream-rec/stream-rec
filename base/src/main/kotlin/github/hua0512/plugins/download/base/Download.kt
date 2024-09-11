@@ -199,13 +199,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     val isDanmuEnabled = downloadConfig.danmu ?: app.config.danmu
     logger.debug("(${streamer.name}) downloadUrl: $downloadUrl")
 
-    // create download engine
-    engine = createDownloadEngine()
-
-    // build output file path
-    val outputPath = buildOutputFilePath(downloadConfig, fileExtension, engine)
+    // build generic output file path
+    val genericOutputPath = buildOutputFilePath(downloadConfig, fileExtension)
     // check if disk space is enough
-    checkDiskSpace(outputPath.parent, app.config.maxPartSize)
+    checkDiskSpace(genericOutputPath.parent, app.config.maxPartSize)
     // download start time
     val startTime = Clock.System.now()
     // check if danmu is initialized
@@ -268,8 +265,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         if (pb?.current != 0L) {
           pb?.reset()
         }
-        val danmuPath =
-          filePath.replace(fileExtension, ContentType.Application.Xml.contentSubtype).replace(PART_PREFIX, "")
+        val danmuPath = filePath
+          .replace(fileExtension, ContentType.Application.Xml.contentSubtype)
+          .replace(PART_PREFIX, "")
+
         danmu.videoStartTime = Instant.fromEpochSeconds(time)
 
         if (isDanmuEnabled) {
@@ -368,11 +367,12 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
     }
 
-    engine.apply {
+    // create download engine
+    engine = createDownloadEngine().apply {
       init(
         downloadUrl,
         fileFormat,
-        outputPath.pathString,
+        genericOutputPath.pathString,
         streamer,
         cookie,
         headers,
@@ -530,7 +530,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     }
   }
 
-  private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String, engine: BaseDownloadEngine): Path {
+  private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String): Path {
     val outputFileName = (downloadConfig.outputFileName?.nonEmptyOrNull() ?: app.config.outputFileName).run {
       formatToFriendlyFileName(
         // Add PART_PREFIX to the file name to indicate that it is a part
