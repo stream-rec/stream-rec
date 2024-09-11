@@ -27,13 +27,14 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.data.stream.FileInfo
-import github.hua0512.flv.FlvAnalyzerSizedUpdater
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
+import github.hua0512.flv.operators.FlvStatsUpdater
 import github.hua0512.flv.operators.PathProvider
 import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
+import github.hua0512.flv.operators.stats
 import github.hua0512.flv.utils.asStreamFlow
 import github.hua0512.logger
 import github.hua0512.utils.replacePlaceholders
@@ -112,18 +113,16 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         this@KotlinDownloadEngine.cookies?.let { header(HttpHeaders.Cookie, it) }
       }.execute { httpResponse ->
         val channel = httpResponse.bodyAsChannel()
-        channel.asStreamFlow().collect { producer.send(it) }
+        channel.asStreamFlow().flowOn(Dispatchers.IO).collect { producer.send(it) }
       }
 
-      this.coroutineContext[Job]?.invokeOnCompletion {
-        producer.close()
-      }
+      producer.close()
     }
 
     // last file size
     var lastSize = 0L
 
-    val sizedUpdater: FlvAnalyzerSizedUpdater = { size: Long, duration: Float, bitrate: Float ->
+    val sizedUpdater: FlvStatsUpdater = { size: Long, duration: Float, bitrate: Float ->
       val kbSizeDiff = (size - lastSize) / 1024
       if (kbSizeDiff > 0)
         onDownloadProgress(kbSizeDiff, bitrate.toInt().toDouble())
@@ -132,7 +131,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
 
     producer.receiveAsFlow()
       .process(limitsProvider)
-      .analyze(metaInfoProvider, sizedUpdater)
+      .analyze(metaInfoProvider)
       .dump(pathProvider) { index, path, createdAt, openAt ->
         val metaInfo = metaInfoProvider[index] ?: run {
           logger.warn("$index meta info not found")
@@ -142,6 +141,8 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         metaInfoProvider.remove(index)
       }
       .flowOn(Dispatchers.IO)
+      .stats(sizedUpdater)
+      .flowOn(Dispatchers.Default)
       .onCompletion {
         // clear meta info provider when completed
         metaInfoProvider.clear()

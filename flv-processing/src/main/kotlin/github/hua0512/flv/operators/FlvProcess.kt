@@ -52,5 +52,5 @@ fun Flow<FlvData>.process(limitsProvider: LimitsProvider = { 0L to 0.0f }): Flow
     .concat()
     .limit(fileSizeLimit, durationLimit)
     .injectMetadata()
-    .flowOn(Dispatchers.IO)
+    .flowOn(Dispatchers.Default)
 }

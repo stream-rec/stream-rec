@@ -27,7 +27,6 @@
 package github.hua0512.flv.operators
 
 import github.hua0512.flv.FlvAnalyzer
-import github.hua0512.flv.FlvAnalyzerSizedUpdater
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
@@ -51,17 +50,16 @@ private val logger = logger(TAG)
  *
  * @receiver Flow<FlvData> The flow of `FlvData` objects to be analyzed.
  * @param infoProvider FlvMetaInfoProvider The provider for metadata information.
- * @param sizedUpdater FlvAnalyzerSizedUpdater A lambda function to update the size of the analyzer. Default is a no-op.
  * @return Flow<FlvData> The analyzed flow of `FlvData` objects.
  * @author hua0512
  * @date : 2024/9/8 21:03
  */
-fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, sizedUpdater: FlvAnalyzerSizedUpdater = { _, _, _ -> }): Flow<FlvData> = flow {
+fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider): Flow<FlvData> = flow {
 
   // Index of the current stream being processed
   var streamIndex = -1
   // Instance of FlvAnalyzer to perform the analysis
-  val analyzer = FlvAnalyzer(sizedUpdater)
+  val analyzer = FlvAnalyzer()
 
   // Resets the analyzer state
   fun reset() {
