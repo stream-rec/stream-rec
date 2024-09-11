@@ -98,7 +98,7 @@ internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
         return@collect
       } else {
         logger.debug("Script tag not found...")
-        val scriptTag = createMetadataTag(1, data.header.timestamp, data.header.streamId.toInt())
+        val scriptTag = createMetadataTag(1, data.header.timestamp, data.header.streamId)
         logger.debug("Created metadata tag: {}", pprint(scriptTag))
         val newTag = scriptTag.injectMetadata()
         emit(newTag)

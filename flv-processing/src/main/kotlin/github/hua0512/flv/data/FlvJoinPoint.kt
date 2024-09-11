@@ -24,34 +24,15 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.operators
-
-import github.hua0512.flv.data.FlvData
-import github.hua0512.flv.utils.isAvcEndSequence
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flowOn
-
-
-typealias LimitsProvider = () -> Pair<Long, Float>
+package github.hua0512.flv.data
 
 /**
- * Process the FLV data flow.
+ * Flv join point
  * @author hua0512
- * @date : 2024/9/10 11:55
+ * @date : 2024/9/12 0:56
  */
-fun Flow<FlvData>.process(limitsProvider: LimitsProvider = { 0L to 0.0f }): Flow<FlvData> {
-  val (fileSizeLimit, durationLimit) = limitsProvider()
-  return this.discardFragmented()
-    .split()
-    .sort()
-    .filter { !it.isAvcEndSequence() }
-    .correct()
-    .fix()
-    .concat()
-    .limit(fileSizeLimit, durationLimit)
-    .extractJoinPoints()
-    .injectMetadata()
-    .flowOn(Dispatchers.Default)
-}
+data class FlvJoinPoint(
+  val seamless: Boolean = false,
+  val timestamp: Long = 0L,
+  val crc32: Long = 0,
+)

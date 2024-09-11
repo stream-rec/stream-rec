@@ -28,8 +28,12 @@ package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
+import github.hua0512.flv.data.FlvJoinPoint
 import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.data.amf.Amf0Value
 import github.hua0512.flv.operators.FlvConcatAction.*
+import github.hua0512.flv.utils.ScriptData
+import github.hua0512.flv.utils.createMetadataTag
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isScriptTag
@@ -165,6 +169,30 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
     return tag.copy(header = tag.header.copy(timestamp = tag.header.timestamp + delta))
   }
 
+  fun makeJoinPointTag(nextTag: FlvTag, seamless: Boolean): FlvTag {
+    val joinPoint = FlvJoinPoint(seamless, nextTag.header.timestamp, nextTag.crc32)
+    logger.debug("Join point: {}", joinPoint)
+    val scriptData = createMetadataTag(nextTag.num - 1, nextTag.header.timestamp, nextTag.header.streamId)
+    val data = scriptData.data as ScriptData
+
+    val amfJoinPoint = Amf0Value.Object(
+      mapOf(
+        "onJoinPoint" to Amf0Value.Object(
+          mapOf(
+            "seamless" to Amf0Value.Boolean(joinPoint.seamless),
+            "timestamp" to Amf0Value.Number(joinPoint.timestamp.toDouble()),
+            "crc32" to Amf0Value.Number(joinPoint.crc32.toDouble())
+          )
+        )
+      )
+    )
+
+    return scriptData.copy(
+      data = data.copy(
+        values = listOf(amfJoinPoint)
+      )
+    )
+  }
 
   suspend fun Flow<FlvData>.doConcat() {
     logger.debug("Concatenating.. gathered {} tags", gatheredTags.size)
@@ -185,8 +213,8 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
     }
 
     if (tags.isNotEmpty()) {
-      // TODO: join point
-      logger.warn("Join point: {}", tags[0])
+      val joinPointTag = makeJoinPointTag(correctTs(tags[0] as FlvTag), seamless)
+      emit(joinPointTag)
     }
 
     for (tag in tags) {

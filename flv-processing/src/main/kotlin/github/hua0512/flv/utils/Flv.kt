@@ -114,7 +114,7 @@ internal fun createEndOfSequenceData(): FlvTagData = FlvVideoTagData(
 )
 
 
-internal fun createMetadataTag(tagNum: Int, timestamp: Long, streamId: Int): FlvTag {
+internal fun createMetadataTag(tagNum: Int, timestamp: Long, streamId: UInt): FlvTag {
   val data = FlvScriptTagData(
     mutableListOf(
       String("onMetaData"),
@@ -127,7 +127,7 @@ internal fun createMetadataTag(tagNum: Int, timestamp: Long, streamId: Int): Flv
       tagType = FlvTagHeaderType.ScriptData,
       dataSize = data.bodySize.toUInt(),
       timestamp = timestamp,
-      streamId = streamId.toUInt()
+      streamId = streamId
     ),
     data = data,
     crc32 = data.binaryData.crc32()

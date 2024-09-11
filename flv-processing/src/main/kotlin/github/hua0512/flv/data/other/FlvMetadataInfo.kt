@@ -26,6 +26,7 @@
 
 package github.hua0512.flv.data.other
 
+import github.hua0512.flv.data.FlvJoinPoint
 import github.hua0512.flv.data.sound.FlvSoundFormat
 import github.hua0512.flv.data.sound.FlvSoundRate
 import github.hua0512.flv.data.sound.FlvSoundSize
@@ -63,4 +64,6 @@ data class FlvMetadataInfo(
   val lastKeyframeTimestamp: Long = 0,
   val lastKeyframeFilePosition: Long = 0,
   val keyframes: List<Keyframe> = emptyList(),
+
+  val joinPoints: List<FlvJoinPoint> = emptyList(),
 )
