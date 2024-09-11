@@ -65,7 +65,7 @@ import kotlin.time.Duration
 
 class DouyinTest : BaseTest() {
 
-  override val testUrl = "https://live.douyin.com/964752892125"
+  override val testUrl = "https://live.douyin.com/386003334438"
 
   @Test
   override fun testRegex(): Unit = runTest {
