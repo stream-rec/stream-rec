@@ -46,7 +46,11 @@ import github.hua0512.plugins.huya.danmu.msg.req.HuyaWup
 import io.ktor.websocket.*
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toLocalDateTime
 import java.nio.charset.StandardCharsets
+import java.time.format.DateTimeFormatter
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -68,7 +72,6 @@ class HuyaDanmu(app: App) : Danmu(app, enablePing = false) {
 
 
   private companion object {
-    private const val VERSION = 2408161057
     private const val HUYA_WS_URL = "wss://cdnws.api.huya.com:443"
   }
 
@@ -88,10 +91,16 @@ class HuyaDanmu(app: App) : Danmu(app, enablePing = false) {
   override fun oneHello(): ByteArray = ByteArray(0)
 
   override suspend fun sendHello(session: WebSocketSession) {
+    // format date to yyMMddHHmm
+    // this is used as version number
+    val date = Clock.System.now().toLocalDateTime(TimeZone.of("Asia/Shanghai"))
+      .toJavaLocalDateTime()
+      .format(DateTimeFormatter.ofPattern("yyMMddHHmm"))
+
     // lUid, sCookie, sGuid are not required
     // omitting them
     val userInfo = HuyaUserInfo(
-      sUA = "webh5&$VERSION&websocket",
+      sUA = "webh5&$date&websocket",
       sDeviceInfo = "chrome",
     )
 
