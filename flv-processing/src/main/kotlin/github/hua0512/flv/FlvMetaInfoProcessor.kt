@@ -175,13 +175,13 @@ object FlvMetaInfoProcessor {
    * @param metaInfo metadata info
    * @return injected tag
    */
-  private fun FlvTag.inject(metaInfo: FlvMetadataInfo): FlvTag {
-    val data = this.data as ScriptData
+  private suspend fun FlvTag.inject(metaInfo: FlvMetadataInfo): FlvTag = withContext(Dispatchers.Default) {
+    val data = this@inject.data as ScriptData
     val oldSize = data.bodySize
 
     if (data.valuesCount < 2) {
       logger.warn("Missing onMetaData, skip injection...")
-      return this
+      return@withContext this@inject
     }
 
     val properties = data[1].getProperties()
@@ -253,7 +253,7 @@ object FlvMetaInfoProcessor {
       )
     }
     logger.info("Injected metadata: {}", pprint(newData, defaultHeight = 50))
-    return this.copy(data = newData, header = header.copy(dataSize = newDataSize.toUInt()))
+    return@withContext this@inject.copy(data = newData, header = header.copy(dataSize = newDataSize.toUInt()))
   }
 
 
