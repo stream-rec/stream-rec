@@ -56,16 +56,11 @@ internal fun loadWebmssdk(): String {
   return SDK_JS
 }
 
+private val jsEngine by lazy {
+  NashornScriptEngineFactory().getScriptEngine("--language=es6")
+}
 
-/**
- * Get a signature for a specific live room
- * @param roomId live room id
- * @param userId user id
- * @return signature string
- */
-internal suspend fun getSignature(roomId: String, userId: String? = DouyinExtractor.USER_ID): String {
-  assert(SDK_JS.isNotEmpty()) { "SDK_JS is empty" }
-
+private val signatureJS by lazy {
   // add dom element
   val jsDom = """
     document = {};
@@ -76,13 +71,20 @@ internal suspend fun getSignature(roomId: String, userId: String? = DouyinExtrac
   """.trimIndent()
 
   // final JS
-  val finalJs = jsDom + SDK_JS
+  jsDom + loadWebmssdk()
+}
 
-  // initialize JS engine
-  val jsEngine = NashornScriptEngineFactory().getScriptEngine("--language=es6")
+/**
+ * Get a signature for a specific live room
+ * @param roomId live room id
+ * @param userId user id
+ * @return signature string
+ */
+internal suspend fun getSignature(roomId: String, userId: String? = DouyinExtractor.USER_ID): String {
+  assert(SDK_JS.isNotEmpty()) { "SDK_JS is empty" }
 
   // load JS
-  jsEngine.eval(finalJs)
+  jsEngine.eval(signatureJS)
 
   // build signature param
   val sigParam =
