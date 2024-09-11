@@ -199,8 +199,11 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     val isDanmuEnabled = downloadConfig.danmu ?: app.config.danmu
     logger.debug("(${streamer.name}) downloadUrl: $downloadUrl")
 
+    // create download engine
+    engine = createDownloadEngine()
+
     // build output file path
-    val outputPath = buildOutputFilePath(downloadConfig, fileExtension)
+    val outputPath = buildOutputFilePath(downloadConfig, fileExtension, engine)
     // check if disk space is enough
     checkDiskSpace(outputPath.parent, app.config.maxPartSize)
     // download start time
@@ -365,7 +368,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
     }
 
-    engine = selectDownloadEngine().apply {
+    engine.apply {
       init(
         downloadUrl,
         fileFormat,
@@ -507,7 +510,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * Select the download engine based on the stream type
    * @return a [BaseDownloadEngine] instance
    */
-  private fun selectDownloadEngine(): BaseDownloadEngine {
+  private fun createDownloadEngine(): BaseDownloadEngine {
     val userSelectedEngine = getDownloadEngine(app.config.engine)
     // fallback to user selected engine if skipStreamInfo is enabled
     if (extractor.skipStreamInfo) return userSelectedEngine
@@ -527,23 +530,21 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     }
   }
 
-  private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String): Path {
-    val timestamp = Clock.System.now()
+  private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String, engine: BaseDownloadEngine): Path {
     val outputFileName = (downloadConfig.outputFileName?.nonEmptyOrNull() ?: app.config.outputFileName).run {
       formatToFriendlyFileName(
         // Add PART_PREFIX to the file name to indicate that it is a part
         PART_PREFIX + replacePlaceholders(
           streamer.name,
           downloadTitle,
-          timestamp,
-          !app.config.useBuiltInSegmenter
+          replaceTimestamps = false
         ) + ".$fileExtension"
       )
     }
 
     val outputFolder = (downloadConfig.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).run {
       val str = if (endsWith(File.separator)) this else this + File.separator
-      str.replacePlaceholders(streamer.name, downloadTitle, timestamp)
+      str.replacePlaceholders(streamer.name, downloadTitle)
     }
     val sum = outputFolder + outputFileName
 

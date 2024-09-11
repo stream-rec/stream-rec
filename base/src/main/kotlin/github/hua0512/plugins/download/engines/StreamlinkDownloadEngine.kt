@@ -57,7 +57,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
   override suspend fun start() = coroutineScope {
     ensureHlsUrl()
-    initPath()
+    initPath(Clock.System.now())
     val streamlinkInputArgs = mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
       // add program args
       if (programArgs.isNotEmpty()) {

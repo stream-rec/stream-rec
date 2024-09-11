@@ -27,16 +27,16 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.App
-import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.download.exceptions.DownloadErrorException
-import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
+import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
 import java.io.OutputStream
 import java.nio.file.Path
@@ -73,17 +73,22 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   protected lateinit var outputFolder: Path
   protected lateinit var outputFileName: String
 
-  protected fun initPath() {
+  protected fun initPath(startInstant: Instant) {
+    outputFolder = Path(downloadFilePath).parent
+    outputFileName = Path(downloadFilePath).name
     if (!useSegmenter) {
       lastOpeningFile = downloadFilePath
       lastOpeningFileTime = Clock.System.now().epochSeconds
+      // replace time placeholders if not using segmenter
+      outputFileName = outputFileName.replacePlaceholders(streamer!!.name, "", startInstant, true)
+      // update downloadFilePath
+      downloadFilePath = outputFolder.resolve(outputFileName).pathString
     }
-    outputFolder = Path(downloadFilePath).parent
-    outputFileName = Path(downloadFilePath).name
   }
 
   override suspend fun start() {
-    initPath()
+    val startTime = Clock.System.now()
+    initPath(startTime)
     // ffmpeg running commands
     val cmds = buildFFMpegCmd(
       headers,
@@ -100,7 +105,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     val streamer = streamer!!
     logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
     if (!useSegmenter) {
-      onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
+      onDownloadStarted(downloadFilePath, startTime.epochSeconds)
     }
 
     val exitCode: Int = executeProcess(

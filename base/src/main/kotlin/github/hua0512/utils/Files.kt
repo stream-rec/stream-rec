@@ -67,7 +67,7 @@ fun Path.rename(newPath: Path, vararg options: CopyOption): Boolean {
     }
 
     Files.move(this, newPath, *options).also {
-      logger.info("File renamed: $this to $newPath")
+      logger.info("Renamed: $this to $newPath")
     }
     true
   } catch (e: Exception) {
