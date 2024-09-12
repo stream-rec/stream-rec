@@ -71,7 +71,7 @@ fun ByteReadChannel.asStreamFlow(): Flow<FlvData> = flow {
       // close read and emit end of sequence tag
     } catch (e: Exception) {
       // other exceptions
-      println("Exception: ${e.message}")
+      FlvReader.logger.info("Exception: ${e.message}")
     } finally {
       close()
       (tag as? FlvTag)?.let {

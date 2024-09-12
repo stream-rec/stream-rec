@@ -89,7 +89,6 @@ open class FlvReader(ins: InputStream) : AutoCloseable {
       } catch (e: EOFException) {
         break
       } catch (e: IOException) {
-        e.printStackTrace()
         logger.error("Read tag error: {}", e.message)
         break
       }
