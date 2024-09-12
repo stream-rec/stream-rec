@@ -56,6 +56,8 @@ fun readAmf0Value(input: DataInputStream): Amf0Value {
     Amf0Type.STRICT_ARRAY.byte -> readAmf0StrictArray(input)
     Amf0Type.DATE.byte -> readAmf0Date(input)
     Amf0Type.AMF3_OBJECT.byte -> readAmf0TypedObject(input)
+    Amf0Type.NULL.byte -> Amf0Value.Null
+    Amf0Type.TYPED_OBJECT.byte -> readAmf0TypedObject(input)
     else -> throw IllegalArgumentException("Unsupported AMF0 type: $type")
   }
 }

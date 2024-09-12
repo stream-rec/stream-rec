@@ -38,6 +38,7 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
   override val size: Int
     get() {
       return when (this) {
+        is Null -> 1
         is Number -> 9 // 1 byte type + 8 byte number
         is Boolean -> 2
         is String -> {
@@ -100,6 +101,12 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
         }
       }
     }
+
+  data object Null : Amf0Value(Amf0Type.NULL.byte) {
+    override fun write(output: DataOutputStream) {
+      output.writeByte(0x05)
+    }
+  }
 
 
   data class Number(val value: Double) : Amf0Value(Amf0Type.NUMBER.byte) {
