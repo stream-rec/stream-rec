@@ -114,8 +114,9 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
     }
     videoFrameInterval = calculateVideoFrameInterval(frameRate)
 
-    val soundRate = properties["audiosamplerate"] ?: Amf0Value.Number(44100.0)
-    soundSampleInterval = 1000 / ((soundRate as Amf0Value.Number).value) / 1000
+    val amfSoundRate = properties["audiosamplerate"] ?: Amf0Value.Number(44100.0)
+    val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
+    soundSampleInterval = 1000 / soundRate
 
     logger.debug("fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
   }
