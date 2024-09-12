@@ -36,7 +36,6 @@ import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.createMetadataTag
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
-import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isSequenceHeader
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
@@ -178,19 +177,15 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
 
     val amfJoinPoint = Amf0Value.Object(
       mapOf(
-        "onJoinPoint" to Amf0Value.Object(
-          mapOf(
-            "seamless" to Amf0Value.Boolean(joinPoint.seamless),
-            "timestamp" to Amf0Value.Number(joinPoint.timestamp.toDouble()),
-            "crc32" to Amf0Value.Number(joinPoint.crc32.toDouble())
-          )
-        )
+        "seamless" to Amf0Value.Boolean(joinPoint.seamless),
+        "timestamp" to Amf0Value.Number(joinPoint.timestamp.toDouble()),
+        "crc32" to Amf0Value.Number(joinPoint.crc32.toDouble())
       )
     )
 
     return scriptData.copy(
       data = data.copy(
-        values = listOf(amfJoinPoint)
+        values = listOf(Amf0Value.String("onJoinPoint"), amfJoinPoint)
       )
     )
   }

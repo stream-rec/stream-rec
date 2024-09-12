@@ -90,9 +90,9 @@ internal fun Flow<FlvData>.extractJoinPoints(onExtracted: onJoinPointExtracted? 
 
     if (value.isScriptTag()) {
       val scriptData = value.data as ScriptData
-      if (scriptData[0] is Amf0Value.Object) {
-        val obj = scriptData[0] as Amf0Value.Object
-        if (obj.properties.containsKey("onJoinPoint")) {
+      if (scriptData[0] is Amf0Value.String) {
+        val name = (scriptData[0] as Amf0Value.String).value
+        if (name == "onJoinPoint") {
           joinPointTag = value
           return@collect
         }
@@ -110,12 +110,12 @@ internal fun Flow<FlvData>.extractJoinPoints(onExtracted: onJoinPointExtracted? 
 private fun makeJoinPoint(joinPointTag: FlvTag, nextTag: FlvTag): FlvJoinPoint {
 
   val joinPointData = joinPointTag.data as ScriptData
-  val joinPointObj = (joinPointData[0] as Amf0Value.Object).properties["onJoinPoint"] as Amf0Value.Object
+  val joinPointProps = (joinPointData[1] as Amf0Value.Object).properties
 
   val joinPoint = FlvJoinPoint(
-    seamless = (joinPointObj.properties["seamless"] as Amf0Value.Boolean).value,
-    timestamp = (joinPointObj.properties["timestamp"] as Amf0Value.Number).value.toLong(),
-    crc32 = (joinPointObj.properties["crc32"] as Amf0Value.Number).value.toLong()
+    seamless = (joinPointProps["seamless"] as Amf0Value.Boolean).value,
+    timestamp = (joinPointProps["timestamp"] as Amf0Value.Number).value.toLong(),
+    crc32 = (joinPointProps["crc32"] as Amf0Value.Number).value.toLong()
   )
 
   logger.debug("Join point: {}, next tag: {}", joinPoint, nextTag)
