@@ -75,6 +75,7 @@ fun ByteReadChannel.asStreamFlow(): Flow<FlvData> = flow {
     } finally {
       close()
       (tag as? FlvTag)?.let {
+        if (it.isAvcEndSequence()) return@let
         emit(
           createEndOfSequenceTag(
             it.num + 1,
