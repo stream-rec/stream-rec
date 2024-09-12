@@ -34,6 +34,7 @@ import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isNaluKeyFrame
 import github.hua0512.flv.utils.isScriptTag
+import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.logger
 import kotlinx.coroutines.flow.Flow
@@ -79,7 +80,7 @@ internal fun Flow<FlvData>.limit(fileSizeLimit: Long = 0, durationLimit: Float =
 
   fun updateLastData(data: FlvTag) {
     // check if the tag is a metadata tag
-    if (data.isScriptTag()) {
+    if (data.isTrueScripTag()) {
       lastMetadata = data
     } else if (data.isAudioSequenceHeader()) {
       lastAudioSequenceTag = data

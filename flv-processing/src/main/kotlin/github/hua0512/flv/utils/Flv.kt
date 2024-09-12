@@ -29,6 +29,7 @@ package github.hua0512.flv.utils
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.data.amf.Amf0Value
 import github.hua0512.flv.data.amf.Amf0Value.*
 import github.hua0512.flv.data.avc.AvcPacketType
 import github.hua0512.flv.data.other.FlvKeyframe
@@ -52,6 +53,13 @@ internal typealias AudioData = FlvAudioTagData
 internal typealias ScriptData = FlvScriptTagData
 
 fun FlvTag.isScriptTag(): Boolean = this.data is FlvScriptTagData
+
+fun FlvTag.isTrueScripTag(): Boolean {
+  if (!isScriptTag()) return false
+  this.data as ScriptData
+  if (data[0] !is Amf0Value.String) return false
+  return (data[0] as Amf0Value.String).value == "onMetaData"
+}
 
 fun FlvTag.isVideoTag(): Boolean = this.data is FlvVideoTagData && this.header.tagType == FlvTagHeaderType.Video
 

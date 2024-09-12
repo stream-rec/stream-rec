@@ -34,6 +34,7 @@ import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isAudioTag
 import github.hua0512.flv.utils.isScriptTag
+import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.isVideoTag
 import github.hua0512.flv.utils.logger
@@ -70,7 +71,7 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
   var lastVideoTag: FlvTag? = null
   var frameRate = 30.0
   var videoFrameInterval = (1000 / frameRate)
-  var soundSampleInterval = (1000 / 44)
+  var soundSampleInterval = (1000 / 44.1)
 
   /**
    * Resets the correction state.
@@ -84,7 +85,7 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
     lastVideoTag = null
     frameRate = 30.0
     videoFrameInterval = (1000 / frameRate)
-    soundSampleInterval = (1000 / 44)
+    soundSampleInterval = (1000 / 44.1)
   }
 
   /**
@@ -112,7 +113,11 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
       return
     }
     videoFrameInterval = calculateVideoFrameInterval(frameRate)
-    logger.debug("fps = $frameRate, videoFrameInterval = $videoFrameInterval")
+
+    val soundRate = properties["audiosamplerate"] ?: Amf0Value.Number(44100.0)
+    soundSampleInterval = 1000 / ((soundRate as Amf0Value.Number).value) / 1000
+
+    logger.debug("fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
   }
 
 
@@ -161,14 +166,14 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
     if (tag.isVideoTag() && lastVideoTag != null) {
       delta = (lastVideoTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval).toLong()
     } else if (tag.isAudioTag() && lastAudioTag != null) {
-      delta = (lastAudioTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval)
+      delta = (lastAudioTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval).toLong()
     }
 
     if (lastTag != null && tag.header.timestamp + delta <= lastTag!!.header.timestamp) {
       if (tag.isVideoTag()) {
         delta = (lastTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval).toLong()
       } else if (tag.isAudioTag()) {
-        delta = (lastTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval)
+        delta = (lastTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval).toLong()
       }
     }
   }
@@ -215,7 +220,7 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
    */
   fun FlvTag.isNoncontinuous(): Boolean {
     if (lastTag == null) return false
-    return (header.timestamp + delta - lastTag!!.header.timestamp) > maxOf(soundSampleInterval.toDouble(), videoFrameInterval) + TOLERANCE
+    return (header.timestamp + delta - lastTag!!.header.timestamp) > maxOf(soundSampleInterval, videoFrameInterval) + TOLERANCE
   }
 
   collect { data ->
@@ -228,7 +233,10 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
     val tag = data as FlvTag
 
     if (tag.isScriptTag()) {
-      updateParameters(tag)
+      tag.data as ScriptData
+      if (tag.isTrueScripTag())
+        updateParameters(tag)
+
       emit(tag)
       return@collect
     }

@@ -36,6 +36,7 @@ import github.hua0512.flv.data.avc.nal.NalUnitType
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isScriptTag
+import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.logger
 import io.exoquery.pprint
@@ -159,7 +160,7 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
     val tag = it as FlvTag
 
     when {
-      tag.isScriptTag() -> {
+      tag.isTrueScripTag() -> {
         logger.debug("Metadata detected: {}", pprint(tag))
         lastMetadata = tag
       }

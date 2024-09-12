@@ -37,6 +37,7 @@ import github.hua0512.flv.naturalMetadataKeyOrder
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.createMetadataTag
 import github.hua0512.flv.utils.isScriptTag
+import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
@@ -92,7 +93,7 @@ internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
 
   collect { data ->
     if (data is FlvTag && data.num == 1) {
-      if (data.isScriptTag()) {
+      if (data.isTrueScripTag()) {
         val newTag = data.injectMetadata()
         emit(newTag)
         return@collect

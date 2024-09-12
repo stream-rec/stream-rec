@@ -33,6 +33,7 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.datetime.Clock
 import java.nio.file.Files
 import java.nio.file.Path
@@ -101,7 +102,10 @@ fun Flow<FlvData>.dump(pathProvider: PathProvider, onStreamDumped: onStreamDumpe
     writer?.writeHeader(this)
   }
 
-  collect { value ->
+  onCompletion {
+    closeAndInform()
+    reset()
+  }.collect { value ->
 
     if (value is FlvHeader) {
       value.write()
@@ -112,8 +116,5 @@ fun Flow<FlvData>.dump(pathProvider: PathProvider, onStreamDumped: onStreamDumpe
 
     emit(value)
   }
-
-  closeAndInform()
-  reset()
 
 }

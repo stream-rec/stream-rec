@@ -38,6 +38,7 @@ import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isSequenceHeader
+import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.logger
 import kotlinx.coroutines.flow.Flow
@@ -196,7 +197,7 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
 
   suspend fun Flow<FlvData>.doConcat() {
     logger.debug("Concatenating.. gathered {} tags", gatheredTags.size)
-    var tags = gatheredTags.filter { (it is FlvTag) && !it.isScriptTag() && !it.isSequenceHeader() }
+    var tags = gatheredTags.filter { (it is FlvTag) && !it.isTrueScripTag() && !it.isSequenceHeader() }
     logger.debug("{} data tags", tags.size)
 
     if (tags.isEmpty()) return
