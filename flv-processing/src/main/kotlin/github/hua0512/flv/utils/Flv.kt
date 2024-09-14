@@ -107,7 +107,7 @@ fun createEndOfSequenceTag(tagNum: Int, timestamp: Long, streamId: Int): FlvTag 
 }
 
 internal fun createEndOfSequenceHeader(timestamp: Long, streamId: Int): FlvTagHeader =
-  FlvTagHeader(tagType = FlvTagHeaderType.Video, dataSize = 5, timestamp = timestamp, streamId = streamId)
+  FlvTagHeader(tagType = FlvTagHeaderType.Video, dataSize = 10, timestamp = timestamp, streamId = streamId)
 
 private val endOfSequenceNalu by lazy {
   byteArrayOf(0x00, 0x00, 0x00, 0x01, 0x0A.toByte())
