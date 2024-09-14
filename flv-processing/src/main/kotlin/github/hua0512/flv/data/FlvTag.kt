@@ -45,6 +45,12 @@ data class FlvTag(
   override val size
     get() = header.dataSize.toLong() + FlvParser.TAG_HEADER_SIZE
 
+  init {
+    if (header.dataSize != data.size) {
+      throw IllegalArgumentException("Data size not match : $this, ${header.dataSize}, ${data.size}")
+    }
+  }
+
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

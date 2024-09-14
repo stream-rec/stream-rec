@@ -52,7 +52,7 @@ internal typealias VideoData = FlvVideoTagData
 internal typealias AudioData = FlvAudioTagData
 internal typealias ScriptData = FlvScriptTagData
 
-fun FlvTag.isScriptTag(): Boolean = this.data is FlvScriptTagData
+fun FlvTag.isScriptTag(): Boolean = this.header.tagType == FlvTagHeaderType.ScriptData && this.data is ScriptData
 
 fun FlvTag.isTrueScripTag(): Boolean {
   if (!isScriptTag()) return false
@@ -61,17 +61,17 @@ fun FlvTag.isTrueScripTag(): Boolean {
   return (data[0] as Amf0Value.String).value == "onMetaData"
 }
 
-fun FlvTag.isVideoTag(): Boolean = this.data is FlvVideoTagData && this.header.tagType == FlvTagHeaderType.Video
+fun FlvTag.isVideoTag(): Boolean = this.data is VideoData && this.header.tagType == FlvTagHeaderType.Video
 
-fun FlvTag.isAudioTag(): Boolean = this.data is FlvAudioTagData && this.header.tagType == FlvTagHeaderType.Audio
+fun FlvTag.isAudioTag(): Boolean = this.data is AudioData && this.header.tagType == FlvTagHeaderType.Audio
 
 fun FlvTag.isSequenceHeader(): Boolean = isVideoSequenceHeader() || isAudioSequenceHeader()
 
-fun FlvTag.isVideoSequenceHeader(): Boolean = isVideoTag() && (this.data as FlvVideoTagData).isAvcHeader()
+fun FlvTag.isVideoSequenceHeader(): Boolean = isVideoTag() && (this.data as VideoData).isAvcHeader()
 
-fun FlvTag.isAudioSequenceHeader(): Boolean = isAudioTag() && (this.data as FlvAudioTagData).isAacHeader()
+fun FlvTag.isAudioSequenceHeader(): Boolean = isAudioTag() && (this.data as AudioData).isAacHeader()
 
-fun FlvTag.isKeyFrame(): Boolean = isVideoTag() && (this.data as FlvVideoTagData).isKeyFrame()
+fun FlvTag.isKeyFrame(): Boolean = isVideoTag() && (this.data as VideoData).isKeyFrame()
 
 
 fun FlvData.isHeader(): Boolean = this is FlvHeader
@@ -107,7 +107,7 @@ fun createEndOfSequenceTag(tagNum: Int, timestamp: Long, streamId: Int): FlvTag 
 }
 
 internal fun createEndOfSequenceHeader(timestamp: Long, streamId: Int): FlvTagHeader =
-  FlvTagHeader(tagType = FlvTagHeaderType.Video, dataSize = 5u, timestamp = timestamp, streamId = streamId.toUInt())
+  FlvTagHeader(tagType = FlvTagHeaderType.Video, dataSize = 5, timestamp = timestamp, streamId = streamId)
 
 private val endOfSequenceNalu by lazy {
   byteArrayOf(0x00, 0x00, 0x00, 0x01, 0x0A.toByte())
@@ -122,7 +122,7 @@ internal fun createEndOfSequenceData(): FlvTagData = FlvVideoTagData(
 )
 
 
-internal fun createMetadataTag(tagNum: Int, timestamp: Long, streamId: UInt): FlvTag {
+internal fun createMetadataTag(tagNum: Int, timestamp: Long, streamId: Int): FlvTag {
   val data = FlvScriptTagData(
     mutableListOf(
       String("onMetaData"),
@@ -133,7 +133,7 @@ internal fun createMetadataTag(tagNum: Int, timestamp: Long, streamId: UInt): Fl
     num = tagNum,
     header = FlvTagHeader(
       tagType = FlvTagHeaderType.ScriptData,
-      dataSize = data.bodySize.toUInt(),
+      dataSize = data.bodySize,
       timestamp = timestamp,
       streamId = streamId
     ),

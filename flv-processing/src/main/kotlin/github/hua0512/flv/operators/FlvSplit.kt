@@ -35,7 +35,6 @@ import github.hua0512.flv.data.avc.nal.NalUnitParser
 import github.hua0512.flv.data.avc.nal.NalUnitType
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
-import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.logger
@@ -185,7 +184,7 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
         val lastTag = lastVideoSequenceTag
         // check if last video sequence tag is not null and not the same as the current tag
         if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.debug("Video parameters changed...")
+          logger.debug("Video parameters changed: {} -> {}", lastTag.crc32, tag.crc32)
           changed = true
           // Flv streams does not typically use Annex B formatted NAL units
 //          if (lastSps != null && lastPps != null) {
@@ -217,7 +216,7 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
         logger.debug("Audio sequence tag detected: {}", tag)
         val lastTag = lastAudioSequenceTag
         if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.debug("Audio parameters changed...")
+          logger.debug("Audio parameters changed : {} -> {}", lastTag.crc32, tag.crc32)
           changed = true
         }
         lastAudioSequenceTag = tag

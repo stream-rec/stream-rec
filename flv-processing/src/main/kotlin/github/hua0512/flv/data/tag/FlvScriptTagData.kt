@@ -40,12 +40,14 @@ data class FlvScriptTagData(val values: List<AmfValue>) : FlvTagData(binaryData 
   val valuesCount: Int
     get() = values.size
 
-  operator fun get(index: Int): AmfValue = values[index]
-
   override val headerSize: Int = 0
 
   val bodySize: Int
     get() = values.sumOf { it.size }
+
+  override val size: Int get() = bodySize
+
+  operator fun get(index: Int): AmfValue = values[index]
 
 
   fun write(os: DataOutputStream) {

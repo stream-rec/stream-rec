@@ -36,7 +36,6 @@ import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.naturalMetadataKeyOrder
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.createMetadataTag
-import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.logger
 import io.exoquery.pprint
@@ -83,12 +82,12 @@ internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
       else -> throw FlvDataErrorException("Unexpected AMF value type in metadata : ${obj::class.qualifiedName}")
     }
 
-    logger.debug("Injected metadata: {}", pprint(tagData[1]))
+    logger.debug("Injected metadata: {}", pprint(tagData[1], defaultHeight = 50))
 
     // recompute the script tag size
     val newSize = tagData.bodySize
     logger.debug("Script tag size changed from $oldSize to $newSize")
-    return this.copy(header = header.copy(dataSize = newSize.toUInt()), data = tagData)
+    return this.copy(header = header.copy(dataSize = newSize), data = tagData)
   }
 
   collect { data ->

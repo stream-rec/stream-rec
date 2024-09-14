@@ -33,7 +33,6 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isNaluKeyFrame
-import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.logger
@@ -94,7 +93,8 @@ internal fun Flow<FlvData>.limit(fileSizeLimit: Long = 0, durationLimit: Float =
     emit(lastHeader!!)
 
     lastMetadata?.let {
-      emit(it)
+      // ensure the metadata tag num is 1
+      emit(it.copy(num = 1))
     }
     lastVideoSequenceTag?.let {
       emit(it)
@@ -179,4 +179,5 @@ internal fun Flow<FlvData>.limit(fileSizeLimit: Long = 0, durationLimit: Float =
   }
 
   reset()
+  logger.debug("$TAG completed")
 }.correct()

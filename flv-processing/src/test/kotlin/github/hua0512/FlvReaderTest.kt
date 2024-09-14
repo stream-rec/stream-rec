@@ -80,15 +80,19 @@ class FlvReaderTest {
         header = it as FlvHeader
       }
       val resolutions = mutableListOf<VideoResolution>()
-      reader.readTags {
-        it as FlvTag
-        if (it.isVideoSequenceHeader()) {
-          val resolution = (it.data as FlvVideoTagData).resolution
-          if (resolutions.contains(resolution)) {
-            return@readTags
+      try {
+        reader.readTags {
+          it as FlvTag
+          if (it.isVideoSequenceHeader()) {
+            val resolution = (it.data as FlvVideoTagData).resolution
+            if (resolutions.contains(resolution)) {
+              return@readTags
+            }
+            resolutions.add(resolution)
           }
-          resolutions.add(resolution)
         }
+      } catch (e: Exception) {
+        e.printStackTrace()
       }
       resolutions.forEach(::println)
       resolutions.clear()

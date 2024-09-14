@@ -48,7 +48,7 @@ data class FlvTagHeader(
   /**
    * FLV tag data size, 3 bytes
    */
-  val dataSize: UInt,
+  val dataSize: Int,
   /**
    * FLV tag timestamp
    */
@@ -56,32 +56,26 @@ data class FlvTagHeader(
   /**
    * FLV tag stream id, 1 byte
    */
-  val streamId: UInt,
+  val streamId: Int,
 ) {
 
   init {
-
-    if (dataSize < 0u || dataSize > 0x00FFFFFFu) {
+    if (dataSize < 0) {
       throw FlvTagHeaderErrorException("Invalid FLV tag data size: $dataSize")
     }
-
-    if (streamId != 0u) {
-      throw FlvTagHeaderErrorException("Invalid FLV tag stream id: $streamId")
-    }
-
   }
 
   fun write(outputStream: OutputStream) {
     with(outputStream) {
       write(tagType.value.toInt() and 0x1F)
       // write 3 bytes data size
-      write3BytesInt(dataSize.toInt())
+      write3BytesInt(dataSize)
       // write 3 bytes timestamp
       write3BytesInt(timestamp.toInt() and 0x00FFFFFF)
       // write 1 byte timestamp extension
       write((timestamp.toInt() shr 24))
       // write 3 bytes stream id
-      write3BytesInt(streamId.toInt())
+      write3BytesInt(streamId)
     }
   }
 }

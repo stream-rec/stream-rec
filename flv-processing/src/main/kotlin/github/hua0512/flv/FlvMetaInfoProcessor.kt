@@ -127,7 +127,7 @@ object FlvMetaInfoProcessor {
             // skip tag header
             raf.skipBytes(FlvParser.TAG_HEADER_SIZE)
             val bytes = (injected.data as ScriptData).toByteArray()
-            assert(bytes.size == injected.header.dataSize.toInt())
+            assert(bytes.size == injected.header.dataSize)
             // write script tag data
             raf.write(bytes)
             return@use
@@ -253,7 +253,7 @@ object FlvMetaInfoProcessor {
       )
     }
     logger.info("Injected metadata: {}", pprint(newData, defaultHeight = 50))
-    return@withContext this@inject.copy(data = newData, header = header.copy(dataSize = newDataSize.toUInt()))
+    return@withContext this@inject.copy(data = newData, header = header.copy(dataSize = newDataSize))
   }
 
 

@@ -30,10 +30,9 @@ import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.exceptions.FlvDataErrorException
+import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.logger
 import java.io.DataInputStream
-import java.io.EOFException
-import java.io.IOException
 import java.io.InputStream
 
 
@@ -44,7 +43,7 @@ internal typealias onTagRead = suspend (FlvData) -> Unit
  * @author hua0512
  * @date : 2024/6/9 12:05
  */
-open class FlvReader(ins: InputStream) : AutoCloseable {
+internal class FlvReader(ins: InputStream) : AutoCloseable {
 
   companion object {
     private const val TAG = "FlvReader"
@@ -62,11 +61,13 @@ open class FlvReader(ins: InputStream) : AutoCloseable {
 
   suspend fun readHeader(onTagRead: onTagRead) {
     if (::header.isInitialized) {
+      logger.error("Header already read")
       throw FlvDataErrorException("Header already read")
     }
     header = parser.parseHeader()
     val previousTagSize = parser.parsePreviousTagSize()
     if (previousTagSize != 0) {
+      logger.error("First previous tag size must be 0, but got $previousTagSize")
       throw FlvDataErrorException("First previous tag size must be 0, but got $previousTagSize")
     }
     onTagRead(header)
@@ -76,6 +77,11 @@ open class FlvReader(ins: InputStream) : AutoCloseable {
     val tag = parser.parseTag()
     val previousTagSize = parser.parsePreviousTagSize()
     if (previousTagSize != tag.size.toInt()) {
+      if (tag.data is ScriptData) {
+        logger.warn("Ignored mismatched previous tag size for script tag, expect ${tag.size}, but got $previousTagSize")
+        return tag
+      }
+      logger.error("Previous tag size not match, expect ${tag.size}, but got $previousTagSize")
       throw FlvDataErrorException("Previous tag size not match, expect ${tag.size}, but got $previousTagSize")
     }
     return tag
@@ -86,11 +92,9 @@ open class FlvReader(ins: InputStream) : AutoCloseable {
     while (true) {
       try {
         onTagRead(readTag())
-      } catch (e: EOFException) {
-        break
-      } catch (e: IOException) {
+      } catch (e: Exception) {
         logger.error("Read tag error: {}", e.message)
-        break
+        throw e
       }
     }
   }

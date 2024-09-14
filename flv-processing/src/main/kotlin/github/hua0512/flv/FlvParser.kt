@@ -43,6 +43,7 @@ import github.hua0512.flv.data.tag.FlvAudioTagData
 import github.hua0512.flv.data.tag.FlvScriptTagData
 import github.hua0512.flv.data.tag.FlvTagHeader
 import github.hua0512.flv.data.tag.FlvTagHeaderType
+import github.hua0512.flv.data.tag.FlvTagHeaderType.*
 import github.hua0512.flv.data.tag.FlvVideoTagData
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.data.video.FlvVideoFrameType
@@ -80,9 +81,6 @@ internal class FlvParser(private val ins: DataInputStream) {
     internal val logger = logger(TAG)
   }
 
-  var backupTimestamp = false
-  var restoreTimestamp = false
-
   private var tagNum = 0
 
   suspend fun parseHeader(): FlvHeader = withContext(Dispatchers.IO) {
@@ -95,7 +93,7 @@ internal class FlvParser(private val ins: DataInputStream) {
     val version = buffer[3]
     val flags = FlvHeaderFlags(buffer[4].toInt())
     val headerSize = buffer.sliceArray(5 until 9).let { ByteBuffer.wrap(it).int }
-    FlvHeader(signature, version.toUInt(), flags, headerSize.toUInt(), buffer.crc32())
+    FlvHeader(signature, version.toInt(), flags, headerSize, buffer.crc32())
   }
 
   fun parsePreviousTagSize(): Int = ins.readInt()
@@ -111,16 +109,22 @@ internal class FlvParser(private val ins: DataInputStream) {
     val header = ins.parseTagHeader()
 
     when (header.tagType) {
-      FlvTagHeaderType.Audio -> parseAudioTagData(header.dataSize.toInt() - AUDIO_TAG_HEADER_SIZE).let {
+      Audio -> parseAudioTagData(header.dataSize - AUDIO_TAG_HEADER_SIZE).let {
         FlvTag(++tagNum, header, it, it.binaryData.crc32())
       }
 
-      FlvTagHeaderType.Video -> parseVideoTagData(header.dataSize.toInt() - VIDEO_TAG_HEADER_SIZE).let {
+      Video -> parseVideoTagData(header.dataSize - VIDEO_TAG_HEADER_SIZE).let {
         FlvTag(++tagNum, header, it, it.binaryData.crc32())
       }
 
-      FlvTagHeaderType.ScriptData -> ins.parseScriptTagData(header.dataSize.toInt()).let { data ->
-        FlvTag(++tagNum, header, data.first, data.second)
+      ScriptData -> ins.parseScriptTagData(header.dataSize).let { data ->
+        if (header.dataSize != data.first.size) {
+          logger.warn("Script tag size mismatch: header=${header.dataSize}, body=${data.first.size}")
+        }
+        // update data size to actual body size
+        // this is to avoid the case where the script tag size is larger than the actual body size
+        // probable due to incorrect size calculation, or missing data in parsing, etc.
+        FlvTag(++tagNum, header.copy(dataSize = data.first.size), data.first, data.second)
       }
 
       else -> throw FlvDataErrorException("Unsupported flv tag type: ${header.tagType}")
@@ -144,7 +148,7 @@ internal class FlvParser(private val ins: DataInputStream) {
     return FlvAudioTagData(
       format = soundFormat,
       rate = soundRate,
-      size = soundSize,
+      soundSize = soundSize,
       type = soundType,
       packetType = aacPacketType,
       binaryData = body
@@ -180,12 +184,11 @@ internal fun InputStream.parseTagHeader(): FlvTagHeader {
 
   fun ByteBuffer.read3BytesAsInt(): Int {
     // Read 3 bytes from the buffer
-    val byte1 = get().toInt() and 0xFF
-    val byte2 = get().toInt() and 0xFF
-    val byte3 = get().toInt() and 0xFF
-
-    // Combine the 3 bytes into an Int
-    return (byte1 shl 16) or (byte2 shl 8) or byte3
+    val b1 = get().toInt() and 0xFF
+    val b2 = get().toInt() and 0xFF
+    val b3 = get().toInt() and 0xFF
+    // Combine the 3 bytes into an integer
+    return (b1 shl 16) or (b2 shl 8) or b3
   }
 
   // read tag header
@@ -208,7 +211,7 @@ internal fun InputStream.parseTagHeader(): FlvTagHeader {
   }
 
   val tagType = FlvTagHeaderType.from(flag and 0b0001_1111)
-  val dataSize = buffer.read3BytesAsInt().toUInt()
+  val dataSize = buffer.read3BytesAsInt()
   // 3 bytes timestamp
   val timestamp = buffer.read3BytesAsInt().toUInt()
   // 1 byte timestamp extended
@@ -216,7 +219,7 @@ internal fun InputStream.parseTagHeader(): FlvTagHeader {
   // final timestamp, 3 bytes timestamp (lower bits) + 1 byte timestamp extended (higher 8 bits)
   val finalTimestamp = (timestampExtended shl 24 or timestamp).toLong()
   // 3 bytes stream id
-  val streamId = buffer.read3BytesAsInt().toUInt()
+  val streamId = buffer.read3BytesAsInt()
   return FlvTagHeader(
     tagType,
     dataSize = dataSize,

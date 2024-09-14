@@ -104,6 +104,7 @@ internal fun Flow<FlvData>.extractJoinPoints(onExtracted: onJoinPointExtracted? 
 
   pushJoinPoint()
   reset()
+  logger.debug("$TAG completed")
 }
 
 

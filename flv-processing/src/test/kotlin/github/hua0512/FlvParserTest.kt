@@ -71,9 +71,9 @@ class FlvParserTest {
     val parser = FlvParser(ins)
     val header = parser.parseHeader()
     assertEquals("FLV", header.signature)
-    assertEquals(1u, header.version)
+    assertEquals(1, header.version)
     assertEquals(FlvHeaderFlags(0x05), header.flags)
-    assertEquals(9u, header.headerSize)
+    assertEquals(9, header.headerSize)
     println(header)
   }
 
@@ -94,9 +94,9 @@ class FlvParserTest {
     val parser = FlvParser(ins)
     val header = parser.parseHeader()
     assertEquals("FLV", header.signature)
-    assertEquals(1u, header.version)
+    assertEquals(1, header.version)
     assertEquals(FlvHeaderFlags(0x05), header.flags)
-    assertEquals(9u, header.headerSize)
+    assertEquals(9, header.headerSize)
     println(header)
   }
 

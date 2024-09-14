@@ -133,7 +133,7 @@ class FlvAnalyzer {
       audioDataSize = audioDataSize,
       audioCodecId = audioInfo?.format,
       audioSampleRate = audioInfo?.rate,
-      audioSampleSize = audioInfo?.size,
+      audioSampleSize = audioInfo?.soundSize,
       audioSoundType = audioInfo?.type,
       videoSize = videoTagsSize,
       videoDataSize = videoDataSize,
@@ -175,7 +175,7 @@ class FlvAnalyzer {
   }
 
   fun analyzeHeader(header: FlvHeader) {
-    this.headerSize = header.headerSize.toInt()
+    this.headerSize = header.headerSize
   }
 
   fun analyzeTag(tag: FlvTag) {

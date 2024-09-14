@@ -27,6 +27,7 @@
 package github.hua0512.flv.data
 
 import github.hua0512.flv.exceptions.FlvHeaderErrorException
+import java.io.OutputStream
 
 /**
  * FLV header data class
@@ -35,21 +36,36 @@ import github.hua0512.flv.exceptions.FlvHeaderErrorException
  * @property flags FLV flags, always 1 byte
  * @property headerSize FLV header size, always 4 bytes
  */
-data class FlvHeader(val signature: String, val version: UInt, val flags: FlvHeaderFlags, val headerSize: UInt, override val crc32: Long) : FlvData {
+data class FlvHeader(val signature: String, val version: Int, val flags: FlvHeaderFlags, val headerSize: Int, override val crc32: Long) : FlvData {
 
   init {
     if (signature.length != 3 || signature != "FLV") {
       throw FlvHeaderErrorException("Invalid FLV signature: $signature")
     }
 
-    if (version != 1u) {
+    if (version != 1) {
       throw FlvHeaderErrorException("Invalid FLV version: $version")
     }
 
-    if (headerSize != 9u) {
+    if (headerSize != 9) {
       throw FlvHeaderErrorException("Invalid FLV header size: $headerSize")
     }
   }
 
   override val size = headerSize.toLong()
+
+
+  fun write(os: OutputStream) {
+    with(os) {
+      // write 'FLV' signature
+      write(signature.toByteArray())
+      write(version)
+      write(flags.value)
+      // write header size as Int (4 bytes)
+      write(headerSize shr 24)
+      write(headerSize shr 16)
+      write(headerSize shr 8)
+      write(headerSize)
+    }
+  }
 }

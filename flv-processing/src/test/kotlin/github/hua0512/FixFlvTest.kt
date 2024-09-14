@@ -133,7 +133,7 @@ class FixFlvTest {
               createEndOfSequenceTag(
                 (tag as FlvTag).num + 1,
                 (tag as FlvTag).header.timestamp + 1,
-                (tag as FlvTag).header.streamId.toInt()
+                (tag as FlvTag).header.streamId
               )
             )
           }

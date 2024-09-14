@@ -40,14 +40,14 @@ import github.hua0512.flv.data.sound.FlvSoundType
 data class FlvAudioTagData(
   val format: FlvSoundFormat,
   val rate: FlvSoundRate,
-  val size: FlvSoundSize,
+  val soundSize: FlvSoundSize,
   val type: FlvSoundType,
   val packetType: AACPacketType?,
   override val binaryData: ByteArray,
 ) : FlvTagData(binaryData) {
 
   override fun toString(): String {
-    return "FlvMusicTagData(format=$format, rate=$rate, size=$size, type=$type, binaryData=${binaryData.size} bytes)"
+    return "FlvMusicTagData(format=$format, rate=$rate, size=$soundSize, type=$type, binaryData=${binaryData.size} bytes)"
   }
 
   override val headerSize: Int = if (format == FlvSoundFormat.AAC) 2 else 1

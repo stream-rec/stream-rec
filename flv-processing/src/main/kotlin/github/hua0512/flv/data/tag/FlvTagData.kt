@@ -35,4 +35,6 @@ sealed class FlvTagData(open val binaryData: ByteArray) {
 
   abstract val headerSize: Int
 
+  open val size: Int get() = headerSize + binaryData.size
+
 }

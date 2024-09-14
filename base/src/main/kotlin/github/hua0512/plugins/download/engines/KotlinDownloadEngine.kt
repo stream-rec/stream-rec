@@ -50,9 +50,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -113,7 +115,15 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         this@KotlinDownloadEngine.cookies?.let { header(HttpHeaders.Cookie, it) }
       }.execute { httpResponse ->
         val channel = httpResponse.bodyAsChannel()
-        channel.asStreamFlow().flowOn(Dispatchers.IO).collect { producer.send(it) }
+
+        channel.asStreamFlow()
+          .onEach { producer.send(it) }
+          .flowOn(Dispatchers.IO)
+          .catch {
+            // log exception when download flow failed
+            logger.error("download flow failed: $it")
+          }
+          .collect()
       }
 
       producer.close()

@@ -28,9 +28,12 @@ package github.hua0512.flv.utils
 
 import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
+import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.exceptions.FlvErrorException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.io.DataInputStream
+import java.io.EOFException
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.toUInt
@@ -50,9 +53,27 @@ import kotlin.use
  */
 fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
   val flvReader = FlvReader(this@asFlvFlow)
-  flvReader.use {
-    flvReader.readHeader(::emit)
-    flvReader.readTags(::emit)
+
+  var lastTag: FlvData? = null
+  try {
+    flvReader.use {
+      flvReader.readHeader(::emit)
+      flvReader.readTags {
+        lastTag = it
+        emit(it)
+      }
+    }
+  } catch (e: EOFException) {
+    // End of file reached
+  } catch (e: FlvErrorException) {
+    e.printStackTrace()
+  } catch (e: Exception) {
+    e.printStackTrace()
+  } finally {
+    lastTag?.let {
+      if (it is FlvTag && it.isAvcEndSequence()) return@let
+      if (it is FlvTag) emit(createEndOfSequenceTag(it.num + 1, it.header.timestamp + 1, it.header.streamId.toInt()))
+    }
   }
 }
 

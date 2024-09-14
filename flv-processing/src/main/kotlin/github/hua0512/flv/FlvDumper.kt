@@ -31,13 +31,13 @@ import github.hua0512.flv.FlvParser.Companion.TAG_HEADER_SIZE
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.sound.FlvSoundFormat
-import github.hua0512.flv.data.tag.FlvAudioTagData
-import github.hua0512.flv.data.tag.FlvScriptTagData
 import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.data.tag.FlvVideoTagData
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
+import github.hua0512.flv.utils.AudioData
+import github.hua0512.flv.utils.ScriptData
+import github.hua0512.flv.utils.VideoData
 import github.hua0512.flv.utils.write3BytesInt
 import java.io.DataOutputStream
 import java.lang.AutoCloseable
@@ -53,14 +53,8 @@ internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
     get() = os.size()
 
   fun dumpHeader(header: FlvHeader): Int {
-    with(os) {
-      // write 'FLV' signature
-      write(header.signature.toByteArray())
-      writeByte(header.version.toInt())
-      writeByte(header.flags.value)
-      writeInt(header.headerSize.toInt())
-    }
-    return header.headerSize.toInt()
+    header.write(os)
+    return header.headerSize
   }
 
   fun dumpPreviousTagSize(size: Int): Int {
@@ -84,14 +78,14 @@ internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
 
     // dump tag data header
     bytesWritten += when (tag.data) {
-      is FlvAudioTagData -> tag.data.dump()
-      is FlvVideoTagData -> tag.data.dump()
-      is FlvScriptTagData -> tag.data.dump()
+      is AudioData -> tag.data.dump()
+      is VideoData -> tag.data.dump()
+      is ScriptData -> tag.data.dump()
       else -> throw FlvDataErrorException("Unsupported tag data: ${tag.data}")
     }
     // dump body
     // skip if tag data is empty (script tag)
-    if (tag.data.binaryData.isNotEmpty()) {
+    if (tag.data !is ScriptData) {
       os.write(tag.data.binaryData)
       bytesWritten += tag.data.binaryData.size
     }
@@ -100,19 +94,19 @@ internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
   }
 
 
-  private fun FlvAudioTagData.dump(): Int {
+  private fun AudioData.dump(): Int {
     if (format != FlvSoundFormat.AAC) {
       throw FlvDataErrorException("Unsupported sound format: ${this.format}")
     }
     // write info byte
-    val info = (format.value shl 4) or (rate.value shl 2) or (size.value shl 1) or type.value
+    val info = (format.value shl 4) or (rate.value shl 2) or (soundSize.value shl 1) or type.value
     os.writeByte(info)
     // write aac packet type
     os.writeByte(packetType!!.value)
     return 2
   }
 
-  private fun FlvVideoTagData.dump(): Int {
+  private fun VideoData.dump(): Int {
     // ensure codec id is valid
     // TODO : SUPPORT CHINESE HEVC
     if (codecId != FlvVideoCodecId.AVC) {
@@ -129,7 +123,7 @@ internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
     return 5
   }
 
-  private fun FlvScriptTagData.dump(): Int {
+  private fun ScriptData.dump(): Int {
     write(os)
     return values.sumOf { it.size }
   }

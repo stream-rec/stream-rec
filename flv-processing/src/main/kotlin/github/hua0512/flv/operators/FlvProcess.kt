@@ -30,6 +30,7 @@ import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.utils.isAvcEndSequence
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 
@@ -53,5 +54,9 @@ fun Flow<FlvData>.process(limitsProvider: LimitsProvider = { 0L to 0.0f }): Flow
     .limit(fileSizeLimit, durationLimit)
     .extractJoinPoints()
     .injectMetadata()
+    .catch {
+      it.printStackTrace()
+      println("Error processing FLV data: $it")
+    }
     .flowOn(Dispatchers.Default)
 }

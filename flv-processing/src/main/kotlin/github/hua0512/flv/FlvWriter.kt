@@ -37,7 +37,7 @@ import java.io.OutputStream
  * @author hua0512
  * @date : 2024/6/10 19:51
  */
-class FlvWriter private constructor() : AutoCloseable {
+internal class FlvWriter private constructor() : AutoCloseable {
 
   private lateinit var dumper: FlvDumper
 
@@ -53,7 +53,7 @@ class FlvWriter private constructor() : AutoCloseable {
   fun writeHeader(header: FlvHeader): Int {
     dumper.dumpHeader(header)
     dumper.dumpPreviousTagSize(0)
-    return header.headerSize.toInt() + POINTER_SIZE
+    return header.headerSize + POINTER_SIZE
   }
 
   fun writeTag(tag: FlvTag): Int {
