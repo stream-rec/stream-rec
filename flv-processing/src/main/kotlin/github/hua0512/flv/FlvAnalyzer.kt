@@ -85,11 +85,7 @@ class FlvAnalyzer {
 
   private var headerSize = 0
 
-  val fileSize: Long
-    get() {
-      // header + tags + numTags * pointer
-      return headerSize + FlvParser.POINTER_SIZE + tagsSize + numTags * FlvParser.POINTER_SIZE
-    }
+  var fileSize: Long = 0
 
   val frameRate: Float
     get() {
@@ -172,10 +168,12 @@ class FlvAnalyzer {
     hasVideo = false
     videoInfo = null
     headerSize = 0
+    fileSize = 0
   }
 
   fun analyzeHeader(header: FlvHeader) {
     this.headerSize = header.headerSize
+    this.fileSize += header.size + FlvParser.POINTER_SIZE
   }
 
   fun analyzeTag(tag: FlvTag) {
@@ -190,6 +188,7 @@ class FlvAnalyzer {
     tagsSize += tag.size
     dataSize += tag.header.dataSize.toLong()
     lastTimestamp = tag.header.timestamp
+    fileSize += tag.size + FlvParser.POINTER_SIZE
   }
 
   private fun analyzeScriptTag(tag: FlvTag) {
@@ -209,7 +208,7 @@ class FlvAnalyzer {
 
     numAudioTags++
     audioTagsSize += tag.size
-    audioDataSize += tag.header.dataSize.toLong()
+    audioDataSize += tag.header.dataSize
     lastAudioTimestamp = tag.header.timestamp
   }
 
@@ -234,7 +233,7 @@ class FlvAnalyzer {
 
     numVideoTags++
     videoTagsSize += tag.size
-    videoDataSize += tag.header.dataSize.toLong()
+    videoDataSize += tag.header.dataSize
     lastVideoTimestamp = tag.header.timestamp
   }
 
