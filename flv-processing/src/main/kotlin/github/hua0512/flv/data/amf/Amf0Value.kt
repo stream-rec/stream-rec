@@ -26,7 +26,7 @@
 
 package github.hua0512.flv.data.amf
 
-import java.io.DataOutputStream
+import java.io.OutputStream
 
 /**
  * AMF0 data values
@@ -35,13 +35,14 @@ import java.io.DataOutputStream
  */
 sealed class Amf0Value(open val type: Byte) : AmfValue {
 
+  override fun write(output: OutputStream) {
+    output.write(type.toInt())
+  }
+
+
   data object Null : Amf0Value(Amf0Type.NULL.byte) {
 
     override val size: Int = 1
-
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
-    }
   }
 
 
@@ -49,8 +50,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
     override val size: Int = 9
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       output.writeDouble(value)
     }
 
@@ -60,9 +61,9 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
     override val size: Int = 2
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
-      output.writeByte(if (value) 0x01 else 0x00)
+    override fun write(output: OutputStream) {
+      super.write(output)
+      output.write(if (value) 0x01 else 0x00)
     }
   }
 
@@ -70,8 +71,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
     override val size: Int = 3 + value.toByteArray(Charsets.UTF_8).size
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       val bytes = value.toByteArray(Charsets.UTF_8)
       output.writeShort(bytes.size)
       output.write(bytes)
@@ -93,8 +94,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
         return totalSize
       }
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       properties.write(output)
     }
 
@@ -133,8 +134,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
       }
 
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       output.writeInt(properties.size)
       properties.write(output)
     }
@@ -145,8 +146,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
     override val size: Int = 5 + values.sumOf { it.size }
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       output.writeInt(values.size)
       values.forEach { it.write(output) }
     }
@@ -156,8 +157,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
     override val size: Int = 11
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       output.writeDouble(value)
       output.writeShort(timezone.toInt())
     }
@@ -168,8 +169,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
     // 1 byte type + 4 byte length + string bytes
     override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       val bytes = value.toByteArray(Charsets.UTF_8)
       output.writeInt(bytes.size)
       output.write(bytes)
@@ -180,8 +181,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
     override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       val bytes = value.toByteArray(Charsets.UTF_8)
       output.writeInt(bytes.size)
       output.write(bytes)
@@ -204,8 +205,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
         return totalSize
       }
 
-    override fun write(output: DataOutputStream) {
-      output.writeByte(type.toInt())
+    override fun write(output: OutputStream) {
+      super.write(output)
       val bytes = className.toByteArray(Charsets.UTF_8)
       output.writeShort(bytes.size)
       output.write(bytes)
@@ -215,7 +216,7 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
 }
 
-private fun Map<kotlin.String, Amf0Value>.write(output: DataOutputStream) {
+internal fun Map<kotlin.String, Amf0Value>.write(output: OutputStream) {
   this.forEach { (key, value) ->
     val bytes = key.toByteArray(Charsets.UTF_8)
     output.writeShort(bytes.size)
@@ -223,7 +224,33 @@ private fun Map<kotlin.String, Amf0Value>.write(output: DataOutputStream) {
     value.write(output)
   }
   output.writeShort(0) // Empty string key to mark end
-  output.writeByte(0x09) // End marker
+  output.write(0x09) // End marker
 }
 
 
+internal fun OutputStream.writeInt(value: Int) {
+  // Write the integer in big-endian order (most significant byte first)
+  write(value ushr 24)
+  write(value ushr 16)
+  write(value ushr 8)
+  write(value)
+}
+
+internal fun OutputStream.writeShort(value: Int) {
+  // Write the short in big-endian order (most significant byte first)
+  write(value ushr 8)
+  write(value)
+}
+
+internal fun OutputStream.writeDouble(value: Double) {
+  // Write the double in big-endian order (most significant byte first)
+  val longBits = java.lang.Double.doubleToLongBits(value)
+  write((longBits ushr 56).toInt())
+  write((longBits ushr 48).toInt())
+  write((longBits ushr 40).toInt())
+  write((longBits ushr 32).toInt())
+  write((longBits ushr 24).toInt())
+  write((longBits ushr 16).toInt())
+  write((longBits ushr 8).toInt())
+  write(longBits.toInt())
+}

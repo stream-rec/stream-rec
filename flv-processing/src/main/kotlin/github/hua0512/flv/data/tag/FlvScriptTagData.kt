@@ -29,6 +29,7 @@ package github.hua0512.flv.data.tag
 import github.hua0512.flv.data.amf.AmfValue
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
+import java.io.OutputStream
 
 /**
  * A script tag data, usually used for metadata
@@ -50,7 +51,7 @@ data class FlvScriptTagData(val values: List<AmfValue>) : FlvTagData(binaryData 
   operator fun get(index: Int): AmfValue = values[index]
 
 
-  fun write(os: DataOutputStream) {
+  fun write(os: OutputStream) {
     values.forEach { it.write(os) }
   }
 

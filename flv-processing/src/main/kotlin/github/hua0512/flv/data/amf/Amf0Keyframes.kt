@@ -28,6 +28,7 @@ package github.hua0512.flv.data.amf
 
 import github.hua0512.flv.utils.Keyframe
 import java.io.DataOutputStream
+import java.io.OutputStream
 
 /**
  * AMF0 Keyframes object
@@ -100,16 +101,11 @@ internal data class Amf0Keyframes(internal val keyframes: ArrayList<Keyframe> = 
     keyframes.remove(keyframe)
   }
 
-  override fun write(output: DataOutputStream) {
-    output.writeByte(Amf0Type.OBJECT.byte.toInt())
-    properties.forEach { (key, value) ->
-      val bytes = key.toByteArray(Charsets.UTF_8)
-      output.writeShort(bytes.size)
-      output.write(bytes)
-      value.write(output)
-    }
+  override fun write(output: OutputStream) {
+    super.write(output)
+    properties.write(output)
     output.writeShort(0) // Empty string key to mark end
-    output.writeByte(0x09) // End marker
+    output.write(0x09) // End marker
   }
 
 

@@ -149,7 +149,7 @@ object FlvMetaInfoProcessor {
             injected!!.header.write(dos)
             (injected.data as ScriptData).write(dos)
             // write injected tag size
-            dos.writeInt(injected.header.dataSize.toInt())
+            dos.writeInt(injected.header.dataSize)
             // skip old tag size pointer
             ins.skipNBytes(4)
             // write the rest of the file

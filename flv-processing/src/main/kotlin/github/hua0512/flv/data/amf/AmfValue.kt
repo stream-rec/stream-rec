@@ -26,7 +26,7 @@
 
 package github.hua0512.flv.data.amf
 
-import java.io.DataOutputStream
+import java.io.OutputStream
 
 /**
  * AMF value interface
@@ -35,7 +35,7 @@ import java.io.DataOutputStream
  */
 interface AmfValue {
 
-  fun write(output: DataOutputStream)
+  fun write(output: OutputStream)
 
   val size: Int
 }
