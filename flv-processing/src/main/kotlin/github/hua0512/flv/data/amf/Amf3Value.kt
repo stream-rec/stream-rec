@@ -26,7 +26,33 @@
 
 package github.hua0512.flv.data.amf
 
+import github.hua0512.flv.utils.writeDouble
+import github.hua0512.flv.utils.writeU29
+import github.hua0512.flv.utils.writeUtf8
 import java.io.OutputStream
+
+
+/**
+ * AMF3 data types
+ * @author hua0512
+ * @date : 2024/6/9 9:58
+ * @see <a href="https://en.wikipedia.org/wiki/Action_Message_Format#AMF3">AMF3 spec</a>
+ */
+enum class Amf3Type(val byte: Byte) {
+  UNDEFINED(0x00),
+  NULL(0x01),
+  BOOLEAN_FALSE(0x02),
+  BOOLEAN_TRUE(0x03),
+  INTEGER(0x04),
+  DOUBLE(0x05),
+  STRING(0x06),
+  XML_DOCUMENT(0x07),
+  DATE(0x08),
+  ARRAY(0x09),
+  OBJECT(0x0A),
+  XML(0x0B),
+  BYTEARRAY(0x0C)
+}
 
 /**
  * AMF3 value class
@@ -35,15 +61,14 @@ import java.io.OutputStream
  */
 sealed class Amf3Value(val type: Amf3Type) : AmfValue {
 
-  // TODO : implement size
-  override val size: Int = 0
-
   override fun write(output: OutputStream) {
     output.write(type.byte.toInt())
   }
 }
 
 data object Amf3Undefined : Amf3Value(Amf3Type.UNDEFINED) {
+
+  override val size: Int = 1
 
   override fun write(output: OutputStream) {
     super.write(output)
@@ -52,6 +77,8 @@ data object Amf3Undefined : Amf3Value(Amf3Type.UNDEFINED) {
 
 data object Amf3Null : Amf3Value(Amf3Type.NULL) {
 
+  override val size: Int = 1
+
   override fun write(output: OutputStream) {
     super.write(output)
   }
@@ -59,12 +86,17 @@ data object Amf3Null : Amf3Value(Amf3Type.NULL) {
 
 data object Amf3BooleanFalse : Amf3Value(Amf3Type.BOOLEAN_FALSE) {
 
+  override val size: Int = 1
+
   override fun write(output: OutputStream) {
     super.write(output)
   }
 }
 
 data object Amf3BooleanTrue : Amf3Value(Amf3Type.BOOLEAN_TRUE) {
+
+  override val size: Int = 1
+
   override fun write(output: OutputStream) {
     super.write(output)
   }
@@ -72,6 +104,13 @@ data object Amf3BooleanTrue : Amf3Value(Amf3Type.BOOLEAN_TRUE) {
 }
 
 data class Amf3Integer(val value: Int) : Amf3Value(Amf3Type.INTEGER) {
+
+  override val size: Int = 1 + when (value) {
+    in -0x80..0x7F -> 0
+    in -0x4000..0x3FFF -> 1
+    in -0x200000..0x1FFFFF -> 2
+    else -> 3
+  }
 
   override fun write(output: OutputStream) {
     super.write(output)
@@ -81,6 +120,8 @@ data class Amf3Integer(val value: Int) : Amf3Value(Amf3Type.INTEGER) {
 
 data class Amf3Double(val value: Double) : Amf3Value(Amf3Type.DOUBLE) {
 
+  override val size: Int = 9
+
   override fun write(output: OutputStream) {
     super.write(output)
     output.writeDouble(value)
@@ -88,6 +129,8 @@ data class Amf3Double(val value: Double) : Amf3Value(Amf3Type.DOUBLE) {
 }
 
 data class Amf3String(val value: String) : Amf3Value(Amf3Type.STRING) {
+
+  override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
 
   override fun write(output: OutputStream) {
     super.write(output)
@@ -97,6 +140,8 @@ data class Amf3String(val value: String) : Amf3Value(Amf3Type.STRING) {
 
 data class Amf3XmlDocument(val value: String) : Amf3Value(Amf3Type.XML_DOCUMENT) {
 
+  override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
+
   override fun write(output: OutputStream) {
     super.write(output)
     output.writeUtf8(value)
@@ -104,6 +149,8 @@ data class Amf3XmlDocument(val value: String) : Amf3Value(Amf3Type.XML_DOCUMENT)
 }
 
 data class Amf3Date(val value: Double) : Amf3Value(Amf3Type.DATE) {
+
+  override val size: Int = 9
 
   override fun write(output: OutputStream) {
     super.write(output)
@@ -114,6 +161,8 @@ data class Amf3Date(val value: Double) : Amf3Value(Amf3Type.DATE) {
 
 data class Amf3Array(val values: List<Amf3Value>) : Amf3Value(Amf3Type.ARRAY) {
 
+  override val size: Int = 1 + 4 + values.sumOf { it.size }
+
   override fun write(output: OutputStream) {
     super.write(output)
     output.writeU29(values.size shl 1 or 1)
@@ -123,6 +172,20 @@ data class Amf3Array(val values: List<Amf3Value>) : Amf3Value(Amf3Type.ARRAY) {
 }
 
 data class Amf3Object(val traits: List<String>, val properties: Map<String, Amf3Value>) : Amf3Value(Amf3Type.OBJECT) {
+
+  override val size: Int
+    get() {
+      var size = 1
+      size += 4 // Traits
+      traits.forEach { size += 2 + it.toByteArray(Charsets.UTF_8).size }
+      properties.forEach { (key, value) ->
+        size += 2 + key.toByteArray(Charsets.UTF_8).size
+        size += value.size
+      }
+      size += 1 // Empty string key to mark end of associative part
+      return size
+    }
+
   override fun write(output: OutputStream) {
     super.write(output)
     val traitsInfo = (traits.size shl 4) or 0x03 // Traits, dynamic, externalizable
@@ -138,6 +201,9 @@ data class Amf3Object(val traits: List<String>, val properties: Map<String, Amf3
 }
 
 data class Amf3Xml(val value: String) : Amf3Value(Amf3Type.XML) {
+
+  override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
+
   override fun write(output: OutputStream) {
     super.write(output)
     output.writeUtf8(value)
@@ -145,6 +211,9 @@ data class Amf3Xml(val value: String) : Amf3Value(Amf3Type.XML) {
 }
 
 data class Amf3ByteArray(val value: ByteArray) : Amf3Value(Amf3Type.BYTEARRAY) {
+
+  override val size: Int = 1 + 4 + value.size
+
   override fun write(output: OutputStream) {
     super.write(output)
     output.writeU29(value.size shl 1 or 1)
@@ -155,40 +224,9 @@ data class Amf3ByteArray(val value: ByteArray) : Amf3Value(Amf3Type.BYTEARRAY) {
 
 data class Amf3Reference(val index: Int) : Amf3Value(Amf3Type.OBJECT) {
 
+  override val size: Int = 1
+
   override fun write(output: OutputStream) {
     throw UnsupportedOperationException("References are not supported in write")
   }
 }
-
-
-internal fun OutputStream.writeU29(value: Int) {
-  var v = value
-  if (v < 0x80) {
-    write(v)
-  } else if (v < 0x4000) {
-    write((v shr 7 and 0x7F or 0x80))
-    write(v and 0x7F)
-  } else if (v < 0x200000) {
-    write((v shr 14 and 0x7F or 0x80))
-    write((v shr 7 and 0x7F or 0x80))
-    write(v and 0x7F)
-  } else if (v < 0x40000000) {
-    write((v shr 22 and 0x7F or 0x80))
-    write((v shr 15 and 0x7F or 0x80))
-    write((v shr 8 and 0x7F or 0x80))
-    write(v and 0xFF)
-  } else {
-    write((v shr 29 and 0x7F or 0x80))
-    write((v shr 22 and 0x7F or 0x80))
-    write((v shr 15 and 0x7F or 0x80))
-    write((v shr 8 and 0x7F or 0x80))
-    write(v and 0xFF)
-  }
-}
-
-internal fun OutputStream.writeUtf8(value: String) {
-  val bytes = value.toByteArray(Charsets.UTF_8)
-  writeU29(bytes.size shl 1 or 1)
-  write(bytes)
-}
-

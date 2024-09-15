@@ -27,15 +27,13 @@
 package github.hua0512.flv.data.amf
 
 import github.hua0512.flv.utils.Keyframe
-import java.io.DataOutputStream
-import java.io.OutputStream
 
 /**
  * AMF0 Keyframes object
  * @author hua0512
  * @date : 2024/9/9 20:43
  */
-internal data class Amf0Keyframes(internal val keyframes: ArrayList<Keyframe> = ArrayList()) : Amf0Value(Amf0Type.OBJECT.byte) {
+internal data class Amf0Keyframes(private val keyframes: ArrayList<Keyframe> = ArrayList()) : Amf0Value.Object(emptyMap()) {
 
   companion object {
     private const val KEY_TIMES = "times"
@@ -46,7 +44,7 @@ internal data class Amf0Keyframes(internal val keyframes: ArrayList<Keyframe> = 
     private const val MIN_INTERVAL_BETWEEN_KEYFRAMES = 1900
   }
 
-  val properties: Map<kotlin.String, Amf0Value>
+  override val properties: Map<kotlin.String, Amf0Value>
     get() = mapOf(
       KEY_TIMES to StrictArray(keyframes.map { Number(it.timestamp / 1000.0) }),
       KEY_FILEPOSITIONS to StrictArray(keyframes.map { Number(it.filePosition.toDouble()) }),
@@ -54,18 +52,6 @@ internal data class Amf0Keyframes(internal val keyframes: ArrayList<Keyframe> = 
     )
 
   val keyframesCount = keyframes.size
-
-  override val size: Int
-    get() {
-      var size = 1
-      properties.forEach { (key, value) ->
-        val keyBytes = key.toByteArray(Charsets.UTF_8)
-        size += 2 + keyBytes.size + value.size
-      }
-      size + 3
-      return size
-    }
-
 
   fun addKeyframe(keyframe: Keyframe) {
     if (keyframes.size >= MAX_KEYFRAMES_PERMITTED) {
@@ -100,13 +86,5 @@ internal data class Amf0Keyframes(internal val keyframes: ArrayList<Keyframe> = 
   fun removeKeyframe(keyframe: Keyframe) {
     keyframes.remove(keyframe)
   }
-
-  override fun write(output: OutputStream) {
-    super.write(output)
-    properties.write(output)
-    output.writeShort(0) // Empty string key to mark end
-    output.write(0x09) // End marker
-  }
-
 
 }

@@ -26,6 +26,8 @@
 
 package github.hua0512.flv.data.tag
 
+import java.io.OutputStream
+
 /**
  * FLV Tag, 11 bytes tag header + tag data
  * @author hua0512
@@ -36,5 +38,8 @@ sealed class FlvTagData(open val binaryData: ByteArray) {
   abstract val headerSize: Int
 
   open val size: Int get() = headerSize + binaryData.size
+
+
+  abstract fun write(os: OutputStream)
 
 }

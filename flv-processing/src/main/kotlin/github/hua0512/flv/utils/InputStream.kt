@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.flow
 import java.io.DataInputStream
 import java.io.EOFException
 import java.io.InputStream
-import java.io.OutputStream
 import kotlin.toUInt
 import kotlin.use
 
@@ -57,8 +56,8 @@ fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
   var lastTag: FlvData? = null
   try {
     flvReader.use {
-      flvReader.readHeader(::emit)
-      flvReader.readTags {
+      it.readHeader(::emit)
+      it.readTags {
         lastTag = it
         emit(it)
       }
@@ -78,6 +77,9 @@ fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
 }
 
 /**
+ * Read an unsigned 24-bit integer from the InputStream.
+ * @receiver InputStream The input stream from which to read the unsigned 24-bit integer.
+ * @return UInt The unsigned 24-bit integer read from the InputStream.
  * @author hua0512
  * @date : 2024/6/10 19:31
  */
@@ -86,11 +88,3 @@ fun InputStream.readUI24(): UInt = readNBytes(3).let {
           ((it[1].toUInt() and 0xFFu) shl 8) or
           (it[2].toUInt() and 0xFFu)
 }
-
-fun OutputStream.write3BytesInt(value: Int) {
-  write((value shr 16).toInt())
-  write((value shr 8).toInt())
-  write(value)
-}
-
-fun DataInputStream.readUnsignedInt(): Int = this.readInt() and 0xFFFFFFFF.toInt()

@@ -231,11 +231,11 @@ internal fun InputStream.parseTagHeader(): FlvTagHeader {
 
 internal fun InputStream.parseScriptTagData(bodySize: Int): Pair<FlvScriptTagData, Long> {
 
-  fun identifyMetadataType(input: DataInputStream): String {
+  fun identifyMetadataType(input: DataInputStream): Int {
     input.mark(1)
     val firstByte = input.readByte().toInt()
     input.reset()
-    return if (firstByte == 0x11) "AMF3" else "AMF0"
+    return firstByte
   }
 
   val body = readNBytes(bodySize)
@@ -246,16 +246,16 @@ internal fun InputStream.parseScriptTagData(bodySize: Int): Pair<FlvScriptTagDat
   dataInputStream.use {
     val metadataType = identifyMetadataType(dataInputStream)
     when (metadataType) {
-      "AMF0" -> {
+      3 -> {
         while (dataInputStream.available() > 0)
-          readAmf0Value(dataInputStream).also {
+          readAmf3Value(dataInputStream).also {
             amfValues.add(it)
           }
       }
 
-      "AMF3" -> {
+      else -> {
         while (dataInputStream.available() > 0)
-          readAmf3Value(dataInputStream).also {
+          readAmf0Value(dataInputStream).also {
             amfValues.add(it)
           }
       }

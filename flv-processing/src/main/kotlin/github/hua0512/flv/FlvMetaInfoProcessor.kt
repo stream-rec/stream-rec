@@ -236,7 +236,7 @@ object FlvMetaInfoProcessor {
       properties["filesize"] = Number((properties["filesize"] as Amf0Value.Number).value + delta)
       // update keyframes filepositions with delta
       val keyframes = (properties["keyframes"] as Amf0Keyframes).run {
-        val oldKeyframes = this.keyframes
+        val oldKeyframes = this.getKeyframes()
         val newKeyframes = oldKeyframes.map { FlvKeyframe(it.timestamp, it.filePosition + delta) }
         copy(keyframes = ArrayList(newKeyframes))
       }

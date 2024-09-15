@@ -32,6 +32,8 @@ import github.hua0512.flv.data.video.FlvVideoFrameType
 import github.hua0512.flv.data.video.VideoResolution
 import github.hua0512.flv.utils.extractResolution
 import github.hua0512.flv.utils.isAvcHeader
+import github.hua0512.flv.utils.write3BytesInt
+import java.io.OutputStream
 
 /**
  * Flv video tag data
@@ -60,6 +62,16 @@ data class FlvVideoTagData(
   }
 
   override val headerSize = if (codecId == FlvVideoCodecId.AVC || codecId == FlvVideoCodecId.HEVC) 5 else 1
+
+  override fun write(os: OutputStream) {
+    val info = (frameType.value shl 4) or codecId.value
+    os.write(info)
+    if (codecId == FlvVideoCodecId.AVC || codecId == FlvVideoCodecId.HEVC) {
+      os.write(avcPacketType!!.value.toInt())
+    }
+    os.write3BytesInt(compositionTime.toInt())
+    os.write(binaryData)
+  }
 
   override fun toString(): String {
     return "FlvVideoTagData(frameType=$frameType, codecId=$codecId, compositionTime=$compositionTime, avcPacketType=$avcPacketType, data=${binaryData.size} bytes)"

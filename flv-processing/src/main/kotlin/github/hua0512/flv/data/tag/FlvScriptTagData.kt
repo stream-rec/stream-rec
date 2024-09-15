@@ -51,7 +51,7 @@ data class FlvScriptTagData(val values: List<AmfValue>) : FlvTagData(binaryData 
   operator fun get(index: Int): AmfValue = values[index]
 
 
-  fun write(os: OutputStream) {
+  override fun write(os: OutputStream) {
     values.forEach { it.write(os) }
   }
 

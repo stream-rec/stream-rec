@@ -31,6 +31,7 @@ import github.hua0512.flv.data.sound.FlvSoundFormat
 import github.hua0512.flv.data.sound.FlvSoundRate
 import github.hua0512.flv.data.sound.FlvSoundSize
 import github.hua0512.flv.data.sound.FlvSoundType
+import java.io.OutputStream
 
 /**
  * A flv audio tag data
@@ -51,5 +52,14 @@ data class FlvAudioTagData(
   }
 
   override val headerSize: Int = if (format == FlvSoundFormat.AAC) 2 else 1
+
+  override fun write(os: OutputStream) {
+    val info = (format.value shl 4) or (rate.value shl 2) or (soundSize.value shl 1) or type.value
+    os.write(info)
+    if (format == FlvSoundFormat.AAC) {
+      os.write(packetType!!.value.toInt())
+    }
+    os.write(binaryData)
+  }
 
 }

@@ -26,17 +26,42 @@
 
 package github.hua0512.flv.data.amf
 
+import github.hua0512.flv.utils.writeDouble
+import github.hua0512.flv.utils.writeInt
+import github.hua0512.flv.utils.writeShort
 import java.io.OutputStream
+
+/**
+ * AMF0 data types
+ * @author hua0512
+ * @date : 2024/6/9 9:58
+ * @see <a href="https://en.wikipedia.org/wiki/Action_Message_Format#AMF0">AMF0 spec</a>
+ */
+enum class Amf0Type(val byte: Int) {
+  NUMBER(0x00),
+  BOOLEAN(0x01),
+  STRING(0x02),
+  OBJECT(0x03),
+  NULL(0x05),
+  ECMA_ARRAY(0x08),
+  OBJECT_END(0x09),
+  STRICT_ARRAY(0x0A),
+  DATE(0x0B),
+  LONG_STRING(0x0C),
+  XML_DOCUMENT(0x0F),
+  TYPED_OBJECT(0x10),
+  AMF3_OBJECT(0x11)
+}
 
 /**
  * AMF0 data values
  * @author hua0512
  * @date : 2024/6/8 20:24
  */
-sealed class Amf0Value(open val type: Byte) : AmfValue {
+sealed class Amf0Value(open val type: Int) : AmfValue {
 
   override fun write(output: OutputStream) {
-    output.write(type.toInt())
+    output.write(type)
   }
 
 
@@ -79,12 +104,12 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
     }
   }
 
-  data class Object(val properties: Map<kotlin.String, Amf0Value>) : Amf0Value(Amf0Type.OBJECT.byte) {
+  open class Object(open val properties: Map<kotlin.String, Amf0Value>) : Amf0Value(Amf0Type.OBJECT.byte) {
 
     override val size: Int
       get() {
         // 1 byte type + 4 byte type marker
-        var totalSize = 5
+        var totalSize = 1
         properties.forEach { (key, value) ->
           val keyBytes = key.toByteArray(Charsets.UTF_8)
           totalSize += 2 + keyBytes.size + value.size
@@ -144,7 +169,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
   data class StrictArray(val values: List<Amf0Value>) : Amf0Value(Amf0Type.STRICT_ARRAY.byte) {
 
 
-    override val size: Int = 5 + values.sumOf { it.size }
+    override val size: Int
+      get() = 5 + values.sumOf { it.size }
 
     override fun write(output: OutputStream) {
       super.write(output)
@@ -214,43 +240,15 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
     }
   }
 
-}
-
-internal fun Map<kotlin.String, Amf0Value>.write(output: OutputStream) {
-  this.forEach { (key, value) ->
-    val bytes = key.toByteArray(Charsets.UTF_8)
-    output.writeShort(bytes.size)
-    output.write(bytes)
-    value.write(output)
+  protected fun Map<kotlin.String, Amf0Value>.write(output: OutputStream) {
+    this.forEach { (key, value) ->
+      val bytes = key.toByteArray(Charsets.UTF_8)
+      output.writeShort(bytes.size)
+      output.write(bytes)
+      value.write(output)
+    }
+    output.writeShort(0) // Empty string key to mark end
+    output.write(Amf0Type.OBJECT_END.byte) // End marker
   }
-  output.writeShort(0) // Empty string key to mark end
-  output.write(0x09) // End marker
 }
 
-
-internal fun OutputStream.writeInt(value: Int) {
-  // Write the integer in big-endian order (most significant byte first)
-  write(value ushr 24)
-  write(value ushr 16)
-  write(value ushr 8)
-  write(value)
-}
-
-internal fun OutputStream.writeShort(value: Int) {
-  // Write the short in big-endian order (most significant byte first)
-  write(value ushr 8)
-  write(value)
-}
-
-internal fun OutputStream.writeDouble(value: Double) {
-  // Write the double in big-endian order (most significant byte first)
-  val longBits = java.lang.Double.doubleToLongBits(value)
-  write((longBits ushr 56).toInt())
-  write((longBits ushr 48).toInt())
-  write((longBits ushr 40).toInt())
-  write((longBits ushr 32).toInt())
-  write((longBits ushr 24).toInt())
-  write((longBits ushr 16).toInt())
-  write((longBits ushr 8).toInt())
-  write(longBits.toInt())
-}

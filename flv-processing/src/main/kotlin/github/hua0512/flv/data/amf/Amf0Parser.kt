@@ -35,7 +35,7 @@ import java.util.LinkedHashMap
  * @date : 2024/6/9 20:13
  */
 fun readAmf0Value(input: DataInputStream): Amf0Value {
-  val type = input.readByte()
+  val type = input.readByte().toInt()
 
   return when (type) {
     Amf0Type.NUMBER.byte -> Amf0Value.Number(input.readDouble())
@@ -63,7 +63,7 @@ fun readAmf0Value(input: DataInputStream): Amf0Value {
 }
 
 
-fun readAmf0Object(input: DataInputStream): Amf0Value.Object {
+private fun readAmf0Object(input: DataInputStream): Amf0Value.Object {
   val properties = LinkedHashMap<kotlin.String, Amf0Value>()
 
   while (true) {
@@ -85,7 +85,7 @@ fun readAmf0Object(input: DataInputStream): Amf0Value.Object {
   return Amf0Value.Object(properties)
 }
 
-fun readAmf0EcmaArray(input: DataInputStream): Amf0Value.EcmaArray {
+private fun readAmf0EcmaArray(input: DataInputStream): Amf0Value.EcmaArray {
   val arrayLength = input.readInt()
   val properties = mutableMapOf<kotlin.String, Amf0Value>()
 
@@ -107,7 +107,7 @@ fun readAmf0EcmaArray(input: DataInputStream): Amf0Value.EcmaArray {
   return Amf0Value.EcmaArray(properties)
 }
 
-fun readAmf0StrictArray(input: DataInputStream): Amf0Value.StrictArray {
+private fun readAmf0StrictArray(input: DataInputStream): Amf0Value.StrictArray {
   val arrayLength = input.readInt()
   val values = mutableListOf<Amf0Value>()
 
@@ -118,13 +118,13 @@ fun readAmf0StrictArray(input: DataInputStream): Amf0Value.StrictArray {
   return Amf0Value.StrictArray(values)
 }
 
-fun readAmf0Date(input: DataInputStream): Amf0Value.Date {
+private fun readAmf0Date(input: DataInputStream): Amf0Value.Date {
   val timestamp = input.readDouble()
   val timezone = input.readShort()
   return Amf0Value.Date(timestamp, timezone)
 }
 
-fun readAmf0TypedObject(input: DataInputStream): Amf0Value.TypedObject {
+private fun readAmf0TypedObject(input: DataInputStream): Amf0Value.TypedObject {
   val classNameLength = input.readUnsignedShort()
   val classNameBytes = ByteArray(classNameLength)
   input.readFully(classNameBytes)
