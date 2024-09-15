@@ -35,84 +35,22 @@ import java.io.DataOutputStream
  */
 sealed class Amf0Value(open val type: Byte) : AmfValue {
 
-  override val size: Int
-    get() {
-      return when (this) {
-        is Null -> 1
-        is Number -> 9 // 1 byte type + 8 byte number
-        is Boolean -> 2
-        is String -> {
-          // 1 byte type + 2 byte length + string bytes
-          3 + value.toByteArray(Charsets.UTF_8).size
-        }
-
-        is EcmaArray -> {
-          // 1 byte type + 4 byte type marker
-          var totalSize = 5
-          properties.forEach { (key, value) ->
-            val keyBytes = key.toByteArray(Charsets.UTF_8)
-            totalSize += 2 + keyBytes.size + value.size
-          }
-          // + 3 byte end marker
-          totalSize += 3
-          totalSize
-        }
-
-        is Date -> 11 // 1 byte type + 8 byte number + 2 byte timezone
-        is LongString -> {
-          // 1 byte type + 4 byte length + string bytes
-          5 + value.toByteArray(Charsets.UTF_8).size
-        }
-
-        is Object -> {
-          var size = 1
-          properties.forEach { (key, value) ->
-            val keyBytes = key.toByteArray(Charsets.UTF_8)
-            size += 2 + keyBytes.size + value.size
-          }
-          size + 3
-        }
-
-        is Amf0Keyframes -> {
-          var size = 1
-          properties.forEach { (key, value) ->
-            val keyBytes = key.toByteArray(Charsets.UTF_8)
-            size += 2 + keyBytes.size + value.size
-          }
-          size + 3
-        }
-
-
-        is StrictArray -> 5 + values.sumOf { it.size } // 1 byte type + 4 byte length + values
-
-        is TypedObject -> {
-          val classNameBytes = className.toByteArray(Charsets.UTF_8)
-          var size = 1 + 2 + classNameBytes.size
-          properties.forEach { (key, value) ->
-            val keyBytes = key.toByteArray(Charsets.UTF_8)
-            size += 2 + keyBytes.size + value.size
-          }
-          size + 3
-        }
-
-        is XmlDocument -> {
-          // 1 byte type + 4 byte length + string bytes
-          5 + value.toByteArray(Charsets.UTF_8).size
-        }
-      }
-    }
-
   data object Null : Amf0Value(Amf0Type.NULL.byte) {
+
+    override val size: Int = 1
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x05)
+      output.writeByte(type.toInt())
     }
   }
 
 
   data class Number(val value: Double) : Amf0Value(Amf0Type.NUMBER.byte) {
 
+    override val size: Int = 9
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x00)
+      output.writeByte(type.toInt())
       output.writeDouble(value)
     }
 
@@ -120,25 +58,43 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
   data class Boolean(val value: kotlin.Boolean) : Amf0Value(Amf0Type.BOOLEAN.byte) {
 
+    override val size: Int = 2
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x01)
+      output.writeByte(type.toInt())
       output.writeByte(if (value) 0x01 else 0x00)
     }
   }
 
   data class String(val value: kotlin.String) : Amf0Value(Amf0Type.STRING.byte) {
 
+    override val size: Int = 3 + value.toByteArray(Charsets.UTF_8).size
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x02)
+      output.writeByte(type.toInt())
       val bytes = value.toByteArray(Charsets.UTF_8)
       output.writeShort(bytes.size)
       output.write(bytes)
     }
   }
 
-  data class Object(open val properties: Map<kotlin.String, Amf0Value>) : Amf0Value(Amf0Type.OBJECT.byte) {
+  data class Object(val properties: Map<kotlin.String, Amf0Value>) : Amf0Value(Amf0Type.OBJECT.byte) {
+
+    override val size: Int
+      get() {
+        // 1 byte type + 4 byte type marker
+        var totalSize = 5
+        properties.forEach { (key, value) ->
+          val keyBytes = key.toByteArray(Charsets.UTF_8)
+          totalSize += 2 + keyBytes.size + value.size
+        }
+        // + 3 byte end marker
+        totalSize += 3
+        return totalSize
+      }
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(Amf0Type.OBJECT.byte.toInt())
+      output.writeByte(type.toInt())
       properties.write(output)
     }
 
@@ -162,16 +118,35 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
   }
 
   data class EcmaArray(val properties: Map<kotlin.String, Amf0Value>) : Amf0Value(Amf0Type.ECMA_ARRAY.byte) {
+
+    override val size: Int
+      get() {
+        // 1 byte type + 4 byte type marker
+        var totalSize = 5
+        properties.forEach { (key, value) ->
+          val keyBytes = key.toByteArray(Charsets.UTF_8)
+          totalSize += 2 + keyBytes.size + value.size
+        }
+        // + 3 byte end marker
+        totalSize += 3
+        return totalSize
+      }
+
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(Amf0Type.ECMA_ARRAY.byte.toInt())
+      output.writeByte(type.toInt())
       output.writeInt(properties.size)
       properties.write(output)
     }
   }
 
   data class StrictArray(val values: List<Amf0Value>) : Amf0Value(Amf0Type.STRICT_ARRAY.byte) {
+
+
+    override val size: Int = 5 + values.sumOf { it.size }
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x0A)
+      output.writeByte(type.toInt())
       output.writeInt(values.size)
       values.forEach { it.write(output) }
     }
@@ -179,16 +154,22 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
   data class Date(val value: Double, val timezone: Short) : Amf0Value(Amf0Type.DATE.byte) {
 
+    override val size: Int = 11
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x0B)
+      output.writeByte(type.toInt())
       output.writeDouble(value)
       output.writeShort(timezone.toInt())
     }
   }
 
   data class LongString(val value: kotlin.String) : Amf0Value(Amf0Type.LONG_STRING.byte) {
+
+    // 1 byte type + 4 byte length + string bytes
+    override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x0C)
+      output.writeByte(type.toInt())
       val bytes = value.toByteArray(Charsets.UTF_8)
       output.writeInt(bytes.size)
       output.write(bytes)
@@ -196,17 +177,35 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
   }
 
   data class XmlDocument(val value: kotlin.String) : Amf0Value(Amf0Type.XML_DOCUMENT.byte) {
+
+    override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x0F)
+      output.writeByte(type.toInt())
       val bytes = value.toByteArray(Charsets.UTF_8)
       output.writeInt(bytes.size)
       output.write(bytes)
     }
+
   }
 
   data class TypedObject(val className: kotlin.String, val properties: Map<kotlin.String, Amf0Value>) : Amf0Value(Amf0Type.TYPED_OBJECT.byte) {
+
+    override val size: Int
+      get() {
+        val classNameBytes = className.toByteArray(Charsets.UTF_8)
+        var totalSize = 1 + 2 + classNameBytes.size
+        properties.forEach { (key, value) ->
+          val keyBytes = key.toByteArray(Charsets.UTF_8)
+          totalSize += 2 + keyBytes.size + value.size
+        }
+        // + 3 byte end marker
+        totalSize += 3
+        return totalSize
+      }
+
     override fun write(output: DataOutputStream) {
-      output.writeByte(0x10)
+      output.writeByte(type.toInt())
       val bytes = className.toByteArray(Charsets.UTF_8)
       output.writeShort(bytes.size)
       output.write(bytes)
