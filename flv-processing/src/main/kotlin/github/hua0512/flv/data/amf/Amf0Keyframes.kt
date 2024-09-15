@@ -34,7 +34,7 @@ import java.io.DataOutputStream
  * @author hua0512
  * @date : 2024/9/9 20:43
  */
-internal data class Amf0Keyframes(val keyframes: ArrayList<Keyframe> = ArrayList()) : Amf0Value(Amf0Type.OBJECT.byte) {
+internal data class Amf0Keyframes(internal val keyframes: ArrayList<Keyframe> = ArrayList()) : Amf0Value(Amf0Type.OBJECT.byte) {
 
   companion object {
     private const val KEY_TIMES = "times"
@@ -45,12 +45,25 @@ internal data class Amf0Keyframes(val keyframes: ArrayList<Keyframe> = ArrayList
     private const val MIN_INTERVAL_BETWEEN_KEYFRAMES = 1900
   }
 
+  val properties: Map<kotlin.String, Amf0Value>
+    get() = mapOf(
+      KEY_TIMES to StrictArray(keyframes.map { Number(it.timestamp / 1000.0) }),
+      KEY_FILEPOSITIONS to StrictArray(keyframes.map { Number(it.filePosition.toDouble()) }),
+      KEY_SPACER to StrictArray(List((MAX_KEYFRAMES_PERMITTED - keyframes.size) * 2) { Number(Double.NaN) })
+    )
 
-  val properties: Map<kotlin.String, Amf0Value> = mapOf(
-    KEY_TIMES to StrictArray(keyframes.map { Number(it.timestamp / 1000.0) }),
-    KEY_FILEPOSITIONS to StrictArray(keyframes.map { Number(it.filePosition.toDouble()) }),
-    KEY_SPACER to StrictArray(List((MAX_KEYFRAMES_PERMITTED - keyframes.size) * 2) { Number(Double.NaN) })
-  )
+  val keyframesCount = keyframes.size
+
+  override val size: Int
+    get() {
+      var size = 1
+      properties.forEach { (key, value) ->
+        val keyBytes = key.toByteArray(Charsets.UTF_8)
+        size += 2 + keyBytes.size + value.size
+      }
+      size + 3
+      return size
+    }
 
 
   fun addKeyframe(keyframe: Keyframe) {
@@ -86,11 +99,6 @@ internal data class Amf0Keyframes(val keyframes: ArrayList<Keyframe> = ArrayList
   fun removeKeyframe(keyframe: Keyframe) {
     keyframes.remove(keyframe)
   }
-
-  fun size(): Int {
-    return keyframes.size
-  }
-
 
   override fun write(output: DataOutputStream) {
     output.writeByte(Amf0Type.OBJECT.byte.toInt())

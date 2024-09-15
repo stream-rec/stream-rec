@@ -128,18 +128,15 @@ internal fun Map<String, Amf0Value>.sortKeys(): Map<String, Amf0Value> {
  */
 internal fun FlvMetadataInfo.toAmfMap(): Map<String, Amf0Value> {
   val streamRec = Amf0Value.String("Stream-rec")
-  val amf0Keyframes = if (keyframes.isNotEmpty()) {
-    val frames = if (keyframes.size > Amf0Keyframes.MAX_KEYFRAMES_PERMITTED) {
-      logger.warn("Keyframes size exceeds the maximum limit of ${Amf0Keyframes.MAX_KEYFRAMES_PERMITTED}")
-      keyframes.subList(0, Amf0Keyframes.MAX_KEYFRAMES_PERMITTED)
-    } else {
-      keyframes
+  val amf0Keyframes = Amf0Keyframes(ArrayList()).apply {
+    if (keyframes.isNotEmpty()) {
+      try {
+        addKeyframes(keyframes)
+      } catch (_: IllegalArgumentException) {
+        logger.warn("Maximum keyframes size exceeded, truncating to ${Amf0Keyframes.MAX_KEYFRAMES_PERMITTED}")
+      }
+      logger.debug("keyframes : {}", keyframesCount)
     }
-    Amf0Keyframes(ArrayList(frames)).apply {
-      logger.debug("keyframes : {}", this.size)
-    }
-  } else {
-    Amf0Keyframes(ArrayList())
   }
 
   return mapOf(
