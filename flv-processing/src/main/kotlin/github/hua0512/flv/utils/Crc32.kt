@@ -29,12 +29,16 @@ package github.hua0512.flv.utils
 import java.util.zip.CRC32
 
 /**
+ * Extension function to calculate the CRC32 checksum of a ByteArray.
+ *
+ * @receiver ByteArray The byte array for which the CRC32 checksum is to be calculated.
+ * @return Long The CRC32 checksum value.
+ *
  * @author hua0512
  * @date : 2024/9/7 11:08
  */
-
 fun ByteArray.crc32(): Long {
-  var crc32 = CRC32()
+  val crc32 = CRC32()
   crc32.update(this)
   return crc32.value
 }
