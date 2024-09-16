@@ -55,9 +55,17 @@ private val logger by lazy { logger(TAG) }
  */
 internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
 
-  val extraData = FlvMetadataInfo().toAmfMap()
+
+  fun Amf0Value.asNumber(): Double {
+    return when (this) {
+      is Amf0Value.Number -> this.value
+      else -> throw FlvDataErrorException("Unexpected AMF value type: ${this::class.qualifiedName}")
+    }
+  }
 
   fun FlvTag.injectMetadata(): FlvTag {
+
+
     var tagData = data as ScriptData
     val obj = tagData[1] // This is the second AMF value in the metadata
 
@@ -65,22 +73,25 @@ internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
 //    logger.debug("Injecting to: {}, oldSize={}, calculatedSize={}", pprint(obj), oldSize, tagData.bodySize)
 
     // Inject a new AMF value
-    when (obj) {
-      is Amf0Value.EcmaArray -> {
-        val newProperties = obj.properties + extraData
-        val newObj = obj.copy(properties = newProperties.sortKeys())
-        tagData = tagData.copy(values = listOf(tagData[0], newObj))
-
-      }
-
-      is Amf0Value.Object -> {
-        val newProperties = obj.properties + extraData
-        val newObj = Amf0Value.Object(newProperties.sortKeys())
-        tagData = tagData.copy(values = listOf(tagData[0], newObj))
-      }
-
+    val properties = when (obj) {
+      is Amf0Value.EcmaArray -> obj.properties
+      is Amf0Value.Object -> obj.properties
       else -> throw FlvDataErrorException("Unexpected AMF value type in metadata : ${obj::class.qualifiedName}")
     }
+
+    val extraData = FlvMetadataInfo(
+      width = properties["width"]?.asNumber()?.toInt() ?: 0,
+      height = properties["height"]?.asNumber()?.toInt() ?: 0,
+    ).toAmfMap()
+
+    val orderedMap = properties.plus(extraData).sortKeys()
+    val newData = if (obj is Amf0Value.EcmaArray) {
+      obj.copy(properties = orderedMap)
+    } else {
+      Amf0Value.Object(orderedMap)
+    }
+
+    tagData = tagData.copy(values = listOf(tagData[0], newData))
 
     logger.debug("Injected metadata: {}", pprint(tagData[1], defaultHeight = 50))
 
@@ -128,10 +139,11 @@ internal fun Map<String, Amf0Value>.sortKeys(): Map<String, Amf0Value> {
  */
 internal fun FlvMetadataInfo.toAmfMap(): Map<String, Amf0Value> {
   val streamRec = Amf0Value.String("Stream-rec")
+  val frames = keyframes
   val amf0Keyframes = Amf0Keyframes(ArrayList()).apply {
-    if (keyframes.isNotEmpty()) {
+    if (frames.isNotEmpty()) {
       try {
-        addKeyframes(keyframes)
+        addKeyframes(frames)
       } catch (_: IllegalArgumentException) {
         logger.warn("Maximum keyframes size exceeded, truncating to ${Amf0Keyframes.MAX_KEYFRAMES_PERMITTED}")
       }
