@@ -234,6 +234,11 @@ object FlvMetaInfoProcessor {
       // recalculate keyframes
       val properties = newData[1].getProperties().toMutableMap()
       properties["filesize"] = Number((properties["filesize"] as Amf0Value.Number).value + delta)
+      // update lastkeyframelocation
+      if (properties.containsKey("lastkeyframelocation")) {
+        val lastKeyframeLocation = (properties["lastkeyframelocation"] as Amf0Value.Number).value + delta
+        properties["lastkeyframelocation"] = Number(lastKeyframeLocation)
+      }
       // update keyframes filepositions with delta
       val keyframes = (properties["keyframes"] as Amf0Keyframes).run {
         val oldKeyframes = this.getKeyframes()
