@@ -73,6 +73,11 @@ fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
       if (it is FlvTag && it.isAvcEndSequence()) return@let
       if (it is FlvTag) emit(createEndOfSequenceTag(it.num + 1, it.header.timestamp + 1, it.header.streamId.toInt()))
     }
+    try {
+      close()
+    } catch (e: Exception) {
+      e.printStackTrace()
+    }
   }
 }
 
