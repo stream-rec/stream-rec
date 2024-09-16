@@ -30,10 +30,23 @@ import github.hua0512.flv.utils.Keyframe
 
 /**
  * AMF0 Keyframes object
- * @author hua0512
- * @date : 2024/9/9 20:43
+ *
+ * This class represents a collection of keyframes in the AMF0 format.
+ * It extends the `Amf0Value.Object` class and provides methods to manage keyframes.
+ *
+ * @property keyframes The list of keyframes.
+ * @constructor Creates an instance of `Amf0Keyframes` with an optional initial list of keyframes.
+ *
+ * @param keyframes The initial list of keyframes.
+ *
+ * @see Amf0Value.Object
+ * @see Keyframe
+ *
+ * @throws IllegalArgumentException if the number of keyframes exceeds the maximum limit.
+ *
+ * @date 2024/9/9 20:43
  */
-internal data class Amf0Keyframes(private val keyframes: ArrayList<Keyframe> = ArrayList()) : Amf0Value.Object(emptyMap()) {
+internal data class Amf0Keyframes(internal val keyframes: ArrayList<Keyframe> = ArrayList()) : Amf0Value.Object(emptyMap()) {
 
   companion object {
     private const val KEY_TIMES = "times"
@@ -44,6 +57,11 @@ internal data class Amf0Keyframes(private val keyframes: ArrayList<Keyframe> = A
     private const val MIN_INTERVAL_BETWEEN_KEYFRAMES = 1900
   }
 
+  /**
+   * The properties of the AMF0 Keyframes object.
+   *
+   * @return A map containing the keyframe times, file positions, and spacer values.
+   */
   override val properties: Map<kotlin.String, Amf0Value>
     get() = mapOf(
       KEY_TIMES to StrictArray(keyframes.map { Number(it.timestamp / 1000.0) }),
@@ -51,8 +69,17 @@ internal data class Amf0Keyframes(private val keyframes: ArrayList<Keyframe> = A
       KEY_SPACER to StrictArray(List((MAX_KEYFRAMES_PERMITTED - keyframes.size) * 2) { Number(Double.NaN) })
     )
 
+  /**
+   * The number of keyframes in the collection.
+   */
   val keyframesCount = keyframes.size
 
+  /**
+   * Adds a keyframe to the collection.
+   *
+   * @param keyframe The keyframe to add.
+   * @throws IllegalArgumentException if the number of keyframes exceeds the maximum limit.
+   */
   fun addKeyframe(keyframe: Keyframe) {
     if (keyframes.size >= MAX_KEYFRAMES_PERMITTED) {
       throw IllegalArgumentException("Keyframes size exceeds the maximum limit of $MAX_KEYFRAMES_PERMITTED")
@@ -63,26 +90,55 @@ internal data class Amf0Keyframes(private val keyframes: ArrayList<Keyframe> = A
     }
   }
 
+  /**
+   * Adds a list of keyframes to the collection.
+   *
+   * @param keyframes The list of keyframes to add.
+   */
   fun addKeyframes(keyframes: List<Keyframe>) {
     keyframes.forEach(::addKeyframe)
   }
 
+  /**
+   * Clears all keyframes from the collection.
+   */
   fun clearKeyframes() {
     keyframes.clear()
   }
 
+  /**
+   * Retrieves the list of keyframes.
+   *
+   * @return The list of keyframes.
+   */
   fun getKeyframes(): List<Keyframe> {
     return keyframes
   }
 
+  /**
+   * Retrieves a keyframe by its index.
+   *
+   * @param index The index of the keyframe to retrieve.
+   * @return The keyframe at the specified index.
+   */
   fun getKeyframe(index: Int): Keyframe {
     return keyframes[index]
   }
 
+  /**
+   * Removes a keyframe by its index.
+   *
+   * @param index The index of the keyframe to remove.
+   */
   fun removeKeyframe(index: Int) {
     keyframes.removeAt(index)
   }
 
+  /**
+   * Removes a keyframe from the collection.
+   *
+   * @param keyframe The keyframe to remove.
+   */
   fun removeKeyframe(keyframe: Keyframe) {
     keyframes.remove(keyframe)
   }
