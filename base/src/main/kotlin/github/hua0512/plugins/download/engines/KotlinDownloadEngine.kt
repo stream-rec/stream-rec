@@ -38,6 +38,7 @@ import github.hua0512.flv.operators.stats
 import github.hua0512.flv.utils.asStreamFlow
 import github.hua0512.logger
 import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.writeToFile
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.timeout
@@ -83,6 +84,12 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
    */
   private val metaInfoProvider = FlvMetaInfoProvider()
 
+
+  /**
+   * Whether to enable flv fix
+   */
+  internal var enableFlvFix = false
+
   override suspend fun start() = coroutineScope {
     val client = HttpClient(OkHttp) {
       engine {
@@ -98,37 +105,17 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
     }
     producer = Channel<FlvData>()
 
+    var lastDownloadedTime = 0L
+
     val pathProvider: PathProvider = { index ->
       val time = Clock.System.now()
+      lastDownloadedTime = time.epochSeconds
       downloadFilePath.replacePlaceholders(streamer!!.name, index.toString(), time).also {
         onDownloadStarted(it, time.epochSeconds)
       }
     }
 
     val limitsProvider = { fileLimitSize to (fileLimitDuration?.toFloat() ?: 0.0f) }
-
-    downloadJob = launch {
-      client.prepareGet(downloadUrl!!) {
-        this@KotlinDownloadEngine.headers.forEach {
-          header(it.key, it.value)
-        }
-        this@KotlinDownloadEngine.cookies?.let { header(HttpHeaders.Cookie, it) }
-      }.execute { httpResponse ->
-        val channel = httpResponse.bodyAsChannel()
-
-        channel.asStreamFlow()
-          .onEach { producer.send(it) }
-          .flowOn(Dispatchers.IO)
-          .catch {
-            // log exception when download flow failed
-            logger.error("download flow failed: $it")
-          }
-          .collect()
-      }
-
-      producer.close()
-    }
-
     // last file size
     var lastSize = 0L
 
@@ -139,26 +126,61 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       lastSize = size
     }
 
-    producer.receiveAsFlow()
-      .process(limitsProvider)
-      .analyze(metaInfoProvider)
-      .dump(pathProvider) { index, path, createdAt, openAt ->
-        val metaInfo = metaInfoProvider[index] ?: run {
-          logger.warn("$index meta info not found")
-          return@dump
+    downloadJob = launch {
+      client.prepareGet(downloadUrl!!) {
+        this@KotlinDownloadEngine.headers.forEach {
+          header(it.key, it.value)
         }
-        onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)
-        metaInfoProvider.remove(index)
-      }
-      .flowOn(Dispatchers.IO)
-      .stats(sizedUpdater)
-      .flowOn(Dispatchers.Default)
-      .onCompletion {
-        // clear meta info provider when completed
-        metaInfoProvider.clear()
-      }
-      .collect()
+        this@KotlinDownloadEngine.cookies?.let { header(HttpHeaders.Cookie, it) }
+      }.execute { httpResponse ->
+        val channel = httpResponse.bodyAsChannel()
 
+        if (enableFlvFix) {
+          // flv fix
+          channel.asStreamFlow()
+            .onEach { producer.send(it) }
+            .flowOn(Dispatchers.IO)
+            .catch {
+              // log exception when download flow failed
+              logger.error("download flow failed: $it")
+            }
+            .collect()
+        } else {
+          val outputPath = pathProvider(0)
+          val file = Path.of(outputPath).toFile()
+          channel.writeToFile(file, sizedUpdater) {
+            onDownloaded(FileInfo(outputPath, file.length(), lastDownloadedTime, file.lastModified() / 1000), null)
+          }
+          // call onDownloaded when nothing is downloaded
+          if (!file.exists()) {
+            onDownloaded(FileInfo(outputPath, 0, lastDownloadedTime, lastDownloadedTime), null)
+          }
+        }
+      }
+      producer.close()
+    }
+
+    if (enableFlvFix) {
+      producer.receiveAsFlow()
+        .process(limitsProvider)
+        .analyze(metaInfoProvider)
+        .dump(pathProvider) { index, path, createdAt, openAt ->
+          val metaInfo = metaInfoProvider[index] ?: run {
+            logger.warn("$index meta info not found")
+            return@dump
+          }
+          onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)
+          metaInfoProvider.remove(index)
+        }
+        .flowOn(Dispatchers.IO)
+        .stats(sizedUpdater)
+        .flowOn(Dispatchers.Default)
+        .onCompletion {
+          // clear meta info provider when completed
+          metaInfoProvider.clear()
+        }
+        .collect()
+    }
     // await for download job to finish
     downloadJob.join()
     // download finished

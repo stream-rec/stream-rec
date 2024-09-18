@@ -72,6 +72,8 @@ data class AppConfigEntity(
   val useBuiltInSegmenter: Boolean = false,
   @ColumnInfo(name = "exitDownloadOnError", defaultValue = "false")
   val exitDownloadOnError: Boolean = false,
+  @ColumnInfo(name = "enableFlvFix", defaultValue = "false")
+  val enableFlvFix: Boolean = false,
   @ColumnInfo(name = "huyaConfig")
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   @ColumnInfo(name = "douyinConfig")

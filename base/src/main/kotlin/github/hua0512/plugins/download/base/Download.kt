@@ -398,6 +398,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       if (this is FFmpegDownloadEngine) {
         useSegmenter = app.config.useBuiltInSegmenter
         detectErrors = app.config.exitDownloadOnError
+      } else if (this is KotlinDownloadEngine) {
+        enableFlvFix = app.config.enableFlvFix
       }
     }
 
