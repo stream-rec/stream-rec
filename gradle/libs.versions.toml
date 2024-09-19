@@ -63,7 +63,7 @@ org-jetbrains-kotlinx-datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.6.1"
 org-jetbrains-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
 org-jetbrains-kotlinx-coroutines-debug = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-debug", version.ref = "kotlin-coroutines" }
 org-jetbrains-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
-org-jetbrains-kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.2"
+org-jetbrains-kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
 org-jetbrains-kotlinx-serialization-protobuf = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.7.2"
 org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.4"
 
