@@ -27,37 +27,43 @@
 package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
-import github.hua0512.flv.utils.isAvcEndSequence
-import kotlinx.coroutines.Dispatchers
+import github.hua0512.flv.utils.logger
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.flow
 
 
-typealias LimitsProvider = () -> Pair<Long, Float>
+private const val NUM_LAST_TAGS = 200
+private const val MAX_DURATION = 20_000
+
+private const val TAG = "FlvDuplicateRule"
+private val logger = logger(TAG)
 
 /**
- * Process the FLV data flow.
+ * Simple duplicate elimination rule.
+ * This rule eliminates duplicate tags based on the CRC32 value of the tag.
+ * The rule keeps track of the last 200 tags and eliminates any tag that has the same CRC32 value as any of the last 200 tags.
+ * @receiver Flow<FlvData> The flow of FlvData to process.
+ * @return Flow<FlvData> A flow of FlvData with duplicate tags eliminated.
  * @author hua0512
- * @date : 2024/9/10 11:55
+ * @date : 2024/9/17 13:38
  */
-fun Flow<FlvData>.process(limitsProvider: LimitsProvider = { 0L to 0.0f }): Flow<FlvData> {
-  val (fileSizeLimit, durationLimit) = limitsProvider()
-  return this.discardFragmented()
-    .split()
-    .sort()
-    .filter { !it.isAvcEndSequence() }
-    .correct()
-    .fix()
-    .concat()
-    .limit(fileSizeLimit, durationLimit)
-    .extractJoinPoints()
-    .injectMetadata()
-    .removeDuplicates()
-    .catch {
-      it.printStackTrace()
-      println("Error processing FLV data: $it")
+internal fun Flow<FlvData>.removeDuplicates(): Flow<FlvData> = flow {
+  val lastTags = LinkedHashSet<Long>(NUM_LAST_TAGS)
+
+  fun reset() {
+    lastTags.clear()
+  }
+
+  collect { flvData ->
+    if (lastTags.add(flvData.crc32)) {
+      if (lastTags.size > NUM_LAST_TAGS) {
+        lastTags.remove(lastTags.iterator().next())
+      }
+      emit(flvData)
+    } else {
+      logger.debug("Found duplicate tag: {}", flvData)
     }
-    .flowOn(Dispatchers.Default)
+  }
+
+  reset()
 }

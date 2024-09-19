@@ -53,17 +53,12 @@ package github.hua0512/*
 import github.hua0512.flv.FlvMemoryProvider
 import github.hua0512.flv.FlvMetaInfoProcessor
 import github.hua0512.flv.FlvMetaInfoProvider
-import github.hua0512.flv.data.FlvData
-import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.utils.asFlvFlow
-import github.hua0512.flv.utils.createEndOfSequenceTag
-import github.hua0512.flv.utils.isAvcEndSequence
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
@@ -106,54 +101,34 @@ class FixFlvTest {
 
   @Test
   fun testFix() = runTest(timeout = Duration.INFINITE) {
-    val file = File("E:/test/test.flv")
+    val file = File("E:/test/早安-2024-09-17 12_33_18.flv")
 
     val bufferedIns = file.inputStream().buffered()
 
-    val ins = DataInputStream(bufferedIns).use {
+    val dis = DataInputStream(bufferedIns)
+    val memoryProvider = FlvMemoryProvider()
 
-      val memoryProvider = FlvMemoryProvider()
+    val metaInfoProvider = FlvMetaInfoProvider()
+    val pathProvider = { index: Int -> "E:/test/${file.nameWithoutExtension}_fix_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
+    val limitsProvider = { 0L to 3600.0f }
 
-      val metaInfoProvider = FlvMetaInfoProvider()
-      val pathProvider = { index: Int -> "E:/test/${file.nameWithoutExtension}_fix_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
-      var tag: FlvData? = null
-      // 500MB or 1 hour
-      val limitsProvider = { 500000000L to 3600.0f }
+    dis.asFlvFlow()
+      .process(limitsProvider)
+      .analyze(metaInfoProvider)
+      .dump(pathProvider) { index, path, createdAt, updatedAt ->
+        println("onStreamDumped: $path, $createdAt -> $updatedAt")
+        launch {
+          val status = FlvMetaInfoProcessor.process(path, metaInfoProvider[index]!!, true)
+          if (status)
+            metaInfoProvider.remove(index)
+        }
+      }
+      .onCompletion {
+        println("onCompletion...")
+        memoryProvider.clear()
+      }
+      .collect()
 
-      it.asFlvFlow()
-        .onEach {
-          tag = it
-        }
-        .onCompletion {
-          println("sendCompletion")
-          if (tag != null && !tag.isAvcEndSequence()) {
-            tag as? FlvTag ?: return@onCompletion
-            println("Create a new tag to end the sequence...")
-            emit(
-              createEndOfSequenceTag(
-                (tag as FlvTag).num + 1,
-                (tag as FlvTag).header.timestamp + 1,
-                (tag as FlvTag).header.streamId
-              )
-            )
-          }
-        }
-        .process(limitsProvider)
-        .analyze(metaInfoProvider)
-        .dump(pathProvider) { index, path, createdAt, updatedAt ->
-          println("onStreamDumped: $path, $createdAt -> $updatedAt")
-          launch {
-            val status = FlvMetaInfoProcessor.process(path, metaInfoProvider[index]!!, true)
-            if (status)
-              metaInfoProvider.remove(index)
-          }
-        }
-        .onCompletion {
-          println("onCompletion...")
-          memoryProvider.clear()
-        }
-        .collect()
-
-    }
   }
+
 }
