@@ -26,7 +26,6 @@
 
 package github.hua0512.services
 
-import github.hua0512.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.withContext
@@ -60,7 +59,7 @@ class FileWatcherService(private val filePath: String) {
   suspend fun watchFileModifications() {
     val filePath = Paths.get(filePath)
     val parentPath = filePath.parent
-    logger.debug("Watching file {}", filePath)
+    github.hua0512.utils.mainLogger.debug("Watching file {}", filePath)
     withContext(Dispatchers.IO) {
       parentPath.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
     }

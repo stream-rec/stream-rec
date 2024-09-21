@@ -37,7 +37,7 @@ import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

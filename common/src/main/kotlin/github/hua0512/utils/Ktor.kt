@@ -26,13 +26,15 @@
 
 package github.hua0512.utils
 
-import github.hua0512.flv.operators.FlvStatsUpdater
-import github.hua0512.logger
+import github.hua0512.download.DownloadProgressUpdater
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isEmpty
 import io.ktor.utils.io.core.readBytes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import java.io.File
+import java.io.OutputStream
 import kotlin.math.roundToInt
 
 /**
@@ -46,8 +48,8 @@ import kotlin.math.roundToInt
  */
 suspend fun ByteReadChannel.writeToFile(
   file: File,
-  sizedUpdater: FlvStatsUpdater = { _, _, _ -> },
-  onDownloadComplete: () -> Unit,
+  sizedUpdater: DownloadProgressUpdater = { _, _, _ -> },
+  onDownloadComplete: () -> Unit = {},
 ) = withIOContext {
   val fos = file.outputStream().buffered()
   var downloaded = 0L
@@ -72,11 +74,26 @@ suspend fun ByteReadChannel.writeToFile(
         }
       }
     }
+    true
   } catch (e: Exception) {
-    logger.error("writeToFile error: ${e.message}")
+    mainLogger.error("writeToFile error: ${e.message}")
+    false
   } finally {
     if (file.exists()) {
       onDownloadComplete()
     }
   }
 }
+
+suspend fun ByteReadChannel.writeToOutputStream(outputStream: OutputStream) = withContext(Dispatchers.IO) {
+  outputStream.use { os ->
+    while (!isClosedForRead) {
+      val packet = readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+      while (!packet.isEmpty) {
+        val bytes = packet.readBytes()
+        os.write(bytes)
+      }
+    }
+  }
+}
+

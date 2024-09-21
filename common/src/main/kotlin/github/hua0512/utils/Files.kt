@@ -26,7 +26,6 @@
 
 package github.hua0512.utils
 
-import github.hua0512.logger
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -42,11 +41,11 @@ import java.util.zip.GZIPInputStream
 
 fun Path.deleteFile(): Boolean = try {
   Files.deleteIfExists(this).also {
-    if (it) logger.info("File deleted: {}", this)
-    else logger.error("File not found: {}", this)
+    if (it) mainLogger.info("File deleted: {}", this)
+    else mainLogger.error("File not found: {}", this)
   }
 } catch (e: Exception) {
-  logger.error("Could not delete file: $this, $e")
+  mainLogger.error("Could not delete file: $this, $e")
   false
 }
 
@@ -56,22 +55,22 @@ fun Path.rename(newPath: Path, vararg options: CopyOption): Boolean {
   return try {
     // check existence of this file
     if (!Files.exists(this)) {
-      logger.error("Error renaming $this, file do not exist")
+      mainLogger.error("Error renaming $this, file do not exist")
       return false
     }
 
     // check existence of new file
     if (Files.exists(newPath)) {
-      logger.error("Error renaming $this, new file already exists")
+      mainLogger.error("Error renaming $this, new file already exists")
       return false
     }
 
     Files.move(this, newPath, *options).also {
-      logger.info("Renamed: $this to $newPath")
+      mainLogger.info("Renamed: $this to $newPath")
     }
     true
   } catch (e: Exception) {
-    logger.error("Could not rename file: $this to $newPath")
+    mainLogger.error("Could not rename file: $this to $newPath")
     false
   }
 }
@@ -79,13 +78,16 @@ fun Path.rename(newPath: Path, vararg options: CopyOption): Boolean {
 fun File.rename(newFile: File): Boolean = toPath().rename(newFile.toPath())
 
 /**
- *
+ * Decompresses a GZIP compressed byte array
+ * @param input GZIP compressed byte array
+ * @return decompressed byte array
+ * @throws Exception if decompression fails
  */
 fun decompressGzip(input: ByteArray): ByteArray {
   ByteArrayInputStream(input).use { bis ->
     GZIPInputStream(bis).use { gis ->
       ByteArrayOutputStream().use { bos ->
-        val buffer = ByteArray(1024)
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         var length: Int
         while (gis.read(buffer).also { length = it } > 0) {
           bos.write(buffer, 0, length)

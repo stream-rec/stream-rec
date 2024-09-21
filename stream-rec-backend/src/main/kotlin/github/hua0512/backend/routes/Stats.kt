@@ -1,6 +1,6 @@
 package github.hua0512.backend.routes
 
-import github.hua0512.logger
+import github.hua0512.backend.logger
 import github.hua0512.repo.stats.SummaryStatsRepo
 import io.ktor.server.application.*
 import io.ktor.server.response.*

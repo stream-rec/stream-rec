@@ -37,7 +37,7 @@ import github.hua0512.flv.data.tag.FlvTagHeader
 import github.hua0512.flv.operators.sortKeys
 import github.hua0512.flv.operators.toAmfMap
 import github.hua0512.flv.utils.ScriptData
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

@@ -27,16 +27,15 @@
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.data.stream.FileInfo
+import github.hua0512.download.DownloadProgressUpdater
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
-import github.hua0512.flv.operators.FlvStatsUpdater
-import github.hua0512.flv.operators.PathProvider
 import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.operators.stats
 import github.hua0512.flv.utils.asStreamFlow
-import github.hua0512.logger
+import github.hua0512.utils.mainLogger
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.writeToFile
 import io.ktor.client.HttpClient
@@ -107,7 +106,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
 
     var lastDownloadedTime = 0L
 
-    val pathProvider: PathProvider = { index ->
+    val pathProvider = { index: Int ->
       val time = Clock.System.now()
       lastDownloadedTime = time.epochSeconds
       downloadFilePath.replacePlaceholders(streamer!!.name, index.toString(), time).also {
@@ -119,7 +118,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
     // last file size
     var lastSize = 0L
 
-    val sizedUpdater: FlvStatsUpdater = { size: Long, duration: Float, bitrate: Float ->
+    val sizedUpdater: DownloadProgressUpdater = { size: Long, duration: Float, bitrate: Float ->
       val kbSizeDiff = (size - lastSize) / 1024
       if (kbSizeDiff > 0)
         onDownloadProgress(kbSizeDiff, bitrate.toInt().toDouble())
@@ -142,7 +141,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
             .flowOn(Dispatchers.IO)
             .catch {
               // log exception when download flow failed
-              logger.error("download flow failed: $it")
+              mainLogger.error("download flow failed: $it")
             }
             .collect()
         } else {
@@ -166,7 +165,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         .analyze(metaInfoProvider)
         .dump(pathProvider) { index, path, createdAt, openAt ->
           val metaInfo = metaInfoProvider[index] ?: run {
-            logger.warn("$index meta info not found")
+            mainLogger.warn("$index meta info not found")
             return@dump
           }
           onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)

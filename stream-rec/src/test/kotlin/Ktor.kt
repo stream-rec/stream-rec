@@ -1,16 +1,25 @@
 import github.hua0512.app.App
+import github.hua0512.download.DownloadPathProvider
 import github.hua0512.flv.FlvMetaInfoProcessor
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.utils.asStreamFlow
+import github.hua0512.hls.operators.PlayListFetcher
+import github.hua0512.hls.operators.download
+import github.hua0512.hls.operators.dump
+import github.hua0512.hls.operators.dumpPlaylist
+import github.hua0512.hls.operators.limit
+import github.hua0512.hls.operators.resolve
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -87,6 +96,29 @@ class NativeDownloadTest {
       .onCompletion {
         println("onCompletion...")
       }
+      .collect()
+  }
+
+  @Test
+  fun testHlsDownload(): Unit = runTest(timeout = Duration.INFINITE) {
+    val client = App(Json {}).client
+    val isOneFile = false
+    val pathProvider: DownloadPathProvider = { index: Int -> if (isOneFile) "F:/test/hls/testSample.ts" else "F:/test/hls" }
+
+    val fetcher = PlayListFetcher(client)
+    val limitsProvider = { 0L to 3600.0f }
+
+
+    val downloadUrl =
+      "http://pull-hs-f5.flive.douyincdn.com/thirdgame/stream-115892132065051402_or4/index.m3u8?expire=1727552290&sign=22ee3446647ccca080c3bebfcada302b&volcSecret=22ee3446647ccca080c3bebfcada302b&volcTime=1727552290&major_anchor_level=common"
+    val baseUrl = downloadUrl.substringBeforeLast("/") + "/"
+    fetcher.consume(downloadUrl)
+      .resolve()
+      .download(baseUrl, client)
+      .limit(limitsProvider, isOneFile)
+      .dump(pathProvider, isOneFile)
+      .dumpPlaylist(!isOneFile, pathProvider)
+      .flowOn(Dispatchers.IO)
       .collect()
   }
 }

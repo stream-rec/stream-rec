@@ -153,7 +153,7 @@ class DownloadService(
       }
     }
 
-    val streamers = withIOContext {
+    val streamers = github.hua0512.utils.withIOContext {
       repo.getStreamersActive()
     }
     this.streamers = streamers

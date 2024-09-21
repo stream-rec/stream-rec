@@ -26,9 +26,9 @@
 
 package github.hua0512.backend.routes
 
+import github.hua0512.backend.logger
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
-import github.hua0512.logger
 import github.hua0512.repo.stream.StreamerRepo
 import io.ktor.http.*
 import io.ktor.server.application.*

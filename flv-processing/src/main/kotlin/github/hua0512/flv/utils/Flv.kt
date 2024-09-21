@@ -41,6 +41,7 @@ import github.hua0512.flv.data.tag.FlvTagHeaderType
 import github.hua0512.flv.data.tag.FlvVideoTagData
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.data.video.FlvVideoFrameType
+import github.hua0512.utils.crc32
 
 /**
  * @author hua0512

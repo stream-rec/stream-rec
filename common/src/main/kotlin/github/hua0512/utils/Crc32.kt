@@ -26,30 +26,19 @@
 
 package github.hua0512.utils
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import java.util.zip.CRC32
 
 /**
- * Split the flow into chunks of the specified size
- * @param chunkSize the size of each chunk
- * @return a flow of lists of elements
+ * Extension function to calculate the CRC32 checksum of a ByteArray.
+ *
+ * @receiver ByteArray The byte array for which the CRC32 checksum is to be calculated.
+ * @return Long The CRC32 checksum value.
+ *
  * @author hua0512
- * @date : 2024/5/13 20:00
+ * @date : 2024/9/7 11:08
  */
-public fun <T> Flow<T>.chunked(size: Int): Flow<List<T>> {
-  require(size >= 1) { "Expected positive chunk size, but got $size" }
-  return flow {
-    var result: ArrayList<T>? = null // Do not preallocate anything
-    collect { value ->
-      // Allocate if needed
-      val acc = result ?: ArrayList<T>(size).also { result = it }
-      acc.add(value)
-      if (acc.size == size) {
-        emit(acc)
-        // Cleanup, but don't allocate -- it might've been the case this is the last element
-        result = null
-      }
-    }
-    result?.let { emit(it) }
-  }
+fun ByteArray.crc32(): Long {
+  val crc32 = CRC32()
+  crc32.update(this)
+  return crc32.value
 }

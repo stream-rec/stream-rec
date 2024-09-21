@@ -1,6 +1,6 @@
 package github.hua0512.plugins.download
 
-import github.hua0512.logger
+import github.hua0512.utils.mainLogger
 import me.tongfei.progressbar.DelegatingProgressBarConsumer
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
@@ -20,7 +20,7 @@ object ProgressBarManager {
 
     val progressBar = ProgressBarBuilder()
       .setTaskName(taskName)
-      .setConsumer(DelegatingProgressBarConsumer(logger::info))
+      .setConsumer(DelegatingProgressBarConsumer(mainLogger::info))
       .setInitialMax(max)
       .setUpdateIntervalMillis(2.toDuration(DurationUnit.MINUTES).inWholeMilliseconds.toInt())
       .continuousUpdate()

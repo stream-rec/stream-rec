@@ -34,7 +34,6 @@ import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
-import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -186,7 +185,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     }
 
     // start Websocket with backoff strategy
-    withIORetry(
+    github.hua0512.utils.withIORetry(
       maxRetries = 10,
       initialDelayMillis = 10000,
       maxDelayMillis = 60000,

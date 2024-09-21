@@ -34,7 +34,6 @@ import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
-import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
@@ -249,11 +248,11 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   }
 
   override suspend fun stop(): Boolean {
-    withIOContext {
+    github.hua0512.utils.withIOContext {
       logger.info("$downloadUrl stopping ffmpeg process...")
       sendStopSignal()
     }
-    val code = withIOContext { process?.waitFor() }
+    val code = github.hua0512.utils.withIOContext { process?.waitFor() }
     if (code != 0) {
       logger.error("ffmpeg process exited with code $code")
     }

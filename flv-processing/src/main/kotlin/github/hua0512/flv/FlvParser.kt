@@ -50,8 +50,8 @@ import github.hua0512.flv.data.video.FlvVideoFrameType
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
-import github.hua0512.flv.utils.crc32
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.crc32
+import github.hua0512.utils.logger
 import github.hua0512.flv.utils.readUI24
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

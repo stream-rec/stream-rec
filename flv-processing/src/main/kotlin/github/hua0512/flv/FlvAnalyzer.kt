@@ -39,7 +39,7 @@ import github.hua0512.flv.utils.isKeyFrame
 import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.isVideoTag
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import io.exoquery.pprint
 
 
@@ -86,6 +86,7 @@ class FlvAnalyzer {
   private var headerSize = 0
 
   var fileSize: Long = 0
+  var metadataCount = 0
 
   val frameRate: Float
     get() {
@@ -116,6 +117,7 @@ class FlvAnalyzer {
 
   internal fun makeMetaInfo(): FlvMetadataInfo {
     assert(resolution != null)
+    logger.debug("metadata count: $metadataCount")
     val keyframes = keyframesMap.map { (timestamp, position) -> FlvKeyframe(timestamp, position) }.sortedBy { it.timestamp }
     return FlvMetadataInfo(
       hasAudio = hasAudio,
@@ -169,6 +171,7 @@ class FlvAnalyzer {
     videoInfo = null
     headerSize = 0
     fileSize = 0
+    metadataCount = 0
   }
 
   fun analyzeHeader(header: FlvHeader) {
@@ -194,6 +197,7 @@ class FlvAnalyzer {
   private fun analyzeScriptTag(tag: FlvTag) {
     // do nothing
     tag.data as ScriptData
+    metadataCount++
     return
   }
 

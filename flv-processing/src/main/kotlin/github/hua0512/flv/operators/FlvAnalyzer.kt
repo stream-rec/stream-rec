@@ -32,7 +32,7 @@ import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.utils.isHeader
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

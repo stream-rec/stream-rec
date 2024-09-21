@@ -44,6 +44,7 @@ import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
+import github.hua0512.utils.mainLogger
 import github.hua0512.utils.nonEmptyOrNull
 import io.ktor.server.engine.ApplicationEngine
 import kotlinx.coroutines.*
@@ -77,7 +78,7 @@ class Application {
       // start the app
       // add shutdown hook
       Runtime.getRuntime().addShutdownHook(Thread {
-        logger.info("Stream-rec shutting down...")
+        mainLogger.info("Stream-rec shutting down...")
         server?.stop(1000, 1000)
         Thread.sleep(1000)
         jobScope.cancel()

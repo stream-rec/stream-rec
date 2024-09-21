@@ -29,13 +29,13 @@ package github.hua0512.backend.routes
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import github.hua0512.backend.logger
 import github.hua0512.backend.plugins.jwtAudience
 import github.hua0512.backend.plugins.jwtDomain
 import github.hua0512.backend.plugins.jwtSecret
 import github.hua0512.data.UserId
 import github.hua0512.data.event.UserEvent.UserLogin
 import github.hua0512.data.user.User
-import github.hua0512.logger
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_PASSWORD_COST
 import github.hua0512.repo.UserRepo

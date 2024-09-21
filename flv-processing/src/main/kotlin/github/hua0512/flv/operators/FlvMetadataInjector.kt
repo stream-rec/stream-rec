@@ -37,7 +37,7 @@ import github.hua0512.flv.naturalMetadataKeyOrder
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.createMetadataTag
 import github.hua0512.flv.utils.isTrueScripTag
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

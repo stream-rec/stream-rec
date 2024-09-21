@@ -31,7 +31,7 @@ import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.utils.ScriptData
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import java.io.DataInputStream
 import java.io.InputStream
 

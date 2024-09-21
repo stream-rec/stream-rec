@@ -1,8 +1,8 @@
 package github.hua0512.backend.plugins
 
+import github.hua0512.backend.logger
 import github.hua0512.data.event.DownloadEvent.DownloadStateUpdate
 import github.hua0512.data.event.StreamerEvent
-import github.hua0512.logger
 import github.hua0512.plugins.event.EventCenter
 import io.ktor.server.application.*
 import io.ktor.server.routing.*

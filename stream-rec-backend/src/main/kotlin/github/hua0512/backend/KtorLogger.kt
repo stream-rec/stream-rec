@@ -24,9 +24,16 @@
  * SOFTWARE.
  */
 
-package github.hua0512
+package github.hua0512.backend
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import github.hua0512.utils.logger
 
-val logger: Logger = LoggerFactory.getLogger("Main")
+
+internal const val TAG = "Ktor"
+
+/**
+ * Logger for Ktor
+ * @author hua0512
+ * @date : 2024/9/19 14:53
+ */
+internal val logger = logger(TAG)

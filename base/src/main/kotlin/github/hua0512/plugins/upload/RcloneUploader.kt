@@ -37,7 +37,6 @@ import github.hua0512.utils.executeProcess
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
-import github.hua0512.utils.withIOContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.slf4j.Logger
@@ -51,7 +50,7 @@ class RcloneUploader(app: App, override val config: RcloneConfig) : Upload<Rclon
   }
 
 
-  override suspend fun performUpload(uploadData: UploadData): UploadResult = withIOContext {
+  override suspend fun performUpload(uploadData: UploadData): UploadResult = github.hua0512.utils.withIOContext {
     val remotePath = config.remotePath.nonEmptyOrNull() ?: throw UploadInvalidArgumentsException("invalid rclone remote path")
 
     val startInstant = Instant.fromEpochSeconds(uploadData.streamStartTime)

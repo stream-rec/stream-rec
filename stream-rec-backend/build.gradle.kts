@@ -11,6 +11,7 @@ version = versionName
 
 dependencies {
   implementation(project(":base"))
+  implementation(project(":common"))
   implementation(libs.at.favre.lib.bcrypt)
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.io.ktor.server.core.jvm)

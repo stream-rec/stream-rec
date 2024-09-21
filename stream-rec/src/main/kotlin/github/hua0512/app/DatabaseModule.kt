@@ -40,8 +40,8 @@ import github.hua0512.dao.upload.UploadActionDao
 import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.dao.user.UserDao
-import github.hua0512.logger
 import github.hua0512.repo.LocalDataSource
+import github.hua0512.utils.mainLogger
 import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 import kotlin.io.path.Path
@@ -62,7 +62,7 @@ class DatabaseModule {
   fun provideRoomDatabase(): AppDatabase {
     val path = Path(LocalDataSource.getDefaultPath()).also {
       it.createParentDirectories()
-      logger.info("Database path: ${it.pathString}")
+      mainLogger.info("Database path: ${it.pathString}")
     }
 
     firstRun = LocalDataSource.isFirstRun()

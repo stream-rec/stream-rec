@@ -30,7 +30,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.flv.data.other.FlvMetadataInfo
-import github.hua0512.logger
+import github.hua0512.utils.mainLogger
 import github.hua0512.plugins.download.base.DownloadCallback
 import github.hua0512.utils.rename
 import java.util.*
@@ -161,10 +161,10 @@ abstract class BaseDownloadEngine {
     val oldPath = Path(data.path)
     // check if the file exists
     if (!oldPath.exists()) {
-      logger.error("Downloaded file does not exist: {}", oldPath)
+      mainLogger.error("Downloaded file does not exist: {}", oldPath)
       return
     }
-    logger.debug("Downloaded file: {}", oldPath)
+    mainLogger.debug("Downloaded file: {}", oldPath)
     // remove the file name PART_ prefix
     val newPath = oldPath.parent.resolve(oldPath.name.removePrefix(PART_PREFIX))
     // rename the file

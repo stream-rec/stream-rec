@@ -24,26 +24,18 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.amf
+package github.hua0512.utils
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+val mainLogger: Logger = LoggerFactory.getLogger("Main")
 
 /**
- * AMF3 data types
+ * Get logger by tag
+ * @param tag
+ * @return slf4j logger
  * @author hua0512
- * @date : 2024/6/9 9:58
- * @see <a href="https://en.wikipedia.org/wiki/Action_Message_Format#AMF3">AMF3 spec</a>
+ * @date : 2024/9/8 21:34
  */
-enum class Amf3Type(val byte: Byte) {
-  UNDEFINED(0x00),
-  NULL(0x01),
-  BOOLEAN_FALSE(0x02),
-  BOOLEAN_TRUE(0x03),
-  INTEGER(0x04),
-  DOUBLE(0x05),
-  STRING(0x06),
-  XML_DOCUMENT(0x07),
-  DATE(0x08),
-  ARRAY(0x09),
-  OBJECT(0x0A),
-  XML(0x0B),
-  BYTEARRAY(0x0C)
-}
+inline fun logger(tag: String) = LoggerFactory.getLogger(tag)

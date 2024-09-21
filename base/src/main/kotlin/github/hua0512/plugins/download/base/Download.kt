@@ -275,7 +275,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           danmu.filePath = danmuPath
           if (danmuJob == null) {
             danmuJob = async {
-              val status: Boolean = withIORetry(
+              val status: Boolean = github.hua0512.utils.withIORetry(
                 maxRetries = 5,
                 maxDelayMillis = 30000,
                 onError = { e, count -> logger.error("(${streamer.name}) danmu failed to initialize($count): $e") }) {

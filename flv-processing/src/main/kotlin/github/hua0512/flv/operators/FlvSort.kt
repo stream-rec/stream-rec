@@ -36,7 +36,7 @@ import github.hua0512.flv.utils.isNaluKeyFrame
 import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.isVideoTag
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion

@@ -31,7 +31,7 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isSequenceHeader
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 

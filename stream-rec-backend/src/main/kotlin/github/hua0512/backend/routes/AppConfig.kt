@@ -26,8 +26,8 @@
 
 package github.hua0512.backend.routes
 
+import github.hua0512.backend.logger
 import github.hua0512.data.config.AppConfig
-import github.hua0512.logger
 import github.hua0512.repo.AppConfigRepo
 import io.ktor.http.*
 import io.ktor.server.application.*

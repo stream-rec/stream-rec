@@ -32,12 +32,10 @@ import github.hua0512.dao.user.UserDao
 import github.hua0512.data.AppConfigId
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.user.UserEntity
-import github.hua0512.logger
 import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_PASSWORD
 import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_PASSWORD_COST
 import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_ROLE
 import github.hua0512.repo.LocalDataSource.Companion.DEFAULT_USER
-import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
@@ -56,14 +54,14 @@ class LocalDataSourceImpl(private val dao: AppConfigDao, private val userDao: Us
   }
 
 
-  override suspend fun getAppConfig(): AppConfig = withIOContext {
+  override suspend fun getAppConfig(): AppConfig = github.hua0512.utils.withIOContext {
     dao.getById(AppConfigId(1))?.let { AppConfig(it) } ?: AppConfig().apply {
-      logger.info("First time running the app, creating default app config")
+      github.hua0512.utils.mainLogger.info("First time running the app, creating default app config")
       val password = System.getenv("LOGIN_SECRET") ?: DEFAULT_PASSWORD
       val hashedPassword = BCrypt.withDefaults().hashToString(DEFAULT_PASSWORD_COST, password.toCharArray())
       val user = UserEntity(0, DEFAULT_USER, hashedPassword, DEFAULT_ROLE, isActive = true, isFirstUsePassword = true, isBcrypt = true)
       userDao.insert(user)
-      logger.info("Default user created: $DEFAULT_USER, password: $password")
+      github.hua0512.utils.mainLogger.info("Default user created: $DEFAULT_USER, password: $password")
       saveAppConfig(this)
     }
   }

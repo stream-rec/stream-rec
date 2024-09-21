@@ -46,6 +46,8 @@ io-ktor-server-websockets-jvm = { module = "io.ktor:ktor-server-websockets-jvm",
 io-ktor-server-netty-jvm = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
 io-ktor-server-tests-jvm = { module = "io.ktor:ktor-server-tests-jvm", version.ref = "ktor" }
 
+io-lindstrom-m3u8-parser = "io.lindstrom:m3u8-parser:0.28"
+
 ch-qos-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 org-jetbrains-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 com-google-dagger-dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }

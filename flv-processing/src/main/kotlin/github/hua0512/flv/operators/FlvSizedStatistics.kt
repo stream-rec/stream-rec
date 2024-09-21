@@ -26,6 +26,7 @@
 
 package github.hua0512.flv.operators
 
+import github.hua0512.download.DownloadProgressUpdater
 import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
@@ -33,9 +34,6 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.utils.isHeader
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-
-
-typealias FlvStatsUpdater = (fileSize: Long, duration: Float, bitrate: Float) -> Unit
 
 
 /**
@@ -46,7 +44,7 @@ typealias FlvStatsUpdater = (fileSize: Long, duration: Float, bitrate: Float) ->
  * @author hua0512
  * @date : 2024/9/11 23:54
  */
-fun Flow<FlvData>.stats(sizedUpdater: FlvStatsUpdater? = null): Flow<FlvData> = flow {
+fun Flow<FlvData>.stats(sizedUpdater: DownloadProgressUpdater? = null): Flow<FlvData> = flow {
 
 
   var startAt = 0L

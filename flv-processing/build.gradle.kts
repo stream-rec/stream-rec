@@ -10,6 +10,7 @@ group = groupName
 version = versionName
 
 dependencies {
+  implementation(project(":common"))
   implementation(libs.ch.qos.logback.classic)
   implementation(libs.io.exoquery.pprint)
   implementation(libs.io.ktor.client.core)

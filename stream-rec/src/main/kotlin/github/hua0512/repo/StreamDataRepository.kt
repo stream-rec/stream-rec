@@ -46,14 +46,14 @@ import github.hua0512.utils.withIOContext
 class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDao) :
   StreamDataRepo {
   override suspend fun getStreamDataById(streamDataId: StreamDataId): StreamData? {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       dao.getWithStreamerById(streamDataId.value)?.let {
         StreamData(it.streamData, Streamer(it.streamer))
       }
     }
   }
 
-  override suspend fun getAllStreamData(): List<StreamData> = withIOContext {
+  override suspend fun getAllStreamData(): List<StreamData> = github.hua0512.utils.withIOContext {
     dao.getAllWithStreamer().flatMap { (t, u) -> u.map { StreamData(it, Streamer(t)) } }
   }
 
@@ -67,7 +67,7 @@ class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDa
     sortColumn: String?,
     sortOrder: String?,
   ): List<StreamData> {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       val order = sortOrder ?: "DESC"
 
       if (order != "ASC" && order != "DESC") {
@@ -105,7 +105,7 @@ class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDa
   }
 
   override suspend fun count(streamers: List<StreamerId>?, filter: String?, dateStart: Long?, dateEnd: Long?): Long {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       dao.countAllStreamData(filter, streamers, streamers?.isEmpty() ?: true, dateStart, dateEnd)
     }
   }
@@ -128,13 +128,13 @@ class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDa
     }
   }
 
-  override suspend fun delete(id: StreamDataId) = withIOContext {
+  override suspend fun delete(id: StreamDataId) = github.hua0512.utils.withIOContext {
     val streamData = StreamDataEntity(id = id.value, "", outputFilePath = "")
     dao.delete(streamData) == 1
   }
 
   override suspend fun delete(ids: List<StreamDataId>): Boolean {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       val streamData = ids.map { StreamDataEntity(id = it.value, "", outputFilePath = "") }
       dao.delete(streamData) == ids.size
     }

@@ -26,6 +26,7 @@
 
 package github.hua0512.flv.operators
 
+import github.hua0512.download.DownloadLimitsProvider
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.utils.isAvcEndSequence
 import kotlinx.coroutines.Dispatchers
@@ -35,14 +36,12 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 
 
-typealias LimitsProvider = () -> Pair<Long, Float>
-
 /**
  * Process the FLV data flow.
  * @author hua0512
  * @date : 2024/9/10 11:55
  */
-fun Flow<FlvData>.process(limitsProvider: LimitsProvider = { 0L to 0.0f }): Flow<FlvData> {
+fun Flow<FlvData>.process(limitsProvider: DownloadLimitsProvider = { 0L to 0.0f }): Flow<FlvData> {
   val (fileSizeLimit, durationLimit) = limitsProvider()
   return this.discardFragmented()
     .split()

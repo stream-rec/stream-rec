@@ -26,7 +26,6 @@
 
 package github.hua0512.utils
 
-import github.hua0512.logger
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.process.toNative
@@ -118,7 +117,7 @@ suspend fun executeProcess(
           try {
             process.outputStream.use { handler(it) }
           } catch (e: Exception) {
-            logger.error("Error while writing to process input stream", e)
+            mainLogger.error("Error while writing to process input stream", e)
           } finally {
             process.outputStream.close()
           }
@@ -129,7 +128,7 @@ suspend fun executeProcess(
         awaitAll(output, input)
         runInterruptible { process.waitFor() }
       } catch (e: CancellationException) {
-        logger.warn("Process execution was cancelled", e)
+        mainLogger.warn("Process execution was cancelled", e)
         onCancellation(e)
         when (destroyForcibly) {
           true -> process.destroyForcibly()

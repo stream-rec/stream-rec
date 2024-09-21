@@ -26,11 +26,12 @@
 
 package github.hua0512.flv.operators
 
+import github.hua0512.download.DownloadPathProvider
 import github.hua0512.flv.FlvWriter
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.utils.logger
+import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
@@ -43,10 +44,7 @@ import kotlin.io.path.outputStream
 private const val TAG = "FlvDumperCenter"
 private val logger = logger(TAG)
 
-
 typealias onStreamDumped = (index: Int, path: String, createAt: Long, dumpedAt: Long) -> Unit
-
-typealias PathProvider = (index: Int) -> String
 
 
 /**
@@ -54,7 +52,7 @@ typealias PathProvider = (index: Int) -> String
  * @author hua0512
  * @date : 2024/9/9 2:15
  */
-fun Flow<FlvData>.dump(pathProvider: PathProvider, onStreamDumped: onStreamDumped = { _, _, _, _ -> }): Flow<FlvData> = flow {
+fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: onStreamDumped = { _, _, _, _ -> }): Flow<FlvData> = flow {
 
   var writer: FlvWriter? = null
   var lastPath: String? = null
