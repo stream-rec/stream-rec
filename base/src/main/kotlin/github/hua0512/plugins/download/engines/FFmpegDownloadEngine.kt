@@ -76,12 +76,12 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     outputFolder = Path(downloadFilePath).parent
     outputFileName = Path(downloadFilePath).name
     if (!useSegmenter) {
-      lastOpeningFile = downloadFilePath
-      lastOpeningFileTime = Clock.System.now().epochSeconds
+      lastOpeningFileTime = startInstant.epochSeconds
       // replace time placeholders if not using segmenter
       outputFileName = outputFileName.replacePlaceholders(streamer!!.name, "", startInstant, true)
       // update downloadFilePath
       downloadFilePath = outputFolder.resolve(outputFileName).pathString
+      lastOpeningFile = outputFileName
     }
   }
 
