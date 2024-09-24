@@ -27,53 +27,34 @@
 package github.hua0512.hls.operators
 
 import github.hua0512.download.DownloadLimitsProvider
+import github.hua0512.download.DownloadPathProvider
 import github.hua0512.hls.data.HlsSegment
-import github.hua0512.utils.logger
+import io.ktor.client.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-
-
-private const val TAG = "HlsLimit"
-private val logger = logger(TAG)
+import kotlinx.coroutines.flow.flowOn
 
 /**
- * Limit the flow of [HlsSegment] based on the [limitProvider]
- * @param limitProvider the provider of the limits
- * @return a flow of [HlsSegment] with limits applied
  * @author hua0512
- * @date : 2024/9/21 14:09
+ * @date : 2024/9/24 10:15
  */
-internal fun Flow<HlsSegment>.limit(limitProvider: DownloadLimitsProvider): Flow<HlsSegment> = flow {
-
-    var duration = 0.0
-    var size = 0L
-
-    var (maxSize, maxDuration) = limitProvider()
 
 
-    fun reset() {
-      duration = 0.0
-      size = 0
-    }
+suspend fun String.processHls(
+  client: HttpClient,
+  limitsProvider: DownloadLimitsProvider,
+  pathProvider: DownloadPathProvider,
+  combineTsFiles: Boolean,
+): Flow<HlsSegment> {
 
-    fun isLimitReached() = (maxSize != 0L && size >= maxSize) || (maxDuration != 0.0f && duration >= maxDuration)
-
-    collect { value ->
-      // if limit reached, end the segment
-      if (isLimitReached()) {
-        logger.info("Limit reached, end hls...")
-        emit(HlsSegment.EndSegment)
-        reset()
-      }
-      // if segment is data segment, add to duration and size
-      if (value is HlsSegment.DataSegment) {
-        duration += value.duration
-        size += value.data.size
-//        logger.trace("Duration: $duration, Size: $size")
-      }
-
-      emit(value)
-    }
-
-    reset()
-  }
+  val isOneFile = combineTsFiles
+  val fetcher = PlayListFetcher(client)
+  val baseUrl = this.substringBeforeLast("/") + "/"
+  return fetcher.consume(this)
+    .resolve()
+    .download(baseUrl, client)
+    .limit(limitsProvider)
+    .dump(pathProvider, isOneFile)
+    .dumpPlaylist(!isOneFile, pathProvider)
+    .flowOn(Dispatchers.IO)
+}

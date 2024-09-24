@@ -32,18 +32,17 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.slf4j.LoggerFactory
 
-/**
- * @author hua0512
- * @date : 2024/9/12 21:31
- */
 
 private const val TAG = "PlayListResolver"
 private val logger = LoggerFactory.getLogger(TAG)
 
 private val NUMBER_REGEX = """(\d+)""".toRegex()
 
-
-fun Flow<MediaPlaylist>.resolve(): Flow<List<MediaSegment>> = flow {
+/**
+ * @author hua0512
+ * @date : 2024/9/12 21:31
+ */
+internal fun Flow<MediaPlaylist>.resolve(): Flow<List<MediaSegment>> = flow {
 
   var lastMediaSequence = 0L
   var lastSequenceNumber = 0L
@@ -66,9 +65,11 @@ fun Flow<MediaPlaylist>.resolve(): Flow<List<MediaSegment>> = flow {
       lastSequenceNumber = 0
     }
 
-    if (mediaSequence - 1 != lastMediaSequence) {
-      logger.warn("Playlist sequence discontinuity detected: $lastSequenceNumber -> $mediaSequence")
-      discontinuity = true
+    if (mediaSequence != lastMediaSequence) {
+      if (lastMediaSequence != 0L && mediaSequence - 1 != lastMediaSequence) {
+        logger.warn("Playlist sequence discontinuity detected: $lastMediaSequence -> $mediaSequence")
+        discontinuity = true
+      }
     }
 
     lastMediaSequence = mediaSequence
@@ -80,7 +81,6 @@ fun Flow<MediaPlaylist>.resolve(): Flow<List<MediaSegment>> = flow {
     if (segments.any { it.discontinuity() }) {
       logger.warn("Segment discontinuity detected in playlist")
     }
-
 
 
     if (segments.isEmpty()) {

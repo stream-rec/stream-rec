@@ -50,7 +50,7 @@ internal const val SEGMENTS_FOLDER = "segments"
  * @date : 2024/9/19 22:30
  */
 
-fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOneFile: Boolean = true): Flow<HlsSegment> = flow<HlsSegment> {
+internal fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOneFile: Boolean = true): Flow<HlsSegment> = flow<HlsSegment> {
 
   var index = 0
   var lastPath: String? = null
@@ -77,17 +77,31 @@ fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOneFile: Bo
 
   fun close() {
     writer?.close()
+  }
+
+  fun reset() {
+    close()
     writer = null
   }
 
   collect {
     val path = pathProvider(index)
-    if (writer == null || !combineOneFile || it is HlsSegment.EndSegment) {
-      close()
-      if (it is HlsSegment.EndSegment) {
-        emit(it)
-        return@collect
+
+    if (it is HlsSegment.EndSegment) {
+      reset()
+      emit(it)
+
+      if (!combineOneFile) {
+        index++
       }
+      return@collect
+    }
+
+    if (!combineOneFile) {
+      close()
+      init(path, it as DataSegment)
+    } else if (writer == null) {
+      reset()
       init(path, it as DataSegment)
       index++
     }
@@ -98,7 +112,7 @@ fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOneFile: Bo
     emit(it)
   }
 
-  close()
+  reset()
 
 }.catch {
   logger.error("Error while dumping: $it")

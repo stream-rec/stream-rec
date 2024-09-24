@@ -31,11 +31,10 @@ import github.hua0512.hls.data.HlsSegment.DataSegment
 import github.hua0512.utils.logger
 import github.hua0512.utils.mapConcurrently
 import github.hua0512.utils.writeToOutputStream
-import io.ktor.client.HttpClient
-import io.ktor.client.plugins.retry
-import io.ktor.client.plugins.timeout
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsChannel
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.lindstrom.m3u8.model.MediaSegment
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -43,7 +42,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.transform
 import java.io.ByteArrayOutputStream
-import java.util.Collections
+import java.util.*
 
 private const val TAG = "SegmentFetcher"
 private val logger = logger(TAG)
@@ -64,7 +63,7 @@ private fun addSegment(segment: String) {
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-fun Flow<List<MediaSegment>>.download(downloadBaseUrl: String, client: HttpClient): Flow<HlsSegment> =
+internal fun Flow<List<MediaSegment>>.download(downloadBaseUrl: String, client: HttpClient): Flow<HlsSegment> =
   transform { segments ->
 
     suspend fun downloadSegment(url: String): ByteArray? {

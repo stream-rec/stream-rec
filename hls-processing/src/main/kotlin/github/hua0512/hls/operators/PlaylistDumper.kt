@@ -33,6 +33,7 @@ import io.lindstrom.m3u8.model.MediaPlaylist
 import io.lindstrom.m3u8.model.MediaSegment
 import io.lindstrom.m3u8.parser.MediaPlaylistParser
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
@@ -50,7 +51,7 @@ private const val MEDIA_PLAYLIST_VERSION = 3
 private const val MEDIA_PLAYLIST_TARGET_DURATION = 10
 
 
-fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider: DownloadPathProvider): Flow<HlsSegment> =
+internal fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider: DownloadPathProvider): Flow<HlsSegment> =
   if (!enable) this
   else flow {
 
@@ -63,7 +64,7 @@ fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider: Downloa
         val path = pathProvider(index)
         val segments = Path(path).resolve(SEGMENTS_FOLDER)
         segments.createDirectories()
-        val playlistPath = Path(path).resolve("playlist_$index.m3u8")
+        val playlistPath = Path(path).resolve("playlist_${index}_${System.currentTimeMillis()}.m3u8")
         logger.info("Writing playlist to $playlistPath")
         val fos = playlistPath.toFile().outputStream().buffered()
         val parser = MediaPlaylistParser()
@@ -73,6 +74,7 @@ fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider: Downloa
           it.write(playListBuffer.array())
         }
       }
+      builder = null
     }
 
     fun initBuilder() {
@@ -87,9 +89,9 @@ fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider: Downloa
 
       if (value is HlsSegment.EndSegment) {
         close()
+        index++
         // reset
         initBuilder()
-        index++
         return@collect
       }
 
@@ -112,4 +114,6 @@ fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider: Downloa
     close()
     builder = null
 
+  }.catch { e ->
+    logger.error("Error:", e)
   }

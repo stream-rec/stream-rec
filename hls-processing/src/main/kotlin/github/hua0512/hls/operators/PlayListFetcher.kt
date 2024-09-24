@@ -26,11 +26,10 @@
 
 package github.hua0512.hls.operators
 
-import io.ktor.client.HttpClient
-import io.ktor.client.plugins.retry
-import io.ktor.client.plugins.timeout
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.lindstrom.m3u8.model.MasterPlaylist
 import io.lindstrom.m3u8.model.MediaPlaylist
 import io.lindstrom.m3u8.parser.MasterPlaylistParser
