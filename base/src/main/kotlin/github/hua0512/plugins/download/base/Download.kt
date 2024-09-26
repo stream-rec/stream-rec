@@ -50,7 +50,10 @@ import github.hua0512.plugins.download.exceptions.DownloadFilePresentException
 import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.plugins.event.EventCenter
-import github.hua0512.utils.*
+import github.hua0512.utils.deleteFile
+import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.withIORetry
 import io.ktor.http.*
 import io.ktor.http.auth.*
 import kotlinx.coroutines.*
@@ -266,7 +269,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           pb?.reset()
         }
         val danmuPath = filePath
-          .replace(fileExtension, ContentType.Application.Xml.contentSubtype)
+          .replace(filePath.substringAfterLast("."), ContentType.Application.Xml.contentSubtype)
           .replace(PART_PREFIX, "")
 
         danmu.videoStartTime = Instant.fromEpochSeconds(time)
@@ -275,7 +278,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           danmu.filePath = danmuPath
           if (danmuJob == null) {
             danmuJob = async {
-              val status: Boolean = github.hua0512.utils.withIORetry(
+              val status: Boolean = withIORetry(
                 maxRetries = 5,
                 maxDelayMillis = 30000,
                 onError = { e, count -> logger.error("(${streamer.name}) danmu failed to initialize($count): $e") }) {

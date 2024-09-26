@@ -7,6 +7,7 @@ import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.utils.asStreamFlow
 import github.hua0512.hls.operators.processHls
+import github.hua0512.plugins.StreamerContext
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -103,8 +104,10 @@ class NativeDownloadTest {
     val downloadUrl =
       "http://pull-hls-q11.douyincdn.com/thirdgame/stream-692368629249344318_or4.m3u8?expire=1727769348&sign=1d15677d42367d0e9c1531e93795b1fe&major_anchor_level=common"
 
+    val context = StreamerContext("test", "")
+
     downloadUrl
-      .processHls(client, limitsProvider, pathProvider, isOneFile)
+      .processHls(client, context, limitsProvider, pathProvider, isOneFile, { _, _ -> }, { _, _, _ -> })
       .collect()
   }
 }

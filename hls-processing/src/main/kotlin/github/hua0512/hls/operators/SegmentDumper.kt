@@ -27,11 +27,13 @@
 package github.hua0512.hls.operators
 
 import github.hua0512.download.DownloadPathProvider
+import github.hua0512.download.OnDownloadStarted
+import github.hua0512.download.OnDownloaded
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.data.HlsSegment.DataSegment
-import github.hua0512.utils.logger
+import github.hua0512.plugins.StreamerContext
+import github.hua0512.utils.slogger
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import java.io.RandomAccessFile
 import java.nio.file.Files
@@ -41,7 +43,6 @@ import kotlin.io.path.pathString
 
 
 private const val TAG = "HlsDumper"
-private val logger = logger(TAG)
 
 internal const val SEGMENTS_FOLDER = "segments"
 
@@ -50,7 +51,15 @@ internal const val SEGMENTS_FOLDER = "segments"
  * @date : 2024/9/19 22:30
  */
 
-internal fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOneFile: Boolean = true): Flow<HlsSegment> = flow<HlsSegment> {
+internal fun Flow<HlsSegment>.dump(
+  context: StreamerContext,
+  pathProvider: DownloadPathProvider,
+  combineOneFile: Boolean = true,
+  onDownloadStarted: OnDownloadStarted? = null,
+  onDownloaded: OnDownloaded = { _, _, _, _ -> Unit },
+): Flow<HlsSegment> = flow<HlsSegment> {
+
+  val logger = context.slogger(TAG)
 
   var index = 0
   var lastPath: String? = null
@@ -64,6 +73,7 @@ internal fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOn
       segmentsFolder.createDirectories()
       segmentsFolder.resolve(segment.name)
     } else {
+      onDownloadStarted?.invoke(path, System.currentTimeMillis())
       Files.createFile(Path(path))
     }
     logger.info("Writing to: {}", file)
@@ -76,7 +86,12 @@ internal fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOn
 
 
   fun close() {
-    writer?.close()
+    writer?.also {
+      it.close()
+      if (combineOneFile) {
+        onDownloaded(index, lastPath!!, lastOpenTime, System.currentTimeMillis())
+      }
+    }
   }
 
   fun reset() {
@@ -85,7 +100,6 @@ internal fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOn
   }
 
   collect {
-    val path = pathProvider(index)
 
     if (it is HlsSegment.EndSegment) {
       reset()
@@ -97,23 +111,24 @@ internal fun Flow<HlsSegment>.dump(pathProvider: DownloadPathProvider, combineOn
       return@collect
     }
 
+    it as DataSegment
+
     if (!combineOneFile) {
       close()
-      init(path, it as DataSegment)
+      val path = pathProvider(index)
+      init(path, it)
     } else if (writer == null) {
       reset()
-      init(path, it as DataSegment)
+      val path = pathProvider(index)
+      init(path, it)
       index++
     }
 
-    (it as? DataSegment)?.let { segment ->
-      writer?.write(segment.data)
-    }
+    writer?.write(it.data)
+
     emit(it)
   }
 
   reset()
-
-}.catch {
-  logger.error("Error while dumping: $it")
+  logger.debug("$TAG end")
 }

@@ -27,16 +27,19 @@
 package github.hua0512.hls.operators
 
 import github.hua0512.download.DownloadPathProvider
+import github.hua0512.download.OnDownloadStarted
+import github.hua0512.download.OnDownloaded
 import github.hua0512.hls.data.HlsSegment
-import github.hua0512.utils.logger
+import github.hua0512.plugins.StreamerContext
+import github.hua0512.utils.slogger
 import io.lindstrom.m3u8.model.MediaPlaylist
 import io.lindstrom.m3u8.model.MediaSegment
 import io.lindstrom.m3u8.parser.MediaPlaylistParser
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.pathString
 
 /**
  * @author hua0512
@@ -45,36 +48,49 @@ import kotlin.io.path.createDirectories
  */
 
 private const val TAG = "HlsPlaylistDumper"
-private val logger = logger(TAG)
 
 private const val MEDIA_PLAYLIST_VERSION = 3
 private const val MEDIA_PLAYLIST_TARGET_DURATION = 10
 
 
-internal fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider: DownloadPathProvider): Flow<HlsSegment> =
+internal fun Flow<HlsSegment>.dumpPlaylist(
+  context: StreamerContext,
+  enable: Boolean = false,
+  pathProvider: DownloadPathProvider,
+  onDownloadStarted: OnDownloadStarted? = null,
+  onDownloaded: OnDownloaded,
+): Flow<HlsSegment> =
   if (!enable) this
   else flow {
+
+    val logger = context.slogger(TAG)
 
     var builder: MediaPlaylist.Builder? = null
 
     var index = 0
+    var lastTime = 0L
+    var lastPath: String? = null
 
     fun close() {
       builder?.build()?.let { playlist ->
-        val path = pathProvider(index)
-        val segments = Path(path).resolve(SEGMENTS_FOLDER)
-        segments.createDirectories()
-        val playlistPath = Path(path).resolve("playlist_${index}_${System.currentTimeMillis()}.m3u8")
-        logger.info("Writing playlist to $playlistPath")
-        val fos = playlistPath.toFile().outputStream().buffered()
+        logger.info("Writing playlist to $lastPath")
+        val fos = Path(lastPath!!).toFile().outputStream().buffered()
         val parser = MediaPlaylistParser()
 
         fos.use {
           val playListBuffer = parser.writePlaylistAsByteBuffer(playlist)
           it.write(playListBuffer.array())
         }
+        onDownloaded(index, lastPath!!, lastTime, System.currentTimeMillis())
       }
       builder = null
+    }
+
+    fun reset() {
+      builder = null
+      index = 0
+      lastTime = 0L
+      lastPath = null
     }
 
     fun initBuilder() {
@@ -83,6 +99,13 @@ internal fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider
         .targetDuration(MEDIA_PLAYLIST_TARGET_DURATION)
         .mediaSequence(index.toLong())
         .ongoing(false)
+      lastTime = System.currentTimeMillis()
+      val path = pathProvider(index)
+      val segments = Path(path).resolve(SEGMENTS_FOLDER)
+      segments.createDirectories()
+      val playlistPath = Path(path).resolve("playlist_${index}_${System.currentTimeMillis()}.m3u8")
+      lastPath = playlistPath.pathString
+      onDownloadStarted?.invoke(lastPath!!, lastTime)
     }
 
     collect { value ->
@@ -112,8 +135,6 @@ internal fun Flow<HlsSegment>.dumpPlaylist(enable: Boolean = false, pathProvider
     }
 
     close()
-    builder = null
-
-  }.catch { e ->
-    logger.error("Error:", e)
+    reset()
+    logger.debug("$TAG end")
   }

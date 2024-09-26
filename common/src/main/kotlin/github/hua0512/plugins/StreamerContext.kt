@@ -24,32 +24,13 @@
  * SOFTWARE.
  */
 
-package github.hua0512.download
+package github.hua0512.plugins
 
 /**
- * Type alias for a function that updates the download progress.
- *
- * @param fileSize The size of the file being downloaded.
- * @param duration The duration of the download.
- * @param bitrate The bitrate of the download.
+ * @author hua0512
+ * @date : 2024/9/26 22:10
  */
-typealias DownloadProgressUpdater = (fileSize: Long, duration: Float, bitrate: Float) -> Unit
-
-/**
- * Type alias for a function that provides download limits.
- *
- * @return A pair containing the maximum download size and the maximum duration of the download.
- */
-typealias DownloadLimitsProvider = () -> Pair<Long, Float>
-
-/**
- * Type alias for a function that provides the download path.
- *
- * @param index The index of the download.
- * @return The path to save the downloaded file.
- */
-typealias DownloadPathProvider = (index: Int) -> String
-
-typealias OnDownloaded = (index: Int, path: String, createAt: Long, dumpedAt: Long) -> Unit
-
-typealias OnDownloadStarted = (path: String, createAt: Long) -> Unit
+data class StreamerContext(
+  val name: String,
+  val title: String,
+)

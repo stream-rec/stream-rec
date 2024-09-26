@@ -24,32 +24,58 @@
  * SOFTWARE.
  */
 
-package github.hua0512.download
+package github.hua0512.hls.operators
+
+import github.hua0512.download.DownloadProgressUpdater
+import github.hua0512.hls.data.HlsSegment
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+
 
 /**
- * Type alias for a function that updates the download progress.
- *
- * @param fileSize The size of the file being downloaded.
- * @param duration The duration of the download.
- * @param bitrate The bitrate of the download.
+ * @author hua0512
+ * @date : 2024/9/26 14:01
  */
-typealias DownloadProgressUpdater = (fileSize: Long, duration: Float, bitrate: Float) -> Unit
 
-/**
- * Type alias for a function that provides download limits.
- *
- * @return A pair containing the maximum download size and the maximum duration of the download.
- */
-typealias DownloadLimitsProvider = () -> Pair<Long, Float>
+internal fun Flow<HlsSegment>.stats(progressUpdater: DownloadProgressUpdater) = flow<HlsSegment> {
 
-/**
- * Type alias for a function that provides the download path.
- *
- * @param index The index of the download.
- * @return The path to save the downloaded file.
- */
-typealias DownloadPathProvider = (index: Int) -> String
+  var size = 0L
+  var duration = 0f
+  var startTime = 0L
 
-typealias OnDownloaded = (index: Int, path: String, createAt: Long, dumpedAt: Long) -> Unit
 
-typealias OnDownloadStarted = (path: String, createAt: Long) -> Unit
+  fun reset() {
+    size = 0
+    duration = 0f
+    startTime = 0
+  }
+
+  fun calculateBitrate(): Float {
+    val endAt = System.currentTimeMillis()
+    val duration = (endAt - startTime) / 1000f
+    val bitrate = size * 8 / duration / 1024f // kbps
+    return bitrate
+  }
+
+  collect {
+    if (it is HlsSegment.EndSegment) {
+      reset()
+      progressUpdater(0, 0f, 0f)
+      emit(it)
+      return@collect
+    }
+
+    if (size == 0L) {
+      startTime = System.currentTimeMillis()
+    }
+
+    it as HlsSegment.DataSegment
+    size += it.data.size
+    duration += it.duration.toFloat()
+    val bitrate = calculateBitrate()
+    progressUpdater(size, duration, bitrate)
+    emit(it)
+  }
+
+  reset()
+}

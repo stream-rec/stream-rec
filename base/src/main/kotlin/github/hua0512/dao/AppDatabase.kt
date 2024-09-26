@@ -49,7 +49,7 @@ import github.hua0512.data.upload.entity.UploadResultEntity
 import github.hua0512.data.user.UserEntity
 
 /**
- * Room based app database
+ * Room-based app database
  * @author hua0512
  * @date : 2024/5/15 21:53
  */
@@ -70,13 +70,14 @@ import github.hua0512.data.user.UserEntity
     AutoMigration(from = 2, to = 3),
     AutoMigration(from = 4, to = 6),
     AutoMigration(from = 6, to = 7),
+    AutoMigration(from = 7, to = 8),
   ]
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
   companion object {
-    const val DATABASE_VERSION = 7
+    const val DATABASE_VERSION = 8
   }
 
   abstract fun getConfigDao(): AppConfigDao

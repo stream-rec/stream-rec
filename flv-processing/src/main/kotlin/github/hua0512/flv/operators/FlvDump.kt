@@ -27,6 +27,7 @@
 package github.hua0512.flv.operators
 
 import github.hua0512.download.DownloadPathProvider
+import github.hua0512.download.OnDownloaded
 import github.hua0512.flv.FlvWriter
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
@@ -44,15 +45,13 @@ import kotlin.io.path.outputStream
 private const val TAG = "FlvDumperCenter"
 private val logger = logger(TAG)
 
-typealias onStreamDumped = (index: Int, path: String, createAt: Long, dumpedAt: Long) -> Unit
-
 
 /**
  * Dump flv data to file by path provider.
  * @author hua0512
  * @date : 2024/9/9 2:15
  */
-fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: onStreamDumped = { _, _, _, _ -> }): Flow<FlvData> = flow {
+fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDownloaded = { _, _, _, _ -> }): Flow<FlvData> = flow {
 
   var writer: FlvWriter? = null
   var lastPath: String? = null

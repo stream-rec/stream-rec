@@ -28,8 +28,10 @@ package github.hua0512.hls.operators
 
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.data.HlsSegment.DataSegment
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import github.hua0512.utils.mapConcurrently
+import github.hua0512.utils.slogger
 import github.hua0512.utils.writeToOutputStream
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -41,11 +43,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.transform
+import org.slf4j.Logger
 import java.io.ByteArrayOutputStream
 import java.util.*
 
 private const val TAG = "SegmentFetcher"
-private val logger = logger(TAG)
 
 private const val MAX_CONCURRENCY = 3
 private const val MAX_RETRIES = 3
@@ -62,14 +64,18 @@ private fun addSegment(segment: String) {
   downloadedSegments[segment] = true
 }
 
+private var logger: Logger? = null
+
 @OptIn(ExperimentalCoroutinesApi::class)
-internal fun Flow<List<MediaSegment>>.download(downloadBaseUrl: String, client: HttpClient): Flow<HlsSegment> =
+internal fun Flow<List<MediaSegment>>.download(context: StreamerContext, downloadBaseUrl: String, client: HttpClient): Flow<HlsSegment> =
   transform { segments ->
+
+    if (logger == null) logger = context.slogger(TAG)
 
     suspend fun downloadSegment(url: String): ByteArray? {
       val channel = try {
         client.get(url) {
-          this.timeout {
+          timeout {
             requestTimeoutMillis = 10000
             connectTimeoutMillis = 10000
             socketTimeoutMillis = 10000
@@ -80,7 +86,7 @@ internal fun Flow<List<MediaSegment>>.download(downloadBaseUrl: String, client: 
           }
         }.bodyAsChannel()
       } catch (e: Exception) {
-        logger.error("Failed to download segment: $url", e)
+        logger!!.error("Failed to download segment: $url", e)
         return null
       }
       val bos = ByteArrayOutputStream()
@@ -96,16 +102,16 @@ internal fun Flow<List<MediaSegment>>.download(downloadBaseUrl: String, client: 
       val url = downloadBaseUrl + segment.uri()
       val normalizedUri = segment.uri().substringBefore("?")
       return if (downloadedSegments.contains(normalizedUri)) {
-        logger.debug("Segment already downloaded: $normalizedUri")
+        logger!!.debug("Segment already downloaded: $normalizedUri")
         null
       } else {
-        logger.debug("Downloading segment: $url")
+        logger!!.debug("Downloading segment: $url")
         downloadSegment(url)?.let {
-          logger.debug("Downloaded segment: ${normalizedUri}, duration = ${segment.duration()}")
+          logger!!.debug("Downloaded segment: ${normalizedUri}, duration = ${segment.duration()}")
           addSegment(normalizedUri)
           DataSegment(normalizedUri, segment.duration(), it) to segment
         } ?: run {
-          logger.error("Failed to download segment: $normalizedUri")
+          logger!!.error("Failed to download segment: $normalizedUri")
           null
         }
       }
@@ -119,7 +125,7 @@ internal fun Flow<List<MediaSegment>>.download(downloadBaseUrl: String, client: 
       }
       .filterNotNull()
       .collect {
-        logger.debug("Segment d: {}", it.second)
+//        logger.debug("Segment d: {}", it.second)
         emit(it.first)
       }
   }

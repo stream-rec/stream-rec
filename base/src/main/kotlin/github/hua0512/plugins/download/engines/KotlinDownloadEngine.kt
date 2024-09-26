@@ -28,6 +28,7 @@ package github.hua0512.plugins.download.engines
 
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.download.DownloadProgressUpdater
+import github.hua0512.download.OnDownloadStarted
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.operators.analyze
@@ -35,31 +36,29 @@ import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.operators.stats
 import github.hua0512.flv.utils.asStreamFlow
+import github.hua0512.hls.operators.processHls
+import github.hua0512.plugins.StreamerContext
+import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.writeToFile
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.timeout
-import io.ktor.client.request.header
-import io.ktor.client.request.prepareGet
-import io.ktor.client.request.request
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.http.HttpHeaders
+import io.ktor.client.*
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.io.path.fileSize
+import kotlin.io.path.pathString
 
 /**
  * Download engine using Ktor client
@@ -89,28 +88,54 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
    */
   internal var enableFlvFix = false
 
+  /**
+   * Whether to combine ts files
+   */
+  internal var combineTsFiles = false
+
   override suspend fun start() = coroutineScope {
     val client = HttpClient(OkHttp) {
+      // 30s to timeout
+      val timeoutSeconds = 30000L
       engine {
         config {
           followRedirects(true)
         }
+
         request {
           timeout {
-            requestTimeoutMillis = 30000
+            requestTimeoutMillis = timeoutSeconds
           }
         }
       }
+      install(HttpTimeout) {
+        requestTimeoutMillis = timeoutSeconds
+        connectTimeoutMillis = timeoutSeconds
+        socketTimeoutMillis = timeoutSeconds
+      }
     }
-    producer = Channel<FlvData>()
+
+    val isFlv = if (downloadUrl!!.contains(".flv")) true
+    else if (downloadUrl!!.contains(".m3u8")) false
+    else throw FatalDownloadErrorException("Unsupported download URL: $downloadUrl")
 
     var lastDownloadedTime = 0L
+
+    val downloadStartCallback: OnDownloadStarted = { path: String, createAt: Long ->
+      onDownloadStarted(path, createAt)
+    }
 
     val pathProvider = { index: Int ->
       val time = Clock.System.now()
       lastDownloadedTime = time.epochSeconds
       downloadFilePath.replacePlaceholders(streamer!!.name, index.toString(), time).also {
-        onDownloadStarted(it, time.epochSeconds)
+        if (isFlv)
+          downloadStartCallback(it, time.epochSeconds)
+      }.run {
+        // use parent folder for m3u8 with combining files disabled
+        if (!isFlv && !combineTsFiles) {
+          Path(this).parent.pathString
+        } else this
       }
     }
 
@@ -125,41 +150,60 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       lastSize = size
     }
 
-    downloadJob = launch {
-      client.prepareGet(downloadUrl!!) {
-        this@KotlinDownloadEngine.headers.forEach {
-          header(it.key, it.value)
-        }
-        this@KotlinDownloadEngine.cookies?.let { header(HttpHeaders.Cookie, it) }
-      }.execute { httpResponse ->
-        val channel = httpResponse.bodyAsChannel()
+    val streamerContext = StreamerContext(streamer!!.name, "")
 
-        if (enableFlvFix) {
-          // flv fix
-          channel.asStreamFlow()
-            .onEach { producer.send(it) }
-            .flowOn(Dispatchers.IO)
-            .catch {
-              // log exception when download flow failed
-              mainLogger.error("download flow failed: $it")
-            }
-            .collect()
-        } else {
-          val outputPath = pathProvider(0)
-          val file = Path.of(outputPath).toFile()
-          channel.writeToFile(file, sizedUpdater) {
-            onDownloaded(FileInfo(outputPath, file.length(), lastDownloadedTime, file.lastModified() / 1000), null)
+    downloadJob = launch {
+      // check if its flv download url
+      if (isFlv) {
+        producer = Channel<FlvData>()
+        client.prepareGet(downloadUrl!!) {
+          this@KotlinDownloadEngine.headers.forEach {
+            header(it.key, it.value)
           }
-          // call onDownloaded when nothing is downloaded
-          if (!file.exists()) {
-            onDownloaded(FileInfo(outputPath, 0, lastDownloadedTime, lastDownloadedTime), null)
+          this@KotlinDownloadEngine.cookies?.let { header(HttpHeaders.Cookie, it) }
+        }.execute { httpResponse ->
+          val channel = httpResponse.bodyAsChannel()
+
+          if (enableFlvFix) {
+            // flv fix
+            channel.asStreamFlow()
+              .onEach { producer.send(it) }
+              .flowOn(Dispatchers.IO)
+              .catch {
+                // log exception when download flow failed
+                mainLogger.error("download flow failed: $it")
+              }
+              .collect()
+          } else {
+            val outputPath = pathProvider(0)
+            val file = Path.of(outputPath).toFile()
+            channel.writeToFile(file, sizedUpdater) {
+              onDownloaded(FileInfo(outputPath, file.length(), lastDownloadedTime, file.lastModified() / 1000), null)
+            }
+            // call onDownloaded when nothing is downloaded
+            if (!file.exists()) {
+              onDownloaded(FileInfo(outputPath, 0, lastDownloadedTime, lastDownloadedTime), null)
+            }
           }
         }
+        producer.close()
+
+      } else {
+        downloadUrl!!.processHls(
+          client,
+          streamerContext,
+          limitsProvider,
+          pathProvider,
+          combineTsFiles,
+          downloadStartCallback,
+          sizedUpdater,
+        ) { index, path, createdAt, openAt ->
+          onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), null)
+        }.collect()
       }
-      producer.close()
     }
 
-    if (enableFlvFix) {
+    if (isFlv && enableFlvFix) {
       producer.receiveAsFlow()
         .process(limitsProvider)
         .analyze(metaInfoProvider)

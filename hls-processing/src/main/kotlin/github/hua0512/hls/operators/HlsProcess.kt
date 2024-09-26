@@ -26,35 +26,54 @@
 
 package github.hua0512.hls.operators
 
-import github.hua0512.download.DownloadLimitsProvider
-import github.hua0512.download.DownloadPathProvider
+import github.hua0512.download.*
 import github.hua0512.hls.data.HlsSegment
+import github.hua0512.plugins.StreamerContext
+import github.hua0512.utils.slogger
 import io.ktor.client.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
+import java.io.IOException
+
+
+private const val TAG = "HlsProcessor"
+
 
 /**
  * @author hua0512
  * @date : 2024/9/24 10:15
  */
-
-
 suspend fun String.processHls(
   client: HttpClient,
+  context: StreamerContext,
   limitsProvider: DownloadLimitsProvider,
   pathProvider: DownloadPathProvider,
   combineTsFiles: Boolean,
+  onDownloadStarted: OnDownloadStarted,
+  onDownloadProgressUpdater: DownloadProgressUpdater,
+  onDownloaded: OnDownloaded = { _, _, _, _ -> },
 ): Flow<HlsSegment> {
 
+  val logger = context.slogger(TAG)
+
   val isOneFile = combineTsFiles
-  val fetcher = PlayListFetcher(client)
-  val baseUrl = this.substringBeforeLast("/") + "/"
+  val fetcher = PlayListFetcher(client, context)
+  val separator = "/"
+  val baseUrl = this.substringBeforeLast(separator) + separator
   return fetcher.consume(this)
-    .resolve()
-    .download(baseUrl, client)
-    .limit(limitsProvider)
-    .dump(pathProvider, isOneFile)
-    .dumpPlaylist(!isOneFile, pathProvider)
+    .catch { cause ->
+      if (cause is IOException) {
+        throw cause
+      }
+      logger.debug("Error: ${cause.message}")
+    }
+    .resolve(context)
+    .download(context, baseUrl, client)
+    .limit(context, limitsProvider)
+    .dump(context, pathProvider, isOneFile, onDownloadStarted, onDownloaded)
+    .dumpPlaylist(context, !isOneFile, pathProvider, onDownloadStarted, onDownloaded)
+    .stats(onDownloadProgressUpdater)
     .flowOn(Dispatchers.IO)
 }

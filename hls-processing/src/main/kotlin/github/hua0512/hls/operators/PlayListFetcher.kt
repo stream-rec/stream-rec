@@ -26,6 +26,8 @@
 
 package github.hua0512.hls.operators
 
+import github.hua0512.plugins.StreamerContext
+import github.hua0512.utils.slogger
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -48,16 +50,15 @@ import org.slf4j.LoggerFactory
 
  */
 
-class PlayListFetcher(val client: HttpClient) {
+class PlayListFetcher(val client: HttpClient, streamer: StreamerContext) {
 
   private var disposed = false
   private var debugEnabled = true
 
+  private val logger = streamer.slogger(TAG)
+
   companion object {
     private const val TAG = "PlayListFetcher"
-
-    private val logger = LoggerFactory.getLogger(TAG)
-
   }
 
 

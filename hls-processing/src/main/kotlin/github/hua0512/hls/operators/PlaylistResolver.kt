@@ -26,6 +26,8 @@
 
 package github.hua0512.hls.operators
 
+import github.hua0512.plugins.StreamerContext
+import github.hua0512.utils.slogger
 import io.lindstrom.m3u8.model.MediaPlaylist
 import io.lindstrom.m3u8.model.MediaSegment
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +36,6 @@ import org.slf4j.LoggerFactory
 
 
 private const val TAG = "PlayListResolver"
-private val logger = LoggerFactory.getLogger(TAG)
 
 private val NUMBER_REGEX = """(\d+)""".toRegex()
 
@@ -42,7 +43,9 @@ private val NUMBER_REGEX = """(\d+)""".toRegex()
  * @author hua0512
  * @date : 2024/9/12 21:31
  */
-internal fun Flow<MediaPlaylist>.resolve(): Flow<List<MediaSegment>> = flow {
+internal fun Flow<MediaPlaylist>.resolve(context: StreamerContext): Flow<List<MediaSegment>> = flow {
+
+  val logger = context.slogger(TAG)
 
   var lastMediaSequence = 0L
   var lastSequenceNumber = 0L
@@ -99,5 +102,6 @@ internal fun Flow<MediaPlaylist>.resolve(): Flow<List<MediaSegment>> = flow {
   }
 
   reset()
+  logger.debug("$TAG end")
 
 }

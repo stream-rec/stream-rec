@@ -32,7 +32,28 @@ package github.hua0512.hls.data
  */
 sealed class HlsSegment {
 
-  data class DataSegment(val name: String, val duration: Double, internal val data: ByteArray) : HlsSegment()
+  data class DataSegment(val name: String, val duration: Double, internal val data: ByteArray) : HlsSegment() {
+
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as DataSegment
+
+      if (name != other.name) return false
+      if (duration != other.duration) return false
+      if (!data.contentEquals(other.data)) return false
+
+      return true
+    }
+
+    override fun hashCode(): Int {
+      var result = name.hashCode()
+      result = 31 * result + duration.hashCode()
+      result = 31 * result + data.contentHashCode()
+      return result
+    }
+  }
 
   data object EndSegment : HlsSegment()
 
