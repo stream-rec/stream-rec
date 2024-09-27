@@ -15,40 +15,30 @@ RUN yum update -y && \
     rm -rf /var/cache/yum
 
 # Install ffmpeg with architecture check
-RUN if [ "$(uname -m)" = "x86_64" ]; then \
-      curl -L https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz | tar -xJ && \
-      mv ffmpeg-*-linux64-*/bin/ffmpeg /usr/local/bin/ && \
-      mv ffmpeg-*-linux64-*/bin/ffprobe /usr/local/bin/ && \
-      mv ffmpeg-*-linux64-*/bin/ffplay /usr/local/bin/ && \
-      chmod +x /usr/local/bin/ffmpeg && \
-      chmod +x /usr/local/bin/ffprobe && \
-      chmod +x /usr/local/bin/ffplay; \
-    elif [ "$(uname -m)" = "aarch64" ]; then \
-      curl -L https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz | tar -xJ && \
-      mv ffmpeg-*-linuxarm64-*/bin/ffmpeg /usr/local/bin/ && \
-      mv ffmpeg-*-linuxarm64-*/bin/ffprobe /usr/local/bin/ && \
-      mv ffmpeg-*-linuxarm64-*/bin/ffplay /usr/local/bin/ && \
-      chmod +x /usr/local/bin/ffmpeg && \
-      chmod +x /usr/local/bin/ffprobe && \
-      chmod +x /usr/local/bin/ffplay; \
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+      URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+      URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz"; \
     fi && \
+    curl -L $URL | tar -xJ && \
+    mv ffmpeg-*-linux*/bin/{ffmpeg,ffprobe,ffplay} /usr/local/bin/ && \
+    chmod +x /usr/local/bin/{ffmpeg,ffprobe,ffplay} && \
     rm -rf ffmpeg-*
 
 # Install rclone with architecture check
-RUN if [ "$(uname -m)" = "x86_64" ]; then \
-      curl -L https://downloads.rclone.org/rclone-current-linux-amd64.zip -o rclone.zip && \
-      unzip rclone.zip && \
-      mv rclone-*-linux-amd64/rclone /usr/bin/ && \
-      chown root:root /usr/bin/rclone && \
-      chmod 755 /usr/bin/rclone; \
-    elif [ "$(uname -m)" = "aarch64" ]; then \
-      curl -L https://downloads.rclone.org/rclone-current-linux-arm64.zip -o rclone.zip && \
-      unzip rclone.zip && \
-      mv rclone-*-linux-arm64/rclone /usr/bin/ && \
-      chown root:root /usr/bin/rclone && \
-      chmod 755 /usr/bin/rclone; \
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+      URL="https://downloads.rclone.org/rclone-current-linux-amd64.zip"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+      URL="https://downloads.rclone.org/rclone-current-linux-arm64.zip"; \
     fi && \
-    rm -rf rclone.zip rclone-* \
+    curl -L $URL -o rclone.zip && \
+    unzip rclone.zip && \
+    mv rclone-*-linux*/rclone /usr/bin/ && \
+    chown root:root /usr/bin/rclone && \
+    chmod 755 /usr/bin/rclone && \
+    rm -rf rclone.zip rclone-*
 
 # Set timezone
 ENV TZ=\${TZ:-Europe/Paris}
