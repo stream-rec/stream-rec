@@ -27,12 +27,12 @@
 package github.hua0512.utils
 
 import github.hua0512.download.DownloadProgressUpdater
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.core.isEmpty
-import io.ktor.utils.io.core.readBytes
+import io.ktor.utils.io.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import kotlinx.io.readByteArray
 import java.io.File
 import java.io.OutputStream
 import kotlin.math.roundToInt
@@ -57,20 +57,18 @@ suspend fun ByteReadChannel.writeToFile(
 
   try {
     fos.use {
-      while (!isClosedForRead) {
+      while (!exhausted()) {
         val packet = readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-        while (!packet.isEmpty) {
-          val bytes = packet.readBytes()
-          fos.write(bytes)
-          // update total downloaded bytes
-          downloaded += bytes.size
-          // update download statistics
-          val currentTime = Clock.System.now().toEpochMilliseconds()
-          val timeDiff = currentTime - lastTime
-          if (timeDiff > 1000) {
-            val bitrate = (downloaded * 8.0 / timeDiff).roundToInt()
-            sizedUpdater(downloaded, timeDiff.toFloat(), bitrate.toFloat())
-          }
+        val bytes = packet.readByteArray()
+        fos.write(bytes)
+        // update total downloaded bytes
+        downloaded += bytes.size
+        // update download statistics
+        val currentTime = Clock.System.now().toEpochMilliseconds()
+        val timeDiff = currentTime - lastTime
+        if (timeDiff > 1000) {
+          val bitrate = (downloaded * 8.0 / timeDiff).roundToInt()
+          sizedUpdater(downloaded, timeDiff.toFloat(), bitrate.toFloat())
         }
       }
     }
@@ -79,21 +77,19 @@ suspend fun ByteReadChannel.writeToFile(
     mainLogger.error("writeToFile error: ${e.message}")
     false
   } finally {
-    if (file.exists()) {
-      onDownloadComplete()
-    }
+    onDownloadComplete()
   }
 }
 
 suspend fun ByteReadChannel.writeToOutputStream(outputStream: OutputStream) = withContext(Dispatchers.IO) {
   outputStream.use { os ->
-    while (!isClosedForRead) {
+
+    while (!exhausted()) {
       val packet = readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-      while (!packet.isEmpty) {
-        val bytes = packet.readBytes()
-        os.write(bytes)
-      }
+      val bytes = packet.readByteArray()
+      os.write(bytes)
     }
+
   }
 }
 

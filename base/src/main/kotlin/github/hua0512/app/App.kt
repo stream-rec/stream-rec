@@ -27,27 +27,14 @@
 package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
-import github.hua0512.plugins.download.COMMON_USER_AGENT
-import github.hua0512.utils.RemoveWebSocketExtensionsInterceptor
 import github.hua0512.utils.isWindows
 import io.ktor.client.*
-import io.ktor.client.engine.*
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.compression.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.plugins.websocket.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 
-class App(val json: Json) {
+class App(val json: Json, val client: HttpClient) {
 
   companion object {
     @JvmStatic
@@ -71,59 +58,6 @@ class App(val json: Json) {
       } else {
         this
       }
-    }
-  }
-
-  val client by lazy {
-    HttpClient(OkHttp) {
-      engine {
-        pipelining = true
-        // Configure proxy
-        // Parse proxy from ENV variable
-        val httpProxy = System.getenv("HTTP_PROXY")
-        val httpsProxy = System.getenv("HTTPS_PROXY")
-        if (httpProxy.isNullOrEmpty().not()) {
-          val httpProxyUrl = Url(httpProxy)
-          logger.info("Using HTTP proxy: {}", httpProxyUrl)
-          proxy = ProxyBuilder.http(httpProxyUrl)
-        }
-        config {
-          // Workaround for: https://youtrack.jetbrains.com/issue/KTOR-6266/OkHttp-Remove-the-default-WebSocket-extension-header-Sec-WebSocket-Extensions
-          addInterceptor(RemoveWebSocketExtensionsInterceptor())
-        }
-      }
-      install(Logging) {
-        logger = Logger.DEFAULT
-        level = LogLevel.NONE
-      }
-
-      install(UserAgent) {
-        agent = COMMON_USER_AGENT
-      }
-
-      install(HttpRequestRetry) {
-        retryOnServerErrors(maxRetries = 3)
-        exponentialDelay()
-      }
-
-      install(ContentNegotiation) {
-        json(json)
-      }
-
-      install(ContentEncoding) {
-        gzip(0.9F)
-      }
-
-//      install(HttpCookies) {
-//        storage = AcceptAllCookiesStorage()
-//      }
-
-      install(HttpTimeout) {
-        requestTimeoutMillis = 5000
-        connectTimeoutMillis = 5000
-        socketTimeoutMillis = 30.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
-      }
-      install(WebSockets)
     }
   }
 

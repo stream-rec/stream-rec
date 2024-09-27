@@ -47,7 +47,7 @@ fun CoroutineScope.backendServer(
   streamDataRepo: StreamDataRepo,
   statsRepo: SummaryStatsRepo,
   uploadRepo: UploadRepo,
-): NettyApplicationEngine {
+): EmbeddedServer<ApplicationEngine, NettyApplicationEngine.Configuration> {
   return embeddedServer(
     Netty,
     port = 12555,

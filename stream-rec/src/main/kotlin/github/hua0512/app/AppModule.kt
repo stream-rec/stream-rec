@@ -38,6 +38,7 @@ import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
+import io.ktor.client.*
 import kotlinx.serialization.json.Json
 import javax.inject.Singleton
 
@@ -53,8 +54,15 @@ class AppModule {
   }
 
   @Provides
+  fun provideHttpFactory(): IHttpClientFactory = HttpClientFactory()
+
+  @Provides
   @Singleton
-  fun provideAppConfig(json: Json): App = App(json)
+  fun provideHttpClient(json: Json, clientFactory: IHttpClientFactory): HttpClient = clientFactory.getClient(json)
+
+  @Provides
+  @Singleton
+  fun provideAppConfig(json: Json, client: HttpClient): App = App(json, client)
 
   @Provides
   @Singleton
