@@ -18,4 +18,5 @@ dependencies {
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.io.lindstrom.m3u8.parser)
   testImplementation(libs.bundles.test.jvm)
+  testImplementation(libs.io.ktor.client.okhttp)
 }

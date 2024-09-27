@@ -39,8 +39,6 @@ dependencies {
   implementation(project(":platforms"))
   implementation(project(":stream-rec-backend"))
   implementation(project(":flv-processing"))
-  testImplementation(project(":hls-processing"))
-  testImplementation(libs.io.lindstrom.m3u8.parser)
   implementation(libs.androidx.sqlite.bundled)
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.compiler)

@@ -1,28 +1,3 @@
-import github.hua0512.app.HttpClientFactory
-import github.hua0512.download.DownloadPathProvider
-import github.hua0512.flv.FlvMetaInfoProcessor
-import github.hua0512.flv.FlvMetaInfoProvider
-import github.hua0512.flv.operators.analyze
-import github.hua0512.flv.operators.dump
-import github.hua0512.flv.operators.process
-import github.hua0512.flv.utils.asStreamFlow
-import github.hua0512.hls.operators.downloadHls
-import github.hua0512.hls.operators.process
-import github.hua0512.plugins.StreamerContext
-import io.ktor.client.plugins.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.utils.io.*
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.Clock
-import kotlinx.serialization.json.Json
-import kotlin.test.Test
-import kotlin.time.Duration
-
 /*
  * MIT License
  *
@@ -49,18 +24,49 @@ import kotlin.time.Duration
  * SOFTWARE.
  */
 
+package github.hua0512
+
+import github.hua0512.flv.FlvMetaInfoProcessor
+import github.hua0512.flv.FlvMetaInfoProvider
+import github.hua0512.flv.operators.analyze
+import github.hua0512.flv.operators.dump
+import github.hua0512.flv.operators.process
+import github.hua0512.flv.utils.asStreamFlow
+import github.hua0512.plugins.StreamerContext
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Clock
+import org.junit.jupiter.api.Test
+import kotlin.time.Duration
+
 /**
  * @author hua0512
- * @date : 2024/6/8 12:45
+ * @date : 2024/9/27 22:00
  */
-class NativeDownloadTest {
+
+class KtorTest {
 
 
   private val streamerContext = StreamerContext("test", "")
 
   @Test
-  fun testDownloadLargeChunked(): Unit = runTest(timeout = Duration.INFINITE) {
-    val client = HttpClientFactory().getClient(Json)
+  fun testDownloadFlvFix(): Unit = runTest(timeout = Duration.INFINITE) {
+    val client = HttpClient(OkHttp) {
+      engine {
+        config {
+          followRedirects(true)
+        }
+      }
+    }
 
 
     val downloadFlow = flow {
@@ -76,7 +82,7 @@ class NativeDownloadTest {
     }
 
     val metaInfoProvider = FlvMetaInfoProvider()
-    val pathProvider = { index: Int -> "E:/test/testSample_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
+    val pathProvider = { index: Int -> "F:/test/testSample_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
     val limitsProvider = { 0L to 3600.0f }
     client.use {
       downloadFlow
@@ -93,27 +99,6 @@ class NativeDownloadTest {
         .onCompletion {
           println("onCompletion...")
         }
-        .collect()
-    }
-  }
-
-  @Test
-  fun testHlsDownload(): Unit = runTest(timeout = Duration.INFINITE) {
-    val client = HttpClientFactory().getClient(Json)
-    val isOneFile = false
-    val pathProvider: DownloadPathProvider = { index: Int -> if (isOneFile) "F:/test/hls/testSample.ts" else "F:/test/hls" }
-
-    val limitsProvider = { 0L to 120.0f }
-
-    val downloadUrl =
-      "http://pull-hls-q11.douyincdn.com/thirdgame/stream-692368629249344318_or4.m3u8?expire=1727769348&sign=1d15677d42367d0e9c1531e93795b1fe&major_anchor_level=common"
-
-    val context = StreamerContext("test", "")
-
-    client.use {
-      downloadUrl
-        .downloadHls(client, context)
-        .process(context, limitsProvider, pathProvider, isOneFile, { _, _ -> }, { _, _, _ -> })
         .collect()
     }
   }
