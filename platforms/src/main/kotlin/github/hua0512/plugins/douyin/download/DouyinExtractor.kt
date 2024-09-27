@@ -78,9 +78,16 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       parameter("web_rid", webRid)
     }
     if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("$url failed to get live data with status code ${response.status}")
-    val data = response.bodyAsText()
-    jsonData = json.parseToJsonElement(data)
-    val liveData = jsonData.jsonObject["data"]?.jsonObject?.get("data")?.jsonArray?.get(0)?.jsonObject ?: run {
+    jsonData = json.parseToJsonElement(response.bodyAsText())
+    val data = jsonData.jsonObject["data"]?.jsonObject
+    val errorMsg = data?.jsonObject?.get("prompts")?.jsonPrimitive?.content
+
+    if (errorMsg != null) {
+      logger.error("$url : $errorMsg")
+      return false
+    }
+
+    val liveData = data?.get("data")?.jsonArray?.get(0)?.jsonObject ?: run {
       logger.debug("$url unable to get live data")
       return false
     }
@@ -94,7 +101,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   override suspend fun extract(): MediaInfo {
     val isLive = isLive()
 
-    val liveData = jsonData.jsonObject["data"]!!.jsonObject["data"]!!.jsonArray[0].jsonObject
+    val liveData = jsonData.jsonObject["data"]?.jsonObject["data"]?.jsonArray[0]?.jsonObject ?: return MediaInfo(url, "", "", "", "")
 
     val title = liveData["title"]!!.jsonPrimitive.content
     val owner = liveData["owner"]
