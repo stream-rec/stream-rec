@@ -208,7 +208,7 @@ internal fun processFFmpegOutputLine(
   onDownloadProgress: (Long, Long, String) -> Unit,
 ) {
   when {
-    !line.startsWith("size=") -> {
+    !line.startsWith("size=") && !line.startsWith("frame=") -> {
       logger.info("$streamer - $line")
       // handle opening segment for writing
       if (line.startsWith("[segment @") && line.contains("Opening")) {
