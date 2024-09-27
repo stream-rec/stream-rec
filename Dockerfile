@@ -51,7 +51,7 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     rm -rf rclone.zip rclone-* \
 
 # Set timezone
-ENV TZ=${TZ:-Europe/Paris}
+ENV TZ=\${TZ:-Europe/Paris}
 
 EXPOSE 12555
 
