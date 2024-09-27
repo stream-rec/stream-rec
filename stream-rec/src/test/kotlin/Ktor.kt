@@ -56,6 +56,8 @@ import kotlin.time.Duration
 class NativeDownloadTest {
 
 
+  private val streamerContext = StreamerContext("test", "")
+
   @Test
   fun testDownloadLargeChunked(): Unit = runTest(timeout = Duration.INFINITE) {
     val client = HttpClientFactory().getClient(Json)
@@ -69,7 +71,7 @@ class NativeDownloadTest {
       }
         .execute { httpResponse ->
           val channel: ByteReadChannel = httpResponse.bodyAsChannel()
-          channel.asStreamFlow().collect { emit(it) }
+          channel.asStreamFlow(context = streamerContext).collect { emit(it) }
         }
     }
 
@@ -78,7 +80,7 @@ class NativeDownloadTest {
     val limitsProvider = { 0L to 3600.0f }
     client.use {
       downloadFlow
-        .process(limitsProvider)
+        .process(limitsProvider, streamerContext)
         .analyze(metaInfoProvider)
         .dump(pathProvider) { index, path, createdAt, updatedAt ->
           println("onStreamDumped: $path, $createdAt -> $updatedAt")

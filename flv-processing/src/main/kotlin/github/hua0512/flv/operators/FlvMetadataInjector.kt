@@ -37,6 +37,7 @@ import github.hua0512.flv.naturalMetadataKeyOrder
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.createMetadataTag
 import github.hua0512.flv.utils.isTrueScripTag
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
@@ -53,13 +54,13 @@ private val logger by lazy { logger(TAG) }
  * @author hua0512
  * @date : 2024/9/7 16:13
  */
-internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.injectMetadata(context: StreamerContext): Flow<FlvData> = flow {
 
 
   fun Amf0Value.asNumber(): Double {
     return when (this) {
       is Amf0Value.Number -> this.value
-      else -> throw FlvDataErrorException("Unexpected AMF value type: ${this::class.qualifiedName}")
+      else -> throw FlvDataErrorException("${context.name} Unexpected AMF value type: ${this::class.qualifiedName}")
     }
   }
 
@@ -76,7 +77,7 @@ internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
     val properties = when (obj) {
       is Amf0Value.EcmaArray -> obj.properties
       is Amf0Value.Object -> obj.properties
-      else -> throw FlvDataErrorException("Unexpected AMF value type in metadata : ${obj::class.qualifiedName}")
+      else -> throw FlvDataErrorException("${context.name} Unexpected AMF value type in metadata : ${obj::class.qualifiedName}")
     }
 
     val extraData = FlvMetadataInfo(
@@ -93,11 +94,11 @@ internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
 
     tagData = tagData.copy(values = listOf(tagData[0], newData))
 
-    logger.debug("Injected metadata: {}", pprint(tagData[1], defaultHeight = 50))
+    logger.debug("${context.name} Injected metadata: {}", pprint(tagData[1], defaultHeight = 50))
 
     // recompute the script tag size
     val newSize = tagData.bodySize
-    logger.debug("Script tag size changed from $oldSize to $newSize")
+    logger.debug("${context.name} Script tag size changed from $oldSize to $newSize")
     return this.copy(header = header.copy(dataSize = newSize), data = tagData)
   }
 
@@ -108,9 +109,9 @@ internal fun Flow<FlvData>.injectMetadata(): Flow<FlvData> = flow {
         emit(newTag)
         return@collect
       } else {
-        logger.debug("Script tag not found...")
+        logger.debug("${context.name} Script tag not found...")
         val scriptTag = createMetadataTag(1, data.header.timestamp, data.header.streamId)
-        logger.debug("Created metadata tag: {}", pprint(scriptTag))
+        logger.debug("${context.name} Created metadata tag: {}", pprint(scriptTag))
         val newTag = scriptTag.injectMetadata()
         emit(newTag)
       }

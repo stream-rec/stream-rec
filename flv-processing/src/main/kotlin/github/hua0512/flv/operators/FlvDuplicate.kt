@@ -27,6 +27,7 @@
 package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -47,7 +48,7 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/17 13:38
  */
-internal fun Flow<FlvData>.removeDuplicates(): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.removeDuplicates(context: StreamerContext): Flow<FlvData> = flow {
   val lastTags = LinkedHashSet<Long>(NUM_LAST_TAGS)
 
   fun reset() {
@@ -61,7 +62,7 @@ internal fun Flow<FlvData>.removeDuplicates(): Flow<FlvData> = flow {
       }
       emit(flvData)
     } else {
-      logger.debug("Found duplicate tag: {}", flvData)
+      logger.debug("${context.name} Found duplicate tag: {}", flvData)
     }
   }
 

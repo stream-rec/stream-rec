@@ -32,6 +32,7 @@ import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.utils.isHeader
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
@@ -54,7 +55,7 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/8 21:03
  */
-fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider): Flow<FlvData> = flow {
+fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerContext): Flow<FlvData> = flow {
 
   // Index of the current stream being processed
   var streamIndex = -1
@@ -69,7 +70,7 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider): Flow<FlvData> = fl
   // Pushes the current metadata information to the infoProvider
   fun pushMetadata() {
     val metadataInfo = analyzer.makeMetaInfo()
-    logger.info("push[{}]: {}", streamIndex, pprint(metadataInfo, defaultHeight = 50))
+    logger.info("${context.name} push[{}]: {}", streamIndex, pprint(metadataInfo, defaultHeight = 50))
     infoProvider[streamIndex] = metadataInfo
   }
 

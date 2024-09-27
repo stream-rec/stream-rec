@@ -39,11 +39,11 @@ import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isSequenceHeader
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onCompletion
 
 
 enum class FlvConcatAction {
@@ -67,7 +67,7 @@ private const val MAX_DURATION = 20_000
  * @author hua0512
  * @date : 2024/9/6 14:16
  */
-internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flow {
 
   var delta = 0L
 
@@ -109,23 +109,23 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
   fun gatherTags(tag: FlvTag) {
     if (tag.isAudioSequenceHeader()) {
       if (lastAudioSequenceTag == null) {
-        logger.debug("Cancel concat due to no last audio sequence header")
+        logger.debug("${context.name} Cancel concat due to no last audio sequence header")
         action = CANCEL
       } else {
         if (tag != lastAudioSequenceTag) {
           action = CANCEL
-          logger.debug("Cancel concat due to audio sequence header changed")
+          logger.debug("${context.name} Cancel concat due to audio sequence header changed")
         }
       }
       lastAudioSequenceTag = tag
     } else if (tag.isVideoSequenceHeader()) {
       if (lastVideoSequenceTag == null) {
-        logger.debug("Cancel concat due to no last video sequence header")
+        logger.debug("${context.name} Cancel concat due to no last video sequence header")
         action = CANCEL
       } else {
         if (tag != lastVideoSequenceTag) {
           action = CANCEL
-          logger.debug("Cancel concat due to video sequence header changed")
+          logger.debug("${context.name} Cancel concat due to video sequence header changed")
         }
       }
       lastVideoSequenceTag = tag
@@ -136,9 +136,9 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
   fun hasGatheringCompleted(): Boolean = (lastTags.last() as FlvTag).header.timestamp >= MAX_DURATION
 
   fun findLastDuplicatedTag(tags: List<FlvData>): Int {
-    logger.debug("Finding duplicated tags...")
+    logger.debug("${context.name} Finding duplicated tags...")
     val lastTag = tags.last() as FlvTag
-    logger.debug("Last tag: {}", lastTag)
+    logger.debug("${context.name} Last tag: {}", lastTag)
 
     for ((i, tag) in tags.withIndex()) {
       if (tag != lastTag) {
@@ -146,11 +146,11 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
       }
 
       if (tags.subList(maxOf(0, i - (lastTags.size - 1)), i).zip(lastTags.dropLast(1)).all { it.first == it.second }) {
-        logger.debug("Last duplicated tag found at index {}, {}", i, tag)
+        logger.debug("${context.name} Last duplicated tag found at index {}, {}", i, tag)
         return i
       }
     }
-    logger.debug("No duplicated tag found")
+    logger.debug("${context.name} No duplicated tag found")
     return -1
   }
 
@@ -191,9 +191,9 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
   }
 
   suspend fun Flow<FlvData>.doConcat() {
-    logger.debug("Concatenating.. gathered {} tags", gatheredTags.size)
+    logger.debug("${context.name} Concatenating.. gathered {} tags", gatheredTags.size)
     var tags = gatheredTags.filter { (it is FlvTag) && !it.isTrueScripTag() && !it.isSequenceHeader() }
-    logger.debug("{} data tags", tags.size)
+    logger.debug("${context.name} {} data tags", tags.size)
 
     if (tags.isEmpty()) return
 
@@ -201,11 +201,11 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
     val seamless = index >= 0
     if (seamless) {
       updateDeltaDuplicated(tags[index] as FlvTag)
-      logger.debug("Updated delta : {}, seamless concat", delta)
+      logger.debug("${context.name} Updated delta : {}, seamless concat", delta)
       tags = tags.subList(index + 1, tags.size)
     } else {
       updateDeltaNonDuplicated(tags[0] as FlvTag)
-      logger.debug("Updated delta : {}, non-seamless concat", delta)
+      logger.debug("${context.name} Updated delta : {}, non-seamless concat", delta)
     }
 
     if (tags.isNotEmpty()) {
@@ -223,7 +223,7 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
 
 
   fun doCancel() = flow {
-    logger.debug("Canceling.. gathered {} tags", gatheredTags.size)
+    logger.debug("${context.name} Canceling.. gathered {} tags", gatheredTags.size)
     assert(lastHeader != null)
     emit(lastHeader!!)
     for (tag in gatheredTags) {
@@ -233,23 +233,16 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
     gatheredTags.clear()
   }
 
-
-  onCompletion {
-    logger.debug("$TAG completed.")
-    if (action == GATHER) {
-      doConcat()
-    }
-    reset()
-  }.collect { data ->
+  collect { data ->
 
     if (data.isHeader()) {
       if (lastHeader == null) {
-        logger.debug("Nop for the first header")
+        logger.debug("${context.name} Nop for the first header")
         lastHeader = data as FlvHeader
         action = NOOP
         emit(data)
       } else {
-        logger.debug("Gathering tags for deduplication...")
+        logger.debug("${context.name} Gathering tags for deduplication...")
         lastHeader = data as FlvHeader
         action = if (action == GATHER) {
           CONCAT_GATHER
@@ -301,5 +294,9 @@ internal fun Flow<FlvData>.concat(): Flow<FlvData> = flow {
       break
     }
   }
-
+  logger.debug("${context.name} completed.")
+  if (action == GATHER) {
+    doConcat()
+  }
+  reset()
 }

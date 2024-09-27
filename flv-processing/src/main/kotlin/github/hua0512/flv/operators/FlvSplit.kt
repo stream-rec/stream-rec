@@ -37,6 +37,7 @@ import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
@@ -44,7 +45,7 @@ import kotlinx.coroutines.flow.flow
 
 
 private const val TAG = "FlvSplitRule"
-private val logger = logger(TAG)
+private val logger by lazy { logger(TAG) }
 
 
 /**
@@ -52,7 +53,7 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/7 0:19
  */
-internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow {
 
   var changed = false // params changed
   var lastHeader: FlvHeader? = null
@@ -90,10 +91,10 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
   }
 
   suspend fun Flow<FlvData>.splitStream() {
-    logger.debug("Splitting stream...")
+    logger.debug("${context.name} Splitting stream...")
     changed = false
     insertHeaderAndTags()
-    logger.debug("Stream split")
+    logger.debug("${context.name} Stream split")
   }
 
 
@@ -125,19 +126,19 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
             if (sps.value != lastSps || pps.value != lastPps) {
               // Annex B format has the ability to decode independently even if SPS, PPS differ from global SPS, PPS
               // do not need to split the stream
-              logger.debug("Nalu SPS or PPS differ from global...")
+              logger.debug("${context.name}  Nalu SPS or PPS differ from global...")
             }
           }
 
           // check if SPS, PPS, IDR order
           // normally SPS should be before PPS, and PPS should be before IDR
           if (sps.index >= pps.index || pps.index >= idrNalUnit.index) {
-            logger.debug("Nalu SPS, PPS, IDR order is incorrect...")
+            logger.debug("${context.name}  Nalu SPS, PPS, IDR order is incorrect...")
             splitStream()
           }
 
         } else {
-          logger.debug("Nalu SPS and PPS not detected...")
+          logger.debug("${context.name} Nalu SPS and PPS not detected...")
           // rare case, there is no SPS, PPS
           // TODO : should we insert the global SPS, PPS here? or just split the stream?
           splitStream()
@@ -160,12 +161,12 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
 
     when {
       tag.isTrueScripTag() -> {
-        logger.debug("Metadata detected: {}", pprint(tag))
+        logger.debug("${context.name} Metadata detected: {}", pprint(tag))
         lastMetadata = tag
       }
 
       tag.isVideoSequenceHeader() -> {
-        logger.debug("Video sequence tag detected: {}", tag)
+        logger.debug("${context.name} Video sequence tag detected: {}", tag)
 
         val avcHeader = AVCSequenceHeaderParser.parse(tag.data.binaryData)
         var sps: NalUnit? = null
@@ -184,7 +185,7 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
         val lastTag = lastVideoSequenceTag
         // check if last video sequence tag is not null and not the same as the current tag
         if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.debug("Video parameters changed: {} -> {}", lastTag.crc32, tag.crc32)
+          logger.debug("${context.name} Video parameters changed: {} -> {}", lastTag.crc32, tag.crc32)
           changed = true
           // Flv streams does not typically use Annex B formatted NAL units
 //          if (lastSps != null && lastPps != null) {
@@ -207,16 +208,16 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
         }
         lastSps = sps
         lastPps = pps
-        logger.debug("SPS : {}", lastSps)
-        logger.debug("PPS : {}", lastPps)
+        logger.debug("${context.name} SPS : {}", lastSps)
+        logger.debug("${context.name} PPS : {}", lastPps)
         lastVideoSequenceTag = tag
       }
 
       tag.isAudioSequenceHeader() -> {
-        logger.debug("Audio sequence tag detected: {}", tag)
+        logger.debug("${context.name} Audio sequence tag detected: {}", tag)
         val lastTag = lastAudioSequenceTag
         if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.debug("Audio parameters changed : {} -> {}", lastTag.crc32, tag.crc32)
+          logger.debug("${context.name} Audio parameters changed : {} -> {}", lastTag.crc32, tag.crc32)
           changed = true
         }
         lastAudioSequenceTag = tag
@@ -234,6 +235,6 @@ internal fun Flow<FlvData>.split(): Flow<FlvData> = flow {
     emit(tag)
   }
 
-  logger.debug("$TAG completed.")
+  logger.debug("${context.name} completed.")
   reset()
 }

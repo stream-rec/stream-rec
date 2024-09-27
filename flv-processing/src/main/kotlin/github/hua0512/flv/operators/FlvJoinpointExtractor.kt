@@ -33,6 +33,7 @@ import github.hua0512.flv.data.amf.Amf0Value
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isScriptTag
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -49,7 +50,7 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/12 1:07
  */
-internal fun Flow<FlvData>.extractJoinPoints(onExtracted: onJoinPointExtracted? = null): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.extractJoinPoints(onExtracted: onJoinPointExtracted? = null, context: StreamerContext): Flow<FlvData> = flow {
 
   val joinPoints = mutableListOf<FlvJoinPoint>()
   var joinPointTag: FlvTag? = null
@@ -83,7 +84,7 @@ internal fun Flow<FlvData>.extractJoinPoints(onExtracted: onJoinPointExtracted? 
     value as FlvTag
 
     joinPointTag?.let { tag ->
-      val joinPoint = makeJoinPoint(tag, value)
+      val joinPoint = makeJoinPoint(tag, value, context)
       joinPoints.add(joinPoint)
       joinPointTag = null
     }
@@ -104,11 +105,11 @@ internal fun Flow<FlvData>.extractJoinPoints(onExtracted: onJoinPointExtracted? 
 
   pushJoinPoint()
   reset()
-  logger.debug("$TAG completed")
+  logger.debug("${context.name} completed")
 }
 
 
-private fun makeJoinPoint(joinPointTag: FlvTag, nextTag: FlvTag): FlvJoinPoint {
+private fun makeJoinPoint(joinPointTag: FlvTag, nextTag: FlvTag, context: StreamerContext): FlvJoinPoint {
 
   val joinPointData = joinPointTag.data as ScriptData
   val joinPointProps = (joinPointData[1] as Amf0Value.Object).properties
@@ -119,9 +120,9 @@ private fun makeJoinPoint(joinPointTag: FlvTag, nextTag: FlvTag): FlvJoinPoint {
     crc32 = (joinPointProps["crc32"] as Amf0Value.Number).value.toLong()
   )
 
-  logger.debug("Join point: {}, next tag: {}", joinPoint, nextTag)
+  logger.debug("${context.name} Join point: {}, next tag: {}", joinPoint, nextTag)
   if (nextTag.crc32 != joinPoint.crc32) {
-    logger.warn("Join point crc32 mismatch, expected: {}, actual: {}", joinPoint.crc32, nextTag.crc32)
+    logger.warn("${context.name} Join point crc32 mismatch, expected: {}, actual: {}", joinPoint.crc32, nextTag.crc32)
   }
 
   return joinPoint

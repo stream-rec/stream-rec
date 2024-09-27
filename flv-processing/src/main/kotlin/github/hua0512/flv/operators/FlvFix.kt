@@ -37,6 +37,7 @@ import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.isVideoTag
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -63,7 +64,7 @@ private const val TOLERANCE = 1
  * @author hua0512
  * @date : 2024/9/6 12:46
  */
-internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
   var delta: Long = 0
   var lastTag: FlvTag? = null
@@ -109,7 +110,7 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
 
     frameRate = (fps as Amf0Value.Number).value
     if (frameRate <= 0) {
-      logger.warn("Invalid frame rate: $frameRate")
+      logger.warn("${context.name} Invalid frame rate: $frameRate")
       return
     }
     videoFrameInterval = calculateVideoFrameInterval(frameRate)
@@ -118,7 +119,7 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
     val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
     soundSampleInterval = 1000 / soundRate
 
-    logger.debug("fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
+    logger.debug("${context.name} fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
   }
 
 
@@ -134,7 +135,7 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
     when (amf) {
       is Amf0Value.Object -> updateVideoParams(amf.properties)
       is Amf0Value.EcmaArray -> updateVideoParams(amf.properties)
-      else -> throw IllegalArgumentException("Invalid script tag data: $amf")
+      else -> throw IllegalArgumentException("${context.name} Invalid script tag data: $amf")
     }
   }
 
@@ -244,16 +245,16 @@ internal fun Flow<FlvData>.fix(): Flow<FlvData> = flow {
 
     if (tag.isTsRebound()) {
       updateDelta(tag)
-      logger.warn("Timestamp rebounded, updated delta: $delta\nlast tag: $lastTag\nlast video tag: $lastVideoTag\nlast audio tag: $lastAudioTag\ncurrent tag: $tag")
+      logger.warn("${context.name} Timestamp rebounded, updated delta: $delta\nlast tag: $lastTag\nlast video tag: $lastVideoTag\nlast audio tag: $lastAudioTag\ncurrent tag: $tag")
     } else if (tag.isNoncontinuous()) {
       updateDelta(tag)
-      logger.warn("Timestamp non continuous, updated delta: $delta\nlast tag: $lastTag\nlast video tag: $lastVideoTag\nlast audio tag: $lastAudioTag\ncurrent tag: $tag")
+      logger.warn("${context.name} Timestamp non continuous, updated delta: $delta\nlast tag: $lastTag\nlast video tag: $lastVideoTag\nlast audio tag: $lastAudioTag\ncurrent tag: $tag")
     }
     val correctedTag = tag.correctTs(delta)
     updateLastTags(correctedTag)
     emit(correctedTag)
   }
 
-  logger.debug("$TAG completed.")
+  logger.debug("${context.name} completed.")
   reset()
 }

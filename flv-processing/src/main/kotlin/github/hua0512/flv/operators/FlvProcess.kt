@@ -29,6 +29,7 @@ package github.hua0512.flv.operators
 import github.hua0512.download.DownloadLimitsProvider
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.utils.isAvcEndSequence
+import github.hua0512.plugins.StreamerContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -41,19 +42,19 @@ import kotlinx.coroutines.flow.flowOn
  * @author hua0512
  * @date : 2024/9/10 11:55
  */
-fun Flow<FlvData>.process(limitsProvider: DownloadLimitsProvider = { 0L to 0.0f }): Flow<FlvData> {
+fun Flow<FlvData>.process(limitsProvider: DownloadLimitsProvider = { 0L to 0.0f }, context: StreamerContext): Flow<FlvData> {
   val (fileSizeLimit, durationLimit) = limitsProvider()
   return this.discardFragmented()
-    .split()
-    .sort()
+    .split(context)
+    .sort(context)
     .filter { !it.isAvcEndSequence() }
-    .correct()
-    .fix()
-    .concat()
-    .limit(fileSizeLimit, durationLimit)
-    .extractJoinPoints()
-    .injectMetadata()
-    .removeDuplicates()
+    .correct(context)
+    .fix(context)
+    .concat(context)
+    .limit(fileSizeLimit, durationLimit, context)
+    .extractJoinPoints(context = context)
+    .injectMetadata(context)
+    .removeDuplicates(context)
     .catch {
       it.printStackTrace()
       println("Error processing FLV data: $it")

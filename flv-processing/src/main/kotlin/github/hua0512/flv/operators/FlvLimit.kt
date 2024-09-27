@@ -35,6 +35,7 @@ import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isNaluKeyFrame
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -48,7 +49,7 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/7 0:02
  */
-internal fun Flow<FlvData>.limit(fileSizeLimit: Long = 0, durationLimit: Float = 0.0f): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.limit(fileSizeLimit: Long = 0, durationLimit: Float = 0.0f, context: StreamerContext): Flow<FlvData> = flow {
 
   var duration: Float = 0.0f
   var fileSize = 0L
@@ -150,11 +151,11 @@ internal fun Flow<FlvData>.limit(fileSizeLimit: Long = 0, durationLimit: Float =
 
 
     if (fileSizeLimit > 0 && isFileSizeLimitReached()) {
-      logger.info("File size limit reached : $fileSize")
+      logger.info("${context.name} File size limit reached : $fileSize")
       return true
     }
     if (durationLimit > 0 && isDurationLimitReached()) {
-      logger.info("Duration limit reached : $duration")
+      logger.info("${context.name} Duration limit reached : $duration")
       return true
     }
 
@@ -179,5 +180,5 @@ internal fun Flow<FlvData>.limit(fileSizeLimit: Long = 0, durationLimit: Float =
   }
 
   reset()
-  logger.debug("$TAG completed")
-}.correct()
+  logger.debug("${context.name} completed")
+}.correct(context)

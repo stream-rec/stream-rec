@@ -36,15 +36,15 @@ import github.hua0512.flv.utils.isNaluKeyFrame
 import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.isVideoTag
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onCompletion
 
 
 private const val TAGS_BUFFER_SIZE = 10
 private const val TAG = "FlvSortRule"
-private val logger = logger(TAG)
+private val logger by lazy { logger(TAG) }
 
 
 /**
@@ -59,7 +59,7 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/6 13:57
  */
-internal fun Flow<FlvData>.sort(): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.sort(context: StreamerContext): Flow<FlvData> = flow {
   val gopTags = mutableListOf<FlvTag>()
 
 
@@ -103,7 +103,7 @@ internal fun Flow<FlvData>.sort(): Flow<FlvData> = flow {
       return
     }
 
-//    logger.debug("Gop tags : {} ", gopTags.size)
+//    logger.debug("${context.name} Gop tags : {} ", gopTags.size)
 
     if (gopTags.size < TAGS_BUFFER_SIZE) {
       val avcHeader = gopTags.firstOrNull { it.isVideoSequenceHeader() }
@@ -135,14 +135,11 @@ internal fun Flow<FlvData>.sort(): Flow<FlvData> = flow {
     reset()
   }
 
-  onCompletion {
-    logger.debug("$TAG completed...")
-    pushTags()
-  }.collect { data ->
+  collect { data ->
     if (data.isHeader() || data.isAvcEndSequence()) {
       pushTags()
       emit(data)
-      logger.debug("Reset gop tags...")
+      logger.debug("${context.name} Reset gop tags...")
       return@collect
     }
 
@@ -155,4 +152,6 @@ internal fun Flow<FlvData>.sort(): Flow<FlvData> = flow {
       gopTags.add(data)
     }
   }
+  pushTags()
+  logger.debug("${context.name}  completed...")
 }

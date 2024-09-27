@@ -28,6 +28,8 @@ package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.HttpClientFactory
 import github.hua0512.data.stream.FileInfo
+import github.hua0512.download.DownloadLimitsProvider
+import github.hua0512.download.DownloadPathProvider
 import github.hua0512.download.DownloadProgressUpdater
 import github.hua0512.download.OnDownloadStarted
 import github.hua0512.flv.FlvMetaInfoProvider
@@ -45,6 +47,7 @@ import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.writeToFile
+import io.ktor.client.HttpClient
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -99,6 +102,10 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
    */
   internal var combineTsFiles = false
 
+
+  // last downloaded segment time
+  private var lastDownloadedTime = 0L
+
   override suspend fun start() = coroutineScope {
     val client = HttpClientFactory().getClient(
       Json,
@@ -119,8 +126,6 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
 
       else -> throw FatalDownloadErrorException("Unsupported download URL: $downloadUrl")
     }
-
-    var lastDownloadedTime = 0L
 
     val downloadStartCallback: OnDownloadStarted = ::onDownloadStarted
 
@@ -154,80 +159,111 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
     downloadJob = launch {
       // check if its flv download url
       if (isFlv) {
-        client.prepareGet(downloadUrl!!) {
-          this@KotlinDownloadEngine.headers.forEach {
-            header(it.key, it.value)
-          }
-          this@KotlinDownloadEngine.cookies?.let { header(HttpHeaders.Cookie, it) }
-        }.execute { httpResponse ->
-          val channel = httpResponse.bodyAsChannel()
-
-          if (enableFlvFix) {
-            // flv fix
-            channel.asStreamFlow()
-              .onEach { producer.send(it) }
-              .flowOn(Dispatchers.IO)
-              .catch {
-                // log exception when download flow failed
-                mainLogger.error("download flow failed: $it")
-              }
-              .collect()
-          } else {
-            val outputPath = pathProvider(0)
-            val file = Path.of(outputPath).toFile()
-            channel.writeToFile(file, sizedUpdater) {
-              onDownloaded(FileInfo(outputPath, file.length(), lastDownloadedTime, file.lastModified() / 1000), null)
-            }
-          }
-        }
-        producer.close()
-
+        handleFlvDownload(client, pathProvider, sizedUpdater, streamerContext)
       } else {
-        downloadUrl!!.downloadHls(client, streamerContext).collect {
-          hlsProducer.send(it)
-        }
-        hlsProducer.close()
+        handleHlsDownload(client, streamerContext)
       }
     }
 
     if (isFlv && enableFlvFix) {
-      producer.receiveAsFlow()
-        .process(limitsProvider)
-        .analyze(metaInfoProvider)
-        .dump(pathProvider) { index, path, createdAt, openAt ->
-          val metaInfo = metaInfoProvider[index] ?: run {
-            mainLogger.warn("$index meta info not found")
-            return@dump
-          }
-          onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)
-          metaInfoProvider.remove(index)
-        }
-        .flowOn(Dispatchers.IO)
-        .stats(sizedUpdater)
-        .flowOn(Dispatchers.Default)
-        .onCompletion {
-          // clear meta info provider when completed
-          metaInfoProvider.clear()
-        }
-        .collect()
+      processFlvDownload(streamerContext, pathProvider, limitsProvider, sizedUpdater)
     } else if (!isFlv) {
-      hlsProducer.receiveAsFlow()
-        .process(
-          streamerContext, limitsProvider,
-          pathProvider,
-          combineTsFiles,
-          downloadStartCallback,
-          sizedUpdater,
-        ) { index, path, createdAt, openAt ->
-          onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), null)
-        }
-        .collect()
+      processHlsDownload(streamerContext, limitsProvider, pathProvider, downloadStartCallback, sizedUpdater)
     }
     // await for download job to finish
     downloadJob.join()
     // download finished
     onDownloadFinished()
     client.close()
+  }
+
+
+  private suspend fun handleFlvDownload(
+    client: HttpClient,
+    pathProvider: DownloadPathProvider,
+    sizedUpdater: DownloadProgressUpdater,
+    streamerContext: StreamerContext,
+  ) {
+    client.prepareGet(downloadUrl!!) {
+      this@KotlinDownloadEngine.headers.forEach { header(it.key, it.value) }
+      cookies?.let { header(HttpHeaders.Cookie, it) }
+    }.execute { httpResponse ->
+      val channel = httpResponse.bodyAsChannel()
+      if (enableFlvFix) {
+        channel
+          .asStreamFlow(context = streamerContext)
+          .onEach { producer.send(it) }
+          .flowOn(Dispatchers.IO)
+          .catch {
+            mainLogger.error("${streamerContext.name} download flow failed: $it")
+          }.collect()
+      } else {
+        val outputPath = pathProvider(0)
+        val file = Path.of(outputPath).toFile()
+        channel.writeToFile(file, sizedUpdater) {
+          onDownloaded(FileInfo(outputPath, file.length(), lastDownloadedTime, file.lastModified() / 1000), null)
+        }
+      }
+    }
+    producer.close()
+  }
+
+  private suspend fun handleHlsDownload(client: HttpClient, streamerContext: StreamerContext) {
+    downloadUrl!!
+      .downloadHls(client, streamerContext)
+      .onCompletion {
+        hlsProducer.close()
+      }.collect {
+        hlsProducer.send(it)
+      }
+  }
+
+
+  private suspend fun processFlvDownload(
+    context: StreamerContext,
+    pathProvider: DownloadPathProvider,
+    limitsProvider: DownloadLimitsProvider,
+    sizedUpdater: DownloadProgressUpdater,
+  ) {
+    producer.receiveAsFlow()
+      .process(limitsProvider, context)
+      .analyze(metaInfoProvider, context)
+      .dump(pathProvider) { index, path, createdAt, openAt ->
+        val metaInfo = metaInfoProvider[index] ?: run {
+          mainLogger.warn("${context.name} $index meta info not found")
+          return@dump
+        }
+        onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)
+        metaInfoProvider.remove(index)
+      }
+      .flowOn(Dispatchers.IO)
+      .stats(sizedUpdater)
+      .flowOn(Dispatchers.Default)
+      .onCompletion {
+        // clear meta info provider when completed
+        metaInfoProvider.clear()
+      }
+      .collect()
+  }
+
+  private suspend fun processHlsDownload(
+    streamerContext: StreamerContext,
+    limitsProvider: DownloadLimitsProvider,
+    pathProvider: DownloadPathProvider,
+    downloadStartCallback: OnDownloadStarted,
+    sizedUpdater: DownloadProgressUpdater,
+  ) {
+    hlsProducer.receiveAsFlow()
+      .process(
+        streamerContext, limitsProvider,
+        pathProvider,
+        combineTsFiles,
+        downloadStartCallback,
+        sizedUpdater,
+      ) { index, path, createdAt, openAt ->
+        onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), null)
+      }
+      .collect()
   }
 
   override suspend fun stop(): Boolean {
