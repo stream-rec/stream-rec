@@ -19,6 +19,6 @@ dependencyResolutionManagement {
   }
 }
 
-arrayOf("base", "common", "platforms", "stream-rec", "stream-rec-backend", "flv-processing", "hls-processing").forEach {
+arrayOf("base", "common", "platforms", "stream-rec", "server", "flv-processing", "hls-processing").forEach {
   include(it)
 }
