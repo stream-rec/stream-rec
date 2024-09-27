@@ -50,12 +50,12 @@ import kotlin.time.toDuration
 
 interface IHttpClientFactory {
 
-  fun getClient(json: Json): HttpClient
+  fun getClient(json: Json, installTimeout: Boolean = true, installWebSockets: Boolean = true): HttpClient
 }
 
 class HttpClientFactory : IHttpClientFactory {
 
-  override fun getClient(json: Json): HttpClient {
+  override fun getClient(json: Json, installTimeout: Boolean, installWebSockets: Boolean): HttpClient {
     return HttpClient(OkHttp) {
       engine {
         pipelining = true
@@ -92,33 +92,32 @@ class HttpClientFactory : IHttpClientFactory {
 //        storage = AcceptAllCookiesStorage()
 //      }
 
-      install(HttpTimeout) {
-        requestTimeoutMillis = 5000
-        connectTimeoutMillis = 5000
-        socketTimeoutMillis = 30.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
+      if (installTimeout) {
+        install(HttpTimeout) {
+          requestTimeoutMillis = 5000
+          connectTimeoutMillis = 5000
+          socketTimeoutMillis = 30.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
+        }
       }
-      install(WebSockets)
-    }
 
+      if (installWebSockets) {
+        install(WebSockets)
+      }
+    }
   }
 
   private fun <T : HttpClientEngineConfig> HttpClientEngineConfig.setProxy() {
-    // Parse proxy from ENV variable
-    val httpProxy = System.getenv("HTTP_PROXY")
-    val httpsProxy = System.getenv("HTTPS_PROXY")
-    val socksProxy = System.getenv("SOCKS_PROXY")
-    if (httpProxy.isNullOrEmpty().not()) {
-      val httpProxyUrl = Url(httpProxy)
-      logger.info("Using HTTP proxy: {}", httpProxyUrl)
-      proxy = ProxyBuilder.http(httpProxyUrl)
-    } else if (httpsProxy.isNullOrEmpty().not()) {
-      val httpsProxyUrl = Url(httpsProxy)
-      logger.info("Using HTTPS proxy: {}", httpsProxyUrl)
-      proxy = ProxyBuilder.http(httpsProxyUrl)
-    } else if (socksProxy.isNullOrEmpty().not()) {
-      val socksProxyUrl = Url(socksProxy)
-      logger.info("Using SOCKS proxy: {}", socksProxyUrl)
-      proxy = ProxyBuilder.socks(socksProxyUrl.host, socksProxyUrl.port)
+    val proxies = listOf("HTTP_PROXY", "HTTPS_PROXY", "SOCKS_PROXY").mapNotNull { env ->
+      System.getenv(env)?.let { env to Url(it) }
+    }
+
+    proxies.firstOrNull()?.let { (type, url) ->
+      logger.info("Using $type proxy: {}", url)
+      proxy = when (type) {
+        "HTTP_PROXY", "HTTPS_PROXY" -> ProxyBuilder.http(url)
+        "SOCKS_PROXY" -> ProxyBuilder.socks(url.host, url.port)
+        else -> null
+      }
     }
   }
 

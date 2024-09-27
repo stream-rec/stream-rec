@@ -29,24 +29,40 @@ package github.hua0512.hls.operators
 import github.hua0512.download.*
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.plugins.StreamerContext
-import github.hua0512.utils.slogger
+import github.hua0512.utils.logger
 import io.ktor.client.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
-import java.io.IOException
 
 
 private const val TAG = "HlsProcessor"
-
+private val logger by lazy { logger(TAG) }
 
 /**
  * @author hua0512
  * @date : 2024/9/24 10:15
  */
-suspend fun String.processHls(
+fun String.downloadHls(
   client: HttpClient,
+  context: StreamerContext,
+): Flow<HlsSegment> {
+  val fetcher = PlayListFetcher(client, context)
+  val separator = "/"
+  val baseUrl = this.substringBeforeLast(separator) + separator
+  return fetcher.consume(this)
+    .resolve(context)
+    .download(context, baseUrl, client)
+    .catch { cause ->
+      logger.error("${context.name} - onCompletion: $cause")
+      emit(HlsSegment.EndSegment)
+    }
+    .flowOn(Dispatchers.IO)
+}
+
+
+fun Flow<HlsSegment>.process(
   context: StreamerContext,
   limitsProvider: DownloadLimitsProvider,
   pathProvider: DownloadPathProvider,
@@ -55,23 +71,8 @@ suspend fun String.processHls(
   onDownloadProgressUpdater: DownloadProgressUpdater,
   onDownloaded: OnDownloaded = { _, _, _, _ -> },
 ): Flow<HlsSegment> {
-
-  val logger = context.slogger(TAG)
-
   val isOneFile = combineTsFiles
-  val fetcher = PlayListFetcher(client, context)
-  val separator = "/"
-  val baseUrl = this.substringBeforeLast(separator) + separator
-  return fetcher.consume(this)
-    .catch { cause ->
-      if (cause is IOException) {
-        throw cause
-      }
-      logger.debug("Error: ${cause.message}")
-    }
-    .resolve(context)
-    .download(context, baseUrl, client)
-    .limit(context, limitsProvider)
+  return this.limit(context, limitsProvider)
     .dump(context, pathProvider, isOneFile, onDownloadStarted, onDownloaded)
     .dumpPlaylist(context, !isOneFile, pathProvider, onDownloadStarted, onDownloaded)
     .stats(onDownloadProgressUpdater)

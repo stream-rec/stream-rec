@@ -31,19 +31,16 @@ import github.hua0512.hls.data.HlsSegment.DataSegment
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import github.hua0512.utils.mapConcurrently
-import github.hua0512.utils.slogger
 import github.hua0512.utils.writeToOutputStream
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.lindstrom.m3u8.model.MediaSegment
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.transform
-import org.slf4j.Logger
+import kotlinx.coroutines.flow.flow
 import java.io.ByteArrayOutputStream
 import java.util.*
 
@@ -54,41 +51,39 @@ private const val MAX_RETRIES = 3
 
 private const val MAX_MAP_SIZE = 100
 
-private val downloadedSegments = Collections.synchronizedMap(object : LinkedHashMap<String, Boolean>(MAX_MAP_SIZE, 0.75f, true) {
-  override fun removeEldestEntry(eldest: Map.Entry<String, Boolean>): Boolean {
-    return size > MAX_MAP_SIZE
-  }
-})
+private val logger by lazy { logger(TAG) }
 
-private fun addSegment(segment: String) {
-  downloadedSegments[segment] = true
-}
-
-private var logger: Logger? = null
-
-@OptIn(ExperimentalCoroutinesApi::class)
 internal fun Flow<List<MediaSegment>>.download(context: StreamerContext, downloadBaseUrl: String, client: HttpClient): Flow<HlsSegment> =
-  transform { segments ->
+  flow {
+    val downloadedSegments = Collections.synchronizedMap(object : LinkedHashMap<String, Boolean>(MAX_MAP_SIZE, 0.75f, true) {
+      override fun removeEldestEntry(eldest: Map.Entry<String, Boolean>): Boolean {
+        return size > MAX_MAP_SIZE
+      }
+    })
 
-    if (logger == null) logger = context.slogger(TAG)
+    fun addSegment(segment: String) {
+      downloadedSegments[segment] = true
+    }
+
+    fun reset() {
+      downloadedSegments.clear()
+    }
 
     suspend fun downloadSegment(url: String): ByteArray? {
-      val channel = try {
-        client.get(url) {
-          timeout {
-            requestTimeoutMillis = 10000
-            connectTimeoutMillis = 10000
-            socketTimeoutMillis = 10000
-          }
-          retry {
-            maxRetries = MAX_RETRIES
-            exponentialDelay(maxDelayMs = 10000)
-          }
-        }.bodyAsChannel()
-      } catch (e: Exception) {
-        logger!!.error("Failed to download segment: $url", e)
-        return null
-      }
+      val maxDelay = 10000L
+
+      val channel = client.get(url) {
+        timeout {
+          requestTimeoutMillis = maxDelay
+          connectTimeoutMillis = maxDelay
+          socketTimeoutMillis = maxDelay
+        }
+        retry {
+          maxRetries = MAX_RETRIES
+          exponentialDelay(maxDelayMs = maxDelay)
+        }
+      }.bodyAsChannel()
+
       val bos = ByteArrayOutputStream()
       channel.writeToOutputStream(bos)
       val bytes = bos.toByteArray()
@@ -102,31 +97,34 @@ internal fun Flow<List<MediaSegment>>.download(context: StreamerContext, downloa
       val url = downloadBaseUrl + segment.uri()
       val normalizedUri = segment.uri().substringBefore("?")
       return if (downloadedSegments.contains(normalizedUri)) {
-        logger!!.debug("Segment already downloaded: $normalizedUri")
+        logger.debug("${context.name} Segment already downloaded: $normalizedUri")
         null
       } else {
-        logger!!.debug("Downloading segment: $url")
+        logger.debug("${context.name} Downloading segment: $url")
         downloadSegment(url)?.let {
-          logger!!.debug("Downloaded segment: ${normalizedUri}, duration = ${segment.duration()}")
+          logger.debug("${context.name} Downloaded segment: ${normalizedUri}, duration = ${segment.duration()}")
           addSegment(normalizedUri)
           DataSegment(normalizedUri, segment.duration(), it) to segment
         } ?: run {
-          logger!!.error("Failed to download segment: $normalizedUri")
+          logger.error("${context.name} Failed to download segment: $normalizedUri")
           null
         }
       }
     }
 
+    collect { segments ->
+      // download segments concurrently preserving order
+      segments.asFlow()
+        .mapConcurrently(MAX_CONCURRENCY, MAX_CONCURRENCY + 1) { segment ->
+          downloadSegment(segment, downloadBaseUrl)
+        }
+        .filterNotNull()
+        .collect {
+//        logger.debug( "Segment d: {}", it.second)
+          emit(it.first)
+        }
+    }
 
-    // download segments concurrently preserving order
-    segments.asFlow()
-      .mapConcurrently(MAX_CONCURRENCY, MAX_CONCURRENCY + 1) { segment ->
-        downloadSegment(segment, downloadBaseUrl)
-      }
-      .filterNotNull()
-      .collect {
-//        logger.debug("Segment d: {}", it.second)
-        emit(it.first)
-      }
+    reset()
   }
 

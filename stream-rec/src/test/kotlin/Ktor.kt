@@ -1,4 +1,4 @@
-import github.hua0512.app.App
+import github.hua0512.app.HttpClientFactory
 import github.hua0512.download.DownloadPathProvider
 import github.hua0512.flv.FlvMetaInfoProcessor
 import github.hua0512.flv.FlvMetaInfoProvider
@@ -6,7 +6,8 @@ import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.utils.asStreamFlow
-import github.hua0512.hls.operators.processHls
+import github.hua0512.hls.operators.downloadHls
+import github.hua0512.hls.operators.process
 import github.hua0512.plugins.StreamerContext
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -57,7 +58,7 @@ class NativeDownloadTest {
 
   @Test
   fun testDownloadLargeChunked(): Unit = runTest(timeout = Duration.INFINITE) {
-    val client = App(Json {}).client
+    val client = HttpClientFactory().getClient(Json)
 
 
     val downloadFlow = flow {
@@ -75,27 +76,28 @@ class NativeDownloadTest {
     val metaInfoProvider = FlvMetaInfoProvider()
     val pathProvider = { index: Int -> "E:/test/testSample_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
     val limitsProvider = { 0L to 3600.0f }
-
-    downloadFlow
-      .process(limitsProvider)
-      .analyze(metaInfoProvider)
-      .dump(pathProvider) { index, path, createdAt, updatedAt ->
-        println("onStreamDumped: $path, $createdAt -> $updatedAt")
-        launch {
-          val status = FlvMetaInfoProcessor.process(path, metaInfoProvider[index]!!, true)
-          if (status)
-            metaInfoProvider.remove(index)
+    client.use {
+      downloadFlow
+        .process(limitsProvider)
+        .analyze(metaInfoProvider)
+        .dump(pathProvider) { index, path, createdAt, updatedAt ->
+          println("onStreamDumped: $path, $createdAt -> $updatedAt")
+          launch {
+            val status = FlvMetaInfoProcessor.process(path, metaInfoProvider[index]!!, true)
+            if (status)
+              metaInfoProvider.remove(index)
+          }
         }
-      }
-      .onCompletion {
-        println("onCompletion...")
-      }
-      .collect()
+        .onCompletion {
+          println("onCompletion...")
+        }
+        .collect()
+    }
   }
 
   @Test
   fun testHlsDownload(): Unit = runTest(timeout = Duration.INFINITE) {
-    val client = App(Json {}).client
+    val client = HttpClientFactory().getClient(Json)
     val isOneFile = false
     val pathProvider: DownloadPathProvider = { index: Int -> if (isOneFile) "F:/test/hls/testSample.ts" else "F:/test/hls" }
 
@@ -106,8 +108,11 @@ class NativeDownloadTest {
 
     val context = StreamerContext("test", "")
 
-    downloadUrl
-      .processHls(client, context, limitsProvider, pathProvider, isOneFile, { _, _ -> }, { _, _, _ -> })
-      .collect()
+    client.use {
+      downloadUrl
+        .downloadHls(client, context)
+        .process(context, limitsProvider, pathProvider, isOneFile, { _, _ -> }, { _, _, _ -> })
+        .collect()
+    }
   }
 }

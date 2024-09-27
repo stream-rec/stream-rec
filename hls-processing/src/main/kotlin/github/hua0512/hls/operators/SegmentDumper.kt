@@ -32,7 +32,7 @@ import github.hua0512.download.OnDownloaded
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.data.HlsSegment.DataSegment
 import github.hua0512.plugins.StreamerContext
-import github.hua0512.utils.slogger
+import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.io.RandomAccessFile
@@ -41,31 +41,40 @@ import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 
-
 private const val TAG = "HlsDumper"
-
+private val logger by lazy { logger(TAG) }
 internal const val SEGMENTS_FOLDER = "segments"
 
 /**
- * @author hua0512
- * @date : 2024/9/19 22:30
+ * Extension function to dump HLS segments to files.
+ *
+ * @receiver Flow<HlsSegment> The flow of HLS segments to be dumped.
+ * @param context StreamerContext The context of the streamer.
+ * @param pathProvider DownloadPathProvider Provides the path for downloading segments.
+ * @param combineOneFile Boolean Whether to combine all segments into one file. Default is true.
+ * @param onDownloadStarted OnDownloadStarted? Callback invoked when download starts. Default is null.
+ * @param onDownloaded OnDownloaded Callback invoked when download completes. Default is a no-op.
+ * @return Flow<HlsSegment> The flow of HLS segments after dumping.
  */
-
 internal fun Flow<HlsSegment>.dump(
   context: StreamerContext,
   pathProvider: DownloadPathProvider,
   combineOneFile: Boolean = true,
   onDownloadStarted: OnDownloadStarted? = null,
   onDownloaded: OnDownloaded = { _, _, _, _ -> Unit },
-): Flow<HlsSegment> = flow<HlsSegment> {
-
-  val logger = context.slogger(TAG)
+): Flow<HlsSegment> = flow {
 
   var index = 0
   var lastPath: String? = null
   var lastOpenTime = 0L
   var writer: RandomAccessFile? = null
 
+  /**
+   * Initializes the file for writing the segment.
+   *
+   * @param path String The path of the file.
+   * @param segment DataSegment The data segment to be written.
+   */
   fun init(path: String, segment: DataSegment) {
     val file = if (!combineOneFile) {
       val origPath = Path(path)
@@ -76,7 +85,7 @@ internal fun Flow<HlsSegment>.dump(
       onDownloadStarted?.invoke(path, System.currentTimeMillis())
       Files.createFile(Path(path))
     }
-    logger.info("Writing to: {}", file)
+    logger.info("${context.name} Writing to: {}", file)
     writer = RandomAccessFile(file.toFile(), "rw").also {
       it.setLength(0)
     }
@@ -84,7 +93,9 @@ internal fun Flow<HlsSegment>.dump(
     lastOpenTime = System.currentTimeMillis()
   }
 
-
+  /**
+   * Closes the current file writer.
+   */
   fun close() {
     writer?.also {
       it.close()
@@ -94,6 +105,9 @@ internal fun Flow<HlsSegment>.dump(
     }
   }
 
+  /**
+   * Resets the writer by closing the current file writer and setting it to null.
+   */
   fun reset() {
     close()
     writer = null
@@ -130,5 +144,5 @@ internal fun Flow<HlsSegment>.dump(
   }
 
   reset()
-  logger.debug("$TAG end")
+  logger.debug("${context.name} end")
 }

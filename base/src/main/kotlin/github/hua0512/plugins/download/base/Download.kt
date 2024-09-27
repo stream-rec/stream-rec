@@ -68,6 +68,7 @@ import java.nio.file.Path
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.path.Path
 import kotlin.io.path.exists
+import kotlin.io.path.extension
 import kotlin.io.path.fileSize
 import kotlin.io.path.pathString
 
@@ -469,7 +470,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   protected fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
     // check if the segment is valid, a valid segment should exist and have a size greater than the minimum part size
-    if (segmentPath.exists() && segmentPath.fileSize() >= app.config.minPartSize) return false
+    if (segmentPath.exists() && (segmentPath.extension != "m3u8" || segmentPath.fileSize() >= app.config.minPartSize)) return false
     logger.error("(${streamer.name}) segment is invalid: ${segmentPath.pathString}")
     // cases where the segment is invalid
     deleteOutputs(segmentPath, danmuPath)

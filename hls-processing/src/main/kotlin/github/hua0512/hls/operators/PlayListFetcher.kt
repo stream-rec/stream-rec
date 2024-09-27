@@ -27,7 +27,10 @@
 package github.hua0512.hls.operators
 
 import github.hua0512.plugins.StreamerContext
-import github.hua0512.utils.slogger
+import github.hua0512.utils.StreamerLoggerContext
+import github.hua0512.utils.debug
+import github.hua0512.utils.logger
+import io.exoquery.pprint
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -41,7 +44,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
 
 
 /**
@@ -50,22 +53,21 @@ import org.slf4j.LoggerFactory
 
  */
 
-class PlayListFetcher(val client: HttpClient, streamer: StreamerContext) {
+class PlayListFetcher(val client: HttpClient, override val streamerContext: StreamerContext) : StreamerLoggerContext {
 
-  private var disposed = false
-  private var debugEnabled = true
-
-  private val logger = streamer.slogger(TAG)
 
   companion object {
     private const val TAG = "PlayListFetcher"
+    private val LOGGER = logger(TAG)
   }
 
+  private var disposed = false
+  override val logger: Logger = LOGGER
+  private var debugEnabled = logger.isDebugEnabled
 
   fun reset() {
     disposed = false
   }
-
 
   private suspend fun fetchPlaylist(url: String): String {
     try {
@@ -82,10 +84,10 @@ class PlayListFetcher(val client: HttpClient, streamer: StreamerContext) {
         }
       }
       val body = request.bodyAsText()
-//      logger.debug("Fetched playlist: $body")
+//      debug("Fetched playlist: $body")
       return body
     } catch (e: Exception) {
-      logger.debug("Failed to fetch playlist: {}", e.message)
+      debug("Failed to fetch playlist: {}", e)
       throw e
     }
   }
@@ -98,12 +100,12 @@ class PlayListFetcher(val client: HttpClient, streamer: StreamerContext) {
       throw IllegalStateException("No variants found in master playlist")
     }
     val bestVariant = variants.maxByOrNull { it.bandwidth() }
-    logger.debug("Best variant: {}", bestVariant)
+    debug("Best variant: {}", bestVariant)
     return bestVariant?.uri() ?: variants.first().uri()
   }
 
 
-  suspend fun consume(urlFlow: String): Flow<MediaPlaylist> = flow {
+  fun consume(urlFlow: String): Flow<MediaPlaylist> = flow {
 
     var url = urlFlow
 
@@ -128,18 +130,18 @@ class PlayListFetcher(val client: HttpClient, streamer: StreamerContext) {
 
         if (isMaster) {
           url = (playlist as MasterPlaylist).getBestQualityVariant()
-          logger.debug("Using variant: $url")
+          debug("Using variant: $url")
           val mediaPlaylistFlow = consume(url)
           emitAll(mediaPlaylistFlow)
           return@flow
         }
 
-        logger.debug("Parsed playlist: {}", playlist)
+        debug("Parsed playlist: {}", pprint(playlist, defaultHeight = 30))
         playlist as MediaPlaylist
         delay = playlist.targetDuration() * 1000L
         emit(playlist)
       } catch (e: Exception) {
-        logger.debug("Failed to fetch playlist: $e")
+        debug("Failed to fetch playlist: $e")
         throw e
       } finally {
         // use playlist target duration / 2 as delay

@@ -39,3 +39,21 @@ val mainLogger: Logger = LoggerFactory.getLogger("Main")
  * @date : 2024/9/8 21:34
  */
 inline fun logger(tag: String) = LoggerFactory.getLogger(tag)
+
+inline fun Logger.debug(message: () -> String) {
+  if (isDebugEnabled) {
+    this.debug(message())
+  }
+}
+
+inline fun Logger.info(message: () -> String) {
+  if (isInfoEnabled) {
+    this.info(message())
+  }
+}
+
+inline fun Logger.warn(message: () -> String) {
+  if (isWarnEnabled) {
+    this.warn(message())
+  }
+}

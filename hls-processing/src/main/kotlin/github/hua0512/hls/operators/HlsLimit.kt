@@ -30,12 +30,12 @@ import github.hua0512.download.DownloadLimitsProvider
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
-import github.hua0512.utils.slogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 
 private const val TAG = "HlsLimit"
+private val logger by lazy { logger(TAG) }
 
 /**
  * Limit the flow of [HlsSegment] based on the [limitProvider]
@@ -45,10 +45,6 @@ private const val TAG = "HlsLimit"
  * @date : 2024/9/21 14:09
  */
 internal fun Flow<HlsSegment>.limit(context: StreamerContext, limitProvider: DownloadLimitsProvider): Flow<HlsSegment> = flow {
-
-  val logger = context.slogger(TAG)
-
-
   var duration = 0.0
   var size = 0L
 
@@ -65,7 +61,7 @@ internal fun Flow<HlsSegment>.limit(context: StreamerContext, limitProvider: Dow
   collect { value ->
     // if limit reached, end the segment
     if (isLimitReached()) {
-      logger.info("Limit reached, end hls...")
+      logger.info("${context.name} Limit reached, end hls...")
       emit(HlsSegment.EndSegment)
       reset()
     }
@@ -73,12 +69,12 @@ internal fun Flow<HlsSegment>.limit(context: StreamerContext, limitProvider: Dow
     if (value is HlsSegment.DataSegment) {
       duration += value.duration
       size += value.data.size
-//        logger.trace("Duration: $duration, Size: $size")
+//        logger.trace(context.name, "Duration: $duration, Size: $size")
     }
 
     emit(value)
   }
 
   reset()
-  logger.debug("$TAG end")
+  logger.debug("${context.name} end")
 }

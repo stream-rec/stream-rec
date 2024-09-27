@@ -27,25 +27,26 @@
 package github.hua0512.hls.operators
 
 import github.hua0512.plugins.StreamerContext
-import github.hua0512.utils.slogger
+import github.hua0512.utils.logger
 import io.lindstrom.m3u8.model.MediaPlaylist
 import io.lindstrom.m3u8.model.MediaSegment
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import org.slf4j.LoggerFactory
 
 
 private const val TAG = "PlayListResolver"
+private val logger by lazy {
+  logger(TAG)
+}
 
 private val NUMBER_REGEX = """(\d+)""".toRegex()
+
 
 /**
  * @author hua0512
  * @date : 2024/9/12 21:31
  */
 internal fun Flow<MediaPlaylist>.resolve(context: StreamerContext): Flow<List<MediaSegment>> = flow {
-
-  val logger = context.slogger(TAG)
 
   var lastMediaSequence = 0L
   var lastSequenceNumber = 0L
@@ -63,14 +64,14 @@ internal fun Flow<MediaPlaylist>.resolve(context: StreamerContext): Flow<List<Me
   collect {
     val mediaSequence = it.mediaSequence()
     if (mediaSequence < lastMediaSequence) {
-      logger.warn("Playlist discontinuity detected: $lastMediaSequence -> $mediaSequence")
+      logger.warn("${context.name} Playlist discontinuity detected: $lastMediaSequence -> $mediaSequence")
       discontinuity = true
       lastSequenceNumber = 0
     }
 
     if (mediaSequence != lastMediaSequence) {
       if (lastMediaSequence != 0L && mediaSequence - 1 != lastMediaSequence) {
-        logger.warn("Playlist sequence discontinuity detected: $lastMediaSequence -> $mediaSequence")
+        logger.warn("${context.name} Playlist sequence discontinuity detected: $lastMediaSequence -> $mediaSequence")
         discontinuity = true
       }
     }
@@ -82,14 +83,14 @@ internal fun Flow<MediaPlaylist>.resolve(context: StreamerContext): Flow<List<Me
 
     // check if segments discontinuity exists
     if (segments.any { it.discontinuity() }) {
-      logger.warn("Segment discontinuity detected in playlist")
+      logger.warn("${context.name} Segment discontinuity detected in playlist")
     }
 
 
     if (segments.isEmpty()) {
       attempts++
       if (attempts > 3) {
-        logger.error("No segments found in playlist")
+        logger.error("${context.name} No segments found in playlist")
         attempts = 0
         throw IllegalStateException("No segments found in playlist")
       }
@@ -97,11 +98,11 @@ internal fun Flow<MediaPlaylist>.resolve(context: StreamerContext): Flow<List<Me
     } else {
       attempts = 0
     }
-//    logger.debug("Emitting segment: {}", segments)
+//    logger.debug("${context.name} Emitting segment: {}", segments)
     emit(segments)
   }
 
   reset()
-  logger.debug("$TAG end")
+  logger.debug("${context.name} end")
 
 }

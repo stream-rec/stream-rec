@@ -31,7 +31,7 @@ import github.hua0512.download.OnDownloadStarted
 import github.hua0512.download.OnDownloaded
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.plugins.StreamerContext
-import github.hua0512.utils.slogger
+import github.hua0512.utils.logger
 import io.lindstrom.m3u8.model.MediaPlaylist
 import io.lindstrom.m3u8.model.MediaSegment
 import io.lindstrom.m3u8.parser.MediaPlaylistParser
@@ -41,18 +41,21 @@ import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.pathString
 
-/**
- * @author hua0512
- * @date : 2024/9/21 14:33
-
- */
-
 private const val TAG = "HlsPlaylistDumper"
-
+private val logger by lazy { logger(TAG) }
 private const val MEDIA_PLAYLIST_VERSION = 3
 private const val MEDIA_PLAYLIST_TARGET_DURATION = 10
 
-
+/**
+ * Extension function to dump HLS segments into a media playlist.
+ *
+ * @param context The context of the streamer.
+ * @param enable Flag to enable or disable the dumping process.
+ * @param pathProvider Function to provide the download path.
+ * @param onDownloadStarted Callback invoked when the download starts.
+ * @param onDownloaded Callback invoked when the download is completed.
+ * @return A Flow of HlsSegment.
+ */
 internal fun Flow<HlsSegment>.dumpPlaylist(
   context: StreamerContext,
   enable: Boolean = false,
@@ -62,18 +65,17 @@ internal fun Flow<HlsSegment>.dumpPlaylist(
 ): Flow<HlsSegment> =
   if (!enable) this
   else flow {
-
-    val logger = context.slogger(TAG)
-
     var builder: MediaPlaylist.Builder? = null
-
     var index = 0
     var lastTime = 0L
     var lastPath: String? = null
 
+    /**
+     * Closes the current playlist by writing it to a file.
+     */
     fun close() {
       builder?.build()?.let { playlist ->
-        logger.info("Writing playlist to $lastPath")
+        logger.info("${context.name} Writing playlist to $lastPath")
         val fos = Path(lastPath!!).toFile().outputStream().buffered()
         val parser = MediaPlaylistParser()
 
@@ -86,6 +88,9 @@ internal fun Flow<HlsSegment>.dumpPlaylist(
       builder = null
     }
 
+    /**
+     * Resets the builder and related variables.
+     */
     fun reset() {
       builder = null
       index = 0
@@ -93,6 +98,9 @@ internal fun Flow<HlsSegment>.dumpPlaylist(
       lastPath = null
     }
 
+    /**
+     * Initializes the MediaPlaylist builder.
+     */
     fun initBuilder() {
       builder = MediaPlaylist.Builder()
         .version(MEDIA_PLAYLIST_VERSION)
@@ -103,17 +111,15 @@ internal fun Flow<HlsSegment>.dumpPlaylist(
       val path = pathProvider(index)
       val segments = Path(path).resolve(SEGMENTS_FOLDER)
       segments.createDirectories()
-      val playlistPath = Path(path).resolve("playlist_${index}_${System.currentTimeMillis()}.m3u8")
+      val playlistPath = Path(path).resolve("PART_playlist_${index}_${System.currentTimeMillis()}.m3u8")
       lastPath = playlistPath.pathString
       onDownloadStarted?.invoke(lastPath!!, lastTime)
     }
 
     collect { value ->
-
       if (value is HlsSegment.EndSegment) {
         close()
         index++
-        // reset
         initBuilder()
         return@collect
       }
@@ -136,5 +142,5 @@ internal fun Flow<HlsSegment>.dumpPlaylist(
 
     close()
     reset()
-    logger.debug("$TAG end")
+    logger.debug("${context.name} end")
   }

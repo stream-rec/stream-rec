@@ -31,25 +31,33 @@ import github.hua0512.hls.data.HlsSegment
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-
 /**
- * @author hua0512
- * @date : 2024/9/26 14:01
+ * Extension function to track and update download progress statistics for HLS segments.
+ *
+ * @param progressUpdater A callback function to update the download progress.
+ * @return A Flow of HlsSegment with progress statistics.
  */
-
 internal fun Flow<HlsSegment>.stats(progressUpdater: DownloadProgressUpdater) = flow<HlsSegment> {
 
   var size = 0L
   var duration = 0f
   var startTime = 0L
 
-
+  /**
+   * Resets the size, duration, and startTime variables.
+   */
   fun reset() {
     size = 0
     duration = 0f
     startTime = 0
+    progressUpdater(0, 0f, 0f)
   }
 
+  /**
+   * Calculates the bitrate based on the size and duration.
+   *
+   * @return The calculated bitrate in kbps.
+   */
   fun calculateBitrate(): Float {
     val endAt = System.currentTimeMillis()
     val duration = (endAt - startTime) / 1000f
@@ -60,7 +68,6 @@ internal fun Flow<HlsSegment>.stats(progressUpdater: DownloadProgressUpdater) = 
   collect {
     if (it is HlsSegment.EndSegment) {
       reset()
-      progressUpdater(0, 0f, 0f)
       emit(it)
       return@collect
     }

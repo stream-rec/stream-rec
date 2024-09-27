@@ -27,10 +27,27 @@
 package github.hua0512.utils
 
 import github.hua0512.plugins.StreamerContext
+import org.slf4j.Logger
 
 /**
  * @author hua0512
  * @date : 2024/9/26 22:52
  */
 
+interface StreamerLoggerContext {
+
+  val streamerContext: StreamerContext
+
+  val logger: Logger
+}
+
 inline fun StreamerContext.slogger(name: String) = logger("$name-${this.name}")
+
+inline fun StreamerLoggerContext.debug(content: String, throwable: Throwable? = null) =
+  logger.debug("${streamerContext.name} $content", throwable)
+
+inline fun StreamerLoggerContext.debug(content: String, vararg objs: Any?) =
+  logger.debug("${streamerContext.name} $content", objs)
+
+inline fun StreamerLoggerContext.debug(content: String) =
+  logger.debug("${streamerContext.name} $content")

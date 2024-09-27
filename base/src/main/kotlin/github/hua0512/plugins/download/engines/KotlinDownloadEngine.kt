@@ -26,6 +26,7 @@
 
 package github.hua0512.plugins.download.engines
 
+import github.hua0512.app.HttpClientFactory
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.download.DownloadProgressUpdater
 import github.hua0512.download.OnDownloadStarted
@@ -36,15 +37,14 @@ import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.operators.stats
 import github.hua0512.flv.utils.asStreamFlow
-import github.hua0512.hls.operators.processHls
+import github.hua0512.hls.data.HlsSegment
+import github.hua0512.hls.operators.downloadHls
+import github.hua0512.hls.operators.process
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.writeToFile
-import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -55,6 +55,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.fileSize
@@ -73,9 +74,14 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
   private lateinit var downloadJob: Job
 
   /**
-   * Producer channel
+   * FLV Producer channel
    */
   private lateinit var producer: Channel<FlvData>
+
+  /**
+   * HLS Producer channel
+   */
+  private lateinit var hlsProducer: Channel<HlsSegment>
 
   /**
    * Meta info provider
@@ -94,38 +100,29 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
   internal var combineTsFiles = false
 
   override suspend fun start() = coroutineScope {
-    val client = HttpClient(OkHttp) {
-      // 30s to timeout
-      val timeoutSeconds = 30000L
-      engine {
-        config {
-          followRedirects(true)
-        }
+    val client = HttpClientFactory().getClient(
+      Json,
+      installTimeout = false,
+      installWebSockets = false
+    )
 
-        request {
-          timeout {
-            requestTimeoutMillis = timeoutSeconds
-          }
-        }
+    val isFlv = when {
+      downloadUrl!!.contains(".flv") -> {
+        producer = Channel<FlvData>()
+        true
       }
-      install(HttpTimeout) {
-        requestTimeoutMillis = timeoutSeconds
-        connectTimeoutMillis = timeoutSeconds
-        socketTimeoutMillis = timeoutSeconds
+
+      downloadUrl!!.contains(".m3u8") -> {
+        hlsProducer = Channel<HlsSegment>()
+        false
       }
+
+      else -> throw FatalDownloadErrorException("Unsupported download URL: $downloadUrl")
     }
-
-    val isFlv = if (downloadUrl!!.contains(".flv")) true
-    else if (downloadUrl!!.contains(".m3u8")) false
-    else throw FatalDownloadErrorException("Unsupported download URL: $downloadUrl")
-
-    if (isFlv) producer = Channel<FlvData>()
 
     var lastDownloadedTime = 0L
 
-    val downloadStartCallback: OnDownloadStarted = { path: String, createAt: Long ->
-      onDownloadStarted(path, createAt)
-    }
+    val downloadStartCallback: OnDownloadStarted = ::onDownloadStarted
 
     val pathProvider = { index: Int ->
       val time = Clock.System.now()
@@ -181,26 +178,15 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
             channel.writeToFile(file, sizedUpdater) {
               onDownloaded(FileInfo(outputPath, file.length(), lastDownloadedTime, file.lastModified() / 1000), null)
             }
-            // call onDownloaded when nothing is downloaded
-            if (!file.exists()) {
-              onDownloaded(FileInfo(outputPath, 0, lastDownloadedTime, lastDownloadedTime), null)
-            }
           }
         }
         producer.close()
 
       } else {
-        downloadUrl!!.processHls(
-          client,
-          streamerContext,
-          limitsProvider,
-          pathProvider,
-          combineTsFiles,
-          downloadStartCallback,
-          sizedUpdater,
-        ) { index, path, createdAt, openAt ->
-          onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), null)
-        }.collect()
+        downloadUrl!!.downloadHls(client, streamerContext).collect {
+          hlsProducer.send(it)
+        }
+        hlsProducer.close()
       }
     }
 
@@ -224,6 +210,18 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
           metaInfoProvider.clear()
         }
         .collect()
+    } else if (!isFlv) {
+      hlsProducer.receiveAsFlow()
+        .process(
+          streamerContext, limitsProvider,
+          pathProvider,
+          combineTsFiles,
+          downloadStartCallback,
+          sizedUpdater,
+        ) { index, path, createdAt, openAt ->
+          onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), null)
+        }
+        .collect()
     }
     // await for download job to finish
     downloadJob.join()
@@ -237,6 +235,9 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       downloadJob.cancel()
       if (this::producer.isInitialized) {
         producer.close()
+      }
+      if (this::hlsProducer.isInitialized) {
+        hlsProducer.close()
       }
       return true
     }
