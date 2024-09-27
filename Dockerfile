@@ -25,12 +25,12 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
       chmod +x /usr/local/bin/ffplay; \
     elif [ "$(uname -m)" = "aarch64" ]; then \
       curl -L https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz | tar -xJ && \
-     mv ffmpeg-*-linux64-*/bin/ffmpeg /usr/local/bin/ && \
-           mv ffmpeg-*-linux64-*/bin/ffprobe /usr/local/bin/ && \
-           mv ffmpeg-*-linux64-*/bin/ffplay /usr/local/bin/ && \
-           chmod +x /usr/local/bin/ffmpeg && \
-           chmod +x /usr/local/bin/ffprobe && \
-           chmod +x /usr/local/bin/ffplay; \
+      mv ffmpeg-*-linuxarm64-*/bin/ffmpeg /usr/local/bin/ && \
+      mv ffmpeg-*-linuxarm64-*/bin/ffprobe /usr/local/bin/ && \
+      mv ffmpeg-*-linuxarm64-*/bin/ffplay /usr/local/bin/ && \
+      chmod +x /usr/local/bin/ffmpeg && \
+      chmod +x /usr/local/bin/ffprobe && \
+      chmod +x /usr/local/bin/ffplay; \
     fi && \
     rm -rf ffmpeg-*
 
