@@ -119,6 +119,8 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
     else if (downloadUrl!!.contains(".m3u8")) false
     else throw FatalDownloadErrorException("Unsupported download URL: $downloadUrl")
 
+    if (isFlv) producer = Channel<FlvData>()
+
     var lastDownloadedTime = 0L
 
     val downloadStartCallback: OnDownloadStarted = { path: String, createAt: Long ->
@@ -155,7 +157,6 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
     downloadJob = launch {
       // check if its flv download url
       if (isFlv) {
-        producer = Channel<FlvData>()
         client.prepareGet(downloadUrl!!) {
           this@KotlinDownloadEngine.headers.forEach {
             header(it.key, it.value)

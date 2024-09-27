@@ -204,11 +204,14 @@ class StreamerDownloadManager(
           is FatalDownloadErrorException, is CancellationException -> {
             streamer.isLive = false
             callback?.onLiveStatusChanged(streamer, false)
-            logger.error("${streamer.name} invalid exception : ${e.message}")
+            logger.error("${streamer.name} invalid exception", e)
             throw e
           }
 
-          else -> onStreamDownloadError(e)
+          else -> {
+            logger.error("${streamer.name} download error", e)
+            onStreamDownloadError(e)
+          }
         }
       } finally {
         isDownloading = false
