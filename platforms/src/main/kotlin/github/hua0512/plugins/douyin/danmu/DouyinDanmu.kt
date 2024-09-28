@@ -58,7 +58,7 @@ import kotlinx.datetime.Instant
  */
 class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
 
-  override var websocketUrl: String = "wss://webcast5-ws-web-hl.douyin.com/webcast/im/push/v2/"
+  override var websocketUrl: String = "wss://webcast5-ws-web-lq.douyin.com/webcast/im/push/v2/"
 
   override val heartBeatDelay: Long = 10000
 
