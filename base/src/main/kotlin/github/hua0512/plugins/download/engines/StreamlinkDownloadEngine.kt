@@ -32,7 +32,6 @@ import github.hua0512.utils.isWindows
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
-import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -57,7 +56,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
   override suspend fun start() = coroutineScope {
     ensureHlsUrl()
-    initPath()
+    initPath(Clock.System.now())
     val streamlinkInputArgs = mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
       // add program args
       if (programArgs.isNotEmpty()) {
@@ -102,7 +101,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     }
 
     // get streamlink process
-    streamlinkProcess = withIOContext {
+    streamlinkProcess = github.hua0512.utils.withIOContext {
       streamLinkBuilder.start()
     }
     // get streamlink output
@@ -163,7 +162,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
   override suspend fun stop(): Boolean {
     sendStopSignal()
-    val exitCode = withIOContext {
+    val exitCode = github.hua0512.utils.withIOContext {
       streamlinkProcess?.waitFor()
     }
     return exitCode == 0

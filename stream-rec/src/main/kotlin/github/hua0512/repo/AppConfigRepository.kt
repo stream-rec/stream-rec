@@ -27,7 +27,6 @@
 package github.hua0512.repo
 
 import github.hua0512.data.config.AppConfig
-import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,7 +49,7 @@ class AppConfigRepository(
   }
 
   override suspend fun getAppConfig(): AppConfig {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       try {
         localDataSource.getAppConfig()
       } catch (e: Exception) {
@@ -61,7 +60,7 @@ class AppConfigRepository(
   }
 
   override suspend fun saveAppConfig(appConfig: AppConfig) {
-    withIOContext {
+    github.hua0512.utils.withIOContext {
       localDataSource.saveAppConfig(appConfig)
     }
   }

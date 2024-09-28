@@ -11,6 +11,7 @@ version = versionName
 
 dependencies {
   implementation(project(":base"))
+  implementation(project(":common"))
   implementation("com.tencent.tars:tars-core:1.7.3")
   implementation(libs.io.exoquery.pprint)
   implementation(libs.io.ktor.client.core)

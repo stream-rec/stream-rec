@@ -25,6 +25,10 @@ dependencies {
   implementation(libs.io.ktor.client.content.negotiation)
   implementation(libs.io.ktor.serialization.kotlinx.json)
   implementation(libs.io.ktor.client.logging)
+  implementation(libs.io.exoquery.pprint)
+  implementation(project(":flv-processing"))
+  implementation(project(":hls-processing"))
+  implementation(project(":common"))
   testImplementation(libs.bundles.test.jvm)
 }
 

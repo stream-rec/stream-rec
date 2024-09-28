@@ -30,6 +30,8 @@ import github.hua0512.app.App
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
+import github.hua0512.flv.FlvMetaInfoProcessor
+import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.download.DownloadPlatformService
 import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.platformConfig
@@ -48,6 +50,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.Path
+import kotlin.io.path.fileSize
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -110,8 +113,23 @@ class DownloadService(
         }
       }
 
-      override fun onStreamDownloaded(streamer: Streamer, stream: StreamData) {
+      override fun onStreamDownloaded(streamer: Streamer, stream: StreamData, shouldInjectMetaInfo: Boolean, metaInfo: FlvMetadataInfo?) {
+        var stream = stream
         scope.launch {
+          if (shouldInjectMetaInfo) {
+            if (metaInfo != null) {
+              val status = FlvMetaInfoProcessor.process(stream.outputFilePath, metaInfo, true)
+              if (status) {
+                logger.info("${stream.outputFilePath} meta info injected")
+                // update the file size
+                stream = stream.copy(outputFileSize = Path(stream.outputFilePath).fileSize())
+              } else {
+                logger.error("${stream.outputFilePath} meta info injection failed")
+              }
+            } else {
+              logger.warn("${stream.outputFilePath} meta info not found, skip meta info processing...")
+            }
+          }
           try {
             val saved = streamDataRepository.save(stream)
             stream.id = saved.id
@@ -135,7 +153,7 @@ class DownloadService(
       }
     }
 
-    val streamers = withIOContext {
+    val streamers = github.hua0512.utils.withIOContext {
       repo.getStreamersActive()
     }
     this.streamers = streamers

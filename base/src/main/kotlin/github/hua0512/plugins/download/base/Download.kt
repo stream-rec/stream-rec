@@ -34,6 +34,7 @@ import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.*
+import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.danmu.base.Danmu
@@ -43,12 +44,16 @@ import github.hua0512.plugins.download.ProgressBarManager
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART_PREFIX
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
+import github.hua0512.plugins.download.engines.KotlinDownloadEngine
 import github.hua0512.plugins.download.engines.StreamlinkDownloadEngine
 import github.hua0512.plugins.download.exceptions.DownloadFilePresentException
 import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.plugins.event.EventCenter
-import github.hua0512.utils.*
+import github.hua0512.utils.deleteFile
+import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.withIORetry
 import io.ktor.http.*
 import io.ktor.http.auth.*
 import kotlinx.coroutines.*
@@ -63,8 +68,12 @@ import java.nio.file.Path
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.io.path.Path
 import kotlin.io.path.exists
+import kotlin.io.path.extension
 import kotlin.io.path.fileSize
 import kotlin.io.path.pathString
+
+
+typealias OnStreamDownloaded = (StreamData, FlvMetadataInfo?) -> Unit
 
 abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Danmu, open val extractor: Extractor) {
 
@@ -106,7 +115,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   /**
    * Callback triggered when the stream is downloaded
    */
-  private var onStreamDownloaded: ((StreamData) -> Unit)? = null
+  private var onStreamDownloaded: OnStreamDownloaded? = null
 
   suspend fun init(streamer: Streamer) {
     this.streamer = streamer
@@ -194,10 +203,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     val isDanmuEnabled = downloadConfig.danmu ?: app.config.danmu
     logger.debug("(${streamer.name}) downloadUrl: $downloadUrl")
 
-    // build output file path
-    val outputPath = buildOutputFilePath(downloadConfig, fileExtension)
+    // build generic output file path
+    val genericOutputPath = buildOutputFilePath(downloadConfig, fileExtension)
     // check if disk space is enough
-    checkDiskSpace(outputPath.parent, app.config.maxPartSize)
+    checkDiskSpace(genericOutputPath.parent, app.config.maxPartSize)
     // download start time
     val startTime = Clock.System.now()
     // check if danmu is initialized
@@ -260,8 +269,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         if (pb?.current != 0L) {
           pb?.reset()
         }
-        val danmuPath =
-          filePath.replace(fileExtension, ContentType.Application.Xml.contentSubtype).replace(PART_PREFIX, "")
+        val danmuPath = filePath
+          .replace(filePath.substringAfterLast("."), ContentType.Application.Xml.contentSubtype)
+          .replace(PART_PREFIX, "")
+
         danmu.videoStartTime = Instant.fromEpochSeconds(time)
 
         if (isDanmuEnabled) {
@@ -297,34 +308,26 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         )
       }
 
-      override fun onDownloadProgress(diff: Long, bitrate: String) {
+      override fun onDownloadProgress(diff: Long, bitrate: Double) {
         pb?.let {
           it.stepBy(diff)
-          it.extraMessage = if (bitrate.isEmpty()) "Downloading..." else "bitrate: $bitrate"
+          it.extraMessage = if (bitrate == 0.0) "Downloading..." else "bitrate: $bitrate"
           // extract numbers from string
-          if (bitrate.isNotEmpty()) {
-            val bitrateValue = try {
-              bitrate.substring(0, bitrate.indexOf("k")).toDouble()
-            } catch (e: Exception) {
-              0.0
-            }
-            EventCenter.sendEvent(
-              DownloadEvent.DownloadStateUpdate(
-                filePath = "",
-                url = downloadUrl,
-                platform = streamer.platform,
-                duration = it.totalElapsed.toSeconds(),
-                speed = 0.0,
-                bitrate = bitrateValue,
-                fileSize = it.current,
-                streamerId = streamer.id
-              )
+          EventCenter.sendEvent(
+            DownloadEvent.DownloadStateUpdate(
+              filePath = "",
+              url = downloadUrl,
+              platform = streamer.platform,
+              duration = it.totalElapsed.toSeconds(),
+              bitrate = bitrate,
+              fileSize = it.current,
+              streamerId = streamer.id
             )
-          }
+          )
         }
       }
 
-      override fun onDownloaded(data: FileInfo) {
+      override fun onDownloaded(data: FileInfo, metaInfo: FlvMetadataInfo?) {
         logger.debug("({}) downloaded: {}", streamer.name, data)
         val danmuPath = if (isDanmuEnabled) {
           Path(danmu.filePath)
@@ -333,7 +336,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         }
 
         // check file downloaded
-        onFileDownloaded(data, streamData, danmuPath)
+        onFileDownloaded(data, streamData, danmuPath, metaInfo)
       }
 
       // normal exit
@@ -368,11 +371,12 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
     }
 
-    engine = selectDownloadEngine().apply {
+    // create download engine
+    engine = createDownloadEngine().apply {
       init(
         downloadUrl,
         fileFormat,
-        outputPath.pathString,
+        genericOutputPath.pathString,
         streamer,
         cookie,
         headers,
@@ -398,6 +402,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       if (this is FFmpegDownloadEngine) {
         useSegmenter = app.config.useBuiltInSegmenter
         detectErrors = app.config.exitDownloadOnError
+      } else if (this is KotlinDownloadEngine) {
+        enableFlvFix = app.config.enableFlvFix
       }
     }
 
@@ -427,10 +433,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     }
   }
 
-  private fun onFileDownloaded(info: FileInfo, streamInfo: StreamData, danmuPath: Path?) {
+  private fun onFileDownloaded(info: FileInfo, streamInfo: StreamData, danmuPath: Path?, metaInfo: FlvMetadataInfo?) {
     // check if the segment is valid
     danmuPath?.let { danmu.finish() }
-    logger.debug("(${streamer.name}) danmu finished : $danmuPath")
+    logger.debug("({}) danmu finished : {}", streamer.name, danmuPath)
     if (processSegment(Path(info.path), danmuPath)) return
     // update stream data
     val stream = streamInfo.copy(
@@ -449,7 +455,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         time = Instant.fromEpochSeconds(info.updatedAt)
       )
     )
-    onStreamDownloaded?.invoke(stream)
+    onStreamDownloaded?.invoke(stream, metaInfo)
   }
 
 
@@ -464,7 +470,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   protected fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
     // check if the segment is valid, a valid segment should exist and have a size greater than the minimum part size
-    if (segmentPath.exists() && segmentPath.fileSize() >= app.config.minPartSize) return false
+    if (segmentPath.exists() && (segmentPath.extension != "m3u8" || segmentPath.fileSize() >= app.config.minPartSize)) return false
     logger.error("(${streamer.name}) segment is invalid: ${segmentPath.pathString}")
     // cases where the segment is invalid
     deleteOutputs(segmentPath, danmuPath)
@@ -499,6 +505,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   private fun getDownloadEngine(type: String): BaseDownloadEngine {
     // user selected engine
     return when (type) {
+      "kotlin" -> KotlinDownloadEngine()
       "ffmpeg" -> FFmpegDownloadEngine()
       "streamlink" -> StreamlinkDownloadEngine()
       else -> throw UnsupportedOperationException("$type download engine not supported")
@@ -509,7 +516,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * Select the download engine based on the stream type
    * @return a [BaseDownloadEngine] instance
    */
-  private fun selectDownloadEngine(): BaseDownloadEngine {
+  private fun createDownloadEngine(): BaseDownloadEngine {
     val userSelectedEngine = getDownloadEngine(app.config.engine)
     // fallback to user selected engine if skipStreamInfo is enabled
     if (extractor.skipStreamInfo) return userSelectedEngine
@@ -530,22 +537,20 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   }
 
   private fun buildOutputFilePath(downloadConfig: DownloadConfig, fileExtension: String): Path {
-    val timestamp = Clock.System.now()
     val outputFileName = (downloadConfig.outputFileName?.nonEmptyOrNull() ?: app.config.outputFileName).run {
       formatToFriendlyFileName(
         // Add PART_PREFIX to the file name to indicate that it is a part
         PART_PREFIX + replacePlaceholders(
           streamer.name,
           downloadTitle,
-          timestamp,
-          !app.config.useBuiltInSegmenter
+          replaceTimestamps = false
         ) + ".$fileExtension"
       )
     }
 
     val outputFolder = (downloadConfig.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).run {
       val str = if (endsWith(File.separator)) this else this + File.separator
-      str.replacePlaceholders(streamer.name, downloadTitle, timestamp)
+      str.replacePlaceholders(streamer.name, downloadTitle)
     }
     val sum = outputFolder + outputFileName
 
@@ -665,7 +670,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * Set the stream downloaded callback
    * @param callback the callback function
    */
-  fun onStreamDownloaded(callback: (StreamData) -> Unit) {
+  fun onStreamDownloaded(callback: OnStreamDownloaded) {
     this.onStreamDownloaded = callback
   }
 }

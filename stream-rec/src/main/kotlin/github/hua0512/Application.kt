@@ -44,8 +44,10 @@ import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
+import github.hua0512.utils.mainLogger
 import github.hua0512.utils.nonEmptyOrNull
-import io.ktor.server.engine.ApplicationEngine
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -64,7 +66,7 @@ class Application {
     /**
      * Backend server instance
      */
-    private var server: ApplicationEngine? = null
+    private var server: EmbeddedServer<ApplicationEngine, NettyApplicationEngine.Configuration>? = null
 
     @JvmStatic
     fun main(args: Array<String>): Unit = runBlocking {
@@ -77,7 +79,7 @@ class Application {
       // start the app
       // add shutdown hook
       Runtime.getRuntime().addShutdownHook(Thread {
-        logger.info("Stream-rec shutting down...")
+        mainLogger.info("Stream-rec shutting down...")
         server?.stop(1000, 1000)
         Thread.sleep(1000)
         jobScope.cancel()

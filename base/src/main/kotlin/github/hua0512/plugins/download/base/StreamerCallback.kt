@@ -28,6 +28,7 @@ package github.hua0512.plugins.download.base
 
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
+import github.hua0512.flv.data.other.FlvMetadataInfo
 
 /**
  * Interface for listening to streamer events
@@ -45,7 +46,7 @@ interface StreamerCallback {
 
   fun onAvatarChanged(streamer: Streamer, avatar: String)
 
-  fun onStreamDownloaded(streamer: Streamer, stream: StreamData)
+  fun onStreamDownloaded(streamer: Streamer, stream: StreamData, shouldInjectMetaInfo: Boolean = false, metaInfo: FlvMetadataInfo? = null)
 
   fun onStreamDownloadFailed(streamer: Streamer, stream: StreamData, e: Exception)
 

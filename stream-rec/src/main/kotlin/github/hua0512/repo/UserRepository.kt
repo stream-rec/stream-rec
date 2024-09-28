@@ -29,7 +29,6 @@ package github.hua0512.repo
 import github.hua0512.dao.user.UserDao
 import github.hua0512.data.UserId
 import github.hua0512.data.user.User
-import github.hua0512.utils.withIOContext
 
 /**
  * Repository for User
@@ -39,32 +38,32 @@ import github.hua0512.utils.withIOContext
 
 class UserRepository(val dao: UserDao) : UserRepo {
   override suspend fun getUserById(id: UserId): User? {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       dao.getById(id)?.let { User(it) }
     }
   }
 
   override suspend fun getUserByName(name: String): User? {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       dao.getByUsername(name)?.let { User(it) }
     }
   }
 
   override suspend fun createUser(newUser: User): User {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       val id = dao.insert(newUser.toEntity())
       newUser.copy(id = id)
     }
   }
 
   override suspend fun deleteUser(user: User): Boolean {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       dao.delete(user.toEntity()) == 1
     }
   }
 
   override suspend fun updateUser(user: User) {
-    return withIOContext {
+    return github.hua0512.utils.withIOContext {
       dao.update(user.toEntity())
     }
   }

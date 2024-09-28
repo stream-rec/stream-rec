@@ -34,6 +34,7 @@ import github.hua0512.data.upload.UploadAction
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadData
 import github.hua0512.utils.*
+import github.hua0512.utils.deleteFile
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import kotlinx.coroutines.async

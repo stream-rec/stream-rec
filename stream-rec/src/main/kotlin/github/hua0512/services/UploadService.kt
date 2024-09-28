@@ -109,7 +109,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
    * @param uploadAction The upload action to upload.
    */
   suspend fun upload(uploadAction: UploadAction) {
-    val saved = withIOContext {
+    val saved = github.hua0512.utils.withIOContext {
       uploadRepo.saveAction(uploadAction)
     }
     val uploader = PlatformUploaderFactory.create(app, uploadAction.uploadConfig)
@@ -117,7 +117,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
       return
     }
     val deferredResults = CompletableDeferred<List<UploadResult>>()
-    withIOContext {
+    github.hua0512.utils.withIOContext {
       val results = parallelUpload(saved.files, uploader)
       logger.debug("Upload results: {}", results)
       deferredResults.complete(results)
@@ -139,12 +139,13 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
    * @param plugin The plugin to use for uploading the files.
    * @return A list of upload results.
    */
-  private suspend fun <T : UploadConfig> parallelUpload(files: Collection<UploadData>, plugin: Upload<T>): List<UploadResult> = withIOContext {
-    files.map {
-      val result = uploadFile(it, plugin)
-      uploadRepo.saveResult(result)
+  private suspend fun <T : UploadConfig> parallelUpload(files: Collection<UploadData>, plugin: Upload<T>): List<UploadResult> =
+    github.hua0512.utils.withIOContext {
+      files.map {
+        val result = uploadFile(it, plugin)
+        uploadRepo.saveResult(result)
+      }
     }
-  }
 
   /**
    * Uploads a file and emits the result.

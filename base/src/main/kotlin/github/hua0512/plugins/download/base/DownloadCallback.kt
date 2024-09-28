@@ -27,20 +27,80 @@
 package github.hua0512.plugins.download.base
 
 import github.hua0512.data.stream.FileInfo
+import github.hua0512.flv.data.other.FlvMetadataInfo
 
 /**
- * @author hua0512
- * @date : 2024/5/5 18:31
+ * Interface defining callback methods for download events.
+ * Implement this interface to handle various stages of the download process.
+ *
+ * Methods:
+ * - `onInit()`: Called when the download process is initialized.
+ * - `onDownloadStarted(filePath: String, time: Long)`: Called when the download starts.
+ * - `onDownloadProgress(diff: Long, bitrate: Double)`: Called to report download progress.
+ * - `onDownloaded(data: FileInfo, metaInfo: FlvMetadataInfo? = null)`: Called when a file is downloaded.
+ * - `onDownloadFinished()`: Called when the download is finished.
+ * - `onDownloadError(filePath: String?, e: Exception)`: Called when an error occurs during download.
+ * - `onDownloadCancelled()`: Called when the download is cancelled.
+ * - `onDestroy()`: Called when the download process is destroyed.
+ *
+ * @see FileInfo
+ * @see FlvMetadataInfo
+ *
+ * Author: hua0512
+ * Date: 2024/5/5 18:31
  */
 interface DownloadCallback {
 
+  /**
+   * Called when the download process is initialized.
+   */
   fun onInit()
+
+  /**
+   * Called when the download starts.
+   *
+   * @param filePath The path of the file being downloaded.
+   * @param time The start time of the download, in epoch seconds.
+   */
   fun onDownloadStarted(filePath: String, time: Long)
-  fun onDownloadProgress(diff: Long, bitrate: String)
-  fun onDownloaded(data: FileInfo)
+
+  /**
+   * Called to report download progress.
+   *
+   * @param diff The difference in bytes downloaded since the last progress update.
+   * @param bitrate The current bitrate of the download.
+   */
+  fun onDownloadProgress(diff: Long, bitrate: Double)
+
+  /**
+   * Called when a file is downloaded.
+   *
+   * @param data The downloaded file information.
+   * @param metaInfo Optional metadata information associated with the file.
+   */
+  fun onDownloaded(data: FileInfo, metaInfo: FlvMetadataInfo? = null)
+
+  /**
+   * Called when the download is finished.
+   */
   fun onDownloadFinished()
+
+  /**
+   * Called when an error occurs during download.
+   *
+   * @param filePath The path of the file that caused the error, if available.
+   * @param e The exception that occurred.
+   */
   fun onDownloadError(filePath: String?, e: Exception)
+
+  /**
+   * Called when the download is cancelled.
+   */
   fun onDownloadCancelled()
+
+  /**
+   * Called when the download process is destroyed.
+   */
   fun onDestroy()
 
 }

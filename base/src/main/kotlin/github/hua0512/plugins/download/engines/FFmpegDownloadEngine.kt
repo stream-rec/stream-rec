@@ -33,8 +33,9 @@ import github.hua0512.plugins.download.exceptions.DownloadErrorException
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
-import github.hua0512.utils.withIOContext
+import github.hua0512.utils.replacePlaceholders
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
 import java.io.OutputStream
 import java.nio.file.Path
@@ -71,17 +72,22 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   protected lateinit var outputFolder: Path
   protected lateinit var outputFileName: String
 
-  protected fun initPath() {
-    if (!useSegmenter) {
-      lastOpeningFile = downloadFilePath
-      lastOpeningFileTime = Clock.System.now().epochSeconds
-    }
+  protected fun initPath(startInstant: Instant) {
     outputFolder = Path(downloadFilePath).parent
     outputFileName = Path(downloadFilePath).name
+    if (!useSegmenter) {
+      lastOpeningFileTime = startInstant.epochSeconds
+      // replace time placeholders if not using segmenter
+      outputFileName = outputFileName.replacePlaceholders(streamer!!.name, "", startInstant, true)
+      // update downloadFilePath
+      downloadFilePath = outputFolder.resolve(outputFileName).pathString
+      lastOpeningFile = outputFileName
+    }
   }
 
   override suspend fun start() {
-    initPath()
+    val startTime = Clock.System.now()
+    initPath(startTime)
     // ffmpeg running commands
     val cmds = buildFFMpegCmd(
       headers,
@@ -98,7 +104,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     val streamer = streamer!!
     logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
     if (!useSegmenter) {
-      onDownloadStarted(downloadFilePath, Clock.System.now().epochSeconds)
+      onDownloadStarted(downloadFilePath, startTime.epochSeconds)
     }
 
     val exitCode: Int = executeProcess(
@@ -152,9 +158,11 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
         bitrate
       )
       lastOpeningSize = currentSize
+      val bitrate = getBitrate(bitrate)
       onDownloadProgress(newDiff, bitrate)
     } else {
       lastOpeningSize = size
+      val bitrate = getBitrate(bitrate)
       onDownloadProgress(diff, bitrate)
     }
   }
@@ -215,6 +223,15 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   }
 
 
+  protected fun getBitrate(bitrate: String): Double {
+    return try {
+      bitrate.substring(0, bitrate.indexOf("k")).toDouble()
+    } catch (e: Exception) {
+      0.0
+    }
+  }
+
+
   protected open fun sendStopSignal() {
     ous?.apply {
       // check if the process is still running
@@ -231,11 +248,11 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   }
 
   override suspend fun stop(): Boolean {
-    withIOContext {
+    github.hua0512.utils.withIOContext {
       logger.info("$downloadUrl stopping ffmpeg process...")
       sendStopSignal()
     }
-    val code = withIOContext { process?.waitFor() }
+    val code = github.hua0512.utils.withIOContext { process?.waitFor() }
     if (code != 0) {
       logger.error("ffmpeg process exited with code $code")
     }

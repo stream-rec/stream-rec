@@ -27,7 +27,7 @@
 package github.hua0512.repo
 
 import github.hua0512.data.config.AppConfig
-import github.hua0512.logger
+import github.hua0512.utils.mainLogger
 import github.hua0512.utils.generateRandomString
 import kotlinx.coroutines.flow.Flow
 import java.nio.file.Files
@@ -68,7 +68,7 @@ interface LocalDataSource {
       return configContent.find { it.startsWith("jwt.secret") }?.split("=")?.get(1)?.trim().run {
         if (isNullOrBlank()) {
           val generated = generateRandomString(32, true)
-          logger.info("First run, generate jwt secret $generated")
+          mainLogger.info("First run, generate jwt secret $generated")
           // append jwt secret to end of file
           Files.writeString(config, "\njwt.secret = $generated", Charsets.UTF_8, StandardOpenOption.APPEND)
           generated

@@ -62,7 +62,6 @@ sealed class DownloadEvent : Event {
     override val url: String,
     override val platform: StreamingPlatform,
     val duration: Long,
-    val speed: Double,
     val bitrate: Double,
     val fileSize: Long,
     val streamerId: Long,

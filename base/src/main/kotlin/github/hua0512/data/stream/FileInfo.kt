@@ -27,8 +27,22 @@
 package github.hua0512.data.stream
 
 /**
- * @author hua0512
- * @date : 2024/5/6 12:27
+ * Data class representing file information.
+ *
+ * @property path The path of the file.
+ * @property size The size of the file in bytes.
+ * @property createdAt The timestamp when the file was created, in epoch seconds.
+ * @property updatedAt The timestamp when the file was last updated, in epoch seconds.
+ *
+ * @constructor Creates a new instance of FileInfo.
+ *
+ * @param path The path of the file.
+ * @param size The size of the file in bytes.
+ * @param createdAt The timestamp when the file was created, in epoch seconds.
+ * @param updatedAt The timestamp when the file was last updated, in epoch seconds.
+ *
+ * @author: hua0512
+ * @date Date: 2024/5/6 12:27
  */
 data class FileInfo(
   val path: String,

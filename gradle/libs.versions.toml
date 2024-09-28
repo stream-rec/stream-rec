@@ -1,5 +1,6 @@
 [versions]
-ktor = "2.3.12"
+ktor = "3.0.0-rc-1"
+ktor-test = "2.3.12"
 ksp = "2.0.20-1.0.25"
 kotlin = "2.0.20"
 kotlin-coroutines = "1.9.0"
@@ -44,7 +45,9 @@ io-ktor-server-content-negotiation-jvm = { module = "io.ktor:ktor-server-content
 io-ktor-serialization-kotlinx-json-jvm = { module = "io.ktor:ktor-serialization-kotlinx-json-jvm", version.ref = "ktor" }
 io-ktor-server-websockets-jvm = { module = "io.ktor:ktor-server-websockets-jvm", version.ref = "ktor" }
 io-ktor-server-netty-jvm = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
-io-ktor-server-tests-jvm = { module = "io.ktor:ktor-server-tests-jvm", version.ref = "ktor" }
+io-ktor-server-tests-jvm = { module = "io.ktor:ktor-server-tests-jvm", version.ref = "ktor-test" }
+
+io-lindstrom-m3u8-parser = "io.lindstrom:m3u8-parser:0.28"
 
 ch-qos-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 org-jetbrains-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }

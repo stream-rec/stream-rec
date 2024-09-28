@@ -18,7 +18,7 @@ dependencyResolutionManagement {
     maven(url = "https://jitpack.io")
   }
 }
-include("base")
-include("platforms")
-include("stream-rec")
-include("stream-rec-backend")
+
+arrayOf("base", "common", "platforms", "stream-rec", "server", "flv-processing", "hls-processing").forEach {
+  include(it)
+}

@@ -41,7 +41,6 @@ import github.hua0512.data.upload.entity.UploadDataEntity
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
-import github.hua0512.utils.getTodayStart
 import github.hua0512.utils.withIOContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -136,14 +135,15 @@ class UploadActionRepository(
     }
   }
 
-  override suspend fun countAllUploadData(status: List<Int>?, filter: String?, streamerId: Collection<StreamerId>?): Long = withIOContext {
-    uploadDataDao.countAllByFilter(
-      status ?: UploadState.intValues(),
-      filter ?: "",
-      streamerId?.map { it.value } ?: emptyList(),
-      streamerId?.isEmpty() != false
-    )
-  }
+  override suspend fun countAllUploadData(status: List<Int>?, filter: String?, streamerId: Collection<StreamerId>?): Long =
+    withIOContext {
+      uploadDataDao.countAllByFilter(
+        status ?: UploadState.intValues(),
+        filter ?: "",
+        streamerId?.map { it.value } ?: emptyList(),
+        streamerId?.isEmpty() != false
+      )
+    }
 
 
   /**
@@ -230,7 +230,7 @@ class UploadActionRepository(
    */
   override suspend fun saveResult(uploadResult: UploadResult): UploadResult = withIOContext {
     val id = uploadResultDao.insert(uploadResult.toEntity())
-    val today = getTodayStart().epochSeconds
+    val today = github.hua0512.utils.getTodayStart().epochSeconds
     val todayStats = statsDao.getBetweenTimeOrderedDesc(today, today + 86400000).firstOrNull()
 
     if (todayStats == null) {

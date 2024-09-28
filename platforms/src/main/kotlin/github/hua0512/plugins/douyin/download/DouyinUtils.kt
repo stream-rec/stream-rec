@@ -26,10 +26,10 @@
 
 package github.hua0512.plugins.douyin.download
 
-import github.hua0512.logger
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.SDK_VERSION
 import github.hua0512.plugins.download.COMMON_USER_AGENT
+import github.hua0512.utils.mainLogger
 import github.hua0512.utils.toMD5Hex
 import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory
 
@@ -89,16 +89,16 @@ internal suspend fun getSignature(roomId: String, userId: String? = DouyinExtrac
   // build signature param
   val sigParam =
     "live_id=1,aid=6383,version_code=180800,webcast_sdk_version=$SDK_VERSION,room_id=$roomId,sub_room_id=,sub_channel_id=,did_rule=3,user_unique_id=$userId,device_platform=web,device_type=,ac=,identity=audience"
-  logger.debug("SigParam: {}", sigParam)
+  mainLogger.debug("SigParam: {}", sigParam)
   // get MD5 of sigParam
   val md5SigParam = sigParam.toByteArray().toMD5Hex()
-  logger.debug("MD5 sigParam: {}", md5SigParam)
+  mainLogger.debug("MD5 sigParam: {}", md5SigParam)
   // build function caller
   val functionCaller = "get_sign('${md5SigParam}')"
   // call JS function
   return try {
     (jsEngine.eval(functionCaller) as String).also {
-      logger.debug("Signature: {}", it)
+      mainLogger.debug("Signature: {}", it)
     }
   } catch (e: Exception) {
     throw InvalidExtractionInitializationException("Failed to get signature, error: ${e.message}")
