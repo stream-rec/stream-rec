@@ -75,13 +75,16 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       """data-onlineid=(\d+)""",
       """(房间已被关闭)"""
     )
+
+    private const val HS_CDN = "hs-h5"
+    private const val TCT_CDN = "tct-h5"
   }
 
   // DOUYU rid
   internal lateinit var rid: String
 
   // DOUYU user preferred cdn
-  internal var selectedCdn: String = ""
+  internal var selectedCdn: String = TCT_CDN
   private lateinit var htmlText: String
 
   init {
@@ -169,8 +172,13 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
   private suspend fun getStreamInfo(selectedCdn: String = "", selectedRate: String = "0", encMap: Map<String, Any?>): Pair<StreamInfo, JsonArray> {
     val liveDataResponse = postResponse("https://www.douyu.com/lapi/live/getH5Play/$rid") {
-      //  tctc-h5（备用线路4）, tct-h5（备用线路5）, ali-h5（备用线路6）, hw-h5（备用线路7）, hs-h5（备用线路13）
-      parameter("cdn", selectedCdn)
+      //  ws-5（线路1） tctc-h5（备用线路4）, tct-h5（备用线路5）, ali-h5（备用线路6）, hw-h5（备用线路7）, hs-h5（备用线路13）
+      val cdn = if (selectedCdn == HS_CDN) {
+        TCT_CDN
+      } else {
+        selectedCdn
+      }
+      parameter("cdn", cdn)
       parameter("rate", selectedRate)
       parameter("iar", "0")
       parameter("ive", "0")
@@ -195,14 +203,28 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
     // current live data, should be the first one, with highest bitrate and quality
     val liveData = liveDataJson.jsonObject["data"]?.jsonObject!!
+    val rtmpUrl = liveData["rtmp_url"]!!.jsonPrimitive.content
+    val rtmpLive = liveData["rtmp_live"]!!.jsonPrimitive.content
     // url = rtmp_url + rtmp_live
-    val url = liveData["rtmp_url"]!!.jsonPrimitive.content + "/" + liveData["rtmp_live"]!!.jsonPrimitive.content
+    val url = "$rtmpUrl/$rtmpLive".run {
+      // HACK, source: <a href="https://biliup.me/d/158-douyu-%E6%9E%84%E9%80%A0%E7%81%AB%E5%B1%B1cdn%E6%B5%81%E9%93%BE%E6%8E%A5">构造火山cdn流链接</a>
+      if (selectedCdn == HS_CDN) {
+        // url encoded
+        val encodedUrl = encodeURLPath()
+        val host = Url(rtmpUrl).host
+        "https://douyu-pull.s.volcfcdndvs.com/live/${rtmpLive}&fp_user_url=$encodedUrl+&vhost=${host}&domain=${host}"
+      } else this
+    }
     // list of supported rates
     val multirates = liveData["multirates"]?.jsonArray
     // rate should be 0, but we obtain it from the live data just in case
     val rate = liveData["rate"]?.jsonPrimitive?.intOrNull
     // cdn, usually tct-h5
-    val cdn = liveData["rtmp_cdn"]!!.jsonPrimitive.content
+    val cdn = if (selectedCdn == HS_CDN)
+      HS_CDN
+    else
+      liveData["rtmp_cdn"]!!.jsonPrimitive.content
+
     val qualityName = getRateInfo(multirates!!.find { it.jsonObject["rate"]!!.jsonPrimitive.intOrNull === rate }!!.jsonObject)
     return StreamInfo(
       url = url,
