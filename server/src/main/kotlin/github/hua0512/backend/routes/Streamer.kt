@@ -123,81 +123,47 @@ fun Route.streamerRoute(repo: StreamerRepo) {
     }
 
     put("{id}") {
-      val id = call.parameters["id"]?.toLongOrNull()
-      if (id == null) {
-        call.respond(HttpStatusCode.BadRequest, "Invalid id")
-        return@put
-      }
-      // receive stream object
-      val streamer: Streamer = try {
-        call.receive<Streamer>().also {
-          logger.debug("Received stream : {}", it)
-        }
-      } catch (e: Exception) {
-        logger.error("Error receiving stream", e)
-        call.respond(HttpStatusCode.BadRequest, "Invalid stream: ${e.message}")
-        return@put
-      }
-      // check if the id in the url matches the id in the stream object
-      if (streamer.id != id) {
-        call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
-        return@put
-      }
-      // check if the stream exists
-      val old = repo.getStreamerById(StreamerId(id)) ?: run {
-        call.respond(HttpStatusCode.BadRequest, "Error updating stream, not found in db")
-        return@put
-      }
-      // check if the url is already used by another stream
-      val dbStreamer = repo.findStreamerByUrl(streamer.url)
-      if (dbStreamer != null && dbStreamer.id != id) {
-        call.respond(HttpStatusCode.BadRequest, "Streamer url already exists")
-        return@put
-      }
-
-      // do not allow converting a template stream to a non-template stream when it is used by other streamers
-      if (old.isTemplate && !streamer.isTemplate) {
-        val count = repo.countStreamersUsingTemplate(StreamerId(id))
-        if (count > 0) {
-          logger.error("Template stream is used by $count streamers")
-          call.respond(HttpStatusCode.BadRequest, "Template stream is used by $count streamers")
-          return@put
-        }
-      }
-      // update stream
-      try {
-        repo.update(streamer)
-        call.respond(streamer)
-      } catch (e: Exception) {
-        logger.error("Error updating stream", e)
-        call.respond(HttpStatusCode.InternalServerError, "Error updating stream: ${e.message}")
-      }
-    }
-
-    put("{id}/state") {
-      val id = call.parameters["id"]?.toLongOrNull()
-      if (id == null) {
-        call.respond(HttpStatusCode.BadRequest, "Invalid id")
-        return@put
-      }
+      val id = call.parameters["id"]?.toLongOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest, "Invalid id")
       val state = call.request.queryParameters["state"]?.toBooleanStrictOrNull()
-      if (state == null) {
-        call.respond(HttpStatusCode.BadRequest, "Invalid state")
-        return@put
-      }
-      try {
-        val streamer = repo.getStreamerById(StreamerId(id)) ?: run {
-          call.respond(HttpStatusCode.NotFound, "Streamer not found")
-          return@put
+
+      if (state != null) {
+        try {
+          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@put call.respond(HttpStatusCode.NotFound, "Streamer not found")
+          repo.update(streamer.copy(isActivated = state))
+          call.respond(HttpStatusCode.OK, buildJsonObject {
+            put("msg", "Stream state updated")
+            put("code", 200)
+          })
+        } catch (e: Exception) {
+          logger.error("Error updating stream state", e)
+          call.respond(HttpStatusCode.InternalServerError, "Error updating stream state: ${e.message}")
         }
-        repo.update(streamer.copy(isActivated = state))
-        call.respond(HttpStatusCode.OK, buildJsonObject {
-          put("msg", "Stream state updated")
-          put("code", 200)
-        })
-      } catch (e: Exception) {
-        logger.error("Error updating stream state", e)
-        call.respond(HttpStatusCode.InternalServerError, "Error updating stream state: ${e.message}")
+      } else {
+        val streamer: Streamer = try {
+          call.receive<Streamer>().also { logger.debug("Received stream : {}", it) }
+        } catch (e: Exception) {
+          logger.error("Error receiving stream", e)
+          return@put call.respond(HttpStatusCode.BadRequest, "Invalid stream: ${e.message}")
+        }
+
+        if (streamer.id != id) return@put call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
+
+        val old = repo.getStreamerById(StreamerId(id)) ?: return@put call.respond(HttpStatusCode.BadRequest, "Error updating stream, not found in db")
+        val dbStreamer = repo.findStreamerByUrl(streamer.url)
+        if (dbStreamer != null && dbStreamer.id != id) return@put call.respond(HttpStatusCode.BadRequest, "Streamer url already exists")
+
+        if (old.isTemplate && !streamer.isTemplate) {
+          val count = repo.countStreamersUsingTemplate(StreamerId(id))
+          if (count > 0) return@put call.respond(HttpStatusCode.BadRequest, "Template stream is used by $count streamers")
+        }
+
+        try {
+          repo.update(streamer)
+          call.respond(streamer)
+        } catch (e: Exception) {
+          logger.error("Error updating stream", e)
+          call.respond(HttpStatusCode.InternalServerError, "Error updating stream: ${e.message}")
+        }
       }
     }
 
