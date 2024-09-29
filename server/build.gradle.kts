@@ -1,9 +1,11 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
   alias(libs.plugins.kotlin.jvm)
   alias(libs.plugins.kotlin.serialization)
 }
 
-// read the version from the gradle.properties file
+// Read the version from the gradle.properties file
 val versionName: String by project
 val groupName: String by project
 group = groupName
@@ -29,5 +31,48 @@ dependencies {
   implementation(libs.ch.qos.logback.classic)
   testImplementation(libs.bundles.test.jvm)
   testImplementation(libs.io.ktor.server.tests.jvm)
-//  testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+}
+
+private fun execAndCapture(vararg command: String): String {
+  val output = ByteArrayOutputStream()
+  project.exec {
+    commandLine = command.toList()
+    standardOutput = output
+  }
+  return output.toString().trim()
+}
+
+tasks.register("getGitVersion") {
+  doLast {
+    try {
+      val gitVersion = execAndCapture("git", "describe", "--tags", "--always", "--first-parent")
+      val commitHash = execAndCapture("git", "rev-parse", "HEAD")
+      val gitCommitCount = execAndCapture("git", "rev-list", "--count", "HEAD")
+      val finalCommitCount = Integer.parseInt(gitCommitCount) + 10000
+      println("Git version: $gitVersion")
+      println("Commit hash: $commitHash")
+      println("Commit count: $finalCommitCount")
+
+      project.extra["gitVersion"] = gitVersion
+      project.extra["gitCommitHash"] = commitHash
+      project.extra["gitCommitCount"] = finalCommitCount
+    } catch (e: Exception) {
+      println("Error executing git commands: ${e.message}")
+      project.extra["gitVersion"] = "N/A"
+      project.extra["gitCommitHash"] = "N/A"
+      project.extra["gitCommitCount"] = "N/A"
+    }
+  }
+}
+
+tasks.processResources {
+  dependsOn("getGitVersion")
+  filesMatching("server.properties") {
+    println("Replacing placeholders in server.properties")
+    expand(
+      "gitVersion" to project.extra["gitVersion"],
+      "gitCommitHash" to project.extra["gitCommitHash"],
+      "gitCommitCount" to project.extra["gitCommitCount"],
+    )
+  }
 }
