@@ -36,6 +36,7 @@ fun Application.configureRouting(
     route("/api") {
       userRoute(json, userRepo)
       authenticate("auth-jwt") {
+        serverRoute()
         configRoute(appConfigRepo)
         statsRoute(statsRepo)
         streamerRoute(streamerRepo)
