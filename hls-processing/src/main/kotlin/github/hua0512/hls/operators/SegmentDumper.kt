@@ -39,6 +39,7 @@ import java.io.RandomAccessFile
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
 
 private const val TAG = "HlsDumper"
@@ -83,7 +84,16 @@ internal fun Flow<HlsSegment>.dump(
       segmentsFolder.resolve(segment.name)
     } else {
       onDownloadStarted?.invoke(path, System.currentTimeMillis())
-      Files.createFile(Path(path))
+      // make sure path extension is the same as the segment
+      val ext = segment.name.substringAfterLast(".")
+      if (ext == "m4s") {
+        "mp4"
+      } else {
+        ext
+      }
+      val jPath = Path(path)
+      val path = jPath.resolveSibling("${jPath.nameWithoutExtension}.$ext")
+      Files.createFile(path)
     }
     logger.info("${context.name} Writing to: {}", file)
     writer = RandomAccessFile(file.toFile(), "rw").also {
