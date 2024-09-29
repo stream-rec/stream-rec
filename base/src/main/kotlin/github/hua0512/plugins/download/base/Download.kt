@@ -390,20 +390,27 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       if (this is StreamlinkDownloadEngine) {
         // check if twitch
         if (streamer.platform == StreamingPlatform.TWITCH) {
+          val config = app.config.twitchConfig
           // check if skip ads is enabled
-          if (app.config.twitchConfig.skipAds) {
+          if (config.skipAds) {
             // add skip ads to streamlink args
             programArgs.add("--twitch-disable-ads")
           }
+          // configure streamlink-ttvlol
+          config.twitchProxyPlaylist?.nonEmptyOrNull()?.let { programArgs.add("--twitch-proxy-playlist=$it") }
+          config.twitchProxyPlaylistExclude?.nonEmptyOrNull()?.let { programArgs.add("--twitch-proxy-playlist-exclude=$it") }
+          if (config.twitchProxyPlaylistFallback) programArgs.add("--twitch-proxy-playlist-fallback")
         }
       }
 
       // determine if the built-in segmenter should be used
-      if (this is FFmpegDownloadEngine) {
-        useSegmenter = app.config.useBuiltInSegmenter
-        detectErrors = app.config.exitDownloadOnError
-      } else if (this is KotlinDownloadEngine) {
-        enableFlvFix = app.config.enableFlvFix
+      when (this) {
+        is FFmpegDownloadEngine -> {
+          useSegmenter = app.config.useBuiltInSegmenter
+          detectErrors = app.config.exitDownloadOnError
+        }
+
+        is KotlinDownloadEngine -> enableFlvFix = app.config.enableFlvFix
       }
     }
 

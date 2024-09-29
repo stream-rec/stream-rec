@@ -11,6 +11,8 @@ COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 RUN yum update -y && \
     yum install -y unzip tar python3 python3-pip which xz tzdata findutils && \
     pip3 install streamlink && \
+    # install streamlink-ttvlol
+    INSTALL_DIR="/root/.local/share/streamlink/plugins"; mkdir -p "$INSTALL_DIR"; curl -L -o "$INSTALL_DIR/twitch.py" 'https://github.com/2bc4/streamlink-ttvlol/releases/latest/download/twitch.py' && \
     yum clean all && \
     rm -rf /var/cache/yum
 

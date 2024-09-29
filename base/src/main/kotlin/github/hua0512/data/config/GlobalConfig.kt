@@ -78,6 +78,9 @@ data class TwitchConfigGlobal(
   override val cookies: String? = null,
   override val fetchDelay: Long = 30,
   val skipAds: Boolean = false,
+  val twitchProxyPlaylist: String? = null,
+  val twitchProxyPlaylistExclude: String? = null,
+  val twitchProxyPlaylistFallback: Boolean = true,
 ) : GlobalPlatformConfig, TwitchConfigDTO
 
 @Serializable
