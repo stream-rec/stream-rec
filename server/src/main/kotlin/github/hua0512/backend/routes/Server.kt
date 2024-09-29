@@ -62,7 +62,7 @@ fun loadProperties() {
  * @date : 2024/9/28 21:46
  */
 fun Route.serverRoute() {
-  route("/config") {
+  route("/server") {
     get {
       try {
         loadProperties()
