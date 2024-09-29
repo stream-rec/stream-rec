@@ -31,10 +31,11 @@ import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
 import github.hua0512.repo.stream.StreamerRepo
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Streamer related routes
@@ -170,6 +171,33 @@ fun Route.streamerRoute(repo: StreamerRepo) {
       } catch (e: Exception) {
         logger.error("Error updating stream", e)
         call.respond(HttpStatusCode.InternalServerError, "Error updating stream: ${e.message}")
+      }
+    }
+
+    put("{id}/state") {
+      val id = call.parameters["id"]?.toLongOrNull()
+      if (id == null) {
+        call.respond(HttpStatusCode.BadRequest, "Invalid id")
+        return@put
+      }
+      val state = call.request.queryParameters["state"]?.toBooleanStrictOrNull()
+      if (state == null) {
+        call.respond(HttpStatusCode.BadRequest, "Invalid state")
+        return@put
+      }
+      try {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: run {
+          call.respond(HttpStatusCode.NotFound, "Streamer not found")
+          return@put
+        }
+        repo.update(streamer.copy(isActivated = state))
+        call.respond(HttpStatusCode.OK, buildJsonObject {
+          put("msg", "Stream state updated")
+          put("code", 200)
+        })
+      } catch (e: Exception) {
+        logger.error("Error updating stream state", e)
+        call.respond(HttpStatusCode.InternalServerError, "Error updating stream state: ${e.message}")
       }
     }
 
