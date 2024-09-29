@@ -32,6 +32,7 @@ import github.hua0512.utils.isWindows
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
+import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -101,7 +102,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     }
 
     // get streamlink process
-    streamlinkProcess = github.hua0512.utils.withIOContext {
+    streamlinkProcess = withIOContext {
       streamLinkBuilder.start()
     }
     // get streamlink output
@@ -162,7 +163,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
   override suspend fun stop(): Boolean {
     sendStopSignal()
-    val exitCode = github.hua0512.utils.withIOContext {
+    val exitCode = withIOContext {
       streamlinkProcess?.waitFor()
     }
     return exitCode == 0
@@ -175,7 +176,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
 
   private fun ensureHlsUrl() {
-    if (programArgs.contains("--twitch-disable-ads")) {
+    if (programArgs.contains("--twitch-disable-ads") || programArgs.firstOrNull { it.startsWith("--twitch-proxy-playlist") } != null) {
       return
     }
     require(downloadUrl!!.contains("m3u8")) {

@@ -44,7 +44,7 @@ class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Downloa
 
 
   init {
-    extractor.skipStreamInfo = app.config.twitchConfig.skipAds
+    extractor.skipStreamInfo = app.config.twitchConfig.skipAds || app.config.twitchConfig.twitchProxyPlaylist?.nonEmptyOrNull() != null
   }
 
 
