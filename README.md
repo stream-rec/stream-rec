@@ -2,7 +2,10 @@
   <strong>English</strong> | <a href="https://github.com/hua0512/stream-rec/blob/main/docs/README_zh.md">简体中文</a>
 </h4>
 
-# Stream-rec
+<div style="display: flex; align-items: center;">
+  <h1 style="flex: 1;">Stream-rec</h1>
+ <a href="https://www.buymeacoffee.com/hua0512"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a Coffee&emoji=🍘&slug=devvie&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" height="40px" /></a>
+</div>
 
 Stream-rec is an automatic stream recording tool for various streaming services.
 
