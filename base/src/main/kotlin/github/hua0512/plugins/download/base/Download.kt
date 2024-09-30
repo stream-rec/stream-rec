@@ -410,7 +410,10 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           detectErrors = app.config.exitDownloadOnError
         }
 
-        is KotlinDownloadEngine -> enableFlvFix = app.config.enableFlvFix
+        is KotlinDownloadEngine -> {
+          enableFlvFix = app.config.enableFlvFix
+          combineTsFiles = app.config.combineTsFiles
+        }
       }
     }
 
