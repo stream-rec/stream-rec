@@ -85,7 +85,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   /**
    * Danmu websocket url
    */
-  abstract var websocketUrl: String
+  abstract val websocketUrl: String
 
   /**
    * Heart beat delay
