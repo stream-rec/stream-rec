@@ -30,6 +30,7 @@ import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationExc
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
 import github.hua0512.plugins.douyu.download.DouyuExtractor.Companion.logger
+import github.hua0512.plugins.jsEngine
 import github.hua0512.utils.generateRandomString
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -41,7 +42,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.*
-import javax.script.ScriptEngineManager
 
 /**
  * @author hua0512
@@ -51,15 +51,14 @@ import javax.script.ScriptEngineManager
 // MD5 JS Encryption
 var MD5CRYPT = ""
 
-
+@Synchronized
 internal fun getMd5Crypt(): String {
   if (MD5CRYPT.isNotEmpty()) return MD5CRYPT
 
   // get from resources
-  MD5CRYPT = synchronized(MD5CRYPT) {
-    DouyuExtractor::class.java.getResourceAsStream("/crypto-js-md5.min.js")?.bufferedReader()?.readText()
-      ?: throw InvalidExtractionInitializationException("Failed to load crypto-js-md5.min.js")
-  }
+  MD5CRYPT = DouyuExtractor::class.java.getResourceAsStream("/crypto-js-md5.min.js")?.bufferedReader()?.readText()
+    ?: throw InvalidExtractionInitializationException("Failed to load crypto-js-md5.min.js")
+
   return MD5CRYPT
 }
 
@@ -144,8 +143,7 @@ internal fun ub98484234(jsEnc: String, rid: String): Map<String, Any?> {
         return ${namesDict["debugMessages"]};
     };
 """
-  val jsEngineManager = ScriptEngineManager()
-  val jsEngine = jsEngineManager.getEngineByName("nashorn")
+
   val jsBuilder = StringBuilder().apply {
     appendLine(MD5CRYPT)
     appendLine(jsDom)

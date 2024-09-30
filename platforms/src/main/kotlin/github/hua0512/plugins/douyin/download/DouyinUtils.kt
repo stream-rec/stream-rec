@@ -29,9 +29,9 @@ package github.hua0512.plugins.douyin.download
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.SDK_VERSION
 import github.hua0512.plugins.download.COMMON_USER_AGENT
+import github.hua0512.plugins.jsEngine
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.toMD5Hex
-import org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory
 
 
 /**
@@ -56,10 +56,6 @@ internal fun loadWebmssdk(): String {
   return SDK_JS
 }
 
-private val jsEngine by lazy {
-  NashornScriptEngineFactory().getScriptEngine("--language=es6")
-}
-
 private val signatureJS by lazy {
   // add dom element
   val jsDom = """
@@ -80,7 +76,7 @@ private val signatureJS by lazy {
  * @param userId user id
  * @return signature string
  */
-internal suspend fun getSignature(roomId: String, userId: String? = DouyinExtractor.USER_ID): String {
+internal fun getSignature(roomId: String, userId: String? = DouyinExtractor.USER_ID): String {
   assert(SDK_JS.isNotEmpty()) { "SDK_JS is empty" }
 
   // load JS
