@@ -27,6 +27,7 @@
 package github.hua0512.backend.routes
 
 import github.hua0512.backend.logger
+import github.hua0512.utils.isDockerized
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -73,8 +74,8 @@ fun Route.serverRoute() {
           val osArch = systemProperties.getProperty("os.arch")
           val javaVersion = systemProperties.getProperty("java.version")
           val javaVendor = systemProperties.getProperty("java.vendor")
-          val dockerEnv = System.getenv("DOCKER_ENV")
-          put("docker", dockerEnv != null)
+          val isDocker = isDockerized()
+          put("docker", isDocker)
           put("osName", osName)
           put("osVersion", osVersion)
           put("osArch", osArch)

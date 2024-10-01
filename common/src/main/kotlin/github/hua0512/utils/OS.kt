@@ -26,6 +26,8 @@
 
 package github.hua0512.utils
 
+import java.io.File
+
 /**
  * Functions for operating system related tasks
  * @author hua0512
@@ -38,3 +40,15 @@ package github.hua0512.utils
  * @return true if the current OS is windows
  */
 fun isWindows(): Boolean = System.getProperty("os.name").contains("win", true)
+
+
+/**
+ * Check if it is running in a docker container
+ *
+ * [source](https://stackoverflow.com/questions/20010199/how-to-determine-if-a-process-runs-inside-lxc-docker/25518345#25518345)
+ * @return true if it is running in a docker container else false
+ *
+ */
+fun isDockerized() = File("/.dockerenv").exists() || File("/.dockerinit").exists() || File("/proc/1/cgroup").readLines().any {
+  it.contains("docker") || it.contains("kubepods")
+}
