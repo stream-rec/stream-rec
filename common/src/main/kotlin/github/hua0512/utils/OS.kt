@@ -49,4 +49,6 @@ fun isWindows(): Boolean = System.getProperty("os.name").contains("win", true)
  * @return true if it is running in a docker container else false
  *
  */
-fun isDockerized() = File("/.dockerenv").exists()
+fun isDockerized() = File("/.dockerenv").exists() || File("/.dockerinit").exists() || File("/proc/1/cgroup").readLines().any {
+  it.contains("docker") || it.contains("kubepods")
+}
