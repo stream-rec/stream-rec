@@ -1,0 +1,21 @@
+name: ci - pr workflow
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - 'main'
+      - 'dev'
+jobs:
+  build_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64
+          build-args: |
+            BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+          outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push=false
