@@ -55,8 +55,8 @@ fun String.downloadHls(
     .resolve(context)
     .download(context, baseUrl, client)
     .catch {
+      logger.error("${context.name} Failed to download HLS: ", it)
       emit(HlsSegment.EndSegment)
-      throw it
     }
     .flowOn(Dispatchers.IO)
 }
