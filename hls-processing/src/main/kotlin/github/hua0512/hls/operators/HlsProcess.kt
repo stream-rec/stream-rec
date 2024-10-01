@@ -31,7 +31,6 @@ import github.hua0512.hls.data.HlsSegment
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import io.ktor.client.*
-import io.lindstrom.m3u8.parser.PlaylistParserException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -55,13 +54,9 @@ fun String.downloadHls(
   return fetcher.consume(this)
     .resolve(context)
     .download(context, baseUrl, client)
-    .catch { cause ->
-      logger.error("${context.name} - onCompletion: $cause")
+    .catch {
       emit(HlsSegment.EndSegment)
-      // rethrow if it's a PlaylistParserException
-      if (cause is PlaylistParserException) {
-        throw cause
-      }
+      throw it
     }
     .flowOn(Dispatchers.IO)
 }

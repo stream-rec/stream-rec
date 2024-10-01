@@ -59,6 +59,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
+import java.net.SocketTimeoutException
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.fileSize
@@ -165,16 +166,20 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       }
     }
 
-    if (isFlv && enableFlvFix) {
-      processFlvDownload(streamerContext, pathProvider, limitsProvider, sizedUpdater)
-    } else if (!isFlv) {
-      processHlsDownload(streamerContext, limitsProvider, pathProvider, downloadStartCallback, sizedUpdater)
+    try {
+      if (isFlv && enableFlvFix) {
+        processFlvDownload(streamerContext, pathProvider, limitsProvider, sizedUpdater)
+      } else if (!isFlv) {
+        processHlsDownload(streamerContext, limitsProvider, pathProvider, downloadStartCallback, sizedUpdater)
+      }
+      // await for download job to finish
+      downloadJob.join()
+      // case when download job is completed
+      onDownloadFinished()
+    } finally {
+      if (downloadJob.isActive) downloadJob.cancel()
+      client.close()
     }
-    // await for download job to finish
-    downloadJob.join()
-    // download finished
-    onDownloadFinished()
-    client.close()
   }
 
 
@@ -211,11 +216,12 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
   private suspend fun handleHlsDownload(client: HttpClient, streamerContext: StreamerContext) {
     downloadUrl!!
       .downloadHls(client, streamerContext)
-      .onCompletion {
-        hlsProducer.close()
-      }.collect {
-        hlsProducer.send(it)
-      }
+      .onEach { hlsProducer.send(it) }
+      .onCompletion { cause ->
+        mainLogger.debug("${streamerContext.name} Completed hls producer due to: $cause")
+      }.collect()
+
+    hlsProducer.close(SocketTimeoutException("HLS download completed"))
   }
 
 
@@ -262,6 +268,12 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         sizedUpdater,
       ) { index, path, createdAt, openAt ->
         onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), null)
+      }
+      .onCompletion {
+        mainLogger.debug("processHlsDownload completed : $it")
+        if (it != null) {
+          throw it // rethrow exception
+        }
       }
       .collect()
   }

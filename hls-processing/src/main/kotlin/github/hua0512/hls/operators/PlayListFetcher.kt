@@ -61,35 +61,26 @@ class PlayListFetcher(val client: HttpClient, override val streamerContext: Stre
     private val LOGGER = logger(TAG)
   }
 
-  private var disposed = false
+
   override val logger: Logger = LOGGER
   private var debugEnabled = logger.isDebugEnabled
 
-  fun reset() {
-    disposed = false
-  }
-
   private suspend fun fetchPlaylist(url: String): String {
-    try {
-      val request = client.get(url) {
-        timeout {
-          // set 10 s timeout for the whole request
-          requestTimeoutMillis = 10000
-          connectTimeoutMillis = 10000
-          socketTimeoutMillis = 10000
-        }
-        retry {
-          this.maxRetries = 8
-          this.exponentialDelay(1.0, maxDelayMs = 10000)
-        }
+    val request = client.get(url) {
+      timeout {
+        // set 10 s timeout for the whole request
+        requestTimeoutMillis = 10000
+        connectTimeoutMillis = 10000
+        socketTimeoutMillis = 10000
       }
-      val body = request.bodyAsText()
-//      debug("Fetched playlist: $body")
-      return body
-    } catch (e: Exception) {
-      debug("Failed to fetch playlist: {}", e)
-      throw e
+      retry {
+        this.maxRetries = 8
+        this.exponentialDelay(1.0, maxDelayMs = 10000)
+      }
     }
+    val body = request.bodyAsText()
+//      debug("Fetched playlist: $body")
+    return body
   }
 
   private fun isMasterPlaylist(content: String) = content.contains("#EXT-X-STREAM-INF")
@@ -113,7 +104,7 @@ class PlayListFetcher(val client: HttpClient, override val streamerContext: Stre
 //    var disposed = this.currentCoroutineContext().isActive
     var delay = 3000L
 
-    while (!disposed) {
+    while (true) {
       try {
         val playlistString = fetchPlaylist(url)
         // use lenient parsing mode
@@ -142,6 +133,7 @@ class PlayListFetcher(val client: HttpClient, override val streamerContext: Stre
         emit(playlist)
       } catch (e: Exception) {
         debug("Failed to fetch playlist: $e")
+        // end loop
         throw e
       } finally {
         // use playlist target duration / 2 as delay
