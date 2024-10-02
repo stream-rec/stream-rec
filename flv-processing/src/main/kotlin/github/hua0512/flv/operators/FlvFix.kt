@@ -117,7 +117,7 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
     val amfSoundRate = properties["audiosamplerate"] ?: Amf0Value.Number(44100.0)
     val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
-    soundSampleInterval = 1000 / soundRate
+    soundSampleInterval = ceil(1000 / soundRate)
 
     logger.debug("${context.name} fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
   }
