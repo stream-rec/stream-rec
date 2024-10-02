@@ -63,6 +63,7 @@ import java.net.SocketTimeoutException
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.fileSize
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
 
 /**
@@ -140,6 +141,10 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         // use parent folder for m3u8 with combining files disabled
         if (!isFlv && !combineTsFiles) {
           Path(this).parent.pathString
+        } else if (isFlv) {
+          // force flv file extension
+          val path = Path(this)
+          path.resolveSibling("${path.nameWithoutExtension}.flv").pathString
         } else this
       }
     }

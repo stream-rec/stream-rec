@@ -61,12 +61,7 @@ fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDow
   var lastOpenTime = 0L
 
   fun init(path: String) {
-    var jPath = Path(path)
-    // force to use "flv" extension
-    if (jPath.extension != "flv") {
-      jPath = jPath.resolveSibling("${jPath.nameWithoutExtension}.flv")
-    }
-    val file = Files.createFile(jPath)
+    val file = Files.createFile(Path(path))
     logger.info("Starting write to: {}", file)
     writer = FlvWriter(file.outputStream().buffered())
     lastPath = path
