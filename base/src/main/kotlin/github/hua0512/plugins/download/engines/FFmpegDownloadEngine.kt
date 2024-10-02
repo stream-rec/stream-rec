@@ -120,7 +120,6 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
         // detect errors by using ffprobe
         // source : https://superuser.com/questions/841235/how-do-i-use-ffmpeg-to-get-the-video-resolution
         // I doubt this will work for all streams, but it's worth a try
-        // I doubt this we
         val cmds = buildFFprobeCmd(headers, cookies, downloadUrl!!)
         val exitCode = executeProcess(
           ffprobe,
@@ -183,6 +182,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     process = null
     ffprobeProcess = null
     ous = null
+    resulutionSet.clear()
   }
 
   protected fun handleDownloadProgress(

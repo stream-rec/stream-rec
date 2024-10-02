@@ -213,9 +213,9 @@ fun buildFFprobeCmd(
     "-select_streams",
     "v:0",
     "-show_entries",
-    "stream=width,height",
+    "frame=width,height",
     "-of",
-    "default=nw=1",
+    "csv=s=x:p=0",
   )
   return defaultFFmpegInputArgs + defaultOutputArgs + downloadUrl
 }
