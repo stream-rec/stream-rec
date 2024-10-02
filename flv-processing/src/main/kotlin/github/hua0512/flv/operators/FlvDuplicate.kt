@@ -62,7 +62,7 @@ internal fun Flow<FlvData>.removeDuplicates(context: StreamerContext): Flow<FlvD
       }
       emit(flvData)
     } else {
-      logger.debug("${context.name} Found duplicate tag: {}", flvData)
+      logger.warn("${context.name} skipping duplicated tag: {}", flvData)
     }
   }
 

@@ -91,10 +91,10 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
   }
 
   suspend fun Flow<FlvData>.splitStream() {
-    logger.debug("${context.name} Splitting stream...")
+    logger.info("${context.name} Splitting stream...")
     changed = false
     insertHeaderAndTags()
-    logger.debug("${context.name} Stream split")
+    logger.info("${context.name} Stream split")
   }
 
 
@@ -185,7 +185,7 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
         val lastTag = lastVideoSequenceTag
         // check if last video sequence tag is not null and not the same as the current tag
         if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.debug("${context.name} Video parameters changed: {} -> {}", lastTag.crc32, tag.crc32)
+          logger.info("${context.name} Video parameters changed: {} -> {}", lastTag.crc32, tag.crc32)
           changed = true
           // Flv streams does not typically use Annex B formatted NAL units
 //          if (lastSps != null && lastPps != null) {
@@ -217,7 +217,7 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
         logger.debug("${context.name} Audio sequence tag detected: {}", tag)
         val lastTag = lastAudioSequenceTag
         if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.debug("${context.name} Audio parameters changed : {} -> {}", lastTag.crc32, tag.crc32)
+          logger.info("${context.name} Audio parameters changed : {} -> {}", lastTag.crc32, tag.crc32)
           changed = true
         }
         lastAudioSequenceTag = tag
