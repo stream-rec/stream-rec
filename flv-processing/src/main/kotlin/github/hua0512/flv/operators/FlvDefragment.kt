@@ -28,6 +28,7 @@ package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.utils.isHeader
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -42,7 +43,7 @@ private const val MIN_TAGS_NUM = 10
  * @author hua0512
  * @date : 2024/9/8 14:24
  */
-internal fun Flow<FlvData>.discardFragmented(): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.discardFragmented(context: StreamerContext): Flow<FlvData> = flow {
 
 
   var isGathering = false
@@ -66,21 +67,21 @@ internal fun Flow<FlvData>.discardFragmented(): Flow<FlvData> = flow {
 
     if (value.isHeader()) {
       if (tags != null) {
-        logger.warn("Discarded {} items, total size: {}", tags?.size, tags?.sumOf { it.size })
+        logger.warn("{} Discarded {} items, total size: {}", context.name, tags?.size, tags?.sumOf { it.size })
         reset()
       }
       isGathering = true
-      logger.debug("Start gathering...")
+      logger.debug("{} Start gathering...", context.name)
     }
 
     if (isGathering) {
       tags = tags ?: ArrayList<FlvData>().also { tags = it }
       tags!!.add(value)
       if (tags!!.size >= MIN_TAGS_NUM) {
-        logger.debug("Gathered {} items, total size: {}", tags?.size, tags?.sumOf { it.size })
+        logger.debug("{} Gathered {} items, total size: {}", context.name, tags?.size, tags?.sumOf { it.size })
         pushTags()
         reset()
-        logger.debug("Not a fragmented sequence, stopped gathering...")
+        logger.debug("{} Not a fragmented sequence, stopped gathering...", context.name)
       }
       return@collect
     }

@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.flowOn
  */
 fun Flow<FlvData>.process(limitsProvider: DownloadLimitsProvider = { 0L to 0.0f }, context: StreamerContext): Flow<FlvData> {
   val (fileSizeLimit, durationLimit) = limitsProvider()
-  return this.discardFragmented()
+  return this.discardFragmented(context)
     .split(context)
     .sort(context)
     .filter { !it.isAvcEndSequence() }

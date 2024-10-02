@@ -60,7 +60,7 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerCo
   // Index of the current stream being processed
   var streamIndex = -1
   // Instance of FlvAnalyzer to perform the analysis
-  val analyzer = FlvAnalyzer()
+  val analyzer = FlvAnalyzer(context)
 
   // Resets the analyzer state
   fun reset() {

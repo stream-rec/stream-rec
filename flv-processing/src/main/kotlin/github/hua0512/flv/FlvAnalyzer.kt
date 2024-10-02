@@ -39,6 +39,7 @@ import github.hua0512.flv.utils.isKeyFrame
 import github.hua0512.flv.utils.isScriptTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import github.hua0512.flv.utils.isVideoTag
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import io.exoquery.pprint
 
@@ -48,7 +49,7 @@ import io.exoquery.pprint
  * @author hua0512
  * @date : 2024/9/8 21:18
  */
-class FlvAnalyzer {
+class FlvAnalyzer(val context: StreamerContext) {
 
 
   companion object {
@@ -117,7 +118,7 @@ class FlvAnalyzer {
 
   internal fun makeMetaInfo(): FlvMetadataInfo {
     assert(resolution != null)
-    logger.debug("metadata count: $metadataCount")
+    logger.debug("{} metadata count: {}", context.name, metadataCount)
     val keyframes = keyframesMap.map { (timestamp, position) -> FlvKeyframe(timestamp, position) }.sortedBy { it.timestamp }
     return FlvMetadataInfo(
       hasAudio = hasAudio,
@@ -207,7 +208,7 @@ class FlvAnalyzer {
     if (!hasAudio) {
       hasAudio = true
       audioInfo = tag.data.copy(binaryData = byteArrayOf())
-      logger.debug("Audio info: {}", pprint(audioInfo))
+      logger.debug("{} Audio info: {}", context.name, pprint(audioInfo))
     }
 
     numAudioTags++
@@ -224,7 +225,7 @@ class FlvAnalyzer {
       keyframesMap[tag.header.timestamp] = fileSize
       if (tag.isVideoSequenceHeader() && resolution == null) {
         resolution = tag.data.resolution
-        logger.debug("Video resolution: {}", pprint(resolution))
+        logger.debug("{} Video resolution: {}", context.name, pprint(resolution))
       }
       lastKeyframeTimestamp = tag.header.timestamp
     }
@@ -232,7 +233,7 @@ class FlvAnalyzer {
     if (videoInfo == null) {
       hasVideo = true
       videoInfo = tag.data.copy(binaryData = byteArrayOf())
-      logger.debug("Video info: {}", pprint(videoInfo))
+      logger.debug("{} Video info: {}", context.name, pprint(videoInfo))
     }
 
     numVideoTags++
