@@ -200,6 +200,27 @@ fun buildFFMpegCmd(
 }
 
 
+fun buildFFprobeCmd(
+  headers: Map<String, String> = emptyMap(),
+  cookies: String? = null,
+  downloadUrl: String,
+) : Array<String>{
+  val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies)
+
+  val defaultOutputArgs = arrayOf(
+    "-v",
+    "error",
+    "-select_streams",
+    "v:0",
+    "-show_entries",
+    "frame=width,height",
+    "-of",
+    "csv=s=x:p=0",
+  )
+  return defaultFFmpegInputArgs + defaultOutputArgs + downloadUrl
+}
+
+
 internal fun processFFmpegOutputLine(
   line: String,
   streamer: String,

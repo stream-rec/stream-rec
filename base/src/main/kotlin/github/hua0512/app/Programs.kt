@@ -26,39 +26,22 @@
 
 package github.hua0512.app
 
-import github.hua0512.data.config.AppConfig
 import github.hua0512.utils.isWindows
-import io.ktor.client.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.serialization.json.Json
-import org.slf4j.LoggerFactory
 
+/**
+ * Paths to the required programs
+ * @author hua0512
+ * @date : 2024/10/2 12:17
+ */
+object Programs {
 
-class App(val json: Json, val client: HttpClient) {
+  val ffmpeg = getExecutablePath("FFMPEG_PATH", "ffmpeg")
+  val ffprobe = getExecutablePath("FFPROBE_PATH", "ffprobe")
+  val streamLink = getExecutablePath("STREAMLINK_PATH", "streamlink")
 
-  companion object {
-    @JvmStatic
-    val logger: org.slf4j.Logger = LoggerFactory.getLogger(App::class.java)
+  private fun getExecutablePath(envVar: String, defaultName: String): String {
+    val path = System.getenv(envVar) ?: defaultName
+    return if (isWindows()) "$path.exe" else path
   }
 
-  val config: AppConfig
-    get() = appFlow.value ?: throw IllegalStateException("App config not initialized")
-
-  private val appFlow = MutableStateFlow<AppConfig?>(null)
-
-  fun updateConfig(config: AppConfig) {
-    val previous = appFlow.value
-    val isChanged = previous != config
-    if (isChanged) {
-      logger.info("App config changed : {}", config)
-    }
-    this.appFlow.value = config
-  }
-
-  /**
-   * Closes the HTTP client.
-   */
-  fun releaseAll() {
-    client.close()
-  }
 }
