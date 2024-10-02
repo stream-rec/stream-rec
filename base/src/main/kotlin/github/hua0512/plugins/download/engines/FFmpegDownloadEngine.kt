@@ -26,14 +26,19 @@
 
 package github.hua0512.plugins.download.engines
 
-import github.hua0512.app.App
+import github.hua0512.app.Programs.ffmpeg
+import github.hua0512.app.Programs.ffprobe
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
+import github.hua0512.flv.data.video.VideoResolution
 import github.hua0512.plugins.download.exceptions.DownloadErrorException
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
@@ -65,12 +70,15 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
 
   var ous: OutputStream? = null
   protected var process: Process? = null
+  protected var ffprobeProcess: Process? = null
 
   protected var lastOpeningFile: String? = null
   protected var lastOpeningFileTime: Long = 0
   protected var lastOpeningSize = 0L
   protected lateinit var outputFolder: Path
   protected lateinit var outputFileName: String
+
+  private val resulutionSet = mutableSetOf<VideoResolution>()
 
   protected fun initPath(startInstant: Instant) {
     outputFolder = Path(downloadFilePath).parent
@@ -85,7 +93,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     }
   }
 
-  override suspend fun start() {
+  override suspend fun start() = coroutineScope {
     val startTime = Clock.System.now()
     initPath(startTime)
     // ffmpeg running commands
@@ -97,7 +105,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       fileLimitSize,
       fileLimitDuration,
       useSegmenter,
-      detectErrors,
+      false,
       outputFileName
     )
 
@@ -107,8 +115,45 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       onDownloadStarted(downloadFilePath, startTime.epochSeconds)
     }
 
+    if (detectErrors)
+      launch {
+        // detect errors by using ffprobe
+        // source : https://superuser.com/questions/841235/how-do-i-use-ffmpeg-to-get-the-video-resolution
+        // I doubt this will work for all streams, but it's worth a try
+        // I doubt this we
+        val cmds = buildFFprobeCmd(headers, cookies, downloadUrl!!)
+        val exitCode = executeProcess(
+          ffprobe,
+          *cmds,
+          stdout = Redirect.CAPTURE,
+          stderr = Redirect.CAPTURE,
+          destroyForcibly = false,
+          getProcess = {
+            ffprobeProcess = it
+          },
+        ) { line ->
+          if (line.contains("x")) {
+            val res = line.split("x")
+            if (res.size == 2) {
+              val resolution = VideoResolution(res[0].toInt(), res[1].toInt())
+              val result = resulutionSet.add(resolution)
+              if (result) {
+                logger.debug("({}) resolution detected: {}", streamer.name, resolution)
+
+                if (resulutionSet.size > 1) {
+                  logger.error("({}) resolution changed: {}", streamer.name, resolution)
+                  sendStopSignal()
+                  ffprobeProcess?.destroy()
+                  ffprobeProcess = null
+                }
+              }
+            }
+          }
+        }
+      }
+
     val exitCode: Int = executeProcess(
-      App.ffmpegPath,
+      ffmpeg,
       *cmds,
       directory = Path(downloadFilePath).parent.toFile(),
       stdout = Redirect.CAPTURE,
@@ -136,6 +181,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     }
     handleExitCodeAndStreamer(exitCode, streamer)
     process = null
+    ffprobeProcess = null
     ous = null
   }
 
@@ -248,11 +294,12 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   }
 
   override suspend fun stop(): Boolean {
-    github.hua0512.utils.withIOContext {
+    withIOContext {
       logger.info("$downloadUrl stopping ffmpeg process...")
+      ffprobeProcess?.destroy()
       sendStopSignal()
     }
-    val code = github.hua0512.utils.withIOContext { process?.waitFor() }
+    val code = withIOContext { process?.waitFor() }
     if (code != 0) {
       logger.error("ffmpeg process exited with code $code")
     }

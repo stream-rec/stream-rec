@@ -26,7 +26,8 @@
 
 package github.hua0512.plugins.download.engines
 
-import github.hua0512.app.App
+import github.hua0512.app.Programs.ffmpeg
+import github.hua0512.app.Programs.streamLink
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.isWindows
 import github.hua0512.utils.nonEmptyOrNull
@@ -95,7 +96,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, detectErrors, outputFileName)
     logger.debug("${streamer.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
     // streamlink process builder
-    val streamLinkBuilder = ProcessBuilder(App.streamLinkPath, *streamlinkArgs).apply {
+    val streamLinkBuilder = ProcessBuilder(streamLink, *streamlinkArgs).apply {
       redirectInput(ProcessBuilder.Redirect.PIPE)
       redirectOutput(ProcessBuilder.Redirect.PIPE)
       directory(outputFolder.toFile())
@@ -126,7 +127,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     }
 
     val exitCode = executeProcess(
-      App.ffmpegPath,
+      ffmpeg,
       *ffmpegCmdArgs,
       directory = Path(downloadFilePath).parent.toFile(),
       stdin = InputSource.fromInputStream(streamlinkProcess!!.inputStream, closeInput = false),
