@@ -58,6 +58,12 @@ sealed class DanmuDataWrapper {
     val serverTime: Long,
   ) : DanmuDataWrapper()
 
+
+  /**
+   * This object represents the end of the Danmu data.
+   */
+  data object EndOfDanmu : DanmuDataWrapper()
+
 }
 
 

@@ -33,6 +33,7 @@ import github.hua0512.app.App
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
+import github.hua0512.data.media.DanmuDataWrapper.EndOfDanmu
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.douyin.download.DouyinExtractor
@@ -192,6 +193,14 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
             chatMessage.rtfContent.defaultFormat.fontSize,
             chatMessage.eventTime * 1000,
           )
+        }
+
+        "WebcastControlMessage" -> {
+          val controlMessage = Dy.ControlMessage.parseFrom(msg.payload)
+          val status = controlMessage.status
+          if (status == 3) {
+            EndOfDanmu
+          } else null
         }
 
         // TODO :support other types of messages

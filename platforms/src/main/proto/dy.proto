@@ -1,4 +1,4 @@
-// extracted from : https://github.com/chenggx/douyin-parse-danmu
+// extracted from : https://github.com/jwwsjlm/douyinLive/blob/main/protobuf/douyin.proto
 syntax = "proto3";
 
 package douyin;
@@ -30,6 +30,18 @@ message Message{
   string wrdsSubKey = 8;
 }
 
+message EmojiChatMessage {
+  Common common = 1;
+  User   user = 2;
+  uint64 emojiId = 3;
+  Text  emojiContent = 4;
+  string defaultContent = 5;
+  Image    backgroundImage = 6;
+  bool  fromIntercom = 7;
+  bool   intercomHideUserCard = 8;
+  PublicAreaCommon public_area_common =9;
+}
+
 // 聊天
 message ChatMessage {
   Common common = 1;
@@ -39,8 +51,8 @@ message ChatMessage {
   Image backgroundImage = 5;
   string fullScreenTextColor = 6;
   Image backgroundImageV2 = 7;
-  PublicAreaCommon publicAreaCommon = 8;
-  Image giftImage = 9;
+  PublicAreaCommon publicAreaCommon = 9;
+  Image giftImage = 10;
   uint64 agreeMsgId = 11;
   uint32 priorityLevel = 12;
   LandscapeAreaCommon landscapeAreaCommon = 13;
@@ -85,14 +97,6 @@ message CommonTextMessage {
   User user = 2;
   string scene = 3;
 }
-
-message UpdateFanTicketMessage {
-  Common common = 1;
-  string roomFanTicketCountText = 2;
-  uint64 roomFanTicketCount = 3;
-  bool forceUpdate = 4;
-}
-
 message RoomUserSeqMessageContributor {
   uint64 score = 1;
   User user = 2;
@@ -105,42 +109,126 @@ message RoomUserSeqMessageContributor {
 
 // 礼物消息
 message GiftMessage {
-  Common common = 1;
-  uint64 giftId = 2;
-  uint64 fanTicketCount = 3;
-  uint64 groupCount = 4;
-  uint64 repeatCount = 5;
-  uint64 comboCount = 6;
-  User user = 7;
-  User toUser = 8;
-  uint32 repeatEnd = 9;
-  TextEffect textEffect = 10;
-  uint64 groupId = 11;
-  uint64 incomeTaskgifts = 12;
-  uint64 roomFanTicketCount = 13;
-  GiftIMPriority priority = 14;
-  GiftStruct gift = 15;
-  string logId = 16;
-  uint64 sendType = 17;
-  PublicAreaCommon publicAreaCommon = 18;
-  Text trayDisplayText = 19;
-  uint64 bannedDisplayEffects = 20;
-  //  GiftTrayInfo trayInfo = 21;
-  //  AssetEffectMixInfo assetEffectMixInfo = 22;
-  bool displayForSelf = 25;
-  string interactGiftInfo = 26;
-  string diyItemInfo = 27;
-  repeated uint64 minAssetSetList = 28;
-  uint64 totalCount = 29;
-  uint32 clientGiftSource = 30;
-  //  AnchorGiftData anchorGift = 31;
-  repeated uint64 toUserIdsList = 32;
-  uint64 sendTime = 33;
-  uint64 forceDisplayEffects = 34;
-  string traceId = 35;
-  uint64 effectDisplayTs = 36;
+  Common common = 1;                // 公共信息
+  int64 gift_id = 2;                // 礼物ID
+  string fan_ticket_count = 3;      // 粉丝票数量
+  string group_count = 4;          // 组数
+  string repeat_count = 5;         // 重复次数
+  string combo_count = 6;          // 组合数
+  User user = 7;                    // 用户信息
+  User to_user = 8;                // 接收用户信息
+  int32 repeat_end = 9;             // 重复结束标志
+  TextEffect text_effect = 10;      // 文字效果
+  string group_id = 11;            // 组ID
+  string income_taskgifts = 12;    // 收入任务礼物
+  string room_fan_ticket_count = 13;// 房间粉丝票数量
+  GiftIMPriority priority = 14;     // 礼物优先级
+  GiftStruct gift = 15;             // 礼物结构
+  string log_id = 16;               // 日志ID
+  string send_type = 17;           // 发送类型
+  PublicAreaCommon public_area_common = 18; // 公共区域信息
+  Text tray_display_text = 19;     // 托盘显示文本
+  string banned_display_effects = 20; // 禁止显示效果
+  GiftTrayInfo tray_info = 21;      // 礼物托盘信息
+  AssetEffectMixInfo asset_effect_mix_info = 24; // 资产效果混合信息
+  bool display_for_self = 25;      // 是否仅自己显示
+  string interact_gift_info = 26;   // 交互礼物信息
+  string diy_item_info = 27;        // 自定义项目信息
+  int64 min_asset_set = 28;        // 最小资产集
+  string total_count = 29;         // 总数
+  int32 client_gift_source = 30;   // 客户端礼物来源
+  AnchorGiftData anchor_gift = 31; // 主持人礼物数据
+  repeated string to_user_ids = 32; // 接收用户IDs列表
+  string send_time = 33;           // 发送时间
+  string force_display_effects = 34;// 强制显示效果
+  string trace_id = 35;            // 追踪ID
+  string effect_display_ts = 36;  // 效果显示时间戳
+  SendTogether send_together = 37; // 一起发送信息
+  ExtraEffect extra_effect = 38;    // 额外效果信息
+  RoomHotInfo room_hot_info = 39;  // 房间热门信息
+  string GiftPlayParam = 40;       // 礼物播放参数
+  int32 multi_send_effect_level = 41; // 多发送效果等级
+  repeated SeriesPlayGift series_gift_data = 42; // 系列礼物数据列表
 }
+message SeriesPlayGift {
+  GiftStruct gift_struct = 1;               // 礼物结构
+  SeriesTrayInfo series_tray_info = 2;      // 系列托盘信息
+  SendTogether send_together = 3;          // 一起发送信息
+  string diy_item_info = 4;                // 自定义项目信息
+  AnchorGiftData anchor_gift = 5;          // 主持人礼物数据
+  AssetEffectMixInfo asset_effect_mix_info = 6; // 资产效果混合信息
+}
+message SeriesTrayInfo {
+  int64 duration = 1;               // 持续时间
+  Image static_img = 2;             // 静态图像信息
+  Image dynamic_img = 3;            // 动态图像信息
+}
+message RoomHotInfo {
+  int32 local_hot_strategy = 1;    // 本地热门策略
+  int32 public_area_level = 2;     // 公共区域等级
+  int32 gift_level = 3;           // 礼物等级
+}
+message ExtraEffect {
+  string asset_id = 1;             // 资源ID
+  int32 display_form = 2;        // 显示形式
+}
+message SendTogether {
+  string id = 1;                  // 唯一标识符
+  string start_time = 2;          // 开始时间（int64字符串表示）
+  string end_time = 3;            // 结束时间（int64字符串表示）
+}
+message AssetEffectMixInfo {
+  // 一个重复的EffectMixImageInfo消息类型列表
+  repeated EffectMixImageInfo effect_mix_image_infos = 1;
+}
+message AnchorGiftData {
+  Image anchor_diy_origin_img = 1; // 主持人自定义原始图像
+}
+message EffectMixImageInfo {
+  string image_key = 1;            // 图片关键字
+  Image mix_image = 2;             // 混合图像信息
+}
+message GiftTrayInfo {
+  Text tray_display_text = 1;               // 托盘显示文本
+  Image tray_base_img = 2;                 // 托盘基础图像
+  Image tray_head_img = 3;                 // 托盘头部图像
+  Image tray_right_img = 4;                // 托盘右侧图像
+  string tray_level = 5;                   // 托盘等级
+  Image tray_dynamic_img = 6;              // 托盘动态图像
+  string tray_schema_url = 7;              // 托盘模式URL
+  int32 tray_type = 8;                     // 托盘类型
+  Image tray_base_img_v2 = 9;              // 托盘基础图像v2
+  Image tray_right_img_v2 = 10;             // 托盘右侧图像v2
+  bool use_high_layer = 11;                // 是否使用高層
+  string duration = 12;                    // 持续时间
+  string toast = 13;                        // 弹出提示
+  int32 tray_slide_rate = 14;               // 托盘滑动速率
+  TrayPreEffect tray_pre_effect = 15;      // 托盘前效果
+  TrayPostEffect tray_post_effect = 16;     // 托盘后效果
+  string origin_gift_id = 17;              // 原始礼物ID
+  string buff_level = 18;                   // 增益等级
+  string toolbar_card_name = 19;            // 工具栏卡片名称
+  Image tray_base_webp_img = 20;           // 托盘基础Webp图像
+  int32 tray_group_mode = 21;              // 托盘组模式
+}
+message TrayPostEffect {
+  Image post_effect_img = 1;       // 后置效果图像
+  string post_schema = 2;         // 后置效果模式
+  string post_duration = 3;        // 后置效果持续时间（int64字符串表示）
+  int32 post_effect_source = 4;    // 后置效果来源
 
+  // 事件跟踪的映射字段
+  map<string, string> event_tracking = 10; // 假设字段编号为10
+}
+message TrayPreEffect {
+  Image pre_effect_img = 1;          // 预效果图像
+  string tray_start_time = 2;       // 托盘开始时间（int64字符串表示）
+  Image tray_ripple = 3;             // 托盘涟漪效果图像
+  string pre_schema = 4;             // 预效果模式
+  string pre_duration = 5;           // 预效果持续时间（int64字符串表示）
+  int32 pre_effect_source = 6;       // 预效果来源
+  string extra = 7;                  // 额外信息
+}
 message GiftStruct {
   Image image = 1;
   string describe = 2;
@@ -164,6 +252,8 @@ message GiftStruct {
   //  specialEffectsMap = 20;
   Image icon = 21;
   uint32 actionType = 22;
+  // fixme 后面的就不写了还有几十个属性
+
 }
 
 message GiftIMPriority {
@@ -197,36 +287,74 @@ message TextEffectDetail {
 
 // 成员消息
 message MemberMessage {
-  Common common = 1;
-  User user = 2;
-  uint64 memberCount = 3;
-  User operator = 4;
-  bool isSetToAdmin = 5;
-  bool isTopUser = 6;
-  uint64 rankScore = 7;
-  uint64 topUserNo = 8;
-  uint64 enterType = 9;
-  uint64 action = 10;
-  string actionDescription = 11;
-  uint64 userId = 12;
-  EffectConfig effectConfig = 13;
-  string popStr = 14;
-  EffectConfig enterEffectConfig = 15;
-  Image backgroundImage = 16;
-  Image backgroundImageV2 = 17;
-  Text anchorDisplayText = 18;
-  PublicAreaCommon publicAreaCommon = 19;
-  uint64 userEnterTipType = 20;
-  uint64 anchorEnterTipType = 21;
+  Common common = 1; // 公共信息
+  User user = 2; // 用户信息
+  int64 member_count = 3; // 成员数量
+  User operator = 4; // 操作员信息
+  bool is_set_to_admin = 5; // 是否设置为管理员
+  bool is_top_user = 6; // 是否是顶级用户
+  int64 rank_score = 7; // 排名分数
+  int64 top_user_no = 8; // 顶级用户编号
+  int64 enter_type = 9; // 进入类型
+  int64 action = 10; // 动作
+  string action_description = 11; // 动作描述
+  int64 user_id = 12; // 用户ID
+  EffectConfig effect_config = 13; // 效果配置
+  string pop_str = 14; // 弹出字符串
+  EffectConfig enter_effect_config = 15; // 进入效果配置
+  Image background_image = 16; // 背景图片
+  Image background_image_v2 = 17; // 背景图片v2
+  Text anchor_display_text = 18; // 主持人展示文本
+  PublicAreaCommon public_area_common = 19; // 公共区域公共信息
+  int64 user_enter_tip_type = 20; // 用户进入提示类型
+  int64 anchor_enter_tip_type = 21; // 主持人进入提示类型
+  PicoEffectConfig pico_enter_effect_config = 24; // Pico进入效果配置
+
+  // 假设buried_point和alternative_effect_config是嵌入在MemberMessage中的map字段
+  map<string, string> buried_point = 22; // 埋点信息
+  map<string, EffectConfig> alternative_effect_config = 23; // 替代效果配置
+  message PicoEffectConfig {
+    int64 type = 1; // 类型
+    Image icon = 2; // 图标
+    Text text = 3; // 文本
+    Image text_icon = 4; // 文本图标
+    int32 stay_time = 5; // 停留时间
+    Image badge = 6; // 徽章
+    int64 center_anim_asset_id = 7; // 中心动画资源ID
+    string dress_id = 9; // 装扮ID
+
+    // extra字段作为map存储额外信息
+    map<string, string> extra = 8; // 额外信息
+  }
 }
 
 
 message PublicAreaCommon {
-  Image userLabel = 1;
-  uint64 userConsumeInRoom = 2;
-  uint64 userSendGiftCntInRoom = 3;
+  Image user_label = 1;
+  string user_consume_in_room = 2;
+  string user_send_gift_cnt_in_room = 3;
+  string individual_priority = 4;
+  string support_pin = 6;
+  SuffixText suffix_text = 7;
+  int32 im_action = 8;
+  bool forbidden_profile = 9;
+  ChatReplyRespInfo reply_resp = 10;
+  string is_featured = 12;
+  bool need_filter_display = 13;
+  map<string, string> individual_strategy_result = 5;
+  map<string, string> tracking_params = 11;
 }
-
+message SuffixText{
+  uint64 biz_type =1;
+  Text text=2;
+}
+message ChatReplyRespInfo{
+  uint64 reply_msg_id=1;
+  uint64 reply_id=2;
+  Text reply_text =3;
+  uint64 reply_uid=4;
+  string reply_webcast_uid=5;
+}
 message EffectConfig {
   uint64 type = 1;
   Image icon = 2;
@@ -253,21 +381,24 @@ message EffectConfig {
 }
 
 message Text {
-  string key = 1;
-  string defaultPatter = 2;
-  TextFormat defaultFormat = 3;
-  repeated TextPiece piecesList = 4;
+  string key = 1;                           // 字符串类型字段
+  string default_pattern = 2;              // 字符串类型字段
+  TextFormat default_format = 3;           // 嵌套类型字段
+  repeated TextPiece pieces = 4;           // 可重复的嵌套类型字段
+  map<string, SchemaInfo> schema_infos = 20;  // 映射类型字段
 }
 
 message TextPiece {
-  bool type = 1;
+  uint32 type = 1;
   TextFormat format = 2;
-  string stringValue = 3;
-  TextPieceUser userValue = 4;
-  TextPieceGift giftValue = 5;
-  TextPieceHeart heartValue = 6;
-  TextPiecePatternRef patternRefValue = 7;
-  TextPieceImage imageValue = 8;
+  string value_ref = 3;
+  string string_value =11;
+  TextPieceUser uservalue =21;
+  TextPieceGift giftvalue =22;
+  TextPieceHeart heartvalue =23;
+  TextPiecePatternRef patternrefvalue =24;
+  TextPieceImage imagevalue =25;
+  string schema_key =100;
 }
 
 
@@ -298,6 +429,10 @@ message PatternRef {
 message TextPieceUser {
   User user = 1;
   bool withColon = 2;
+  bool self_show_real_name =3;
+  uint32 left_show_extension =4;
+  string left_additional_content =5;
+  string right_additional_content =6;
 }
 
 message TextFormat {
@@ -305,10 +440,10 @@ message TextFormat {
   bool bold = 2;
   bool italic = 3;
   uint32 weight = 4;
-  uint32 italicAngle = 5;
-  uint32 fontSize = 6;
-  bool useHeighLightColor = 7;
-  bool useRemoteClor = 8;
+  uint32 italic_angle = 5;
+  uint32 font_size = 6;
+  bool use_heigh_light_color = 7;
+  bool use_remote_clor = 8;
 }
 
 // 点赞
@@ -324,7 +459,6 @@ message LikeMessage {
   uint64 linkmicGuestUid = 9;
   string scene = 10;
   PicoDisplayInfo picoDisplayInfo = 11;
-
 }
 
 message SocialMessage {
@@ -402,28 +536,30 @@ message Against {
 
 message Common {
   string method = 1;
-  uint64 msgId = 2;
-  uint64 roomId = 3;
-  uint64 createTime = 4;
+  uint64 msg_id = 2;
+  uint64 room_id = 3;
+  uint64 create_time = 4;
   uint32 monitor = 5;
-  bool isShowMsg = 6;
+  bool is_show_msg = 6;
   string describe = 7;
+  Text display_text =8;
   //  DisplayText displayText = 8;
-  uint64 foldType = 9;
-  uint64 anchorFoldType = 10;
+  uint64 fold_type = 9;
+  uint64 anchor_fold_type = 10;
   uint64 priorityScore = 11;
   string logId = 12;
   string msgProcessFilterK = 13;
   string msgProcessFilterV = 14;
   User user = 15;
   //  Room room = 16;
-  uint64 anchorFoldTypeV2 = 17;
-  uint64 processAtSeiTimeMs = 18;
-  uint64 randomDispatchMs = 19;
-  bool isDispatch = 20;
-  uint64 channelId = 21;
-  uint64 diffSei2absSecond = 22;
-  uint64 anchorFoldDuration = 23;
+  uint64 anchor_fold_type_v2 = 17;
+  uint64 process_at_sei_time_ms = 18;
+  uint64 random_dispatch_ms = 19;
+  bool is_dispatch = 20;
+  uint64 channel_id = 21;
+  uint64 diff_sei2abs_second = 22;
+  uint64 anchor_fold_duration = 23;
+  uint64 app_id =24;
 }
 
 message User {
@@ -449,8 +585,8 @@ message User {
   uint32 IncomeSharePercent = 20;
   repeated Image BadgeImageList = 21;
   FollowInfo FollowInfo = 22;
-  //  PayGrade PayGrade = 23;
-  //  FansClub FansClub = 24;
+  PayGrade PayGrade = 23;
+  FansClub FansClub = 24;
   //  Border Border = 25;
   string SpecialId = 26;
   Image AvatarBorder = 27;
@@ -461,6 +597,71 @@ message User {
   uint64 fanTicketCount = 1022;
   string idStr = 1028;
   uint32 ageRange = 1045;
+
+
+}
+
+message PayGrade {
+  int64 totalDiamondCount = 1;
+  Image diamondIcon = 2;
+  string name = 3;
+  Image icon = 4;
+  string nextName = 5;
+  int64 level = 6;
+  Image nextIcon = 7;
+  int64 nextDiamond = 8;
+  int64 nowDiamond = 9;
+  int64 thisGradeMinDiamond = 10;
+  int64 thisGradeMaxDiamond = 11;
+  int64 payDiamondBak = 12;
+  string gradeDescribe = 13;
+  repeated GradeIcon gradeIconList = 14;
+  int64 screenChatType = 15;
+  Image imIcon = 16;
+  Image imIconWithLevel = 17;
+  Image liveIcon = 18;
+  Image newImIconWithLevel = 19;
+  Image newLiveIcon = 20;
+  int64 upgradeNeedConsume = 21;
+  string nextPrivileges = 22;
+  Image background = 23;
+  Image backgroundBack = 24;
+  int64 score = 25;
+  GradeBuffInfo buffInfo = 26;
+  string gradeBanner = 1001;
+  Image profileDialogBg = 1002;
+  Image profileDialogBgBack = 1003;
+}
+
+message FansClub{
+  FansClubData data = 1;
+  map<int32, FansClubData> preferData = 2;
+}
+message FansClubData {
+  string clubName = 1;
+  int32 level = 2;
+  int32 userFansClubStatus = 3;
+  UserBadge badge = 4;
+  repeated int64 availableGiftIds = 5;
+  int64 anchorId = 6;
+}
+message UserBadge {
+  map<int32, Image> icons = 1;
+  string title = 2;
+}
+
+message GradeBuffInfo {
+}
+
+message Border{
+
+}
+
+message GradeIcon{
+  Image icon = 1;
+  int64 iconDiamond = 2;
+  int64 level = 3;
+  string levelStr = 4;
 }
 
 message FollowInfo {
@@ -474,29 +675,29 @@ message FollowInfo {
 
 }
 message Image {
-  repeated string urlListList = 1;
-  string uri = 2;
-  uint64 height = 3;
-  uint64 width = 4;
-  string avgColor = 5;
-  uint32 imageType = 6;
-  string openWebUrl = 7;
-  ImageContent content = 8;
-  bool isAnimated = 9;
-  NinePatchSetting FlexSettingList = 10;
-  NinePatchSetting TextSettingList = 11;
+  repeated string url_list = 1;  // 图像URL列表
+  string uri = 2;                // 图像统一资源标识符
+  string height = 3;             // 图像高度（int64字符串表示）
+  string width = 4;              // 图像宽度（int64字符串表示）
+  string avg_color = 5;          // 图像平均颜色
+  int32 image_type = 6;          // 图像类型
+  string open_web_url = 7;      // 打开网页的URL
+  Content content = 8;           // 图像内容（嵌套消息类型）
+  bool is_animated = 9;          // 是否是动画图像
+  repeated NinePatchSetting flex_setting_list = 10;  // 灵活设置列表（嵌套消息类型）
+  repeated NinePatchSetting text_setting_list = 11;   // 文本设置列表（嵌套消息类型）
+  message Content {
+    string name = 1;                  // 名称
+    string font_color = 2;            // 字体颜色
+    string level = 3;                // 级别（int64字符串表示）
+    string alternative_text = 4;     // 替代文本
+  }
 }
 
 message NinePatchSetting {
   repeated string settingListList = 1;
 }
 
-message ImageContent {
-  string name = 1;
-  string fontColor = 2;
-  uint64 level = 3;
-  string alternativeText = 4;
-}
 
 message PushFrame {
   uint64 seqId = 1;
@@ -507,7 +708,6 @@ message PushFrame {
   string payloadEncoding = 6;
   string payloadType = 7;
   bytes payload = 8;
-
 }
 
 message kk {
@@ -523,7 +723,6 @@ message SendMessageBody {
   uint32 messageType = 6;
   string ticket = 7;
   string clientMessageId = 8;
-
 }
 
 message ExtList {
@@ -559,7 +758,7 @@ message PreMessage {
   uint32 inboxType = 6;
   string buildNumber = 7;
   SendMessageBody sendMessageBody = 8;
-  // FIXME : I don't know the name of this field
+  // 字段名待定
   string aa = 9;
   string devicePlatform = 11;
   repeated HeadersList headers = 15;
@@ -577,8 +776,6 @@ message LiveShoppingMessage {
   Common common = 1;
   int32 msgType = 2;
   int64  promotionId = 4;
-
-
 }
 
 message RoomStatsMessage {
@@ -620,4 +817,1141 @@ message ProductChangeMessage {
   repeated ProductInfo updateProductInfoList = 4;
   int64 total = 5;
   repeated CategoryInfo updateCategoryInfoList = 8;
+}
+
+// from https://github.com/HaoDong108/DouyinBarrageGrab/blob/main/BarrageGrab/proto/message.proto
+// status = 3 下播
+message ControlMessage {
+  Common common = 1;
+  int32 status = 2;
+}
+
+// from https://github.com/HaoDong108/DouyinBarrageGrab/blob/main/BarrageGrab/proto/message.proto
+message FansclubMessage {
+  Common commonInfo = 1;
+  // 升级是1，加入是2
+  int32 type = 2;
+  string content = 3;
+  User user = 4;
+}
+
+// from https://github.com/scx567888/live-room-watcher/blob/master/src/main/proto/douyin_hack/webcast/im/RoomRankMessage.proto
+// 直播间排行榜
+message RoomRankMessage {
+  Common common = 1;
+  repeated RoomRank ranksList = 2;
+
+  message RoomRank{
+    User user = 1;
+    string scoreStr = 2;
+    bool profileHidden = 3;
+  }
+}
+// from https://github.com/scx567888/live-room-watcher/blob/master/src/main/proto/douyin_hack/webcast/im/RoomMsgTypeEnum.proto
+enum RoomMsgTypeEnum{
+  DEFAULTROOMMSG = 0;
+  ECOMLIVEREPLAYSAVEROOMMSG = 1;
+  CONSUMERRELATIONROOMMSG = 2;
+  JUMANJIDATAAUTHNOTIFYMSG = 3;
+  VSWELCOMEMSG = 4;
+  MINORREFUNDMSG = 5;
+  PAIDLIVEROOMNOTIFYANCHORMSG = 6;
+  HOSTTEAMSYSTEMMSG = 7;
+}
+// from https://github.com/scx567888/live-room-watcher/blob/master/src/main/proto/douyin_hack/webcast/im/RoomMessage.proto
+message RoomMessage{
+  Common common = 1;
+  string content = 2;
+  bool supprotLandscape = 3;
+  RoomMsgTypeEnum roommessagetype = 4;
+  bool systemTopMsg = 5;
+  bool forcedGuarantee = 6;
+  string bizScene = 20;
+  map<string, string> buriedPointMap = 30;
+}
+
+message RanklistHourEntranceMessage{
+  Common common = 1;
+  RanklistHourEntrance info =2;
+}
+message RanklistHourEntrance {
+  repeated RanklistHourEntrance_Info global_infos = 1; // 全局信息列表
+  repeated RanklistHourEntrance_Info default_global_infos = 2; // 默认全局信息列表
+  repeated RanklistHourEntrance_Info vertical_infos = 3; // 垂直信息列表
+  repeated RanklistHourEntrance_Info default_vertical_infos = 4; // 默认垂直信息列表
+}
+message RanklistHourEntrance_Info {
+  // "details" 字段是一个重复字段，使用 RanklistHourEntrance.Detail 消息类型
+  repeated RanklistHourEntrance_Detail details = 1;
+}
+message RanklistHourEntrance_Detail {
+  repeated RanklistHourEntrance_Page pages = 1; // 假设 pages 是 RanklistHourEntrance_Page 类型
+  int32 ranklist_type = 2;                       // 排名列表类型
+  string title = 3;                              // 标题
+  string ranklist_extra = 4;                     // 排名列表额外信息
+  string entrance_extra = 5;                     // 入口额外信息
+  string schema = 6;                             // 模式
+}
+message RanklistHourEntrance_Page {
+  string content = 1;               // Content of the page
+  string background_color = 2;      // Background color of the page
+  int64 show_times = 3;             // Number of times the page is shown (or similar)
+  int32 content_type = 4;           // Type of the content
+}
+message InRoomBannerMessage {
+  // common 字段，引用 Common 消息类型
+  Common common = 1;
+
+  // extra 字段，字符串类型
+  string extra = 2;
+
+  // position 字段，整型
+  int32 position = 3;
+
+  // action_type 字段，整型
+  int32 action_type = 4;
+
+  // container_url 字段，字符串类型
+  string container_url = 5;
+
+  // lynx_container_url 字段，字符串类型
+  string lynx_container_url = 6;
+
+  // container_type 字段，整型
+  int32 container_type = 7;
+
+  // op_type 字段，整型
+  int32 op_type = 8;
+}
+message RoomDataSyncMessage {
+  // common 字段，引用 Common 消息类型
+  Common common = 1;
+
+  // roomID 字段，整型字符串（int64String）
+  string roomID = 2;
+
+  // syncKey 字段，字符串类型
+  string syncKey = 3;
+
+  // version 字段，整型字符串（int64String）
+  string version = 4;
+
+  // payload 字段，字节类型（bytes）
+  bytes payload = 5;
+
+  // bizLogID 字段，字符串类型
+  string bizLogID = 6;
+}
+message LuckyBoxTempStatusMessage{
+  Common common =1;
+}
+message DecorationModifyMessage{
+  //存疑
+  //网页原型为DecorationModifyMessage?
+  Common common =1;
+  string extra =2;
+}
+message DecorationUpdateMessage {
+  Common common =1;
+  DecotationDetail detai =2;
+}
+message DecotationDetail{
+  Decoration text_decoration =1;
+  Decoration image_decoration =2;
+
+}
+message Decoration {
+  // id 字段，整型字符串（int64String）
+  string id = 1;
+
+  // image 字段，引用 Image 消息类型
+  Image image = 2;
+
+  // type 字段，整型字符串（int64String）
+  string type = 3;
+
+  // input_rect 字段，整型字符串（int64String）列表
+  repeated string input_rect = 4;
+
+  // text_size 字段，整型字符串（int64String）
+  string text_size = 5;
+
+  // text_color 字段，字符串类型
+  string text_color = 6;
+
+  // content 字段，字符串类型
+  string content = 7;
+
+  // max_length 字段，整型字符串（int64String）
+  string max_length = 8;
+
+  // status 字段，整型字符串（int64String）
+  string status = 9;
+
+  // h 字段，整型字符串（int64String）
+  string h = 10;
+
+  // x 字段，整型字符串（int64String）
+  string x = 11;
+
+  // w 字段，整型字符串（int64String）
+  string w = 12;
+
+  // y 字段，整型字符串（int64String）
+  string y = 13;
+
+  // kind 字段，整型字符串（int64String）
+  string kind = 14;
+
+  // sub_type 字段，整型字符串（int64String）
+  string sub_type = 15;
+
+  // reservation 字段，引用 Reservation 消息类型
+  Reservation reservation = 16;
+
+  // nine_patch_image 字段，引用 Image 消息类型
+  Image nine_patch_image = 17;
+
+  // text_special_effects 字段，整型字符串（int64String）列表
+  repeated string text_special_effects = 18;
+
+  // text_image_adjustable_start_position 字段，整型字符串（int64String）
+  string text_image_adjustable_start_position = 19;
+
+  // text_image_adjustable_end_position 字段，整型字符串（int64String）
+  string text_image_adjustable_end_position = 20;
+
+  // text_font_config 字段，引用 DecorationFontConfig 消息类型
+  DecorationFontConfig text_font_config = 21;
+
+  // audit_text_color 字段，字符串类型
+  string audit_text_color = 22;
+}
+message Reservation {
+  // appointment_id 字段，整型字符串（int64String）
+  string appointment_id = 1;
+
+  // anchor_id 字段，整型字符串（int64String）
+  string anchor_id = 2;
+
+  // room_id 字段，整型字符串（int64String）
+  string room_id = 3;
+
+  // start_time 字段，整型字符串（int64String）
+  string start_time = 4;
+
+  // end_time 字段，整型字符串（int64String）
+  string end_time = 5;
+
+  // btn_rect 字段，整型字符串（int64String）列表，假设它是一个矩形区域
+  repeated string btn_rect = 6;
+
+  // btn_color 字段，字符串类型
+  string btn_color = 7;
+
+  // is_reserved 字段，布尔类型
+  bool is_reserved = 8;
+}
+message DecorationFontConfig {
+  // FontID 字段，整型字符串（int64String）
+  string FontID = 1;
+
+  // DownloadUrl 字段，字符串类型
+  string DownloadUrl = 2;
+
+  // Status 字段，整型字符串（int64String）
+  string Status = 3;
+
+  // font_name 字段，字符串类型
+  string font_name = 4;
+}
+message LinkMicAudienceKtvMessage {
+  // common 字段，引用 Common 消息类型
+  Common common = 1;
+
+  // message_type 字段，整型字符串（int64String）
+  string message_type = 2;
+
+  // list_info 字段，是一个可重复的 ListInfo 消息类型列表
+  repeated ListInfo list_info = 3;
+
+  // want_sing_count 字段，整型字符串（int64String）
+  string want_sing_count = 4;
+
+  // want_sing_song_threshold 字段，整型字符串（int64String）
+  string want_sing_song_threshold = 5;
+
+  // sung_song_count 字段，整型字符串（int64String）
+  string sung_song_count = 6;
+
+  // is_downgrade 字段，布尔类型
+  bool is_downgrade = 7;
+
+  // all_song_unique_list 字段，是一个可重复的 SongUniqueInfo 消息类型列表
+  repeated SongUniqueInfo all_song_unique_list = 8;
+  message SongUniqueInfo {
+    // song_id 字段，整型字符串（int64String）
+    string song_id = 1;
+
+    // user_id 字段，整型字符串（int64String）
+    string user_id = 2;
+
+    // song_type 字段，整型字符串（int64String）
+    string song_type = 3;
+
+    // is_public 字段，布尔类型
+    bool is_public = 4;
+  }
+}
+
+message ListInfo {
+  // music 字段，引用 KtvSongStruct 消息类型
+  KtvSongStruct music = 1;
+
+  // is_self_seeing 字段，布尔类型
+  bool is_self_seeing = 2;
+}
+
+message KtvSongStruct {
+  // id 字段，整型字符串（int64String）
+  string id = 1;
+
+  // title 字段，字符串类型
+  string title = 2;
+
+  // author 字段，字符串类型
+  string author = 3;
+
+  // lyric_type 字段，整型字符串（int64String）
+  string lyric_type = 4;
+
+  // song_url 字段，字符串类型
+  string song_url = 5;
+
+  // lyric_url_list 字段，字符串列表
+  repeated string lyric_url_list = 6;
+
+  // duration 字段，整型字符串（int64String）
+  string duration = 7;
+
+  // cover_url 字段，字符串类型
+  string cover_url = 8;
+
+  // song_pattern 字段，整型字符串（int64String）
+  string song_pattern = 9;
+
+  // preview_start_time 字段，双精度浮点数
+  double preview_start_time = 10;
+
+  // full_track 字段，AudioInfo 消息类型
+  AudioInfo full_track = 11;
+
+  // accompaniment_track 字段，AudioInfo 消息类型
+  AudioInfo accompaniment_track = 12;
+
+  // new_cover_url 字段，字符串类型
+  string new_cover_url = 13;
+
+  // midi_url 字段，字符串类型
+  string midi_url = 14;
+
+  // is_favorite 字段，布尔类型
+  bool is_favorite = 15;
+
+  // order_info 字段，OrderInfo 消息类型
+  OrderInfo order_info = 16;
+
+  // tags 字段，字符串列表
+  repeated string tags = 17;
+
+  // music_climax 字段，MusicInterval 消息类型列表
+  repeated MusicInterval music_climax = 19;
+
+  // preludes 字段，MusicInterval 消息类型列表
+  repeated MusicInterval preludes = 20;
+
+  // interludes 字段，MusicInterval 消息类型列表
+  repeated MusicInterval interludes = 21;
+
+  // segments 字段，MusicInterval 消息类型列表
+  repeated MusicInterval segments = 22;
+
+  // pattern_file_url 字段，字符串类型
+  string pattern_file_url = 23;
+
+  // bridge_segments 字段，MusicInterval 消息类型列表
+  repeated MusicInterval bridge_segments = 24;
+
+  // main_segments 字段，MusicInterval 消息类型列表
+  repeated MusicInterval main_segments = 25;
+
+  // finale_segments 字段，MusicInterval 消息类型列表
+  repeated MusicInterval finale_segments = 26;
+
+  // chorus_info 字段，ChorusVideoInfo 消息类型
+  ChorusVideoInfo chorus_info = 27;
+
+  // song_type 字段，整型
+  int32 song_type = 28;
+
+  // add_song_source 字段，字符串类型
+  string add_song_source = 29;
+
+  // total_order_with_cur_anchor 字段，整型字符串（int64String）
+  string total_order_with_cur_anchor = 30;
+
+  // global_total_order 字段，整型字符串（int64String）
+  string global_total_order = 31;
+
+  // artist_ids 字段，整型字符串（int64String）列表
+  repeated string artist_ids = 32;
+
+  // id_str 字段，字符串类型
+  string id_str = 33;
+
+  // song_copyright 字段，整型列表
+  repeated int32 song_copyright = 34;
+
+  // is_prior_song 字段，布尔类型
+  bool is_prior_song = 35;
+
+  // is_fragment_song 字段，布尔类型
+  bool is_fragment_song = 36;
+
+  // fragment_lyric 字段，字符串类型
+  string fragment_lyric = 37;
+
+  // personal_song_info 字段，PersonalSongInfo 消息类型
+  PersonalSongInfo personal_song_info = 38;
+
+  // lyric_hash 字段，字符串类型
+  string lyric_hash = 39;
+
+  // midi_hash 字段，字符串类型
+  string midi_hash = 40;
+
+  // want_listen_info 字段，WantListenInfo 消息类型
+  WantListenInfo want_listen_info = 41;
+
+  // challenge_info 字段，ChallengeInfo 消息类型
+  ChallengeInfo challenge_info = 42;
+
+  // 扩展字段，假设 ext 是一个 map<string, string>
+  map<string, string> ext = 18;
+  message AudioInfo {
+    // url 字段，字符串类型
+    string url = 1;
+
+    // song_patten 字段，整型字符串（int64String）
+    string song_patten = 2;
+
+    // audio_id 字段，整型字符串（int64String）
+    string audio_id = 3;
+
+    // volume_lufs 字段，双精度浮点数
+    double volume_lufs = 4;
+
+    // volume_peak 字段，双精度浮点数
+    double volume_peak = 5;
+
+    // bpm 字段，双精度浮点数
+    double bpm = 6;
+
+    // beats_point_url 字段，字符串类型
+    string beats_point_url = 7;
+
+    // create_time 字段，整型字符串（int64String）
+    string create_time = 8;
+
+    // file_hash 字段，字符串类型
+    string file_hash = 9;
+  }
+  message OrderInfo {
+    // top_user 字段，是一个 UserInfo 消息类型
+    UserInfo top_user = 1;
+
+    // score 字段，整型字符串（int64String）
+    string score = 2;
+
+    // order_count 字段，整型字符串（int64String）
+    string order_count = 3;
+
+    // has_added 字段，布尔类型
+    bool has_added = 4;
+
+  }
+  message ChallengeInfo {
+    // ktv_challenge_type 字段，整型（int32）
+    int32 ktv_challenge_type = 1;
+
+    // is_success 字段，布尔类型（bool）
+    bool is_success = 2;
+
+    // score 字段，双精度浮点数（double）
+    double score = 3;
+  }
+}
+
+
+message PersonalSongInfo {
+  // user_midi_score 字段，双精度浮点数
+  double user_midi_score = 1;
+
+  // is_high_score_song 字段，布尔类型
+  bool is_high_score_song = 2;
+}
+
+message UserInfo {
+  // id 字段，整型字符串（int64String）
+  string id = 1;
+
+  // nickname 字段，字符串类型
+  string nickname = 2;
+
+  // avatar 字段，Image 消息类型
+  Image avatar = 3;
+
+  // id_str 字段，字符串类型
+  string id_str = 4;
+
+  // high_score_song_count 字段，字符串类型
+  string high_score_song_count = 5;
+
+  // ktv_stage_mic_pos_tag_text 字段，字符串类型
+  string ktv_stage_mic_pos_tag_text = 6;
+
+  // ktv_lyric_text 字段，整型（int32）
+  int32 ktv_lyric_text = 7;
+
+  // ktv_component_lyric_text_first_line 字段，字符串类型
+  string ktv_component_lyric_text_first_line = 8;
+
+  // ktv_component_lyric_text_second_line 字段，整型（int32）
+  int32 ktv_component_lyric_text_second_line = 9;
+
+  // high_score_song_tag 字段，UserHighScoreSongTag 消息类型
+  UserHighScoreSongTag high_score_song_tag = 10;
+
+  // hit_midi_record_ab 字段，整型字符串（int64String）
+  string hit_midi_record_ab = 11;
+
+  // user_midi_score 字段，双精度浮点数（double）
+  double user_midi_score = 12;
+
+  // is_high_score_song 字段，布尔类型（bool）
+  bool is_high_score_song = 13;
+}
+
+message WantListenInfo {
+  // want_listen_count 字段，整型字符串（int64String）
+  string want_listen_count = 1;
+}
+
+message MusicInterval {
+  // StartTimeMillisecond 字段，整型字符串（int64String）
+  string StartTimeMillisecond = 1;
+
+  // DurationMillisecond 字段，整型字符串（int64String）
+  string DurationMillisecond = 2;
+}
+message ChorusVideoInfo {
+  // item_id 字段，整型字符串（int64String）
+  string item_id = 1;
+
+  // item_description 字段，字符串类型
+  string item_description = 2;
+
+  // item_url 字段，字符串类型
+  string item_url = 3;
+
+  // author_id 字段，整型字符串（int64String）
+  string author_id = 4;
+
+  // author_name 字段，字符串类型
+  string author_name = 5;
+
+  // use_times 字段，整型字符串（int64String）
+  string use_times = 6;
+
+  // image 字段，Image 消息类型
+  Image image = 7;
+}
+message UserHighScoreSongTag {
+  // high_score_song_count 字段，字符串类型
+  string high_score_song_count = 1;
+
+  // icon 字段，字符串类型
+  string icon = 2;
+
+  // bg_color 字段，字符串类型列表
+  repeated string bg_color = 3;
+}
+message RoomStreamAdaptationMessage {
+  Common common = 1;
+  int32 adaptation_type = 2;
+  float adaptation_height_ratio = 3;
+  float adaptation_body_center_ratio = 4;
+}
+message QuizAudienceStatusMessage {
+  // common 字段，引用 Common 消息类型
+  Common common = 1;
+
+  // quiz_list 字段，是一个可重复的 Quiz 消息类型列表
+  repeated Quiz quiz_list = 2;
+}
+message Quiz {
+  // quiz_id 字段，字符串类型
+  string quiz_id = 1;
+
+  // title 字段，字符串类型
+  string title = 2;
+
+  // options 字段，字符串类型
+  string options = 3;
+
+  // quiz_status 字段，整型
+  int32 quiz_status = 4;
+
+  // countdown_time 字段，整型字符串（int64String）
+  string countdown_time = 5;
+
+  // win_option 字段，整型字符串（int64String）
+  string win_option = 6;
+
+  // bet_option 字段，整型字符串（int64String）
+  string bet_option = 7;
+
+  // gain 字段，字符串类型
+  string gain = 8;
+
+  // template_id 字段，字符串类型
+  string template_id = 9;
+
+  // absolute_end_time 字段，整型字符串（int64String）
+  string absolute_end_time = 10;
+}
+message HotChatMessage {
+  Common common = 1;                // 公共信息
+  string title = 2;                  // 标题
+  string content = 3;                // 内容
+  int64 num = 4;                    // 数量
+  int64 duration = 5;                // 持续时间
+  int64 show_duration = 6;           // 显示持续时间
+  int64 sequence_id = 7;             // 序列ID
+  repeated string hot_list = 8;      // 热门列表
+  Text rtf_content = 9;              // 富文本内容
+  int64 chat_content_type = 10;      // 聊天内容类型
+
+  // 额外信息的映射字段
+  map<string, string> extra = 200;  // 假设字段编号为200
+}
+message HotRoomMessage {
+  // common field, assuming it's a message type imported from another .proto file
+  Common common = 1;
+
+  // info field, assuming it's a message type imported from another .proto file
+  HotRoomInfo info = 2;
+}
+message HotRoomInfo {
+  // BitMap field, an integer field represented as a string
+  string BitMap = 1;
+}
+message AudioChatMessage {
+  // common 字段，引用 Common 消息类型
+  Common common = 1;
+
+  // user 字段，引用 User 消息类型
+  User user = 2;
+
+  // content 字段，字符串类型
+  string content = 3;
+
+  // audio_url 字段，字符串类型
+  string audio_url = 4;
+
+  // audio_duration 字段，整型字符串（int64String）
+  string audio_duration = 5;
+
+  // public_area_common 字段，引用 PublicAreaCommon 消息类型
+  PublicAreaCommon public_area_common = 6;
+
+  // rtf_content 字段，引用 Text 消息类型
+  Text rtf_content = 7;
+}
+message NotifyMessage {
+  // common 字段，引用 Common 消息类型
+  Common common = 1;
+
+  // schema 字段，字符串类型
+  string schema = 2;
+
+  // notify_type 字段，整型字符串（int64String）
+  string notify_type = 3;
+
+  // content 字段，字符串类型
+  string content = 4;
+
+  // user 字段，引用 User 消息类型
+  User user = 5;
+
+  // extra 字段，引用 NotifyMessage.Extra 消息类型
+  NotifyMessage.Extra extra = 6;
+
+  // notify_class 字段，整型字符串（int64String）
+  string notify_class = 7;
+
+  // flex_setting 字段，整型字符串（int64String）列表
+  repeated string flex_setting = 8;
+
+  // biz_scene 字段，字符串类型
+  string biz_scene = 100;
+  message Extra {
+    // duration field, an int64 string
+    string duration = 1;
+
+    // background field, assuming it's a Background message
+    Background background = 2;
+
+    // content_list field, assuming it's a ContentList message
+    ContentList content_list = 3;
+
+    // need_gift_frequency field, a boolean
+    bool need_gift_frequency = 6;
+
+    // params map field
+    map<string, string> params = 5;
+  }
+  message Background {
+    // width field, an int32
+    int32 width = 1;
+
+    // height field, an int32
+    int32 height = 2;
+
+    // url_list field, a repeated string
+    repeated string url_list = 3;
+
+    // uri field, a string
+    string uri = 4;
+  }
+  message Content {
+    // 假设Content有id和text两个字段
+    string content = 1;
+    bool need_high_light = 2;
+  }
+  message ContentList {
+    repeated Content contents = 1;
+    string high_light_color = 2;
+  }
+}
+// 幸运盒子消息
+message LuckyBoxMessage {
+  Common common = 1;
+  int64 diamond_count = 2;
+  int64 box_id = 3;
+  int64 send_time = 4;
+  int64 delay_time = 5;
+  int64 box_type = 6;
+  string title = 7;
+  bool large = 8;
+  Image background = 9;
+  bool is_official = 10;
+  int64 priority = 11;
+  User user = 12;
+  repeated ImgText description_list = 13; // 假设ImgText也在别处定义
+  Image lucky_icon = 14;
+  int64 display_duration = 15;
+  int32 box_status = 16;
+  int32 flat_duration = 17;
+  int32 unpack_type = 18;
+  BoxMeta meta = 19;
+  Extra extra = 20;
+  int64 business_type = 21;
+  Image top_cover_image = 22;
+  Image bottom_cover_image = 23;
+  string box_id_str = 24;
+  BottomCommentMsg bottom_comment_msg = 25; // 假设BottomCommentMsg也在别处定义
+  bool is_risky_owner = 26;
+  string activity_id = 27;
+  Dress dress = 28; // 假设Dress也在别处定义
+  PublicAreaCommon public_area_common = 29; // 假设PublicAreaCommon也在别处定义
+  int64 join_frozen_duration = 30;
+  message ImgText {
+    Image image = 1; // 使用webcast.data包中的Image消息类型
+    string text = 2;
+  }
+  message BoxMeta {
+    string title_desc = 1;               // 标题描述
+    string content_count_desc = 2;       // 内容数量描述
+    string content_amount_desc = 3;      // 内容金额描述
+    string animation_desc = 4;           // 动画描述
+    string before_unpack_desc = 5;       // 解包前的描述
+    string success_unpack_desc = 6;     // 成功解包的描述
+    string fail_unpack_desc = 7;        // 解包失败的描述
+    Image ad_image = 8;     // 广告图像
+    string im_desc = 9;                  // IM描述
+  }
+  message Extra {
+    int32 current_round = 3;           // 当前轮次
+    int32 pct = 4;                     // 百分比
+    int64 round_target = 5;           // 轮次目标
+    map<string, string> all_desc = 1; // 所有描述的键值对映射
+    map<string, Image> all_image = 2; // 所有图像的键值对映射
+  }
+  // BottomCommentMsg消息类型，包含底部评论消息的内容
+  message BottomCommentMsg {
+    Text text = 1;        // 文本内容
+    Image background = 2; // 背景图像
+    Image left_icon = 3;  // 左侧图标
+    Image right_icon = 4; // 右侧图标
+  }
+  message Dress {
+    string dress_id = 1;               // 装扮ID
+    string dress_offline_time = 2;     // 装扮下线时间（int64字符串表示）
+    string jump_text = 3;              // 跳转文本
+
+    // 嵌套的映射类型，键为int64，值为字符串
+    map<int64, string> jump_schema_to_box = 4;
+    map<int64, string> jump_schema_to_dress = 5;
+  }
+}
+message UpdateFanTicketMessage {
+  Common common = 1;  // 假设Common是已定义的消息类型
+  string room_fan_ticket_count_text = 2;  // 房间粉丝票计数文本
+  int64 room_fan_ticket_count = 3;         // 房间粉丝票计数
+  bool force_update = 4;                 // 是否强制更新
+}
+message ScreenChatMessage {
+  Common common = 1;                           // 公共信息
+  User user = 2;                               // 用户信息
+  string screen_chat_type = 3;                // 屏幕聊天类型
+  string content = 4;                          // 内容
+  string priority = 5;                         // 优先级
+  Effect effect = 6;                           // 效果
+  Image background_image = 7;                  // 背景图像
+  Effect effect_v2 = 8;                        // 效果v2
+  Image background_image_v2 = 9;               // 背景图像v2
+  PublicAreaCommon public_area_common = 10;    // 公共区域信息
+  OfficialCommentConfig official_comment_config = 11; // 官方评论配置
+  string event_time = 12;                      // 事件时间
+  bool send_review = 13;                       // 是否发送审核
+  ChatIdentity chat_identity_info = 14;        // 聊天身份信息
+  Text rtf_content = 30;                       // 富文本内容
+  bool public_area_does_not_display = 31;      // 公共区域是否不显示
+  Text rtf_content_v2 = 32;                    // 富文本内容v2
+  message OfficialCommentConfig {
+    bool official = 1;  // 是否官方评论
+  }
+}
+message Effect {
+  FlexImageStruct icon = 1;               // 图标结构
+  Image avatar_icon = 2;                 // 头像图标
+  string background_color = 3;           // 背景颜色
+}
+// FlexImageStruct消息类型
+message FlexImageStruct {
+  repeated string url_list = 1;  // 图像URL列表
+  string uri = 2;                // 图像统一资源标识符
+  string flex_setting = 3;       // 弹性设置（假设为int64字符串表示）
+  string text_setting = 4;       // 文本设置（假设为int64字符串表示）
+  string top_border_height = 5;  // 顶部边框高度（假设为int64字符串表示）
+}
+message ChatIdentity {
+  int32 show_identity = 1;    // 显示身份标识（假设为int32类型）
+  Image identity_label = 2;   // 身份标签图像
+}
+message NotifyEffectMessage {
+  Common common = 1; // 假设Common也在相应的.proto文件中定义
+  repeated Image icons = 2;
+  CombinedText text = 3; // 假设CombinedText也在相应的.proto文件中定义
+  Background background = 4;
+  DynamicConfig dynamic_config = 5;
+  CombinedText text_v2 = 6; // 假设CombinedText也在相应的.proto文件中定义
+  bool support_landscape = 7;
+  SceneConfig scene_config = 10;
+  map<string, string> buried_point = 20; // 假设埋点数据为string到string的映射
+  // Background嵌套消息类型
+  message Background {
+    Image background_image = 1;
+    string background_color = 10;
+    Image background_effect = 11;
+  }
+
+  // DynamicConfig嵌套消息类型
+  message DynamicConfig {
+    int32 stay_time = 1;
+    int32 max_stay_time = 2;
+    int32 display_effect_type = 3;
+  }
+
+  message BindingGiftMessage {
+    GiftMessage msg = 1;  // 嵌套类型字段
+    Common common = 2;    // 嵌套类型字段
+  }
+  // SceneConfig嵌套消息类型
+  message SceneConfig {
+    string scene = 1;
+    string priority = 2; // 假设优先级为string类型，如int64字符串表示
+    bool need_aggregate = 3;
+    string aggregate_num = 4; // 假设聚合数为string类型，如int64字符串表示
+    Text aggregate_text = 5; // 假设Text也在相应的.proto文件中定义
+    string sub_scene = 6;
+    string max_wait_time = 7; // 假设最大等待时间为string类型，如int64字符串表示
+  }
+}
+message CombinedText {
+  repeated DisplayItem display_items = 1; // 显示项列表
+  SchemaInfo schema_info = 10;            // 模式信息
+  ComboInfo combo_info = 11;              // 组合信息
+}
+message ComboInfo {
+  int64 combo_seq = 1;    // 组合序列
+  int64 combo_order = 2; // 组合顺序
+}
+message SchemaInfo {
+  string schema_url = 1;  // 模式URL
+}
+message DisplayItem {
+  int32 display_item_type = 1; // 显示项类型
+  bool combo_fresh = 20;       // 组合新鲜度标记
+  SchemaInfo schema_info = 21; // 模式信息
+  ImagesItem images_item = 50; // 图像项
+  TextItem text_item = 51;     // 文本项
+  DisplayItemFormat format = 100; // 显示项格式
+}
+message ImagesItem {
+  // 假设Image是images字段中元素的类型
+  repeated Image images = 1;
+  int32 display_style = 20;
+}
+message TextItem {
+  // 文本字段，使用repeated表示可以有多个文本项
+  repeated Text text = 1;
+}
+message DisplayItemFormat {
+  bool enable_left_space = 1;  // 布尔类型字段
+  string left_space = 2;       // 字符串类型字段，假设int64String被转换为string
+}
+message TempStateAreaReachMessage {
+  Common common = 1; // 假设Common是已经定义好的消息类型
+  int64 elem_type = 2;
+  int64 elem_id = 3;
+  int64 item_id = 4;
+  int64 status = 5;
+  Resource resource = 6; // Resource是嵌套类型
+  message Resource {
+    string name = 1;
+    string icon = 2;
+    string description = 3;
+    string extra = 4;
+  }
+}
+message GrowthTask {
+  int64 id = 1;                  // 64位整数
+  string id_str = 2;             // 字符串
+  int64 live_id = 3;             // 64位整数
+  int64 app_id = 4;              // 64位整数
+  int64 class_id = 5;            // 64位整数
+  int64 group_id = 6;            // 64位整数
+  int32 item_type = 7;           // 32位整数
+  string item_id = 8;            // 字符串
+  string task_name = 9;          // 字符串
+  string task_desc = 10;         // 字符串
+  int64 start_time = 11;         // 64位整数
+  int64 end_time = 12;           // 64位整数
+  int64 display_start_time = 13;  // 64位整数
+  int64 display_end_time = 14;    // 64位整数
+  int32 status = 15;              // 32位整数
+  int64 completed_stage = 16;     // 64位整数
+  int64 finish_time = 17;         // 64位整数
+  repeated GrowthTaskStage stage_list = 18;  // 可重复的GrowthTaskStage类型字段
+  string extra = 19;              // 字符串
+  string config = 20;             // 字符串
+  int64 create_time = 21;         // 64位整数
+}
+message GrowthTaskStage {
+  repeated GrowthTaskCondition condition_list = 1;  // 条件列表，可重复的GrowthTaskCondition类型字段
+  repeated GrowthTaskReward reward_list = 2;        // 奖励列表，可重复的GrowthTaskReward类型字段
+  int64 completed_time = 3;                          // 完成时间，64位整数
+}
+message GrowthTaskReward {
+  GrowthTaskRewardDef def = 1;  // GrowthTaskRewardDef类型字段
+  int32 status = 2;              // 奖励状态，32位整数
+  string extra = 3;              // 额外信息，字符串类型
+  int64 remaining_count = 4;    // 剩余数量，64位整数
+}
+message GrowthTaskRewardDef {
+  int64 id = 1;                  // 唯一标识符，64位整数
+  int32 reward_type = 2;         // 奖励类型，32位整数
+  int32 settle_type = 3;         // 结算类型，32位整数
+  string target = 4;             // 目标，字符串类型
+  string desc = 5;               // 描述，字符串类型
+  string operator = 6;           // 操作符，字符串类型
+  string send_param_str = 7;     // 发送参数字符串，字符串类型
+  string extra = 8;               // 额外信息，字符串类型
+  string name = 9;                // 名称，字符串类型
+}
+message GrowthTaskCondDef {
+  int64 id = 1;           // 唯一标识符，64位整数
+  string key = 2;         // 条件的键或代码，字符串类型
+  string desc = 3;        // 条件描述，字符串类型
+  string operator = 4;    // 操作符，可能定义了如何比较条件，字符串类型
+  string extra = 5;       // 额外信息，可能包含其他元数据，字符串类型
+}
+message GrowthTaskCondition {
+  GrowthTaskCondDef def = 1;             // GrowthTaskCondDef类型字段
+  string desc = 2;                       // 字符串类型字段
+  string current_value = 3;              // 当前值，以字符串形式存储
+  string target_value = 4;               // 目标值，以字符串形式存储
+  string display_current_value = 5;      // 显示的当前值，以字符串形式存储
+  string display_target_value = 6;       // 显示的目标值，以字符串形式存储
+  string display_delta = 7;              // 显示的变化量，以字符串形式存储
+}
+message GrowthTaskMessage {
+
+  Common common = 1;
+  GrowthTask task = 2;
+  int32 action = 3;
+  CurrentContribution current_contribution = 4;
+  repeated GrowthTaskContributorRank contributors = 5;
+  int64 queue_task_len = 6;
+
+  message CurrentContribution {
+    User user = 1;  // 关联User消息类型
+    map<int64, int64> delta_info = 2;  // 映射类型字段，存储贡献变化
+  }
+
+}
+message GrowthTaskContributorRank {
+  User user = 1;  // 用户信息，关联User消息类型
+  int64 score = 2;  // 分数，64位整数
+  int64 rank = 3;  // 排名，64位整数
+}
+message GameCPBaseMessage {
+  Common common = 1;      // 公共信息，关联Common消息类型
+  GameCPShowMessage show_info = 2;  // 展示信息，关联GameCPShowMessage消息类型
+}
+message GameCPShowMessage {
+  int32 type = 1; // 消息类型
+  Text introduce_download_info = 2; // 游戏下载信息
+  string game_image = 3; // 游戏图片
+  string game_name = 4; // 游戏名称
+  string game_download_url = 5; // 游戏下载链接
+  string game_trace_info = 6; // 游戏追踪信息
+  repeated string game_tag_names = 7; // 游戏标签名称列表
+  string game_background_color = 8; // 游戏背景颜色
+  int32 introduce_time_limit = 9; // 介绍时间限制
+  int64 introduce_start_time = 10; // 介绍开始时间
+  int32 introduce_stop_type = 11; // 介绍停止类型
+  Text introduce_stop_message = 12; // 介绍停止信息
+  string game_id = 13; // 游戏ID
+  bool audit_result = 14; // 审核结果
+  string ios_app_id = 15; // iOS应用ID
+  string company_name = 16; // 公司名称
+  string download_extra = 17; // 下载额外信息
+  string android_privacy_url = 18; // Android隐私政策链接
+  string android_authorization_url = 19; // Android授权链接
+  string ios_privacy_url = 20; // iOS隐私政策链接
+  string ios_authorization_url = 21; // iOS授权链接
+  string android_version = 22; // Android版本
+  string ios_version = 23; // iOS版本
+  string active_link = 24; // 活跃链接
+  int64 download_count = 25; // 下载次数
+  bool is_show_animate = 26; // 是否显示动画
+  int64 animate_start_time = 27; // 动画开始时间
+  int64 animate_duration = 28; // 动画持续时间
+  string anti_hijack_content = 29; // 反劫持内容
+  string anti_hijack_image = 30; // 反劫持图片
+  string ios_sale_point = 31; // iOS销售点
+  bool is_forbid_jump_ios_app = 32; // 是否禁止跳转到iOS应用
+  bool has_platform_gift = 33; // 是否有平台礼物
+  string open_game_url = 44; // 打开游戏链接
+  string prop_icon = 45; // 道具图标
+  string prop_name = 46; // 道具名称
+  string prop_id = 47; // 道具ID
+  int64 market_price = 48; // 市场价格
+  int64 selling_price = 49; // 销售价格
+  int64 prop_sku_id = 50; // 道具SKU ID
+  ReserveItem reserve_item = 51; // 预约项目
+  int64 prop_type = 52; // 道具类型
+  int64 game_access_type = 53; // 游戏访问类型
+  bool is_prop_exp_game = 54; // 是否是道具体验游戏
+  repeated string component_ids = 55; // 组件ID列表
+  int32 biz_type = 56; // 业务类型
+  int64 install_user_count = 57; // 安装用户数量
+  string android_sale_point = 58; // Android销售点
+  MiniGameMeta mini_game_meta = 59; // 小游戏元数据
+  int64 support_platforms = 60; // 支持的平台
+  MiniPlayMeta mini_play_meta = 61; // 小游戏播放元数据
+  string play_introduce = 62; // 播放介绍
+  string small_icon = 63; // 小图标
+  string game_introduction_url = 64; // 游戏介绍链接
+  GameImageBundler game_icon = 65; // 游戏图标捆绑
+  CloudGameMeta cloud_game_meta = 66; // 云游戏元数据
+  AtmosphereContent atmosphere_content = 67; // 氛围内容
+  FeaturedContent featured_content = 68; // 特色内容
+  string promote_instance_id = 70; // 推广实例ID
+  int64 prop_stock_num = 71; // 道具库存数量
+  IntroduceCardTag tag = 72; // 介绍卡片标签
+  IntroduceCardDisplayInfo card_display_info = 73; // 卡片显示信息
+  bool is_in_pre_download_period = 74; // 是否在预下载期
+}
+message ReserveItem {
+  string reserve_today_num = 1;  // 当天预订数量，字符串类型
+  string reserve_total_num = 2;  // 总预订数量，字符串类型
+  int32 reserve_status = 3;       // 预订状态，32位整数
+}
+message MiniGameMeta {
+  string schema = 1;  // 小游戏的schema，字符串类型
+  string version = 2;  // 小游戏的版本，字符串类型
+}
+message MiniPlayMeta {
+  string schema = 1;            // 小游戏的schema，字符串类型
+  string game_name = 2;         // 小游戏名称，字符串类型
+  string icon = 3;              // 小游戏图标，字符串类型
+  string game_id = 4;           // 小游戏ID，字符串类型
+  string app_id = 5;            // 应用ID，字符串类型
+  int64 support_live_scene = 6; // 支持的直播场景，64位整数
+  string version = 7;           // 小游戏版本，字符串类型
+  int32 game_type = 8;          // 小游戏类型，32位整数
+  string developer = 9;         // 开发者信息，字符串类型
+  string extra = 10;            // 额外信息，字符串类型
+}
+message GameImageBundler {
+  GameImage origin_image = 1;  // 原始图片，GameImage类型
+  GameImage thumb_image = 2;   // 缩略图，GameImage类型
+  GameImage thumb_heif_image = 3; // HEIC格式的缩略图，GameImage类型
+}
+message GameImage {
+  repeated string url_list = 1;  // 图片URL列表，重复的字符串类型字段
+  string uri = 2;                // 图片统一资源标识符，字符串类型
+  int64 height = 3;              // 图片高度，64位整数
+  int64 width = 4;               // 图片宽度，64位整数
+  int64 rotation = 5;            // 图片旋转角度，64位整数
+}
+message CloudGameMeta {
+  string schema = 1;  // 云游戏的schema，字符串类型
+}
+message AtmosphereContent {
+  int64 show_duration = 1; // 展示时长，64位整数
+  string count = 2;        // 计数，字符串类型
+}
+message FeaturedContent {
+  int32 rotation_time = 1;   // 轮播时间，32位整数
+  repeated Content contents = 2; // 内容列表，重复的Content类型字段
+}
+message Content {
+  int32 type = 1;    // 内容类型，32位整数
+  string content = 2; // 内容正文，字符串类型
+  repeated string avatar = 3; // 头像列表，重复的字符串类型字段
+}
+message IntroduceCardTag {
+  string icon_url = 1; // 标签的图标URL，字符串类型
+  string sub_text = 2; // 标签的辅助文本，字符串类型
+}
+message IntroduceCardDisplayInfo {
+  int64 display_duration = 1;          // 展示时长，64位整数
+  bool is_open_timer_introduce_card = 2; // 是否开启定时介绍卡片，布尔类型
+  int64 display_timer_span = 3;       // 展示定时间隔，64位整数
+  int64 display_timer_loop_cnt = 4;   // 展示定时循环次数，64位整数
 }

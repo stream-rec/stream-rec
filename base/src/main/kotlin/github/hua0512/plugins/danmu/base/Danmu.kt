@@ -32,8 +32,10 @@ import github.hua0512.app.App
 import github.hua0512.data.media.ClientDanmuData
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
+import github.hua0512.data.media.DanmuDataWrapper.EndOfDanmu
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
+import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -151,6 +153,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   private val bufferLock = ReentrantLock()
 
   /**
+   * Whether end of danmu is received
+   */
+  private var hasReceivedEnd = false
+
+  /**
    * Initialize danmu
    *
    * @param streamer streamer
@@ -185,7 +192,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     }
 
     // start Websocket with backoff strategy
-    github.hua0512.utils.withIORetry(
+    withIORetry(
       maxRetries = 10,
       initialDelayMillis = 10000,
       maxDelayMillis = 60000,
@@ -220,7 +227,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         }
       }
       // check if coroutine is cancelled
-      if (isActive) {
+      if (isActive && !hasReceivedEnd) {
         // trigger backoff strategy
         throw IOException("$websocketUrl connection finished")
       }
@@ -260,6 +267,12 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
                   val delta = danmu.calculateDelta()
                   // emit danmu to write to file
                   emit(ClientDanmuData(danmu, videoStartTime, delta))
+                }
+
+                is EndOfDanmu -> {
+                  logger.debug("$filePath End of danmu received")
+                  hasReceivedEnd = true
+                  close()
                 }
 
                 else -> logger.error("Unsupported danmu data: {}", danmu)
@@ -432,6 +445,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    */
   fun clean() {
     enableWrite = false
+    hasReceivedEnd = false
     // reset replay cache
     headersMap.clear()
     requestParams.clear()
