@@ -38,7 +38,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.datetime.Clock
 import java.nio.file.Files
-import java.nio.file.Path
+import kotlin.io.path.Path
+import kotlin.io.path.extension
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 
 
@@ -59,7 +61,12 @@ fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDow
   var lastOpenTime = 0L
 
   fun init(path: String) {
-    val file = Files.createFile(Path.of(path))
+    var jPath = Path(path)
+    // force to use "flv" extension
+    if (jPath.extension != "flv") {
+      jPath = jPath.resolveSibling("${jPath.nameWithoutExtension}.flv")
+    }
+    val file = Files.createFile(jPath)
     logger.info("Starting write to: {}", file)
     writer = FlvWriter(file.outputStream().buffered())
     lastPath = path
