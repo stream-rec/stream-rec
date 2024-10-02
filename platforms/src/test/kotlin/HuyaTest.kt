@@ -1,7 +1,3 @@
-import github.hua0512.app.App
-import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.HuyaConfigGlobal
-import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.plugins.huya.download.Huya
@@ -11,8 +7,8 @@ import io.exoquery.pprint
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
+import kotlin.test.expect
 import kotlin.time.Duration
 
 /*
@@ -41,8 +37,9 @@ import kotlin.time.Duration
  * SOFTWARE.
  */
 
-class HuyaTest {
+class HuyaTest : BaseTest() {
 
+  override val testUrl: String = "https://www.huya.com/660000"
 
   @Test
   fun testUrl() = runTest {
@@ -65,16 +62,10 @@ class HuyaTest {
     assertEquals(matchResult.groupValues.last(), "https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310")
   }
 
-  private val streamingUrl = "https://www.huya.com/660000"
-
-  private val app = App(Json).apply {
-    updateConfig(AppConfig(huyaConfig = HuyaConfigGlobal(sourceFormat = VideoFormat.hls, primaryCdn = "HW")))
-  }
-
   @Test
-  fun testLive() = runTest {
+  override fun testLive() = runTest {
     val client = app.client
-    val extractor = HuyaExtractor(client, app.json, streamingUrl).apply {
+    val extractor = HuyaExtractor(client, app.json, testUrl).apply {
       prepare()
     }
     val mediaInfo = extractor.extract()
@@ -83,9 +74,18 @@ class HuyaTest {
   }
 
   @Test
+  override fun testRegex(): Unit {
+    val regex = HuyaExtractor.URL_REGEX.toRegex().find(testUrl)
+    assertNotNull(regex)
+    expect("660000") {
+      regex!!.groupValues.last()
+    }
+  }
+
+  @Test
   fun testLive2() = runTest {
     val client = app.client
-    val extractor = HuyaExtractorV2(client, app.json, streamingUrl).apply {
+    val extractor = HuyaExtractorV2(client, app.json, testUrl).apply {
       prepare()
     }
     val mediaInfo = extractor.extract()
@@ -96,9 +96,9 @@ class HuyaTest {
   @Test
   fun testFlv() = runTest {
     val client = app.client
-    val extractor = HuyaExtractor(client, app.json, streamingUrl)
+    val extractor = HuyaExtractor(client, app.json, testUrl)
     val downloader = Huya(app, HuyaDanmu(app), extractor).apply {
-      init(Streamer(0, "test", streamingUrl))
+      init(Streamer(0, "test", testUrl))
     }
     val streamInfo = downloader.shouldDownload()
     println(streamInfo)
@@ -113,7 +113,7 @@ class HuyaTest {
       filePath = "huya_danmu.txt"
       presenterUid = 1346609715
     }
-    val init = danmu.init(Streamer(0, "test", streamingUrl))
+    val init = danmu.init(Streamer(0, "test", testUrl))
     danmu.fetchDanmu()
     assertNotNull(danmu)
   }

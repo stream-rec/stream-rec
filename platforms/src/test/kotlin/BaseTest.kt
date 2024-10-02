@@ -1,5 +1,7 @@
 import github.hua0512.app.App
+import github.hua0512.app.HttpClientFactory
 import github.hua0512.data.config.AppConfig
+import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 
@@ -36,7 +38,7 @@ import kotlin.test.Test
  */
 abstract class BaseTest {
 
-  protected val app = App(Json).apply {
+  protected val app = App(Json, HttpClientFactory().getClient(Json)).apply {
     updateConfig(AppConfig())
   }
 
