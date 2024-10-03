@@ -480,11 +480,13 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    */
   protected fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
     // check if the segment is valid, a valid segment should exist and have a size greater than the minimum part size
-    if (segmentPath.exists() && (segmentPath.extension != "m3u8" || segmentPath.fileSize() >= app.config.minPartSize)) return false
-    logger.error("(${streamer.name}) segment is invalid: ${segmentPath.pathString}")
-    // cases where the segment is invalid
-    deleteOutputs(segmentPath, danmuPath)
-    return true
+    // m3u8 files are not considered segments
+    if (segmentPath.exists() && segmentPath.extension != "m3u8" && segmentPath.fileSize() < app.config.minPartSize) {
+      logger.error("(${streamer.name}) segment is invalid: ${segmentPath.pathString}")
+      deleteOutputs(segmentPath, danmuPath)
+      return true
+    }
+    return false
   }
 
   /**
