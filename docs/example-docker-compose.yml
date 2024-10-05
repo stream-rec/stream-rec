@@ -20,13 +20,13 @@ services:
       # Proxy settings, if you are in mainland China, you may need to set up a proxy.
       # Comment it out if you don't need a proxy. Only http proxy is supported.
       #- HTTP_PROXY=http://192.168.110.10:7890
-      # Log level, by default is info. Debug logs are useful for debugging, but they can be very verbose.
+      # Log level, by default is info. `DEBUG` logs are useful for debugging, but they can be very verbose.
       - LOG_LEVEL=INFO
       # CONTAINER database path
       - DB_PATH=/opt/records
       # CONTAINER download path for the first initialization
       - DOWNLOAD_PATH=/opt/records
-      # LOGIN secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
+      # FIRST USE LOGIN secret, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
       - LOGIN_SECRET=123
     volumes:
       # Host machine path binding to container path, storage path mapping
@@ -52,8 +52,8 @@ services:
       # Make sure the port is the same as the backend port.
       - API_URL=http://backend:12555/api
       # Secret for next-auth, YOU CAN CHANGE IT TO ANY STRING YOU LIKE
-      - NEXTAUTH_SECRET=21312312
-      # CLIENT url, used by next-auth to redirect login page.
+      - NEXTAUTH_SECRET=6chtw8GBN3BO
+      # CLIENT url, used by next-auth to redirect to login page.
       # Should be the address which the user types in the browser to access the frontend.
       # Make sure the port is the same as the frontend port.
       - NEXTAUTH_URL=http://localhost:15275/

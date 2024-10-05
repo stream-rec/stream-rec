@@ -25,6 +25,7 @@ This project is the result of my personal need for a tool that can automatically
 - Integration with [Rclone](https://rclone.org/) for uploading to cloud storage
 - Configurable via web interface.
 - Docker support
+- FLV AVC fix support
 
 # Supported streaming services
 
@@ -44,9 +45,9 @@ This project is the result of my personal need for a tool that can automatically
 
 # Screenshots
 
-![login.png](https://github.com/hua0512/stream-rec-front/blob/master/docs/en/login.png)
-![dashboard.png](https://github.com/hua0512/stream-rec-front/blob/master/docs/en/dashboard.png)
-![streamers.png](https://github.com/hua0512/stream-rec-front/blob/master/docs/en/streamers.png)
+![login.png](https://github.com/stream-rec/stream-rec-frontend/blob/master/docs/en/login.png)
+![dashboard.png](https://github.com/stream-rec/stream-rec-frontend/blob/master/docs/en/dashboard.png)
+![streamers.png](https://github.com/stream-rec/stream-rec-frontend/blob/master/docs/en/streamers.png)
 
 # Installation
 
@@ -78,13 +79,14 @@ see [Configuration](docs/Configuration.md)).
 ## 2.1 Prerequisites
 
 - Internet access, obviously 😂
-- [Git](https://git-scm.com/downloads) (optional, for cloning the repository)
+- [Git](https://git-scm.com/downloads) (Used to get the version information by the backend)
 - A java development kit (JDK) (version 21 or
   later), [Amazon Corretto 21](https://docs.aws.amazon.com/corretto/latest/corretto-21-ug/downloads-list.html) is recommended.
-- [FFmpeg](https://ffmpeg.org/download.html) (Make sure it's in your `PATH`).
+- [FFmpeg](https://ffmpeg.org/download.html) (Make sure it's in your `PATH`). No longer required if you are using the `kotlin` engine.
+- [FFprobe](https://ffmpeg.org/download.html) (Make sure it's in your `PATH`). Required if `Exit on download error` is enabled.
 - [Streamlink](https://streamlink.github.io/install.html) (optional, for recording streams, make sure it's in your `PATH`)
 - [Rclone](https://rclone.org/downloads/) (optional, for uploading to cloud storage, make sure it's in your `PATH`)
-- [Sqlite3](https://www.sqlite.org/download.html) (for storing stream, upload information, make sure it's in your `PATH`)
+- ~~[Sqlite3](https://www.sqlite.org/download.html) (for storing stream, upload information, make sure it's in your `PATH`)~~
 
 ## 2.2 Building the backend
 
@@ -116,7 +118,7 @@ Several environment variables can be set to configure the tool:
 - `DB_PATH`: Path to the SQLite database folder. (default: `./db`)
 - `JWT_SECRET`: Secret key for JWT token generation.
 - `LOG_LEVEL`: Log level (default: `info`).
-- `LOGIN_SECRET`: Login password for the web interface (default: `stream-rec`).
+- `LOGIN_SECRET`: Login password for the web interface (default: `stream-rec`, if not set).
 
 For example:
 

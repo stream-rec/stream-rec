@@ -3,7 +3,7 @@
 |                    Feature                    |                 Kotlin                  |                   FFMPEG                   |                STREAMLINK                |
 |:---------------------------------------------:|:---------------------------------------:|:------------------------------------------:|:----------------------------------------:|
 |                 FLV Download                  |                    ✅                    |                     ✅                      |                    ❌                     |
-|                 HLS Download                  |         ✅ <br/>(Multithreaded)          |                     ❌                      |          ✅ <br/>(Multithreaded)          |
+|                 HLS Download                  |         ✅ <br/>(Multithreaded)          |                     ✅                      |          ✅ <br/>(Multithreaded)          |
 |           Recording Duration Stats            | ✅    <br/>(Raw data mode not supported) |                     ✅                      |                    ✅                     |
 |            Download Bitrate Stats             |                    ✅                    |  ✅   <br/>(-f segmentation not supported)  | ✅   <br/>(-f segmentation not supported) |
 |               Size Segmentation               |  ✅ <br/>(Raw data mode not supported)   | ✅     <br/>(-f segmentation not supported) |                    ✅                     |
@@ -22,3 +22,4 @@
 |    Video Header Changes (Resolution, Other Parameters)     | Split file      |
 |                    Audio Header Changes                    | Split file      |
 | AMF Metadata Injection (lastheadertimestamp, keyframes...) | Inject          |
+|                       Duplicate TAG                        | Ignore          |
