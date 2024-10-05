@@ -126,10 +126,7 @@ class StreamerDownloadManager(
     // reset retry count
     retryCount = 0
     // update db with the new isLive value
-    if (streamer.isLive) {
-      streamer.isLive = false
-      callback?.onLiveStatusChanged(streamer, false)
-    }
+    resetStreamerLiveStatus()
     // stream is not live or without data
     if (dataList.isEmpty()) {
       return
@@ -244,12 +241,9 @@ class StreamerDownloadManager(
     } else {
       logger.info("${streamer.name} is not live")
     }
-    // there might be a case where the streamer is live but the stream is not available
-    // or the user exited the app while the stream is live
-    if (streamer.isLive) {
-      streamer.isLive = false
-      callback?.onLiveStatusChanged(streamer, false)
-    }
+    // there might be a case when the user exited the app while the stream is live
+    // we reset the isLive value to false to avoid any issues
+    resetStreamerLiveStatus()
   }
 
   suspend fun start(): Unit = supervisorScope {
@@ -384,13 +378,17 @@ class StreamerDownloadManager(
       }
     }
     // ensure the streamer is not live
+    resetStreamerLiveStatus()
+    delay(delayMillis)
+    inTimerRange = true
+    launchStopTask(durationMillis)
+  }
+
+  private fun resetStreamerLiveStatus() {
     if (streamer.isLive) {
       streamer.isLive = false
       callback?.onLiveStatusChanged(streamer, false)
     }
-    delay(delayMillis)
-    inTimerRange = true
-    launchStopTask(durationMillis)
   }
 }
 
