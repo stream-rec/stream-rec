@@ -14,7 +14,8 @@ import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 
 val heartBeatArray = byteArrayOf(0x88.toByte(), 0x88.toByte(), 0x88.toByte(), 0x88.toByte())
@@ -37,8 +38,8 @@ private fun CoroutineScope.createTimeoutJob(session: WebSocketSession): Job {
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Application.configureSockets(json: Json) {
   install(WebSockets) {
-    pingPeriod = Duration.ofSeconds(30)
-    timeout = Duration.ofSeconds(45)
+    pingPeriod = 30.toDuration(DurationUnit.SECONDS)
+    timeout = 45.toDuration(DurationUnit.SECONDS)
     maxFrameSize = Long.MAX_VALUE
     masking = false
   }
