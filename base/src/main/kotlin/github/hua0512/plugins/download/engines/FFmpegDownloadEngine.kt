@@ -214,6 +214,11 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   }
 
   protected fun handleExitCodeAndStreamer(exitCode: Int, streamer: Streamer) {
+    if (lastOpeningFile == null) {
+      logger.error("({}) ffmpeg download failed, exit code: $exitCode")
+      onDownloadError(downloadFilePath, DownloadErrorException("ffmpeg download failed (exit code: $exitCode)"))
+      return
+    }
     val file = outputFolder.resolve(lastOpeningFile!!)
     if (exitCode != 0) {
       logger.error("(${streamer.name}) ffmpeg download failed, exit code: $exitCode")
