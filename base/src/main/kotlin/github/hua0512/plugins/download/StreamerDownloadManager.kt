@@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration
@@ -97,6 +100,11 @@ class StreamerDownloadManager(
    * Flag to check if the download is in progress
    */
   private var isDownloading = false
+
+  /**
+   * Flag to check if the download is in the timer range
+   */
+  private var inTimerRange = true
 
   /**
    * Callback to handle download events
@@ -165,7 +173,7 @@ class StreamerDownloadManager(
     updateLastLiveTime()
     var hasError = false
     // while loop for parted download
-    while (!isCancelled.value) {
+    while (!isCancelled.value && inTimerRange) {
       downloadStream(onDownloaded = { stream, metaInfo ->
         callback?.onStreamDownloaded(streamer, stream, metaInfo != null, metaInfo)
         dataList.add(stream)
@@ -235,26 +243,35 @@ class StreamerDownloadManager(
   }
 
   suspend fun start(): Unit = supervisorScope {
-    // download the stream
     launch {
       isCancelled.collect {
         if (it) {
-          // await for the download to finish
           val result = stop()
           logger.info("${streamer.name} download stopped with result : $result")
           if (!isDownloading) {
-            // break the loop if download is not in progress
             logger.info("${streamer.name} download canceled, not in progress")
             this@supervisorScope.cancel("Download cancelled")
           }
         }
       }
     }
+
     while (!isCancelled.value) {
       if (retryCount >= maxRetry) {
         handleMaxRetry()
         continue
       }
+
+      val recordStartTime = streamer.startTime
+      val recordEndTime = streamer.endTime
+      if (recordStartTime != null && recordEndTime != null) {
+        if (recordStartTime == recordEndTime) {
+          logger.error("${streamer.name} stream is not live, start time and end time are the same")
+          throw CancellationException("SAME_START_END_TIME")
+        }
+        handleTimerDuration(recordStartTime, recordEndTime)
+      }
+
       val isLive = checkStreamerLiveStatus()
 
       if (isLive) {
@@ -302,6 +319,52 @@ class StreamerDownloadManager(
 
   fun setCallback(callback: StreamerCallback) {
     this.callback = callback
+  }
+
+
+  private suspend fun CoroutineScope.handleTimerDuration(definedStartTime: String, definedStopTime: String): Boolean {
+    val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
+    val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
+    val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
+    val jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
+    val jEndTime = currentTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
+      .let { if (endHour < startHour) it.plusDays(1) else it }
+
+    if (currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime)) {
+      inTimerRange = true
+      val duration = java.time.Duration.between(currentTime, jEndTime)
+      val millis = duration.toMillis()
+      logger.info("${streamer.name} stopping download after $millis ms")
+      launch {
+        delay(millis)
+        inTimerRange = false
+        val result = stop()
+        logger.info("${streamer.name} download stopped with result : $result")
+        streamer.isLive = false
+        callback?.onLiveStatusChanged(streamer, false)
+      }
+      return true
+    } else if (currentTime.isBefore(jStartTime)) {
+      val delay = java.time.Duration.between(currentTime, jStartTime)
+      val millis = delay.toMillis()
+      logger.info("${streamer.name} before start time, waiting for $millis")
+      delay(millis)
+      inTimerRange = true
+      return true
+    } else if (currentTime.isAfter(jEndTime)) {
+      // delay to wait for the next run, which should be the next day start time
+      val nextRun = jStartTime.plusDays(1)
+      val delay = java.time.Duration.between(currentTime, nextRun)
+      val millis = delay.toMillis()
+      logger.info("${streamer.name} end time passed, waiting for $millis ms")
+      delay(millis)
+      inTimerRange = true
+      return false
+    } else {
+      logger.info("${streamer.name} outside timer range")
+      inTimerRange = false
+      return false
+    }
   }
 
 }

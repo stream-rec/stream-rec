@@ -38,7 +38,6 @@ import github.hua0512.plugins.download.platformConfig
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
-import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.buffer
@@ -241,6 +240,8 @@ class DownloadService(
               old.name != new.name -> "name"
               old.isTemplate != new.isTemplate -> "as template"
               old.templateId != new.templateId -> "template id"
+              old.startTime != new.startTime -> "start time"
+              old.endTime != new.endTime -> "end time"
               old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template stream download config"
               // other changes are ignored
               else -> return@forEach

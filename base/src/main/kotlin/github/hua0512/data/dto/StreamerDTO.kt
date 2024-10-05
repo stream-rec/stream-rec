@@ -45,4 +45,6 @@ interface StreamerDTO {
   val downloadConfig: DownloadConfig?
   val isTemplate: Boolean
   val templateId: Long?
+  val startTime: String?
+  val endTime: String?
 }

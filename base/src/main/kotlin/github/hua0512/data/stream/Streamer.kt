@@ -44,6 +44,8 @@ data class Streamer(
   override var isActivated: Boolean = true,
   override var avatar: String? = null,
   override var streamTitle: String? = null,
+  override val startTime: String? = null,
+  override val endTime: String? = null,
   override val downloadConfig: DownloadConfig? = null,
   override val isTemplate: Boolean = false,
   override val templateId: Long? = 0,
@@ -62,6 +64,8 @@ data class Streamer(
     isActivated = entity.isActivated,
     avatar = entity.avatar,
     streamTitle = entity.streamTitle,
+    startTime = entity.startTime,
+    endTime = entity.endTime,
     downloadConfig = entity.downloadConfig,
     isTemplate = entity.isTemplate,
     templateId = entity.templateId,
@@ -73,10 +77,12 @@ data class Streamer(
     name = name,
     url = url,
     platform = platform,
-    lastLiveTime = lastLiveTime ?: 0,
+    lastLiveTime = lastLiveTime,
     isLive = isLive,
     isActivated = isActivated,
     streamTitle = streamTitle,
+    startTime = startTime,
+    endTime = endTime,
     avatar = avatar,
     isTemplate = isTemplate,
     templateId = templateId ?: 0,
@@ -94,6 +100,8 @@ data class Streamer(
     if (url != other.url) return false
     if (platform != other.platform) return false
     if (isActivated != other.isActivated) return false
+    if (startTime != other.startTime) return false
+    if (endTime != other.endTime) return false
     if (downloadConfig != other.downloadConfig) return false
     if (isTemplate != other.isTemplate) return false
     if (id != other.id) return false
@@ -108,6 +116,8 @@ data class Streamer(
     result = 31 * result + url.hashCode()
     result = 31 * result + platform.hashCode()
     result = 31 * result + isActivated.hashCode()
+    result = 31 * result + (startTime?.hashCode() ?: 0)
+    result = 31 * result + (endTime?.hashCode() ?: 0)
     result = 31 * result + (downloadConfig?.hashCode() ?: 0)
     result = 31 * result + isTemplate.hashCode()
     result = 31 * result + id.hashCode()

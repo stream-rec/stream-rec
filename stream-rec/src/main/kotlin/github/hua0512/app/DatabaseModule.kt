@@ -74,6 +74,7 @@ class DatabaseModule {
     return builder
       .addMigrations(Migrate3To4)
       .fallbackToDestructiveMigration(false)
+      .fallbackToDestructiveMigrationOnDowngrade(false)
       .setDriver(BundledSQLiteDriver())
       .setQueryCoroutineContext(Dispatchers.IO)
       .build()

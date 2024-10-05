@@ -380,9 +380,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         streamer,
         cookie,
         headers,
-        fileLimitSize = app.config.maxPartSize.run {
-          if (this > 0) this else 2621440000
-        },
+        fileLimitSize = app.config.maxPartSize,
         fileLimitDuration = app.config.maxPartDuration,
         callback = streamerCallback
       )
