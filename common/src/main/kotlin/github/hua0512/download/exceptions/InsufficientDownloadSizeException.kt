@@ -24,12 +24,12 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.exceptions
+package github.hua0512.download.exceptions
 
 /**
- * Exception thrown when the download file is already present
+ * Exception thrown when the download size is not enough
  * @author hua0512
- * @date : 2024/5/16 20:45
+ * @date : 2024/5/16 20:43
  */
-class DownloadFilePresentException(override val message: String) : FatalDownloadErrorException(message) {
+class InsufficientDownloadSizeException(override val message: String) : FatalDownloadErrorException(message) {
 }

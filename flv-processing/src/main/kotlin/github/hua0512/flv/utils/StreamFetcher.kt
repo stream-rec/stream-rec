@@ -32,6 +32,7 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.plugins.StreamerContext
 import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.CancellationException
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -68,9 +69,11 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
       // thrown when the connection is closed
       // close read and emit end of sequence tag
     } catch (e: Exception) {
-      e.printStackTrace()
-      // other exceptions
-      FlvReader.logger.error("${context.name} Exception: ${e.message}")
+      // log other exceptions
+      if (e !is CancellationException) {
+        e.printStackTrace()
+        FlvReader.logger.error("${context.name} Exception: ${e.message}")
+      }
     } finally {
       if (closeSource) {
         close()
@@ -80,7 +83,7 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
         emit(
           createEndOfSequenceTag(
             it.num + 1,
-            it.header.timestamp + 1,
+            it.header.timestamp,
             it.header.streamId
           )
         )

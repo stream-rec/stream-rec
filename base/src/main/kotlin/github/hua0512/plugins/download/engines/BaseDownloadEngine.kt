@@ -30,8 +30,8 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.flv.data.other.FlvMetadataInfo
-import github.hua0512.utils.mainLogger
 import github.hua0512.plugins.download.base.DownloadCallback
+import github.hua0512.utils.mainLogger
 import github.hua0512.utils.rename
 import java.util.*
 import kotlin.io.path.*
@@ -110,7 +110,7 @@ abstract class BaseDownloadEngine {
   /**
    * Stop the download process
    */
-  abstract suspend fun stop(): Boolean
+  abstract suspend fun stop(exception: Exception? = null): Boolean
 
   /**
    * Clean up the resources

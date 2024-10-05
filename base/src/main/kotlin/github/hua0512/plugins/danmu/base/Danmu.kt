@@ -289,7 +289,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         addToBuffer(it)
       }
       .catch {
-        logger.error("$filePath write error: ${it.message}")
+        logger.error("$filePath write error:", it)
       }
       .onCompletion {
         it ?: return@onCompletion
@@ -387,7 +387,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   protected open fun launchHeartBeatJob(session: WebSocketSession) {
     with(session) {
       launch {
-        // repeat a task each hearbeat delay
+        // repeat a task each heartbeat delay
         while (isActive) {
           // send heart beat with delay
           send(heartBeatPack)
@@ -457,7 +457,6 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    * @receiver OutputStream output stream
    * @see [XML_START]
    */
-  @Synchronized
   private fun OutputStream.writeStartXml() = writeLock.withLock {
     write(XML_START.toByteArray())
   }
@@ -468,7 +467,6 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    * @receiver OutputStream output stream
    * @see [XML_END]
    */
-  @Synchronized
   private fun OutputStream.writeEndXml() {
     writeLock.withLock {
       write(XML_END.toByteArray())

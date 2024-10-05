@@ -34,10 +34,12 @@ import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
+import github.hua0512.download.exceptions.FatalDownloadErrorException
+import github.hua0512.download.exceptions.TimerEndedDownloadException
+import github.hua0512.download.exceptions.UserStoppedDownloadException
 import github.hua0512.plugins.download.base.Download
 import github.hua0512.plugins.download.base.OnStreamDownloaded
 import github.hua0512.plugins.download.base.StreamerCallback
-import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.plugins.event.EventCenter
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -124,8 +126,10 @@ class StreamerDownloadManager(
     // reset retry count
     retryCount = 0
     // update db with the new isLive value
-    if (streamer.isLive) callback?.onLiveStatusChanged(streamer, false)
-    streamer.isLive = false
+    if (streamer.isLive) {
+      streamer.isLive = false
+      callback?.onLiveStatusChanged(streamer, false)
+    }
     // stream is not live or without data
     if (dataList.isEmpty()) {
       return
@@ -167,9 +171,9 @@ class StreamerDownloadManager(
           Clock.System.now()
         )
       )
+      streamer.isLive = true
       callback?.onLiveStatusChanged(streamer, true)
     }
-    streamer.isLive = true
     updateLastLiveTime()
     var hasError = false
     // while loop for parted download
@@ -246,7 +250,7 @@ class StreamerDownloadManager(
     launch {
       isCancelled.collect {
         if (it) {
-          val result = stop()
+          val result = stop(UserStoppedDownloadException())
           logger.info("${streamer.name} download stopped with result : $result")
           if (!isDownloading) {
             logger.info("${streamer.name} download canceled, not in progress")
@@ -302,9 +306,7 @@ class StreamerDownloadManager(
     }
   }
 
-  private suspend fun stop(): Boolean {
-    return plugin.stopDownload()
-  }
+  private suspend fun stop(exception: Exception? = null): Boolean = plugin.stopDownload(exception)
 
   fun cancel() {
     logger.info("Cancelling download for ${streamer.name}, isDownloading : $isDownloading")
@@ -338,7 +340,7 @@ class StreamerDownloadManager(
       launch {
         delay(millis)
         inTimerRange = false
-        val result = stop()
+        val result = stop(TimerEndedDownloadException())
         logger.info("${streamer.name} download stopped with result : $result")
         streamer.isLive = false
         callback?.onLiveStatusChanged(streamer, false)

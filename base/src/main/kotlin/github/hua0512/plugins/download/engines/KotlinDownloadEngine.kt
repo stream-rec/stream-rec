@@ -32,6 +32,7 @@ import github.hua0512.download.DownloadLimitsProvider
 import github.hua0512.download.DownloadPathProvider
 import github.hua0512.download.DownloadProgressUpdater
 import github.hua0512.download.OnDownloadStarted
+import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.operators.analyze
@@ -43,7 +44,6 @@ import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.operators.downloadHls
 import github.hua0512.hls.operators.process
 import github.hua0512.plugins.StreamerContext
-import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.writeToFile
@@ -53,6 +53,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
@@ -283,9 +284,9 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       .collect()
   }
 
-  override suspend fun stop(): Boolean {
+  override suspend fun stop(exception: Exception?): Boolean {
     if (this::downloadJob.isInitialized) {
-      downloadJob.cancel()
+      downloadJob.cancelAndJoin()
       if (this::producer.isInitialized) {
         producer.close()
       }

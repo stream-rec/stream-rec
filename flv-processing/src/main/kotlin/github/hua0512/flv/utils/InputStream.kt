@@ -30,9 +30,9 @@ import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.exceptions.FlvErrorException
+import io.ktor.utils.io.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import java.io.DataInputStream
 import java.io.EOFException
 import java.io.InputStream
 import kotlin.toUInt
@@ -67,11 +67,12 @@ fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
   } catch (e: FlvErrorException) {
     e.printStackTrace()
   } catch (e: Exception) {
-    e.printStackTrace()
+    if (e !is CancellationException)
+      e.printStackTrace()
   } finally {
     lastTag?.let {
       if (it is FlvTag && it.isAvcEndSequence()) return@let
-      if (it is FlvTag) emit(createEndOfSequenceTag(it.num + 1, it.header.timestamp + 1, it.header.streamId.toInt()))
+      if (it is FlvTag) emit(createEndOfSequenceTag(it.num + 1, it.header.timestamp, it.header.streamId.toInt()))
     }
     try {
       close()
