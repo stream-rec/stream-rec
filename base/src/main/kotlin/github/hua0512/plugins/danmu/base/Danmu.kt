@@ -270,7 +270,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
                 }
 
                 is EndOfDanmu -> {
-                  logger.debug("$filePath End of danmu received")
+                  logger.info("$filePath End of danmu received")
                   hasReceivedEnd = true
                   close()
                 }
@@ -279,7 +279,9 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
               }
             }
           } catch (e: Exception) {
-            logger.error("Error decoding danmu", e)
+            if (e !is CancellationException) {
+              logger.error("Error decoding danmu", e)
+            }
           }
         }
       }
@@ -288,14 +290,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       .onEach {
         addToBuffer(it)
       }
-      .catch {
-        logger.error("$filePath write error:", it)
-      }
       .onCompletion {
         it ?: return@onCompletion
-        logger.error("$filePath danmu completed: $it")
         // write end section only when download is aborted or cancelled
         if (it.cause !is DownloadProcessFinishedException) {
+          logger.error("$filePath danmu completed: $it")
           val file = File(filePath)
           if (file.exists()) {
             try {
@@ -304,10 +303,12 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
               with(fos) {
                 flush()
                 writeEndXml()
-                close()
               }
             } catch (e: Exception) {
-
+              logger.error("$filePath Error writing remaining danmu", e)
+            } finally {
+              enableWrite = false
+              fos.close()
             }
           }
         }
