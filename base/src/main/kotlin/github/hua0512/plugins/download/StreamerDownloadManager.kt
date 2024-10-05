@@ -383,7 +383,11 @@ class StreamerDownloadManager(
         return
       }
     }
-
+    // ensure the streamer is not live
+    if (streamer.isLive) {
+      streamer.isLive = false
+      callback?.onLiveStatusChanged(streamer, false)
+    }
     delay(delayMillis)
     inTimerRange = true
     launchStopTask(durationMillis)
