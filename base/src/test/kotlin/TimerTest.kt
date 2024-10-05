@@ -67,20 +67,32 @@ class TimerTest {
 
   @Test
   fun testCurrentTime() {
-    val definedStartTime = "15:05:00"
-    val definedStopTime = "23:59:59"
+    val definedStartTime = "00:00:00"
+    val definedStopTime = "23:15:00"
     val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
     val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
     val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
-    val jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
-    val jEndTime = currentTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
+    var jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
+    var jEndTime = jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
       .let { if (endHour < startHour) it.plusDays(1) else it }
-    if (currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime)) {
-      val duration = java.time.Duration.between(currentTime, jEndTime)
-      println("stopping download after ${duration.toMillis()} ms")
-    } else {
+    // same day
+    if (currentTime.isBefore(jStartTime)) {
       val delay = java.time.Duration.between(currentTime, jStartTime)
-      println("outside start and end time, waiting for ${delay.toMillis()}")
+      val millis = delay.toMillis()
+      println("before start time, waiting for $millis ms")
+    } else if (currentTime.isAfter(jEndTime)) {
+      // delay to wait for the next run, which should be the next day start time
+      jStartTime = jStartTime.plusDays(1)
+      jEndTime = jEndTime.plusDays(1)
+      val delay = java.time.Duration.between(currentTime, jEndTime)
+      val millis = delay.toMillis()
+      println("end time passed, waiting for $millis ms")
+    } else if (currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime)) {
+      val duration = java.time.Duration.between(currentTime, jEndTime)
+      val millis = duration.toMillis()
+      println("stopping download after $millis ms")
+    } else {
+      println("outside timer range")
     }
   }
 

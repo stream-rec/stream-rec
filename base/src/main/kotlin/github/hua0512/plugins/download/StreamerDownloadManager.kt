@@ -330,51 +330,64 @@ class StreamerDownloadManager(
   }
 
 
-  private suspend fun CoroutineScope.handleTimerDuration(definedStartTime: String, definedStopTime: String): Boolean {
-    val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
-    val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
-    val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
-    val jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
-    val jEndTime = currentTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
-      .let { if (endHour < startHour) it.plusDays(1) else it }
+  private suspend fun CoroutineScope.handleTimerDuration(definedStartTime: String, definedStopTime: String) {
 
-    if (currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime)) {
-      inTimerRange = true
-      val duration = java.time.Duration.between(currentTime, jEndTime)
-      val millis = duration.toMillis()
-      logger.info("${streamer.name} stopping download after $millis ms")
+    fun CoroutineScope.launchStopTask(duration: Long) {
+      logger.info("${streamer.name} stopping download after $duration ms")
       launch {
-        delay(millis)
+        delay(duration)
         inTimerRange = false
         val result = stop(TimerEndedDownloadException())
         logger.info("${streamer.name} download stopped with result : $result")
         streamer.isLive = false
         callback?.onLiveStatusChanged(streamer, false)
       }
-      return true
-    } else if (currentTime.isBefore(jStartTime)) {
-      val delay = java.time.Duration.between(currentTime, jStartTime)
-      val millis = delay.toMillis()
-      logger.info("${streamer.name} before start time, waiting for $millis")
-      delay(millis)
-      inTimerRange = true
-      return true
-    } else if (currentTime.isAfter(jEndTime)) {
-      // delay to wait for the next run, which should be the next day start time
-      val nextRun = jStartTime.plusDays(1)
-      val delay = java.time.Duration.between(currentTime, nextRun)
-      val millis = delay.toMillis()
-      logger.info("${streamer.name} end time passed, waiting for $millis ms")
-      delay(millis)
-      inTimerRange = true
-      return false
-    } else {
-      logger.info("${streamer.name} outside timer range")
-      inTimerRange = false
-      return false
     }
-  }
 
+    val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
+    val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
+    val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
+    var jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
+    var jEndTime = jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec).let {
+      if (endHour < startHour) it.plusDays(1) else it
+    }
+
+    // delayMillis is the time to wait before starting the download
+    // durationMillis is the time to wait before stopping the download
+    val (delayMillis, durationMillis) = when {
+      currentTime.isBefore(jStartTime) -> {
+        val delay = java.time.Duration.between(currentTime, jStartTime).toMillis()
+        val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
+        logger.info("${streamer.name} before start time, waiting for $delay ms")
+        delay to duration
+      }
+
+      currentTime.isAfter(jEndTime) -> {
+        // plus one day to get the next start time
+        jStartTime = jStartTime.plusDays(1)
+        jEndTime = jEndTime.plusDays(1)
+        val delay = java.time.Duration.between(currentTime, jStartTime).toMillis()
+        val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
+        logger.info("${streamer.name} end time passed, waiting for $delay ms")
+        delay to duration
+      }
+
+      currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime) -> {
+        val duration = java.time.Duration.between(currentTime, jEndTime).toMillis()
+        0L to duration
+      }
+
+      else -> {
+        logger.info("${streamer.name} outside timer range")
+        inTimerRange = false
+        return
+      }
+    }
+
+    delay(delayMillis)
+    inTimerRange = true
+    launchStopTask(durationMillis)
+  }
 }
 
 
