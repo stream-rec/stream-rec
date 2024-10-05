@@ -73,7 +73,7 @@ class HttpClientFactory : IHttpClientFactory {
     }
     install(Logging) {
       logger = Logger.DEFAULT
-      level = LogLevel.NONE
+      level = LogLevel.ALL
     }
 
     install(github.hua0512.utils.UserAgent) {
