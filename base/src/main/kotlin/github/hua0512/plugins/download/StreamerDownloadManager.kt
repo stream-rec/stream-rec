@@ -244,6 +244,12 @@ class StreamerDownloadManager(
     } else {
       logger.info("${streamer.name} is not live")
     }
+    // there might be a case where the streamer is live but the stream is not available
+    // or the user exited the app while the stream is live
+    if (streamer.isLive) {
+      streamer.isLive = false
+      callback?.onLiveStatusChanged(streamer, false)
+    }
   }
 
   suspend fun start(): Unit = supervisorScope {
