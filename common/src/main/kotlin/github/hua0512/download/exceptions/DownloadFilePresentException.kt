@@ -24,27 +24,12 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
-
-import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.stream.StreamingPlatform
+package github.hua0512.download.exceptions
 
 /**
+ * Exception thrown when the download file is already present
  * @author hua0512
- * @date : 2024/2/10 19:54
+ * @date : 2024/5/16 20:45
  */
-interface StreamerDTO {
-  val name: String
-  val url: String
-  val platform: StreamingPlatform
-  val lastLiveTime: Long
-  val isLive: Boolean
-  val isActivated: Boolean
-  val avatar: String?
-  val streamTitle: String?
-  val downloadConfig: DownloadConfig?
-  val isTemplate: Boolean
-  val templateId: Long?
-  val startTime: String?
-  val endTime: String?
+class DownloadFilePresentException(override val message: String) : FatalDownloadErrorException(message) {
 }

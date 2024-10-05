@@ -57,6 +57,7 @@ import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.utils.asFlvFlow
+import github.hua0512.plugins.StreamerContext
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
@@ -112,9 +113,10 @@ class FixFlvTest {
     val pathProvider = { index: Int -> "E:/test/${file.nameWithoutExtension}_fix_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
     val limitsProvider = { 0L to 3600.0f }
 
+    val streamerContext = StreamerContext("test", "")
     dis.asFlvFlow()
-      .process(limitsProvider)
-      .analyze(metaInfoProvider)
+      .process(limitsProvider, streamerContext)
+      .analyze(metaInfoProvider, streamerContext)
       .dump(pathProvider) { index, path, createdAt, updatedAt ->
         println("onStreamDumped: $path, $createdAt -> $updatedAt")
         launch {

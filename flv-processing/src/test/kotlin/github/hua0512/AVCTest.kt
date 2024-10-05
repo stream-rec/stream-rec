@@ -24,19 +24,24 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.exceptions
+package github.hua0512
+
+import github.hua0512.flv.data.avc.nal.NAL_UNIT_TYPE_END_OF_SEQUENCE
+import kotlin.test.Test
+import kotlin.test.expect
 
 /**
- * Download error exception, thrown when an error occurs during download
  * @author hua0512
- * @date : 2024/5/5 21:44
+ * @date : 2024/10/5 14:35
  */
-open class DownloadErrorException(override val message: String) : IllegalStateException(message) {
 
-  companion object {
-    @JvmStatic
-    fun from(e: Exception): DownloadErrorException {
-      return DownloadErrorException(e.message ?: "Unknown error")
+class AVCTest {
+
+  @Test
+  fun test() {
+    val endOfSequenceNalu = byteArrayOf(0x00, 0x00, 0x00, 0x01, NAL_UNIT_TYPE_END_OF_SEQUENCE.toByte())
+    expect(endOfSequenceNalu.size) {
+      5
     }
   }
 }

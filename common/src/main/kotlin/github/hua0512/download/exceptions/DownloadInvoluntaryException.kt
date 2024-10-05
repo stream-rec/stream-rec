@@ -24,12 +24,17 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.exceptions
+package github.hua0512.download.exceptions
 
 /**
- * Exception thrown when the download size is not enough
  * @author hua0512
- * @date : 2024/5/16 20:43
+ * @date : 2024/10/5 14:07
  */
-class InsufficientDownloadSizeException(override val message: String) : FatalDownloadErrorException(message) {
+open class DownloadInvoluntaryException(override val message: String) : DownloadErrorException(message) {
+  companion object {
+    @JvmStatic
+    fun from(e: Exception): DownloadInvoluntaryException {
+      return DownloadInvoluntaryException(e.message ?: "Unknown error")
+    }
+  }
 }

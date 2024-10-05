@@ -34,6 +34,9 @@ import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.*
+import github.hua0512.download.exceptions.DownloadFilePresentException
+import github.hua0512.download.exceptions.FatalDownloadErrorException
+import github.hua0512.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
@@ -46,9 +49,6 @@ import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART
 import github.hua0512.plugins.download.engines.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.KotlinDownloadEngine
 import github.hua0512.plugins.download.engines.StreamlinkDownloadEngine
-import github.hua0512.plugins.download.exceptions.DownloadFilePresentException
-import github.hua0512.plugins.download.exceptions.FatalDownloadErrorException
-import github.hua0512.plugins.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.nonEmptyOrNull
@@ -380,9 +380,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
         streamer,
         cookie,
         headers,
-        fileLimitSize = app.config.maxPartSize.run {
-          if (this > 0) this else 2621440000
-        },
+        fileLimitSize = app.config.maxPartSize,
         fileLimitDuration = app.config.maxPartDuration,
         callback = streamerCallback
       )
@@ -493,9 +491,9 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
    * Stop the download process
    * @return true if the download is stopped, false otherwise
    */
-  suspend fun stopDownload(): Boolean {
+  suspend fun stopDownload(exception: Exception? = null): Boolean {
     return if (::engine.isInitialized) {
-      engine.stop()
+      engine.stop(exception)
     } else true
   }
 

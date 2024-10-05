@@ -162,7 +162,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     process = null
   }
 
-  override suspend fun stop(): Boolean {
+  override suspend fun stop(exception: Exception?): Boolean {
     sendStopSignal()
     val exitCode = withIOContext {
       streamlinkProcess?.waitFor()

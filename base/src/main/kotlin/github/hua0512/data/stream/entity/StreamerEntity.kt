@@ -69,6 +69,10 @@ data class StreamerEntity(
   override val avatar: String? = null,
   @ColumnInfo(name = "description")
   override val streamTitle: String? = null,
+  @ColumnInfo(name = "start_time")
+  override val startTime: String? = null,
+  @ColumnInfo(name = "end_time")
+  override val endTime: String? = null,
   @ColumnInfo(name = "download_config")
   override val downloadConfig: DownloadConfig? = null,
   @ColumnInfo(name = "is_template")

@@ -87,7 +87,7 @@ class KtorTest {
     client.use {
       downloadFlow
         .process(limitsProvider, streamerContext)
-        .analyze(metaInfoProvider)
+        .analyze(metaInfoProvider, streamerContext)
         .dump(pathProvider) { index, path, createdAt, updatedAt ->
           println("onStreamDumped: $path, $createdAt -> $updatedAt")
           launch {

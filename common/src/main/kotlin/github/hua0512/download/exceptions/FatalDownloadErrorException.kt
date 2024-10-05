@@ -24,27 +24,19 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
-
-import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.stream.StreamingPlatform
+package github.hua0512.download.exceptions
 
 /**
+ * Fatal download error exception, thrown when a fatal error occurs during download
  * @author hua0512
- * @date : 2024/2/10 19:54
+ * @date : 2024/5/5 21:44
  */
-interface StreamerDTO {
-  val name: String
-  val url: String
-  val platform: StreamingPlatform
-  val lastLiveTime: Long
-  val isLive: Boolean
-  val isActivated: Boolean
-  val avatar: String?
-  val streamTitle: String?
-  val downloadConfig: DownloadConfig?
-  val isTemplate: Boolean
-  val templateId: Long?
-  val startTime: String?
-  val endTime: String?
+open class FatalDownloadErrorException(override val message: String) : DownloadInvoluntaryException(message) {
+
+  companion object {
+    @JvmStatic
+    fun from(e: Exception): FatalDownloadErrorException {
+      return FatalDownloadErrorException(e.message ?: "Unknown error")
+    }
+  }
 }
