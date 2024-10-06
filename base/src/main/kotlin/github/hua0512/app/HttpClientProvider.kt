@@ -86,6 +86,7 @@ class HttpClientFactory : IHttpClientFactory {
 
       install(ContentEncoding) {
         gzip(0.9F)
+        deflate(1.0F)
       }
 
 //      install(HttpCookies) {
