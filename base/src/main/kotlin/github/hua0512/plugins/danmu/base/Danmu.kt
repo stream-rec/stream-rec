@@ -295,21 +295,8 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         // write end section only when download is aborted or cancelled
         if (it.cause !is DownloadProcessFinishedException) {
           logger.error("$filePath danmu completed: $it")
-          val file = File(filePath)
-          if (file.exists()) {
-            try {
-              // ensure remaining danmu is written
-              writeRemainingDanmu()
-              with(fos) {
-                flush()
-                writeEndXml()
-              }
-            } catch (e: Exception) {
-              logger.error("$filePath Error writing remaining danmu", e)
-            } finally {
-              enableWrite = false
-              fos.close()
-            }
+          if (File(filePath).exists()) {
+            writeFinalToFos()
           }
         }
       }
@@ -415,16 +402,25 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   fun finish() {
     val exists = File(filePath).exists()
     if (!exists) return
+    writeFinalToFos()
+  }
+
+
+  private fun writeFinalToFos() {
+    if (!enableWrite) return
     writeLock.withLock {
-      // ensure remaining danmu is written
-      writeRemainingDanmu()
-      fos.flush()
-      enableWrite = false
-      fos.writeEndXml()
       try {
-        fos.close()
+        writeRemainingDanmu()
+        fos.writeEndXml()
       } catch (e: Exception) {
-        // ignore
+        logger.error("$filePath Error writing final danmu", e)
+      } finally {
+        enableWrite = false
+        try {
+          fos.close()
+        } catch (e: Exception) {
+          logger.error("$filePath Error closing fos", e)
+        }
       }
     }
   }
