@@ -90,11 +90,14 @@ fun String.nonEmptyOrNull(): String? {
  *
  * @param length The length of the string to be generated.
  * @param noNumeric A flag to indicate whether the string should not contain numeric characters. Defaults to true.
+ * @param noUpperLetters A flag to indicate whether the string should not contain upper-case letters. Defaults to false.
  * @return A random string of the specified length.
  */
-fun generateRandomString(length: Int, noNumeric: Boolean = true): String {
-  val allowedChars = ('A'..'Z') + ('a'..'z').run {
-    if (noNumeric) this else this + ('0'..'9')
+fun generateRandomString(length: Int, noNumeric: Boolean = true, noUpperLetters: Boolean = false): String {
+  val allowedChars = buildList {
+    addAll('a'..'z')
+    if (!noNumeric) addAll('0'..'9')
+    if (!noUpperLetters) addAll('A'..'Z')
   }
   return (1..length)
     .map { allowedChars.random() }
