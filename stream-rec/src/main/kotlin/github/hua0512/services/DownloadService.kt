@@ -87,27 +87,27 @@ class DownloadService(
       override fun onLiveStatusChanged(streamer: Streamer, isLive: Boolean) {
         scope.launch {
           val status = repo.update(streamer.copy(isLive = isLive))
-          logger.debug("({}) live status changed to {}, {}", streamer.name, isLive, status)
+          logger.debug("({}) live -> {} = , {}", streamer.name, isLive, status)
         }
       }
 
       override fun onLastLiveTimeChanged(streamer: Streamer, lastLiveTime: Long) {
         scope.launch {
-          logger.debug("({}) last live time changed to {}", streamer.name, lastLiveTime)
+          logger.debug("({}) last live time -> {}", streamer.name, lastLiveTime)
           repo.update(streamer.copy(lastLiveTime = lastLiveTime))
         }
       }
 
       override fun onDescriptionChanged(streamer: Streamer, description: String) {
         scope.launch {
-          logger.debug("({}) description changed to {}", streamer.name, description)
+          logger.debug("({}) description -> {}", streamer.name, description)
           repo.update(streamer.copy(streamTitle = description))
         }
       }
 
       override fun onAvatarChanged(streamer: Streamer, avatar: String) {
         scope.launch {
-          logger.debug("({}) avatar changed to {}", streamer.name, avatar)
+          logger.debug("({}) avatar url -> {}", streamer.name, avatar)
           repo.update(streamer.copy(avatar = avatar))
         }
       }
