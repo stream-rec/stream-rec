@@ -286,7 +286,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
     private val userUseCountMap = mutableMapOf<String, Int>()
 
-    private fun generateUserId() = Random.nextLong(730_000_000_000_000_0000L, 7_999_999_999_999_999_999L).toString()
+    private fun generateUserId() = Random.nextLong(730_000_000_000_000_0000L, 740_000_000_000_000_0000L).toString()
 
     /**
      * Try to get a valid user id from the userUseCountMap.
