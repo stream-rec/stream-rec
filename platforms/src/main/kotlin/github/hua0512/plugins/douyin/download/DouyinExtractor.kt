@@ -197,7 +197,6 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     // cookie parameters
     private var NONCE: String? = null
     private var TT_WID: String? = null
-    private var MS_TOKEN: String? = null
 
     /**
      * Extracts the Douyin webrid from the specified URL.
@@ -233,7 +232,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
     }
 
     /**
-     * Populates the missing parameters (ttwid, __ac_nonce or msToken) in the specified Douyin cookies.
+     * Populates the missing parameters (ttwid, __ac_nonce) in the specified Douyin cookies.
      *
      * @param cookies The Douyin cookies to populate
      * @param client The HTTP client to use for making requests
@@ -243,29 +242,8 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       val map = parseCookies(cookies).toMutableMap().apply {
         getOrPut("ttwid") { getDouyinTTwid(client) }
         getOrPut("__ac_nonce") { generateNonce() }
-        getOrPut("msToken") { generateDouyinMsToken() }
       }
       return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
-    }
-
-
-    /**
-     * Generates a random string to be used as the `msToken` parameter in Douyin requests.
-     *
-     * @param length The length of the random string to generate
-     * @return A random string to be used as the `msToken` parameter in Douyin requests
-     */
-    private fun generateDouyinMsToken(length: Int = 116): String {
-      synchronized(this) {
-        if (MS_TOKEN != null) return MS_TOKEN!!
-
-        // generate a random string, with length 107
-        val generated = generateRandomString(length)
-        return generated.also {
-          MS_TOKEN = it
-          logger.info("generated douyin msToken: $it")
-        }
-      }
     }
 
 
