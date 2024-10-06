@@ -38,8 +38,9 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.douyin.download.DouyinExtractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.commonDouyinParams
-import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.extractDouyinWebRid
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.populateDouyinCookieMissedParams
+import github.hua0512.plugins.douyin.download.LIVE_DOUYIN_URL
+import github.hua0512.plugins.douyin.download.extractDouyinWebRid
 import github.hua0512.plugins.douyin.download.getSignature
 import github.hua0512.plugins.douyin.download.loadWebmssdk
 import github.hua0512.plugins.download.COMMON_HEADERS
@@ -65,6 +66,8 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
   override val heartBeatDelay: Long = 10000
 
   override val heartBeatPack: ByteArray = byteArrayOf()
+
+  private var userUniqueId: String? = null
 
   companion object {
     init {
@@ -112,14 +115,14 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     try {
       cookies = populateDouyinCookieMissedParams(cookies, app.client)
     } catch (e: Exception) {
-      logger.error("Failed to populate douyin cookie missed params", e)
+      logger.error("({}) Failed to populate douyin cookie missed params", roomId, e)
       return false
     }
 
     val response = app.client.get("https://live.douyin.com/webcast/room/web/enter/") {
       headers {
         COMMON_HEADERS.forEach { append(it.first, it.second) }
-        append(HttpHeaders.Referrer, DouyinExtractor.LIVE_DOUYIN_URL)
+        append(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
         append(HttpHeaders.Cookie, cookies)
       }
       commonDouyinParams.forEach { (t, u) ->
@@ -146,9 +149,11 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     }
     requestParams["room_id"] = trueRoomId.toString()
     requestParams["web_rid"] = roomId
-    // generate user id if not exists
-    requestParams["user_unique_id"] = DouyinExtractor.USER_ID!!
-    val signature = getSignature(trueRoomId.toString(), DouyinExtractor.USER_ID)
+
+    // get user unique id
+    userUniqueId = DouyinExtractor.getValidUserId()
+    requestParams["user_unique_id"] = userUniqueId!!
+    val signature = getSignature(trueRoomId.toString(), userUniqueId!!)
     // add signature to request params
     requestParams["signature"] = signature
     headersMap[HttpHeaders.Cookie] = cookies
@@ -222,5 +227,11 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
       .build()
     val byteArray = pushFrame.toByteArray()
     session.send(byteArray)
+  }
+
+  override fun clean() {
+    super.clean()
+    userUniqueId?.let { DouyinExtractor.releaseUserId(it) }
+    userUniqueId = null
   }
 }

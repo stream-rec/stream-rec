@@ -65,13 +65,13 @@ import kotlin.time.Duration
 
 class DouyinTest : BaseTest() {
 
-  override val testUrl = "https://live.douyin.com/386003334438"
+  override val testUrl = "https://live.douyin.com/802975310822"
 
   @Test
   override fun testRegex(): Unit = runTest {
     val url = testUrl
     val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url) ?: throw IllegalArgumentException("Invalid url")
-    assertEquals("failed to match id", matchResult.groupValues.last(), "217536353956")
+    assertEquals("failed to match id", matchResult.groupValues.last(), "802975310822")
   }
 
   @Test

@@ -27,7 +27,6 @@
 package github.hua0512.plugins.douyin.download
 
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
-import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.SDK_VERSION
 import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.plugins.jsEngine
 import github.hua0512.utils.mainLogger
@@ -45,14 +44,12 @@ private var SDK_JS: String = ""
  * Load webmssdk JS file content
  * @return webmssdk JS file content
  */
+@Synchronized
 internal fun loadWebmssdk(): String {
   if (SDK_JS.isNotEmpty()) return SDK_JS
-  synchronized(SDK_JS) {
-    DouyinExtractor::class.java.getResourceAsStream("/douyin-webmssdk.js")?.bufferedReader()?.use {
-      SDK_JS = it.readText()
-    } ?: throw InvalidExtractionInitializationException("Failed to load douyin webmssdk")
-
-  }
+  DouyinExtractor::class.java.getResourceAsStream("/douyin-webmssdk.js")?.bufferedReader()?.use {
+    SDK_JS = it.readText()
+  } ?: throw InvalidExtractionInitializationException("Failed to load douyin webmssdk")
   return SDK_JS
 }
 
@@ -76,7 +73,7 @@ private val signatureJS by lazy {
  * @param userId user id
  * @return signature string
  */
-internal fun getSignature(roomId: String, userId: String? = DouyinExtractor.USER_ID): String {
+internal fun getSignature(roomId: String, userId: String): String {
   assert(SDK_JS.isNotEmpty()) { "SDK_JS is empty" }
 
   // load JS

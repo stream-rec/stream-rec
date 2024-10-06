@@ -32,7 +32,6 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.COMMON_HEADERS
 import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.utils.generateRandomString
@@ -41,6 +40,8 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.*
 import kotlin.random.Random
 
@@ -72,8 +73,9 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   override suspend fun isLive(): Boolean {
     // initialize cookies
-    cookies = cookies.nonEmptyOrNull().apply { populateDouyinCookieMissedParams(cookies, http) }
-      ?: populateDouyinCookieMissedParams(cookies, http)
+    cookies = cookies.nonEmptyOrNull()?.let { populateDouyinCookieMissedParams(it, http) }
+      ?: populateDouyinCookieMissedParams("", http)
+
     val response = getResponse("${LIVE_DOUYIN_URL}/webcast/room/web/enter/") {
       parameter("web_rid", webRid)
     }
@@ -190,32 +192,18 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   companion object {
     const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9_\\.]+)"
-    const val LIVE_DOUYIN_URL = "https://live.douyin.com"
 
-    internal const val SDK_VERSION = "1.0.14-beta.0"
+    private const val MAX_USER_ID_COUNT_PER_USER = 40
 
     // cookie parameters
     private var NONCE: String? = null
     private var TT_WID: String? = null
+    private var ODIN_TT: String? = null
 
     /**
-     * Extracts the Douyin webrid from the specified URL.
-     *
-     * @param url The URL from which to extract the Douyin webrid
-     * @return The Douyin room ID, or `null` if the webrid could not be extracted
+     * A semaphore to ensure that only one request is made to fetch the cookies at a time.
      */
-    internal fun extractDouyinWebRid(url: String): String? {
-      if (url.isEmpty()) return null
-      return try {
-        val roomIdPattern = URL_REGEX.toRegex()
-        roomIdPattern.find(url)?.groupValues?.get(1) ?: run {
-          logger.error("Failed to get douyin room id from url: $url")
-          return null
-        }
-      } catch (_: Exception) {
-        throw InvalidExtractionUrlException("Failed to get douyin room id from url: $url")
-      }
-    }
+    private val fetchCookiesSemaphore by lazy { Semaphore(1) }
 
 
     /**
@@ -227,7 +215,7 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       if (NONCE != null) return NONCE!!
       return generateRandomString(21).apply {
         NONCE = this
-        logger.info("generated nonce: $this")
+        logger.info("${AC_NONCE_COOKIE}(generated): $this")
       }
     }
 
@@ -240,12 +228,24 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
      */
     suspend fun populateDouyinCookieMissedParams(cookies: String, client: HttpClient): String {
       val map = parseCookies(cookies).toMutableMap().apply {
-        getOrPut("ttwid") { getDouyinTTwid(client) }
-        getOrPut("__ac_nonce") { generateNonce() }
+        getOrPut(TT_WID_COOKIE) { getDouyinTTwid(client) }
+        getOrPut(ODIN_TT_COOKIE) { generateOdinTT() }
+        getOrPut(AC_NONCE_COOKIE) { generateNonce() }
       }
+
       return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
     }
 
+    private fun generateOdinTT(): String {
+      if (ODIN_TT != null) return ODIN_TT!!
+      synchronized(this) {
+        if (ODIN_TT == null) {
+          ODIN_TT = generateRandomString(160, noNumeric = false, noUpperLetters = true)
+          logger.info("${ODIN_TT_COOKIE}(generated): $ODIN_TT")
+        }
+      }
+      return ODIN_TT!!
+    }
 
     /**
      * Makes a request to the Douyin API to get the `ttwid` parameter from the cookies.
@@ -254,43 +254,68 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
      * @return The `ttwid` parameter from the Douyin cookies
      */
     private suspend fun getDouyinTTwid(client: HttpClient): String {
-      if (TT_WID != null) return TT_WID!!
-      val response = client.get("${LIVE_DOUYIN_URL}/") {
-        commonDouyinParams.forEach { (key, value) ->
-          parameter(key, value)
+      TT_WID?.let { return it }
+
+      val ttwid = fetchCookiesSemaphore.withPermit {
+        TT_WID?.let { return it }
+
+        val response = client.get("${LIVE_DOUYIN_URL}/") {
+          commonDouyinParams.forEach { (key, value) ->
+            parameter(key, value)
+          }
+          COMMON_HEADERS.forEach { (key, value) ->
+            header(key, value)
+          }
+          header(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
         }
-        COMMON_HEADERS.forEach { (key, value) ->
-          header(key, value)
-        }
-        header(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
+        val cookiesList = response.setCookie()
+        logger.debug("cookies: {}", cookiesList)
+
+        cookiesList.firstOrNull { it.name == TT_WID_COOKIE }?.value
+          ?: throw InvalidExtractionParamsException("failed to get $TT_WID_COOKIE from web")
       }
 
-      val cookies = response.headers[HttpHeaders.SetCookie] ?: ""
-      val ttwidPattern = "ttwid=([^;]*)".toRegex()
-      val ttwid = ttwidPattern.find(cookies)?.groupValues?.get(1) ?: ""
-      if (ttwid.isEmpty()) {
-        throw InvalidExtractionParamsException("Failed to get ttwid from cookies")
-      }
       synchronized(this) {
         if (TT_WID == null) {
           TT_WID = ttwid
-          logger.info("got douyin ttwid: $ttwid")
+          logger.info("$TT_WID_COOKIE(from web): $TT_WID")
         }
       }
-      return ttwid
+      return TT_WID!!
     }
 
-    internal var USER_ID: String? = null
-      get() {
-        if (field != null) return field!!
-        synchronized(this) {
-          if (field == null) {
-            field = Random.nextLong(730_000_000_000_000_0000L, 7_999_999_999_999_999_999L).toString()
-            logger.info("generated douyin user id: $field")
-          }
+    private val userUseCountMap = mutableMapOf<String, Int>()
+
+    private fun generateUserId() = Random.nextLong(730_000_000_000_000_0000L, 7_999_999_999_999_999_999L).toString()
+
+    /**
+     * Try to get a valid user id from the userUseCountMap.
+     * If there is no valid user id, generate a new one.
+     * @return a valid user id
+     * @see userUseCountMap
+     */
+    internal fun getValidUserId(): String {
+      return synchronized(this) {
+        val validIds = userUseCountMap.filter { it.value < MAX_USER_ID_COUNT_PER_USER }.keys.toList()
+        if (validIds.isEmpty()) {
+          // recreate a new user id
+          val newId = generateUserId()
+          userUseCountMap[newId] = 0
+          newId
+        } else {
+          val selectedId = validIds.random()
+          userUseCountMap[selectedId] = userUseCountMap[selectedId]!! + 1
+          selectedId
         }
-        return field!!
       }
+    }
+
+    fun releaseUserId(userId: String) {
+      synchronized(this) {
+        userUseCountMap[userId] = userUseCountMap[userId]?.minus(1) ?: 0
+      }
+    }
+
 
     /**
      * A map of common parameters used for making requests to the Douyin API.
