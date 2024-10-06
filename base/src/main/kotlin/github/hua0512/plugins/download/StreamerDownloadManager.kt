@@ -331,10 +331,11 @@ class StreamerDownloadManager(
       launch {
         delay(duration)
         inTimerRange = false
-        val result = stop(TimerEndedDownloadException())
-        logger.info("${streamer.name} download stopped with result : $result")
-        streamer.isLive = false
-        callback?.onLiveStatusChanged(streamer, false)
+        if (isDownloading) {
+          val result = stop(TimerEndedDownloadException())
+          logger.info("${streamer.name} download stopped with result : $result")
+          resetStreamerLiveStatus()
+        }
       }
     }
 
