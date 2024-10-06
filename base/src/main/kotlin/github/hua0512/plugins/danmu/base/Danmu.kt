@@ -46,6 +46,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.EOFException
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
@@ -233,6 +234,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       }
     }
 
+    // wait for cancellation
     awaitCancellation()
   }
 
@@ -256,39 +258,15 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     // receive incoming
     incoming.receiveAsFlow()
       .flatMapConcat { frame ->
-        val data = frame.data
-        flow {
-          try {
-            // decode danmu
-            for (danmu in decodeDanmu(this@processSession, data)) {
-              when (danmu) {
-                is DanmuData -> {
-                  // calculate delta time
-                  val delta = danmu.calculateDelta()
-                  // emit danmu to write to file
-                  emit(ClientDanmuData(danmu, videoStartTime, delta))
-                }
-
-                is EndOfDanmu -> {
-                  logger.info("$filePath End of danmu received")
-                  hasReceivedEnd = true
-                  close()
-                }
-
-                else -> logger.error("Unsupported danmu data: {}", danmu)
-              }
-            }
-          } catch (e: Exception) {
-            if (e !is CancellationException) {
-              logger.error("Error decoding danmu", e)
-            }
-          }
-        }
+        decodeDanmu(frame.data)
       }
       .flowOn(Dispatchers.Default)
       .buffer()
       .onEach {
         addToBuffer(it)
+      }
+      .catch {
+        if (!(it is EOFException && hasReceivedEnd)) throw it
       }
       .onCompletion {
         it ?: return@onCompletion
@@ -302,6 +280,35 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       }
       .flowOn(Dispatchers.IO)
       .collect()
+  }
+
+
+  private fun WebSocketSession.decodeDanmu(data: ByteArray): Flow<ClientDanmuData> = flow {
+    try {
+      // decode danmu
+      for (danmu in decodeDanmu(this@decodeDanmu, data)) {
+        when (danmu) {
+          is DanmuData -> {
+            // calculate delta time
+            val delta = danmu.calculateDelta()
+            // emit danmu to write to file
+            emit(ClientDanmuData(danmu, videoStartTime, delta))
+          }
+
+          is EndOfDanmu -> {
+            logger.info("$filePath End of danmu received")
+            hasReceivedEnd = true
+            close()
+          }
+
+          else -> logger.error("Unsupported danmu data: {}", danmu)
+        }
+      }
+    } catch (e: Exception) {
+      if (e !is CancellationException) {
+        logger.error("Error decoding danmu", e)
+      }
+    }
   }
 
 
