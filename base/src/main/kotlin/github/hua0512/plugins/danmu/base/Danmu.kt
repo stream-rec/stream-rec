@@ -447,7 +447,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   /**
    * Clean up danmu resources
    */
-  fun clean() {
+  open fun clean() {
     enableWrite = false
     hasReceivedEnd = false
     // reset replay cache
