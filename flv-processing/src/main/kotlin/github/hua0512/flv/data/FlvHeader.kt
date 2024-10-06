@@ -39,15 +39,15 @@ import java.io.OutputStream
 data class FlvHeader(val signature: String, val version: Int, val flags: FlvHeaderFlags, val headerSize: Int, override val crc32: Long) : FlvData {
 
   init {
-    if (signature.length != 3 || signature != "FLV") {
+    if (signature.length != 3 || signature != SIGNATURE) {
       throw FlvHeaderErrorException("Invalid FLV signature: $signature")
     }
 
-    if (version != 1) {
+    if (version != SIGNATURE_VERSION) {
       throw FlvHeaderErrorException("Invalid FLV version: $version")
     }
 
-    if (headerSize != 9) {
+    if (headerSize != HEADER_SIZE) {
       throw FlvHeaderErrorException("Invalid FLV header size: $headerSize")
     }
   }
@@ -67,5 +67,20 @@ data class FlvHeader(val signature: String, val version: Int, val flags: FlvHead
       write(headerSize shr 8)
       write(headerSize)
     }
+  }
+
+  companion object {
+
+    internal const val SIGNATURE = "FLV"
+
+    internal const val SIGNATURE_VERSION = 1
+
+    internal const val HEADER_SIZE = 9
+
+    /**
+     * Create a default FLV header
+     * @return FLV header
+     */
+    fun default() = FlvHeader(SIGNATURE, SIGNATURE_VERSION, FlvHeaderFlags(5), HEADER_SIZE, 265716093)
   }
 }

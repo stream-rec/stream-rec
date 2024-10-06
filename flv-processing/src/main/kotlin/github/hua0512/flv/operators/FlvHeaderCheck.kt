@@ -26,39 +26,41 @@
 
 package github.hua0512.flv.operators
 
-import github.hua0512.download.DownloadLimitsProvider
 import github.hua0512.flv.data.FlvData
-import github.hua0512.flv.utils.isAvcEndSequence
+import github.hua0512.flv.data.FlvHeader
+import github.hua0512.flv.utils.isHeader
 import github.hua0512.plugins.StreamerContext
-import kotlinx.coroutines.Dispatchers
+import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.flow
 
+
+private const val TAG = "FlvHeaderCheckRule"
+private val LOGGER by lazy { logger(TAG) }
 
 /**
- * Process the FLV data flow.
+ * Rule to check FLV header is present at the first position of the flow.
  * @author hua0512
- * @date : 2024/9/10 11:55
+ * @date : 2024/10/6 12:44
  */
-fun Flow<FlvData>.process(limitsProvider: DownloadLimitsProvider = { 0L to 0.0f }, context: StreamerContext): Flow<FlvData> {
-  val (fileSizeLimit, durationLimit) = limitsProvider()
-  return this.discardFragmented(context)
-    .checkHeader(context)
-    .split(context)
-    .sort(context)
-    .filter { !it.isAvcEndSequence() }
-    .correct(context)
-    .fix(context)
-    .concat(context)
-    .limit(fileSizeLimit, durationLimit, context)
-    .extractJoinPoints(context = context)
-    .injectMetadata(context)
-    .removeDuplicates(context)
-    .catch {
-      it.printStackTrace()
-      println("Error processing FLV data: $it")
+fun Flow<FlvData>.checkHeader(streamerContext: StreamerContext): Flow<FlvData> = flow {
+  var num = 0
+
+  collect { data ->
+
+    if (num == 0 && data.isHeader()) {
+      emit(data)
+      num++
+      return@collect
+    } else if (num == 0 && data.isHeader().not()) {
+      val innerHeader = FlvHeader.default()
+      LOGGER.warn("${streamerContext.name} FLV header is missing, inserted a default header")
+      emit(innerHeader)
+      num++
     }
-    .flowOn(Dispatchers.Default)
+
+    emit(data)
+  }
+
+  num = 0
 }
