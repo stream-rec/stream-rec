@@ -109,6 +109,11 @@ class StreamerDownloadManager(
   private var inTimerRange = true
 
   /**
+   * Timer job to stop the download after the timer ends
+   */
+  private var stopTimerJob: Job? = null
+
+  /**
    * Callback to handle download events
    */
   private var callback: StreamerCallback? = null
@@ -252,6 +257,11 @@ class StreamerDownloadManager(
         if (it) {
           val result = stop(UserStoppedDownloadException())
           logger.info("${streamer.name} download stopped with result : $result")
+          // cancel the timer job if it's active
+          if (stopTimerJob?.isActive == true) {
+            stopTimerJob?.cancel()
+          }
+          stopTimerJob = null
           if (!isDownloading) {
             logger.info("${streamer.name} download canceled, not in progress")
             this@supervisorScope.cancel("Download cancelled")
@@ -328,7 +338,10 @@ class StreamerDownloadManager(
 
     fun CoroutineScope.launchStopTask(duration: Long) {
       logger.info("${streamer.name} stopping download after $duration ms")
-      launch {
+      if (stopTimerJob?.isActive == true) {
+        stopTimerJob?.cancel()
+      }
+      stopTimerJob = launch {
         delay(duration)
         inTimerRange = false
         if (isDownloading) {
