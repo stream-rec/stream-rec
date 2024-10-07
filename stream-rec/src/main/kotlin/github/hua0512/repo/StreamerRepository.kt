@@ -49,60 +49,68 @@ class StreamerRepository(val dao: StreamerDao) : StreamerRepo {
     }
     .flowOn(Dispatchers.IO)
 
-  override suspend fun getStreamers(): List<Streamer> = github.hua0512.utils.withIOContext {
+  override suspend fun getStreamers(): List<Streamer> = withIOContext {
     dao.getAll().toStreamers()
   }
 
-  override suspend fun getAllTemplateStreamers(): List<Streamer> = github.hua0512.utils.withIOContext {
+  override suspend fun getAllTemplateStreamers(): List<Streamer> = withIOContext {
     dao.getTemplates().toStreamers()
   }
 
-  override suspend fun getAllNonTemplateStreamers(): List<Streamer> = github.hua0512.utils.withIOContext {
+  override suspend fun getAllNonTemplateStreamers(): List<Streamer> = withIOContext {
     dao.getNonTemplates().toStreamers()
   }
 
   override suspend fun getStreamerById(id: StreamerId): Streamer? {
-    return github.hua0512.utils.withIOContext {
+    return withIOContext {
       dao.getById(id)?.toStreamer()
     }
   }
 
-  override suspend fun getStreamersActive(): List<Streamer> = github.hua0512.utils.withIOContext {
+  override suspend fun getStreamersActive(): List<Streamer> = withIOContext {
     dao.getActivesNonTemplates().map {
       it.toStreamer()
     }
   }
 
-  override suspend fun getStreamersInactive(): List<Streamer> = github.hua0512.utils.withIOContext {
+  override suspend fun getStreamersInactive(): List<Streamer> = withIOContext {
     dao.getInactivesNonTemplates().toStreamers()
   }
 
-  override suspend fun findStreamerByUrl(url: String): Streamer? = github.hua0512.utils.withIOContext {
+  override suspend fun getStreamersByLiveStatus(isLive: Boolean): List<Streamer> = withIOContext {
+    if (isLive) {
+      dao.getLiveNonTemplatesStreamers().toStreamers()
+    } else {
+      dao.getNonLiveNonTemplatesStreamers().toStreamers()
+    }
+  }
+
+  override suspend fun findStreamerByUrl(url: String): Streamer? = withIOContext {
     dao.findByUrl(url)?.toStreamer()
   }
 
-  override suspend fun findStreamersUsingTemplate(templateId: StreamerId): List<Streamer> = github.hua0512.utils.withIOContext {
+  override suspend fun findStreamersUsingTemplate(templateId: StreamerId): List<Streamer> = withIOContext {
     dao.findByTemplateId(templateId).map {
       it.toStreamer()
     }
   }
 
-  override suspend fun countStreamersUsingTemplate(templateId: StreamerId): Long = github.hua0512.utils.withIOContext {
+  override suspend fun countStreamersUsingTemplate(templateId: StreamerId): Long = withIOContext {
     dao.countByTemplateId(templateId)
   }
 
-  override suspend fun update(streamer: Streamer) = github.hua0512.utils.withIOContext {
+  override suspend fun update(streamer: Streamer) = withIOContext {
     dao.update(streamer.toStreamerEntity()) == 1
   }
 
-  override suspend fun save(newStreamer: Streamer): Streamer = github.hua0512.utils.withIOContext {
+  override suspend fun save(newStreamer: Streamer): Streamer = withIOContext {
     val result = dao.insert(newStreamer.toStreamerEntity())
     newStreamer.copy(id = result)
   }
 
   override suspend fun delete(oldStreamer: Streamer): Boolean {
     if (oldStreamer.id == 0L) throw IllegalArgumentException("Streamer id is 0")
-    return github.hua0512.utils.withIOContext {
+    return withIOContext {
       dao.delete(oldStreamer.toStreamerEntity()) == 1
     }
   }

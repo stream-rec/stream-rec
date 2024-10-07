@@ -45,6 +45,7 @@ interface StreamerRepo {
   suspend fun getStreamerById(id: StreamerId): Streamer?
   suspend fun getStreamersActive(): List<Streamer>
   suspend fun getStreamersInactive(): List<Streamer>
+  suspend fun getStreamersByLiveStatus(isLive: Boolean): List<Streamer>
 
   suspend fun findStreamerByUrl(url: String): Streamer?
   suspend fun findStreamersUsingTemplate(templateId: StreamerId): List<Streamer>
