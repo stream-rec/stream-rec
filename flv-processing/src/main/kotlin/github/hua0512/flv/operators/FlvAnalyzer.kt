@@ -69,6 +69,9 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerCo
 
   // Pushes the current metadata information to the infoProvider
   fun pushMetadata() {
+    if (streamIndex < 0) {
+      return
+    }
     val metadataInfo = analyzer.makeMetaInfo()
     logger.info("${context.name} push[{}]: {}", streamIndex, pprint(metadataInfo, defaultHeight = 50))
     infoProvider[streamIndex] = metadataInfo
@@ -78,9 +81,7 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerCo
   collect { value ->
     if (value.isHeader()) {
       streamIndex++
-      if (streamIndex > 0) {
-        pushMetadata()
-      }
+      pushMetadata()
       reset()
       // Analyze the header
       analyzer.analyzeHeader(value as FlvHeader)
@@ -95,4 +96,5 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerCo
   // Push the final metadata information and reset the analyzer
   pushMetadata()
   reset()
+  streamIndex = -1
 }
