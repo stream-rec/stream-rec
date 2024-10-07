@@ -33,8 +33,6 @@ package github.hua0512.plugins.douyin.download
  */
 
 
-internal const val SDK_VERSION = "1.0.14-beta.0"
-
 internal const val ODIN_TT_COOKIE = "odin_tt"
 internal const val TT_WID_COOKIE = "ttwid"
 internal const val AC_NONCE_COOKIE = "__ac_nonce"

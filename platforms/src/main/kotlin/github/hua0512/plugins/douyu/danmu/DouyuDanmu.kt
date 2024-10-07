@@ -96,6 +96,10 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
     return loginPacket + joinGroup
   }
 
+  override fun onDanmuRetry(retryCount: Int) {
+    // do nothing
+  }
+
   override suspend fun decodeDanmu(session: WebSocketSession, data: ByteArray): List<DanmuDataWrapper?> {
     val messages = DouyuPacket.decode(data)
     val danmus = mutableListOf<DanmuDataWrapper>()

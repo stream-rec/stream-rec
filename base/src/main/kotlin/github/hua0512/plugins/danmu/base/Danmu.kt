@@ -204,6 +204,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       maxDelayMillis = 60000,
       factor = 1.5,
       onError = { e, retryCount ->
+        onDanmuRetry(retryCount)
         logger.error("Error connecting ws, $filePath, retry count: $retryCount", e)
       }
     ) {
@@ -236,6 +237,8 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       if (isActive && !hasReceivedEnd) {
         // trigger backoff strategy
         throw IOException("$websocketUrl connection finished")
+      } else if (isActive && hasReceivedEnd) {
+        throw CancellationException("End of danmu received")
       }
     }
 

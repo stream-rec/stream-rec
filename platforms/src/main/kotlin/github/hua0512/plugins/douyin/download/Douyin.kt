@@ -43,7 +43,8 @@ import github.hua0512.plugins.download.base.Download
  * @property streamer The [Streamer] instance.
  * @property downloadUrl The URL of the video to be downloaded.
  */
-class Douyin(app: App, danmu: DouyinDanmu, extractor: DouyinExtractor) : Download<DouyinDownloadConfig>(app, danmu, extractor) {
+class Douyin(app: App, override val danmu: DouyinDanmu, override val extractor: DouyinExtractor) :
+  Download<DouyinDownloadConfig>(app, danmu, extractor) {
 
   override fun createDownloadConfig(): DouyinDownloadConfig = DouyinDownloadConfig(
     quality = app.config.douyinConfig.quality,
@@ -55,7 +56,11 @@ class Douyin(app: App, danmu: DouyinDanmu, extractor: DouyinExtractor) : Downloa
     (config.cookies ?: app.config.douyinConfig.cookies)?.also {
       extractor.cookies = it
     }
-    return super.shouldDownload(onLive)
+    return super.shouldDownload {
+      onLive()
+      // bind idStr to danmu
+      danmu.idStr = extractor.idStr
+    }
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {

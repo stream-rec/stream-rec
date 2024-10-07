@@ -89,6 +89,7 @@ class DouyinTest : BaseTest() {
     val danmu = DouyinDanmu(app).apply {
       enableWrite = false
       filePath = "douyin_danmu.txt"
+      idStr = ""
     }
     val init = danmu.init(Streamer(0, "test", testUrl))
     if (init) {

@@ -28,8 +28,10 @@ package github.hua0512.plugins.douyin.download
 
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.URL_REGEX
+import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.parameter
 
-/**
+/** Utils for Douyin requests
  * @author hua0512
  * @date : 2024/10/6 16:40
  */
@@ -48,4 +50,18 @@ internal fun extractDouyinWebRid(url: String): String? {
     throw InvalidExtractionUrlException("Failed to get douyin room id from url: $url")
     return null
   }
+}
+
+internal fun HttpRequestBuilder.fillDouyinCommonParams() {
+  DouyinParams.commonParams.forEach { (t, u) ->
+    parameter(t, u)
+  }
+}
+
+internal fun MutableMap<String, String>.fillDouyinCommonParams() {
+  putAll(DouyinParams.commonParams)
+}
+
+internal fun HttpRequestBuilder.fillWebRid(webRid: String) {
+  parameter(DouyinParams.WEB_RID_KEY, webRid)
 }

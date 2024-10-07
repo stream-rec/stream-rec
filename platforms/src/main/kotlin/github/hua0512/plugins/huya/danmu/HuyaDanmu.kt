@@ -90,6 +90,10 @@ class HuyaDanmu(app: App) : Danmu(app, enablePing = false) {
 
   override fun oneHello(): ByteArray = ByteArray(0)
 
+  override fun onDanmuRetry(retryCount: Int) {
+    // do nothing
+  }
+
   override suspend fun sendHello(session: WebSocketSession) {
     // format date to yyMMddHHmm
     // this is used as version number

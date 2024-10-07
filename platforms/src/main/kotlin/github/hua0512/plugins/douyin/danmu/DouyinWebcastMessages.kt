@@ -24,33 +24,20 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.douyin.download
+package github.hua0512.plugins.douyin.danmu
 
 /**
- * Douyin live room url
  * @author hua0512
- * @date : 2024/10/6 16:41
+ * @date : 2024/10/6 21:43
  */
+enum class DouyinWebcastMessages(val className: String) {
 
-
-internal typealias DouyinApi = DouyinApis.Companion
-
-
-class DouyinApis {
+  CHAT_MESSAGE("WebcastChatMessage"),
+  CONTROL_MESSAGE("WebcastControlMessage");
 
   companion object {
-
-    internal const val LIVE_DOUYIN_URL = "https://live.douyin.com"
-
-
-    internal const val WEBCAST_ENTER = "${LIVE_DOUYIN_URL}/webcast/room/web/enter/"
-
-
-    internal val webSocketDomains = arrayOf(
-      "wss://webcast5-ws-web-lq.douyin.com",
-      "wss://webcast5-ws-web-hl.douyin.com",
-      "wss://webcast5-ws-web-lf.douyin.com"
-    )
-    internal val randomWebSocketUrl get() = "${webSocketDomains.random()}/webcast/im/push/v2/"
+    fun fromClassName(className: String): DouyinWebcastMessages? {
+      return DouyinWebcastMessages.entries.firstOrNull { it.className == className }
+    }
   }
 }

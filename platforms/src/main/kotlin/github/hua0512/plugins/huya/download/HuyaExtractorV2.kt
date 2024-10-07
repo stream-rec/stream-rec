@@ -151,7 +151,16 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     if (!isLive) return mediaInfo
 
     // get stream info
-    val streamJson = data["stream"]?.jsonObject ?: throw InvalidExtractionParamsException("stream is null from $url")
+    val streamJson = data["stream"]
+
+    if (streamJson == null || streamJson is JsonNull) {
+      throw InvalidExtractionParamsException("stream is null from $url")
+    }
+
+    if (streamJson !is JsonObject) {
+      throw InvalidExtractionParamsException("stream is not a json object from $url : $streamJson")
+    }
+
     val baseStreamInfoList =
       streamJson["baseSteamInfoList"]?.jsonArray ?: throw InvalidExtractionParamsException("baseStreamInfoList is null from $url")
     if (baseStreamInfoList.isEmpty()) {
