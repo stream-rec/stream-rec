@@ -345,18 +345,16 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       }
 
       // error exit
-      override fun onDownloadError(filePath: String?, e: Exception?) {
+      override fun onDownloadError(filePath: String?, e: Exception) {
         logger.error("(${streamer.name}), $filePath, download failed: $e")
-
-        if (e != null)
-          EventCenter.sendEvent(
-            DownloadEvent.DownloadError(
-              filePath = filePath.toString(),
-              url = downloadUrl,
-              platform = streamer.platform,
-              error = e
-            )
+        EventCenter.sendEvent(
+          DownloadEvent.DownloadError(
+            filePath = filePath.toString(),
+            url = downloadUrl,
+            platform = streamer.platform,
+            error = e
           )
+        )
 
         // then it means that download has failed (no file is created)
         exception = e
