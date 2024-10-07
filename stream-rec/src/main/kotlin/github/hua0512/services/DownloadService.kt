@@ -87,7 +87,7 @@ class DownloadService(
       override fun onLiveStatusChanged(streamer: Streamer, isLive: Boolean) {
         scope.launch {
           val status = repo.update(streamer.copy(isLive = isLive))
-          logger.debug("({}) live -> {} = , {}", streamer.name, isLive, status)
+          logger.debug("({}) live -> {} = {}", streamer.name, isLive, status)
         }
       }
 

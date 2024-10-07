@@ -37,6 +37,8 @@ open class FlvMetaInfoProvider {
 
   private val metaInfo = mutableMapOf<Int, FlvMetadataInfo>()
 
+  val size get() = metaInfo.size
+
   operator fun set(streamIndex: Int, info: FlvMetadataInfo) {
     metaInfo[streamIndex] = info
   }
@@ -48,7 +50,6 @@ open class FlvMetaInfoProvider {
   fun remove(streamIndex: Int) {
     metaInfo.remove(streamIndex)
   }
-
 
   fun clear() {
     metaInfo.clear()

@@ -95,8 +95,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
   /**
    * Meta info provider
    */
-  private val metaInfoProvider = FlvMetaInfoProvider()
-
+  private val metaInfoProvider by lazy { FlvMetaInfoProvider() }
 
   /**
    * Whether to enable flv fix
@@ -108,9 +107,11 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
    */
   internal var combineTsFiles = false
 
-
   // last downloaded segment time
   private var lastDownloadedTime = 0L
+
+  // last downloaded file path
+  private var lastDownloadFilePath: String = ""
 
   override suspend fun start() = coroutineScope {
     val client = HttpClientFactory().getClient(
@@ -143,13 +144,15 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
           downloadStartCallback(it, time.epochSeconds)
       }.run {
         // use parent folder for m3u8 with combining files disabled
-        if (!isFlv && !combineTsFiles) {
+        lastDownloadFilePath = if (!isFlv && !combineTsFiles) {
           Path(this).parent.pathString
         } else if (isFlv) {
           // force flv file extension
           val path = Path(this)
           path.resolveSibling("${path.nameWithoutExtension}.flv").pathString
-        } else this
+        } else
+          this
+        lastDownloadFilePath
       }
     }
 
@@ -198,6 +201,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
     sizedUpdater: DownloadProgressUpdater,
     streamerContext: StreamerContext,
   ) {
+    var exception: Throwable? = null
     client.prepareGet(downloadUrl!!) {
       this@KotlinDownloadEngine.headers.forEach { header(it.key, it.value) }
       cookies?.let { header(HttpHeaders.Cookie, it) }
@@ -207,10 +211,11 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         channel
           .asStreamFlow(context = streamerContext)
           .onEach { producer.send(it) }
-          .flowOn(Dispatchers.IO)
           .catch {
-            mainLogger.error("${streamerContext.name} download flow failed: $it")
-          }.collect()
+            exception = it
+          }
+          .flowOn(Dispatchers.IO)
+          .collect()
       } else {
         val outputPath = pathProvider(0)
         val file = Path.of(outputPath).toFile()
@@ -219,7 +224,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         }
       }
     }
-    producer.close()
+    producer.close(exception)
   }
 
   private suspend fun handleHlsDownload(client: HttpClient, streamerContext: StreamerContext) {
@@ -254,7 +259,11 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       .flowOn(Dispatchers.IO)
       .stats(sizedUpdater)
       .flowOn(Dispatchers.Default)
-      .onCompletion {
+      .onCompletion { cause ->
+        // nothing is downloaded
+        if (metaInfoProvider.size == 0 && cause != null) {
+          throw cause
+        }
         // clear meta info provider when completed
         metaInfoProvider.clear()
       }

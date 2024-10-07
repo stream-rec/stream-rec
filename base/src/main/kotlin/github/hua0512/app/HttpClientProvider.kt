@@ -65,9 +65,12 @@ class HttpClientFactory : IHttpClientFactory {
         config {
           // Workaround for: https://youtrack.jetbrains.com/issue/KTOR-6266/OkHttp-Remove-the-default-WebSocket-extension-header-Sec-WebSocket-Extensions
           addInterceptor(RemoveWebSocketExtensionsInterceptor())
-          connectTimeout(15, TimeUnit.SECONDS)
-          writeTimeout(20, TimeUnit.SECONDS)
-          readTimeout(60, TimeUnit.SECONDS)
+
+          if (installTimeout) {
+            connectTimeout(15, TimeUnit.SECONDS)
+            writeTimeout(20, TimeUnit.SECONDS)
+            readTimeout(60, TimeUnit.SECONDS)
+          }
         }
       }
       install(Logging) {

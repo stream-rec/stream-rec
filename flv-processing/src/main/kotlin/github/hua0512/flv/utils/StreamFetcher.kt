@@ -30,13 +30,11 @@ import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.plugins.StreamerContext
-import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.CancellationException
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import java.io.EOFException
 
 
 /**
@@ -62,18 +60,13 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
         emit(it)
       }
       FlvReader.logger.debug("${context.name} End of stream")
-    } catch (_: EOFException) {
-      // thrown when malformed FLV data is encountered
-      // close read and emit end of sequence tag
-    } catch (_: SocketTimeoutException) {
-      // thrown when the connection is closed
-      // close read and emit end of sequence tag
     } catch (e: Exception) {
       // log other exceptions
       if (e !is CancellationException) {
         e.printStackTrace()
         FlvReader.logger.error("${context.name} Exception: ${e.message}")
       }
+      throw e
     } finally {
       if (closeSource) {
         close()

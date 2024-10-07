@@ -345,19 +345,20 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       }
 
       // error exit
-      override fun onDownloadError(filePath: String?, e: Exception) {
+      override fun onDownloadError(filePath: String?, e: Exception?) {
         logger.error("(${streamer.name}), $filePath, download failed: $e")
-        EventCenter.sendEvent(
-          DownloadEvent.DownloadError(
-            filePath = filePath.toString(),
-            url = downloadUrl,
-            platform = streamer.platform,
-            error = e
+
+        if (e != null)
+          EventCenter.sendEvent(
+            DownloadEvent.DownloadError(
+              filePath = filePath.toString(),
+              url = downloadUrl,
+              platform = streamer.platform,
+              error = e
+            )
           )
-        )
 
         // then it means that download has failed (no file is created)
-        logger.error("${streamer.name} download failed")
         exception = e
       }
 
@@ -431,7 +432,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           // delete danmu as invalid download
           file.deleteFile()
         }
-        throw exception
+        throw exception!!
       } else {
         danmuJob?.let {
           stopDanmuJob(it)
@@ -612,7 +613,8 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
       danmuJob.cancel(CancellationException(Throwable("Cancel download", DownloadProcessFinishedException())))
       danmuJob.join()
     } catch (e: Exception) {
-      logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
+      if (e !is CancellationException)
+        logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
     } finally {
       danmu.clean()
     }
