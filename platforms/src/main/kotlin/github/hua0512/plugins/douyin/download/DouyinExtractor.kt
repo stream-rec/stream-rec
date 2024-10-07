@@ -32,17 +32,14 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
-import github.hua0512.plugins.download.COMMON_HEADERS
-import github.hua0512.plugins.download.COMMON_USER_AGENT
-import github.hua0512.utils.generateRandomString
+import github.hua0512.plugins.douyin.download.DouyinApis.Companion.LIVE_DOUYIN_URL
+import github.hua0512.plugins.douyin.download.DouyinApis.Companion.WEBCAST_ENTER
 import github.hua0512.utils.nonEmptyOrNull
 import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
+import io.ktor.client.plugins.timeout
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import kotlinx.serialization.json.*
-import kotlin.random.Random
 
 /**
  *
@@ -52,6 +49,10 @@ import kotlin.random.Random
  */
 class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : Extractor(http, json) {
 
+  companion object {
+    const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9_\\.]+)"
+  }
+
   override val regexPattern: Regex = URL_REGEX.toRegex()
 
   private lateinit var webRid: String
@@ -60,10 +61,10 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   init {
     platformHeaders[HttpHeaders.Referrer] = LIVE_DOUYIN_URL
-    commonDouyinParams.forEach { (key, value) ->
-      platformParams[key] = value
-    }
+    platformParams.fillDouyinCommonParams()
   }
+
+  internal var idStr = ""
 
   override fun match(): Boolean {
     webRid = extractDouyinWebRid(url) ?: return false
@@ -72,25 +73,45 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   override suspend fun isLive(): Boolean {
     // initialize cookies
-    cookies = cookies.nonEmptyOrNull().apply { populateDouyinCookieMissedParams(cookies, http) }
-      ?: populateDouyinCookieMissedParams(cookies, http)
-    val response = getResponse("${LIVE_DOUYIN_URL}/webcast/room/web/enter/") {
-      parameter("web_rid", webRid)
+    cookies = cookies.nonEmptyOrNull()?.let { populateDouyinCookieMissedParams(it, http) }
+      ?: populateDouyinCookieMissedParams("", http)
+
+    val response = getResponse(WEBCAST_ENTER) {
+      timeout {
+        requestTimeoutMillis = 15000
+      }
+      fillWebRid(webRid)
     }
-    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("$url failed to get live data with status code ${response.status}")
-    jsonData = json.parseToJsonElement(response.bodyAsText())
-    val data = jsonData.jsonObject["data"]?.jsonObject
-    val errorMsg = data?.jsonObject?.get("prompts")?.jsonPrimitive?.content
+    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("$url failed, status code = ${response.status}")
+    val textBody = response.bodyAsText()
+    if (textBody.isEmpty()) {
+      logger.info("$url response is empty")
+      return false
+    }
+    jsonData = json.parseToJsonElement(textBody)
+    val data = jsonData.jsonObject["data"]?.jsonObject ?: throw InvalidExtractionParamsException("$url failed to get data")
+
+    val errorMsg = data.jsonObject["prompts"]?.jsonPrimitive?.content
 
     if (errorMsg != null) {
       logger.error("$url : $errorMsg")
       return false
     }
 
-    val liveData = data?.get("data")?.jsonArray?.get(0)?.jsonObject ?: run {
+    val dataArray = data["data"]?.jsonArray
+
+    if (dataArray == null || dataArray.isEmpty()) {
       logger.debug("$url unable to get live data")
       return false
     }
+
+    idStr = data["enter_room_id"]?.jsonPrimitive?.content ?: run {
+      logger.debug("$url unable to get id_str")
+      return false
+    }
+
+    val liveData = dataArray[0].jsonObject
+
     val status = liveData["status"]?.jsonPrimitive?.int ?: run {
       logger.debug("$url unable to get live status")
       return false
@@ -101,8 +122,20 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   override suspend fun extract(): MediaInfo {
     val isLive = isLive()
 
-    val liveData = jsonData.jsonObject["data"]?.jsonObject["data"]?.jsonArray[0]?.jsonObject ?: return MediaInfo(url, "", "", "", "")
+    if (jsonData is JsonNull) {
+      logger.debug("$url unable to get json data")
+      return MediaInfo(url, "", "", "", "")
+    }
 
+    val data = jsonData.jsonObject["data"]?.jsonObject?.get("data")?.jsonArray ?: return MediaInfo(url, "", "", "", "")
+
+    val dataArray = data.jsonArray
+    if (dataArray.isEmpty()) {
+      logger.debug("$url unable to get live data")
+      return MediaInfo(url, "", "", "", "")
+    }
+
+    val liveData = dataArray[0].jsonObject
     val title = liveData["title"]!!.jsonPrimitive.content
     val owner = liveData["owner"]
     val nickname = owner?.jsonObject?.get("nickname")?.jsonPrimitive?.content ?: ""
@@ -187,166 +220,4 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
 
     return mediaInfo.copy(artistImageUrl = avatar, coverUrl = cover, streams = streams)
   }
-
-  companion object {
-    const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9_\\.]+)"
-    const val LIVE_DOUYIN_URL = "https://live.douyin.com"
-
-    internal const val SDK_VERSION = "1.0.14-beta.0"
-
-    // cookie parameters
-    private var NONCE: String? = null
-    private var TT_WID: String? = null
-    private var MS_TOKEN: String? = null
-
-    /**
-     * Extracts the Douyin webrid from the specified URL.
-     *
-     * @param url The URL from which to extract the Douyin webrid
-     * @return The Douyin room ID, or `null` if the webrid could not be extracted
-     */
-    internal fun extractDouyinWebRid(url: String): String? {
-      if (url.isEmpty()) return null
-      return try {
-        val roomIdPattern = URL_REGEX.toRegex()
-        roomIdPattern.find(url)?.groupValues?.get(1) ?: run {
-          logger.error("Failed to get douyin room id from url: $url")
-          return null
-        }
-      } catch (_: Exception) {
-        throw InvalidExtractionUrlException("Failed to get douyin room id from url: $url")
-      }
-    }
-
-
-    /**
-     * Generates a random string to be used as the `__ac_nonce` parameter in Douyin requests.
-     * The generated string is 21 characters long.
-     * @return A random string to be used as the `__ac_nonce` parameter in Douyin requests
-     */
-    private fun generateNonce(): String = synchronized(this) {
-      if (NONCE != null) return NONCE!!
-      return generateRandomString(21).apply {
-        NONCE = this
-        logger.info("generated nonce: $this")
-      }
-    }
-
-    /**
-     * Populates the missing parameters (ttwid, __ac_nonce or msToken) in the specified Douyin cookies.
-     *
-     * @param cookies The Douyin cookies to populate
-     * @param client The HTTP client to use for making requests
-     * @return The Douyin cookies with the missing parameters populated
-     */
-    suspend fun populateDouyinCookieMissedParams(cookies: String, client: HttpClient): String {
-      val map = parseCookies(cookies).toMutableMap().apply {
-        getOrPut("ttwid") { getDouyinTTwid(client) }
-        getOrPut("__ac_nonce") { generateNonce() }
-        getOrPut("msToken") { generateDouyinMsToken() }
-      }
-      return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
-    }
-
-
-    /**
-     * Generates a random string to be used as the `msToken` parameter in Douyin requests.
-     *
-     * @param length The length of the random string to generate
-     * @return A random string to be used as the `msToken` parameter in Douyin requests
-     */
-    private fun generateDouyinMsToken(length: Int = 116): String {
-      synchronized(this) {
-        if (MS_TOKEN != null) return MS_TOKEN!!
-
-        // generate a random string, with length 107
-        val generated = generateRandomString(length)
-        return generated.also {
-          MS_TOKEN = it
-          logger.info("generated douyin msToken: $it")
-        }
-      }
-    }
-
-
-    /**
-     * Makes a request to the Douyin API to get the `ttwid` parameter from the cookies.
-     *
-     * @param client The HTTP client to use for making requests
-     * @return The `ttwid` parameter from the Douyin cookies
-     */
-    private suspend fun getDouyinTTwid(client: HttpClient): String {
-      if (TT_WID != null) return TT_WID!!
-      val response = client.get("${LIVE_DOUYIN_URL}/") {
-        commonDouyinParams.forEach { (key, value) ->
-          parameter(key, value)
-        }
-        COMMON_HEADERS.forEach { (key, value) ->
-          header(key, value)
-        }
-        header(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
-      }
-
-      val cookies = response.headers[HttpHeaders.SetCookie] ?: ""
-      val ttwidPattern = "ttwid=([^;]*)".toRegex()
-      val ttwid = ttwidPattern.find(cookies)?.groupValues?.get(1) ?: ""
-      if (ttwid.isEmpty()) {
-        throw InvalidExtractionParamsException("Failed to get ttwid from cookies")
-      }
-      synchronized(this) {
-        if (TT_WID == null) {
-          TT_WID = ttwid
-          logger.info("got douyin ttwid: $ttwid")
-        }
-      }
-      return ttwid
-    }
-
-    internal var USER_ID: String? = null
-      get() {
-        if (field != null) return field!!
-        synchronized(this) {
-          if (field == null) {
-            field = Random.nextLong(730_000_000_000_000_0000L, 7_999_999_999_999_999_999L).toString()
-            logger.info("generated douyin user id: $field")
-          }
-        }
-        return field!!
-      }
-
-    /**
-     * A map of common parameters used for making requests to the Douyin API.
-     *
-     * The map contains the following key-value pairs:
-     * - "aid" - The Douyin application ID
-     * - "device_platform" - The platform of the device making the request (e.g., "web")
-     * - "browser_language" - The language of the browser making the request (e.g., "zh-CN")
-     * - "browser_platform" - The platform of the browser making the request (e.g., "Win32")
-     * - "browser_name" - The name of the browser making the request (e.g., "Chrome")
-     * - "browser_version" - The version of the browser making the request (e.g., "98.0.4758.102")
-     * - "compress" - The compression method used for the response (e.g., "gzip")
-     * - "signature" - The signature for the request
-     * - "heartbeatDuration" - The duration of the heartbeat in milliseconds
-     */
-    internal val commonDouyinParams = mapOf(
-      "app_name" to "douyin_web",
-      "version_code" to "180800",
-      "webcast_sdk_version" to SDK_VERSION,
-      "update_version_code" to SDK_VERSION,
-      "compress" to "gzip",
-      "device_platform" to "web",
-      "browser_language" to "zh-CN",
-      "browser_platform" to "Win32",
-      "browser_name" to "Mozilla",
-      "browser_version" to COMMON_USER_AGENT.removePrefix("Mozilla/").trim(),
-      "host" to "https://live.douyin.com",
-      "aid" to "6383",
-      "live_id" to "1",
-      "did_rule" to "3",
-      "endpoint" to "live_pc",
-      "identity" to "audience",
-      "heartbeatDuration" to "0",
-    )
-  }
-
 }

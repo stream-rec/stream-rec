@@ -27,11 +27,20 @@
 package github.hua0512.plugins.douyin.download
 
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
-import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.SDK_VERSION
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_VALUE
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.ROOM_ID_KEY
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.SDK_VERSION
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.USER_UNIQUE_KEY
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.VERSION_CODE_KEY
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.VERSION_CODE_VALUE
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.WEBCAST_SDK_VERSION_KEY
+import github.hua0512.plugins.douyu.download.DouyuExtractor.Companion.logger
 import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.plugins.jsEngine
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.toMD5Hex
+import kotlinx.atomicfu.atomic
 
 
 /**
@@ -39,21 +48,21 @@ import github.hua0512.utils.toMD5Hex
  * @author hua0512
  * @date : 2024/6/21 12:58
  */
-private var SDK_JS: String = ""
+private var SDK_JS = atomic<String?>(null)
 
 /**
  * Load webmssdk JS file content
  * @return webmssdk JS file content
  */
-internal fun loadWebmssdk(): String {
-  if (SDK_JS.isNotEmpty()) return SDK_JS
-  synchronized(SDK_JS) {
-    DouyinExtractor::class.java.getResourceAsStream("/douyin-webmssdk.js")?.bufferedReader()?.use {
-      SDK_JS = it.readText()
-    } ?: throw InvalidExtractionInitializationException("Failed to load douyin webmssdk")
-
+internal fun loadWebmssdk(): String = SDK_JS.value ?: run {
+  val sdkText = DouyinExtractor::class.java.getResourceAsStream("/douyin-webmssdk.js")?.bufferedReader()?.use {
+    it.readText()
+  } ?: throw InvalidExtractionInitializationException("Failed to load douyin webmssdk")
+  val status = SDK_JS.compareAndSet(null, sdkText)
+  if (!status) {
+    logger.error("failed to set douyin webmssdk")
   }
-  return SDK_JS
+  SDK_JS.value ?: sdkText
 }
 
 private val signatureJS by lazy {
@@ -76,15 +85,15 @@ private val signatureJS by lazy {
  * @param userId user id
  * @return signature string
  */
-internal fun getSignature(roomId: String, userId: String? = DouyinExtractor.USER_ID): String {
-  assert(SDK_JS.isNotEmpty()) { "SDK_JS is empty" }
+internal fun getSignature(roomId: String, userId: String): String {
+  assert(!(SDK_JS.value.isNullOrEmpty())) { "SDK_JS is empty" }
 
   // load JS
   jsEngine.eval(signatureJS)
 
   // build signature param
   val sigParam =
-    "live_id=1,aid=6383,version_code=180800,webcast_sdk_version=$SDK_VERSION,room_id=$roomId,sub_room_id=,sub_channel_id=,did_rule=3,user_unique_id=$userId,device_platform=web,device_type=,ac=,identity=audience"
+    "live_id=1,${AID_KEY}=${AID_VALUE},${VERSION_CODE_KEY}=${VERSION_CODE_VALUE},${WEBCAST_SDK_VERSION_KEY}=$SDK_VERSION,${ROOM_ID_KEY}=$roomId,sub_room_id=,sub_channel_id=,did_rule=3,${USER_UNIQUE_KEY}=$userId,device_platform=web,device_type=,ac=,identity=audience"
   mainLogger.debug("SigParam: {}", sigParam)
   // get MD5 of sigParam
   val md5SigParam = sigParam.toByteArray().toMD5Hex()

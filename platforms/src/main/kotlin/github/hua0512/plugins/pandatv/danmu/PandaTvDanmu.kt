@@ -80,6 +80,10 @@ class PandaTvDanmu(app: App) : Danmu(app, enablePing = true) {
 
   override fun oneHello(): ByteArray = throw NotImplementedError()
 
+  override fun onDanmuRetry(retryCount: Int) {
+    // do nothing
+  }
+
   override suspend fun sendHello(session: WebSocketSession) {
     val authPacket = buildJsonObject {
       put("id", sendId++)

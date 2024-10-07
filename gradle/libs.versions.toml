@@ -3,6 +3,7 @@ ktor = "3.0.0-rc-2"
 ktor-test = "2.3.12"
 ksp = "2.0.20-1.0.25"
 kotlin = "2.0.20"
+kotlin-atomicfu = "0.25.0"
 kotlin-coroutines = "1.9.0"
 logback = "1.5.8"
 dagger = "2.52"
@@ -61,6 +62,7 @@ com-google-protobuf-protobuf-kotlin-lite = { module = "com.google.protobuf:proto
 
 me-tongfei-progressbar = "me.tongfei:progressbar:0.10.1"
 
+org-jetbrains-kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlin-atomicfu" }
 org-jetbrains-kotlinx-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 org-jetbrains-kotlinx-datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.6.1"
 org-jetbrains-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
@@ -79,6 +81,7 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "androidx-room" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version.ref = "kotlin-atomicfu" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 
 [bundles]

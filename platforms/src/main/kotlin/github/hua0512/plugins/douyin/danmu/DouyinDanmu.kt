@@ -26,6 +26,7 @@
 
 package github.hua0512.plugins.douyin.danmu
 
+
 import com.google.protobuf.ByteString
 import douyin.Dy
 import douyin.Dy.PushFrame
@@ -36,13 +37,18 @@ import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.media.DanmuDataWrapper.EndOfDanmu
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.base.Danmu
-import github.hua0512.plugins.douyin.download.DouyinExtractor
-import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.commonDouyinParams
-import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.extractDouyinWebRid
-import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.populateDouyinCookieMissedParams
+import github.hua0512.plugins.douyin.danmu.DouyinWebcastMessages.CHAT_MESSAGE
+import github.hua0512.plugins.douyin.danmu.DouyinWebcastMessages.CONTROL_MESSAGE
+import github.hua0512.plugins.douyin.download.DouyinApi
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.ROOM_ID_KEY
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.SIGNATURE_KEY
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.USER_UNIQUE_KEY
+import github.hua0512.plugins.douyin.download.extractDouyinWebRid
+import github.hua0512.plugins.douyin.download.fillDouyinCommonParams
 import github.hua0512.plugins.douyin.download.getSignature
+import github.hua0512.plugins.douyin.download.getValidUserId
 import github.hua0512.plugins.douyin.download.loadWebmssdk
-import github.hua0512.plugins.download.COMMON_HEADERS
+import github.hua0512.plugins.douyin.download.populateDouyinCookieMissedParams
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
@@ -52,37 +58,41 @@ import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.datetime.Instant
 
+
 /**
  * Douyin danmu client
  * @author hua0512
  * @date : 2024/2/9 13:48
  */
-class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
-
-  override val websocketUrl: String
-    get() = webSocketDomains.random() + "/webcast/im/push/v2/"
-
-  override val heartBeatDelay: Long = 10000
-
-  override val heartBeatPack: ByteArray = byteArrayOf()
+open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
 
   companion object {
     init {
       // load webmssdk js
       loadWebmssdk()
     }
-
-    private val webSocketDomains = arrayOf(
-      "wss://webcast5-ws-web-lq.douyin.com",
-      "wss://webcast5-ws-web-hl.douyin.com",
-      "wss://webcast5-ws-web-lf.douyin.com"
-    )
   }
 
 
+  override val websocketUrl: String
+    get() = DouyinApi.randomWebSocketUrl
+
+  override val heartBeatDelay: Long = 15000
+
+  override val heartBeatPack: ByteArray = run {
+    val heartbeatPack = Dy.PushFrame.newBuilder()
+      .setPayloadType("hb")
+      .build()
+    heartbeatPack.toByteArray()
+  }
+
+  private var userUniqueId: String? = null
+
+  internal var idStr = ""
+
   override suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean {
     // get room id
-    val roomId = extractDouyinWebRid(streamer.url) ?: return false
+    val webRid = extractDouyinWebRid(streamer.url) ?: return false
 
     val config: DouyinDownloadConfig = if (streamer.templateStreamer != null) {
       // try to get templates download config
@@ -112,51 +122,37 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     try {
       cookies = populateDouyinCookieMissedParams(cookies, app.client)
     } catch (e: Exception) {
-      logger.error("Failed to populate douyin cookie missed params", e)
+      logger.error("({}) Failed to populate douyin cookie missed params", webRid, e)
       return false
     }
 
-    val response = app.client.get("https://live.douyin.com/webcast/room/web/enter/") {
-      headers {
-        COMMON_HEADERS.forEach { append(it.first, it.second) }
-        append(HttpHeaders.Referrer, DouyinExtractor.LIVE_DOUYIN_URL)
-        append(HttpHeaders.Cookie, cookies)
-      }
-      commonDouyinParams.forEach { (t, u) ->
-        parameter(t, u)
-      }
-      parameter("web_rid", roomId)
-    }
-
-    if (response.status != HttpStatusCode.OK) {
-      logger.debug("Streamer : {} response status is not OK : {}", streamer.name, response.status)
-      return false
-    }
-
-    val data = response.bodyAsText()
-    val roomIdPattern = "id_str\"\\s*:\\s*\"(\\d+)".toRegex()
-    val trueRoomId = roomIdPattern.find(data)?.groupValues?.get(1)?.toLong() ?: 0
-    if (trueRoomId == 0L) {
+    if (idStr.isEmpty()) {
       logger.error("Failed to get douyin room id_str")
       return false
     }
-    logger.info("(${streamer.name}) douyin room id_str: $trueRoomId")
-    commonDouyinParams.forEach { (t, u) ->
-      requestParams[t] = u
+    logger.info("(${streamer.name}) douyin room id_str: $idStr")
+
+    with(requestParams) {
+      fillDouyinCommonParams()
+      this[ROOM_ID_KEY] = idStr
+      updateSignature()
     }
-    requestParams["room_id"] = trueRoomId.toString()
-    requestParams["web_rid"] = roomId
-    // generate user id if not exists
-    requestParams["user_unique_id"] = DouyinExtractor.USER_ID!!
-    val signature = getSignature(trueRoomId.toString(), DouyinExtractor.USER_ID)
-    // add signature to request params
-    requestParams["signature"] = signature
     headersMap[HttpHeaders.Cookie] = cookies
     return true
   }
 
-  override fun launchHeartBeatJob(session: WebSocketSession) {
-    // Douyin does not use heart beat
+  override fun onDanmuRetry(retryCount: Int) {
+    // update signature
+    updateSignature()
+  }
+
+  private fun updateSignature() {
+    assert(requestParams[ROOM_ID_KEY] != null) { "$ROOM_ID_KEY is null" }
+    // user unique id may be expired, get a new one
+    userUniqueId = getValidUserId().toString()
+    requestParams[USER_UNIQUE_KEY] = userUniqueId!!
+    // update signature
+    requestParams[SIGNATURE_KEY] = getSignature(requestParams[ROOM_ID_KEY]!!, userUniqueId!!)
   }
 
   override fun oneHello(): ByteArray {
@@ -179,8 +175,9 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     val msgList = payloadPackage.messagesListList
     // each frame may contain multiple messages
     return msgList.mapNotNull { msg ->
-      when (msg.method) {
-        "WebcastChatMessage" -> {
+      val msgType = DouyinWebcastMessages.fromClassName(msg.method)
+      when (msgType) {
+        CHAT_MESSAGE -> {
           val chatMessage = Dy.ChatMessage.parseFrom(msg.payload)
           val textColor = chatMessage.rtfContent.defaultFormat.color.run {
             if (this.isNullOrEmpty()) -1 else this.toInt(16)
@@ -195,7 +192,7 @@ class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
           )
         }
 
-        "WebcastControlMessage" -> {
+        CONTROL_MESSAGE -> {
           val controlMessage = Dy.ControlMessage.parseFrom(msg.payload)
           val status = controlMessage.status
           if (status == 3) {

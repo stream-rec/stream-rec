@@ -40,6 +40,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import java.util.concurrent.TimeUnit
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -64,6 +65,9 @@ class HttpClientFactory : IHttpClientFactory {
         config {
           // Workaround for: https://youtrack.jetbrains.com/issue/KTOR-6266/OkHttp-Remove-the-default-WebSocket-extension-header-Sec-WebSocket-Extensions
           addInterceptor(RemoveWebSocketExtensionsInterceptor())
+          connectTimeout(15, TimeUnit.SECONDS)
+          writeTimeout(20, TimeUnit.SECONDS)
+          readTimeout(60, TimeUnit.SECONDS)
         }
       }
       install(Logging) {
@@ -86,6 +90,7 @@ class HttpClientFactory : IHttpClientFactory {
 
       install(ContentEncoding) {
         gzip(0.9F)
+        deflate(1.0F)
       }
 
 //      install(HttpCookies) {
@@ -94,9 +99,9 @@ class HttpClientFactory : IHttpClientFactory {
 
       if (installTimeout) {
         install(HttpTimeout) {
-          requestTimeoutMillis = 5000
-          connectTimeoutMillis = 5000
-          socketTimeoutMillis = 30.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
+          requestTimeoutMillis = 15000
+          connectTimeoutMillis = 15000
+          socketTimeoutMillis = 60.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
         }
       }
 

@@ -72,6 +72,10 @@ class TwitchDanmu(app: App) : Danmu(app = app, enablePing = false) {
 
   override fun oneHello(): ByteArray = throw UnsupportedOperationException("TwitchDanmu does not support oneHello")
 
+  override fun onDanmuRetry(retryCount: Int) {
+    // do nothing
+  }
+
   override suspend fun sendHello(session: WebSocketSession) {
     val user = "justinfan${(1000..99999).random()}"
     with(session) {
