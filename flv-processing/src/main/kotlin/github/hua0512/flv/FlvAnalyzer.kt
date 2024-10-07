@@ -117,7 +117,7 @@ class FlvAnalyzer(val context: StreamerContext) {
     }
 
   internal fun makeMetaInfo(): FlvMetadataInfo {
-    assert(resolution != null)
+    resolution = resolution ?: VideoResolution(0, 0)
     logger.debug("{} metadata count: {}", context.name, metadataCount)
     val keyframes = keyframesMap.map { (timestamp, position) -> FlvKeyframe(timestamp, position) }.sortedBy { it.timestamp }
     return FlvMetadataInfo(

@@ -194,6 +194,8 @@ object FlvMetaInfoProcessor {
 
     with(mutableMap) {
       metaInfo.toAmfMap().forEach { (k, v) ->
+        // do not inject width and height if it is 0
+        if ((k == "width" || k == "height") && v is Amf0Value.Number && v.value == 0.0 && this[k] != null) return@forEach
         this[k] = v
       }
       if (metaInfo.hasKeyframes) {
