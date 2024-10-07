@@ -183,6 +183,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   abstract fun oneHello(): ByteArray
 
   /**
+   * Callback triggered when danmu fails to connect
+   */
+  protected abstract fun onDanmuRetry(retryCount: Int)
+
+  /**
    * Fetch danmu from server using websocket
    *
    */
@@ -419,6 +424,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       try {
         writeRemainingDanmu()
         fos.writeEndXml()
+        fos.flush()
       } catch (e: Exception) {
         logger.error("$filePath Error writing final danmu", e)
       } finally {
