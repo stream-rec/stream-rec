@@ -51,13 +51,16 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import java.net.SocketTimeoutException
@@ -284,17 +287,25 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       .collect()
   }
 
+  @OptIn(DelicateCoroutinesApi::class)
   override suspend fun stop(exception: Exception?): Boolean {
-    if (this::downloadJob.isInitialized) {
-      downloadJob.cancelAndJoin()
-      if (this::producer.isInitialized) {
-        producer.close()
+    if (!this::downloadJob.isInitialized) return false
+    downloadJob.cancelAndJoin()
+    listOfNotNull(
+      if (this::producer.isInitialized) producer else null,
+      if (this::hlsProducer.isInitialized) hlsProducer else null
+    ).forEach { channel ->
+      channel.close()
+      val result = withTimeoutOrNull(10000) {
+        while (!channel.isClosedForReceive) {
+          delay(1000)
+        }
       }
-      if (this::hlsProducer.isInitialized) {
-        hlsProducer.close()
+      if (result == null) {
+        mainLogger.warn("${channel::class.simpleName} channel not closed")
+        return false
       }
-      return true
     }
-    return false
+    return true
   }
 }
