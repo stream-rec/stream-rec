@@ -75,7 +75,7 @@ suspend fun ByteReadChannel.writeToFile(
     true
   } catch (e: Exception) {
     mainLogger.error("writeToFile error: ${e.message}")
-    false
+    throw e
   } finally {
     onDownloadComplete()
   }

@@ -244,6 +244,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
     }
 
     var exception: Exception? = null
+    var lastFilePath = ""
 
 
     val streamerCallback = object : DownloadCallback {
@@ -274,6 +275,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           .replace(PART_PREFIX, "")
 
         danmu.videoStartTime = Instant.fromEpochSeconds(time)
+        lastFilePath = filePath
 
         if (isDanmuEnabled) {
           danmu.filePath = danmuPath
@@ -426,11 +428,21 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
           danmu.finish()
           // stop danmu job
           stopDanmuJob(it)
-          val file = Path(danmu.filePath)
-          // delete danmu as invalid download
-          file.deleteFile()
+          if (lastFilePath.isNotEmpty()) {
+            // check if the file exists
+            val path = Path(lastFilePath)
+            if (path.exists()) {
+              return@let
+            }
+          } else {
+            // delete the danmu file
+            val danmuPath = Path(danmu.filePath)
+            if (danmuPath.exists()) {
+              danmuPath.deleteFile()
+            }
+          }
         }
-        throw exception!!
+        throw exception
       } else {
         danmuJob?.let {
           stopDanmuJob(it)

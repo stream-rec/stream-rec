@@ -210,10 +210,10 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       if (enableFlvFix) {
         channel
           .asStreamFlow(context = streamerContext)
-          .onEach { producer.send(it) }
           .catch {
             exception = it
           }
+          .onEach { producer.send(it) }
           .flowOn(Dispatchers.IO)
           .collect()
       } else {
@@ -224,6 +224,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         }
       }
     }
+    mainLogger.debug("${streamerContext.name} flv download completed, exception: $exception")
     producer.close(exception)
   }
 
@@ -260,11 +261,16 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       .stats(sizedUpdater)
       .flowOn(Dispatchers.Default)
       .onCompletion { cause ->
+        mainLogger.debug("${context.name} flv process completed : {}, {}", cause, metaInfoProvider.size)
         // nothing is downloaded
         if (metaInfoProvider.size == 0 && cause != null) {
+          // clear meta info provider when completed
+          metaInfoProvider.clear()
+          onDownloadError(lastDownloadFilePath, cause as Exception)
           throw cause
+          return@onCompletion
         }
-        // clear meta info provider when completed
+        // case when download is completed with more than 0 segments is downloaded
         metaInfoProvider.clear()
       }
       .collect()
