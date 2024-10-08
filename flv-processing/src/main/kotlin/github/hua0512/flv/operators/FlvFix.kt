@@ -108,7 +108,10 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     val fps = properties["fps"] ?: properties["framerate"]
     fps ?: return
 
-    frameRate = (fps as Amf0Value.Number).value
+    frameRate = if (fps is Amf0Value.Number) fps.value
+    else if (fps is Amf0Value.String) fps.value.toDouble()
+    else throw IllegalArgumentException("${context.name} Invalid fps type: $fps")
+
     if (frameRate <= 0) {
       logger.warn("${context.name} Invalid frame rate: $frameRate")
       return
