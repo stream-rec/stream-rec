@@ -116,7 +116,7 @@ class DownloadPlatformService(
    * Cancel streamer download
    * @param streamer the streamer to cancel
    */
-  suspend fun cancelStreamer(streamer: Streamer, reason: String? = null) {
+  suspend fun cancelStreamer(streamer: Streamer, reason: String? = null, newStreamer: Streamer) {
     logger.debug("({}) request to cancel streamer: {} reason : {}", platform, streamer.url, reason)
     // check if streamer is present in the list
     if (!streamers.contains(streamer) &&
@@ -129,7 +129,7 @@ class DownloadPlatformService(
 
     cancelledStreamers.add(streamer.url)
     logger.debug("({}), streamer {} received cancellation signal : {}", platform, streamer.url, reason)
-    managers[streamer.url]?.cancelBlocking()
+    managers[streamer.url]?.cancelBlocking(newStreamer)
 
     EventCenter.sendEvent(
       StreamerRecordStop(

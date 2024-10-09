@@ -673,6 +673,14 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
   }
 
   /**
+   * Update the streamer info
+   * @param streamer the [Streamer] instance
+   */
+  open fun updateStreamer(streamer: Streamer) {
+    this.streamer = streamer
+  }
+
+  /**
    * Update streamer info
    * @param mediaInfo the [MediaInfo] instance
    * @param streamer the [Streamer] instance

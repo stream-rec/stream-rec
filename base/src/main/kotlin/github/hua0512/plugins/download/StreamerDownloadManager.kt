@@ -62,7 +62,7 @@ import kotlin.time.toDuration
  */
 class StreamerDownloadManager(
   private val app: App,
-  private val streamer: Streamer,
+  private var streamer: Streamer,
   private val plugin: Download<DownloadConfig>,
   private val downloadSemaphore: Semaphore,
 ) {
@@ -320,14 +320,20 @@ class StreamerDownloadManager(
     isCancelled.value = true
   }
 
-  suspend fun cancelBlocking() {
+  suspend fun cancelBlocking(newStreamer: Streamer) {
     logger.info("${streamer.name} try cancel, isDownloading: {}", isDownloading)
+    updateStreamer(newStreamer)
     isCancelled.emit(true)
   }
 
 
   fun setCallback(callback: StreamerCallback) {
     this.callback = callback
+  }
+
+  fun updateStreamer(newStreamer: Streamer) {
+    this.plugin.updateStreamer(newStreamer)
+    this.streamer = newStreamer
   }
 
 

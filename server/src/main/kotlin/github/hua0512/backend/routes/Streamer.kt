@@ -139,7 +139,9 @@ fun Route.streamerRoute(repo: StreamerRepo) {
       if (state != null) {
         try {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@put call.respond(HttpStatusCode.NotFound, "Streamer not found")
-          repo.update(streamer.copy(isActivated = state, isLive = state))
+          val newStreamer = streamer.copy(isActivated = state, isLive = state)
+          val status = repo.update(newStreamer)
+          if (!status) return@put call.respond(HttpStatusCode.InternalServerError, "Error updating stream state")
           call.respond(HttpStatusCode.OK, buildJsonObject {
             put("msg", "Stream state updated")
             put("code", 200)

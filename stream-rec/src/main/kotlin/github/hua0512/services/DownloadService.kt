@@ -212,7 +212,7 @@ class DownloadService(
           }.forEach { streamer ->
             val platform = streamer.platform
             val streamerService = taskJobs[platform] ?: return@forEach
-            streamerService.cancelStreamer(streamer, "delete")
+            streamerService.cancelStreamer(streamer, "delete", streamer)
           }
         }
 
@@ -249,7 +249,7 @@ class DownloadService(
             logger.debug("Detected entity change for {}, {}", new, old)
             val platform = old.platform
             val service = taskJobs[platform] ?: getOrInitPlatformService(platform)
-            service.cancelStreamer(old, reason)
+            service.cancelStreamer(old, reason, new)
             if (validateActivation(new)) return@forEach
             service.addStreamer(new)
           }
