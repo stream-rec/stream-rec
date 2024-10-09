@@ -24,6 +24,8 @@
  * SOFTWARE.
  */
 
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package github.hua0512.plugins.download.engines
 
 import github.hua0512.app.HttpClientFactory
@@ -35,6 +37,7 @@ import github.hua0512.download.OnDownloadStarted
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
+import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import github.hua0512.flv.operators.analyze
 import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
@@ -53,6 +56,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -227,6 +231,13 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
       }
     }
     mainLogger.debug("${streamerContext.name} flv download completed, exception: $exception")
+    if (exception is FlvHeaderErrorException) {
+      if (producer.isEmpty) {
+        producer.close(exception)
+        onDownloadError(lastDownloadFilePath, exception as Exception)
+        throw exception!!
+      }
+    }
     producer.close(exception)
   }
 

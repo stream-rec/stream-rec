@@ -31,7 +31,7 @@ package github.hua0512.flv.exceptions
  * Base FLV error exception
  * @param message error message
  */
-open class FlvErrorException(override val message: String) : IllegalStateException(message)
+open class FlvErrorException(override val message: String) : IllegalArgumentException(message)
 
 /**
  * FLV data error exception
