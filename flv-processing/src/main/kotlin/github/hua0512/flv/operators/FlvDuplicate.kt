@@ -71,7 +71,7 @@ internal fun Flow<FlvData>.removeDuplicates(context: StreamerContext, gopCount: 
         lastTags.remove()
       }
 
-      logger.debug("${context.name} gopCount: ${gopCount.value}, lastTags: ${lastTags.size}")
+//      logger.debug("${context.name} gopCount: ${gopCount.value}, lastTags: ${lastTags.size}")
       emit(flvData)
     }
 
