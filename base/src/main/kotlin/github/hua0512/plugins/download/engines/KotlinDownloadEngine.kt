@@ -69,6 +69,7 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import java.net.SocketTimeoutException
 import java.nio.file.Path
+import java.util.concurrent.CancellationException
 import kotlin.io.path.Path
 import kotlin.io.path.fileSize
 import kotlin.io.path.nameWithoutExtension
@@ -237,6 +238,8 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         onDownloadError(lastDownloadFilePath, exception as Exception)
         throw exception!!
       }
+    } else if (exception is CancellationException) {
+      exception = null
     }
     producer.close(exception)
   }
