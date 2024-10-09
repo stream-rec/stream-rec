@@ -411,6 +411,7 @@ abstract class Download<out T : DownloadConfig>(val app: App, open val danmu: Da
 
         is KotlinDownloadEngine -> {
           enableFlvFix = app.config.enableFlvFix
+          enableFlvDuplicateTagFiltering = app.config.enableFlvDuplicateTagFiltering
           combineTsFiles = app.config.combineTsFiles
         }
       }

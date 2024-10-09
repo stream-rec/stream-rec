@@ -39,6 +39,7 @@ import github.hua0512.flv.utils.isVideoTag
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 
 
@@ -59,7 +60,7 @@ private val logger by lazy { logger(TAG) }
  * @author hua0512
  * @date : 2024/9/6 13:57
  */
-internal fun Flow<FlvData>.sort(context: StreamerContext): Flow<FlvData> = flow {
+internal fun Flow<FlvData>.sort(context: StreamerContext, gopCount: MutableStateFlow<Int>): Flow<FlvData> = flow {
   val gopTags = mutableListOf<FlvTag>()
 
 
@@ -130,6 +131,8 @@ internal fun Flow<FlvData>.sort(context: StreamerContext): Flow<FlvData> = flow 
       }
     }
 
+    gopCount.value = sortedTags.size
+
     scriptTags.forEach { emit(it) }
     sortedTags.forEach { emit(it) }
     reset()
@@ -153,5 +156,5 @@ internal fun Flow<FlvData>.sort(context: StreamerContext): Flow<FlvData> = flow 
     }
   }
   pushTags()
-  logger.debug("${context.name}  completed...")
+  logger.debug("${context.name} completed...")
 }

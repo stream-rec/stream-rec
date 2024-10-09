@@ -32,6 +32,7 @@ import github.hua0512.flv.utils.isAvcEndSequence
 import github.hua0512.plugins.StreamerContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
@@ -42,12 +43,19 @@ import kotlinx.coroutines.flow.flowOn
  * @author hua0512
  * @date : 2024/9/10 11:55
  */
-fun Flow<FlvData>.process(limitsProvider: DownloadLimitsProvider = { 0L to 0.0f }, context: StreamerContext): Flow<FlvData> {
+fun Flow<FlvData>.process(
+  limitsProvider: DownloadLimitsProvider = { 0L to 0.0f },
+  context: StreamerContext,
+  duplicateTagFiltering: Boolean = true,
+): Flow<FlvData> {
   val (fileSizeLimit, durationLimit) = limitsProvider()
+  // GOP count
+  val gopCount = MutableStateFlow(0)
+
   return this.discardFragmented(context)
     .checkHeader(context)
     .split(context)
-    .sort(context)
+    .sort(context, gopCount)
     .filter { !it.isAvcEndSequence() }
     .correct(context)
     .fix(context)
@@ -55,7 +63,7 @@ fun Flow<FlvData>.process(limitsProvider: DownloadLimitsProvider = { 0L to 0.0f 
     .limit(fileSizeLimit, durationLimit, context)
     .extractJoinPoints(context = context)
     .injectMetadata(context)
-    .removeDuplicates(context)
+    .removeDuplicates(context, gopCount, duplicateTagFiltering)
     .catch {
       it.printStackTrace()
       println("Error processing FLV data: $it")

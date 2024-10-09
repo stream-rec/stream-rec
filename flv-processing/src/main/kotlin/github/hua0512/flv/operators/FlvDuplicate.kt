@@ -30,11 +30,14 @@ import github.hua0512.flv.data.FlvData
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import java.util.LinkedList
+import java.util.Queue
 
 
-private const val NUM_LAST_TAGS = 200
-private const val MAX_DURATION = 20_000
+private const val NUM_LAST_TAGS = 195
+private const val MAX_DURATION = 2000
 
 private const val TAG = "FlvDuplicateRule"
 private val logger = logger(TAG)
@@ -48,23 +51,30 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/17 13:38
  */
-internal fun Flow<FlvData>.removeDuplicates(context: StreamerContext): Flow<FlvData> = flow {
-  val lastTags = LinkedHashSet<Long>(NUM_LAST_TAGS)
+internal fun Flow<FlvData>.removeDuplicates(context: StreamerContext, gopCount: MutableStateFlow<Int>, enable: Boolean = true): Flow<FlvData> =
+  if (enable) flow {
+    val lastTags: Queue<Long> = LinkedList()
 
-  fun reset() {
-    lastTags.clear()
-  }
-
-  collect { flvData ->
-    if (lastTags.add(flvData.crc32)) {
-      if (lastTags.size > NUM_LAST_TAGS) {
-        lastTags.remove(lastTags.iterator().next())
-      }
-      emit(flvData)
-    } else {
-      logger.warn("${context.name} skipping duplicated tag: {}", flvData)
+    fun reset() {
+      lastTags.clear()
     }
-  }
 
-  reset()
-}
+    collect { flvData ->
+      if (lastTags.contains(flvData.crc32)) {
+        logger.warn("${context.name} skipping duplicated tag: {}", flvData)
+        return@collect
+      }
+
+      lastTags.add(flvData.crc32)
+
+      while (lastTags.size > gopCount.value) {
+        lastTags.remove()
+      }
+
+      logger.debug("${context.name} gopCount: ${gopCount.value}, lastTags: ${lastTags.size}")
+      emit(flvData)
+    }
+
+    reset()
+    gopCount.value = 0
+  } else this

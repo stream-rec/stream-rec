@@ -102,6 +102,8 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
    */
   internal var enableFlvFix = false
 
+  internal var enableFlvDuplicateTagFiltering = true
+
   /**
    * Whether to combine ts files
    */
@@ -247,7 +249,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
     sizedUpdater: DownloadProgressUpdater,
   ) {
     producer.receiveAsFlow()
-      .process(limitsProvider, context)
+      .process(limitsProvider, context, enableFlvDuplicateTagFiltering)
       .analyze(metaInfoProvider, context)
       .dump(pathProvider) { index, path, createdAt, openAt ->
         val metaInfo = metaInfoProvider[index] ?: run {
