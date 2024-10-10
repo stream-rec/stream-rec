@@ -26,6 +26,8 @@
 
 package github.hua0512.flv.data
 
+import github.hua0512.flv.exceptions.FlvHeaderErrorException
+
 /**
  * Flv header flag wrapper
  * @author hua0512
@@ -35,13 +37,13 @@ package github.hua0512.flv.data
 value class FlvHeaderFlags(val value: Int) {
 
   init {
-    require(value in 0..0x07) { "Invalid flags value: $value" }
-
-    // assert that 5 bits are 0
-    require((value and 0xF8) == 0) { "Invalid flags value: $value" }
-
-    // assert that 7 bit is 0 (reserved)
-    require((value and 0x02) == 0) { "Flv header reserved flag must be zero" }
+    // TypeFlagsReserved UB [5] Shall be 0
+    // TypeFlagsAudio UB [1] 1 = Audio present
+    // TypeFlagsReserved UB [1] Shall be 0
+    // TypeFlagsVideo UB [1] 1 = Video present
+    if (value !in 0..0x07) {
+      throw FlvHeaderErrorException("Invalid flags value: $value")
+    }
   }
 
   /**
