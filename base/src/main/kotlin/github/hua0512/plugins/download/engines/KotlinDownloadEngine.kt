@@ -238,7 +238,7 @@ class KotlinDownloadEngine : BaseDownloadEngine() {
         onDownloadError(lastDownloadFilePath, exception as Exception)
         throw exception!!
       }
-    } else if (exception is CancellationException) {
+    } else if (exception is CancellationException || exception is kotlinx.coroutines.CancellationException) {
       exception = null
     }
     producer.close(exception)
