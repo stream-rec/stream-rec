@@ -1,8 +1,10 @@
 .gradle
-build
+# any build directory
+*/build/
+docs
 .idea
 *.jar
 *.war
 *.log
 *.db
-db
+.env*.local
