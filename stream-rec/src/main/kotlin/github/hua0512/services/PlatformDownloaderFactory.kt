@@ -59,11 +59,12 @@ object PlatformDownloaderFactory : IPlatformDownloaderFactory {
       val useMobile = app.config.huyaConfig.useMobileApi
       val isNumericUrl = useMobile && url.split("/").last().matches(Regex("\\d+"))
       // use v2 extractor for numeric urls
-      if (isNumericUrl) {
-        Huya(app, HuyaDanmu(app), HuyaExtractorV2(app.client, app.json, url))
+      val extractor = if (isNumericUrl) {
+        HuyaExtractorV2(app.client, app.json, url)
       } else {
-        Huya(app, HuyaDanmu(app), HuyaExtractor(app.client, app.json, url))
+        HuyaExtractor(app.client, app.json, url)
       }
+      Huya(app, HuyaDanmu(app), extractor)
     }
 
     StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app), DouyinExtractor(app.client, app.json, url))

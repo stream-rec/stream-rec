@@ -26,6 +26,7 @@
 
 package github.hua0512.plugins.douyin.download
 
+import github.hua0512.app.COMMON_USER_AGENT
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_VALUE
@@ -36,7 +37,6 @@ import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.VERS
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.VERSION_CODE_VALUE
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.WEBCAST_SDK_VERSION_KEY
 import github.hua0512.plugins.douyu.download.DouyuExtractor.Companion.logger
-import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.plugins.jsEngine
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.toMD5Hex

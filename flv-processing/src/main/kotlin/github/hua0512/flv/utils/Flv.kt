@@ -97,7 +97,7 @@ fun FlvTag.isNalu(): Boolean {
   return videoData.isAvcNalu()
 }
 
-fun createEndOfSequenceTag(tagNum: Int, timestamp: Long, streamId: Int): FlvTag {
+fun createEndOfSequenceTag(tagNum: Int, timestamp: Int, streamId: Int): FlvTag {
   val data = createEndOfSequenceData()
   return FlvTag(
     num = tagNum,
@@ -107,7 +107,7 @@ fun createEndOfSequenceTag(tagNum: Int, timestamp: Long, streamId: Int): FlvTag 
   )
 }
 
-internal fun createEndOfSequenceHeader(timestamp: Long, streamId: Int): FlvTagHeader =
+internal fun createEndOfSequenceHeader(timestamp: Int, streamId: Int): FlvTagHeader =
   FlvTagHeader(tagType = FlvTagHeaderType.Video, dataSize = 5, timestamp = timestamp, streamId = streamId)
 
 
@@ -120,7 +120,7 @@ internal fun createEndOfSequenceData(): FlvTagData = FlvVideoTagData(
 )
 
 
-internal fun createMetadataTag(tagNum: Int, timestamp: Long, streamId: Int): FlvTag {
+internal fun createMetadataTag(tagNum: Int, timestamp: Int, streamId: Int): FlvTag {
   val data = FlvScriptTagData(
     mutableListOf(
       String("onMetaData"),

@@ -50,7 +50,7 @@ private val logger = logger(TAG)
  * @return Flow<FlvData> The corrected flow of FLV data.
  */
 internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = flow {
-  var delta: Long? = null
+  var delta: Int? = null
   var firstDataTag: FlvTag? = null
 
   /**
@@ -67,11 +67,11 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
    * Corrects the timestamp of a given FLV tag.
    *
    * @param tag FlvTag The FLV tag to correct.
-   * @param delta Long The delta to apply to the timestamp.
+   * @param delta The delta to apply to the timestamp.
    * @return FlvTag The FLV tag with the corrected timestamp.
    */
-  fun correctTimestamp(tag: FlvTag, delta: Long): FlvTag {
-    if (delta == 0L) {
+  fun correctTimestamp(tag: FlvTag, delta: Int): FlvTag {
+    if (delta == 0) {
       return tag
     }
     return tag.copy(header = tag.header.copy(timestamp = tag.header.timestamp + delta))
@@ -88,7 +88,7 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
 
     if (item.isScriptTag()) {
       // SCRIPT tag timestamp must be 0
-      val scriptTag = if (item.header.timestamp != 0L) {
+      val scriptTag = if (item.header.timestamp != 0) {
         if (item.num != 1) {
           logger.warn("${context.name} Script tag timestamp is not 0: {}", item)
         }
@@ -101,7 +101,7 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
     if (delta == null) {
       if (item.isSequenceHeader()) {
         // Sequence timestamp must be 0
-        val sequenceTag = if (item.header.timestamp != 0L) {
+        val sequenceTag = if (item.header.timestamp != 0) {
           item.copy(header = item.header.copy(timestamp = 0))
         } else item
         emit(sequenceTag)

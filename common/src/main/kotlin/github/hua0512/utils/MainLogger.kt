@@ -40,6 +40,15 @@ val mainLogger: Logger = LoggerFactory.getLogger("Main")
  */
 inline fun logger(tag: String) = LoggerFactory.getLogger(tag)
 
+/**
+ * Get logger by class
+ * @param clazz
+ * @return slf4j logger
+ * @author hua0512
+ * @date : 2024/9/8 21:34
+ */
+inline fun logger(clazz: Class<*>) = LoggerFactory.getLogger(clazz)
+
 inline fun Logger.debug(message: () -> String) {
   if (isDebugEnabled) {
     this.debug(message())

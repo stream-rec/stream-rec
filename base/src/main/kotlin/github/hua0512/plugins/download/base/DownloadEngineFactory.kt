@@ -24,30 +24,43 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
+package github.hua0512.plugins.download.base
 
-import github.hua0512.data.config.Action
 import github.hua0512.data.media.VideoFormat
+import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.DownloadEngines
+import github.hua0512.plugins.download.engines.ffmpeg.FFmpegDownloadEngine
+import github.hua0512.plugins.download.engines.ffmpeg.StreamlinkDownloadEngine
+import github.hua0512.plugins.download.engines.kotlin.KotlinFlvDownloadEngine
+import github.hua0512.plugins.download.engines.kotlin.KotlinHlsDownloadEngine
 
 /**
+ * Factory for creating download engines
+ * @see BaseDownloadEngine
+ * @see DownloadEngines
  * @author hua0512
- * @date : 2024/2/11 19:58
+ * @date : 2024/10/10 21:33
  */
-interface DownloadConfigDTO {
+class DownloadEngineFactory {
 
-  val engine: DownloadEngines?
-  val cookies: String?
-  val danmu: Boolean?
-  val maxBitRate: Int?
-  val outputFolder: String?
-  val outputFileName: String?
-  val outputFileFormat: VideoFormat?
+  companion object {
+    fun createEngine(engineType: DownloadEngines, videoFormat: VideoFormat): BaseDownloadEngine {
+      return when (engineType) {
+        DownloadEngines.KOTLIN -> {
+          if (videoFormat == VideoFormat.flv) {
+            KotlinFlvDownloadEngine()
+          } else if (videoFormat == VideoFormat.hls) {
+            KotlinHlsDownloadEngine()
+          } else {
+            throw IllegalArgumentException("Kotlin engine only supports FLV format")
+          }
+        }
 
-
-  val onPartedDownload: List<Action>?
-
-
-  val onStreamingFinished: List<Action>?
+        DownloadEngines.FFMPEG -> FFmpegDownloadEngine()
+        DownloadEngines.STREAMLINK -> StreamlinkDownloadEngine()
+        else -> throw IllegalArgumentException("Unknown engine type: $engineType")
+      }
+    }
+  }
 
 }

@@ -31,28 +31,23 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.PandaTvDownloadConfig
 import github.hua0512.data.platform.PandaTvQuality
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
-import github.hua0512.utils.nonEmptyOrNull
 
 /**
  * Pandalive live stream downloader.
  * @author hua0512
  * @date : 2024/5/10 13:22
  */
-class PandaTv(app: App, override val danmu: PandaTvDanmu, override val extractor: PandaTvExtractor) :
-  Download<PandaTvDownloadConfig>(app, danmu, extractor) {
-
-  override fun createDownloadConfig() = PandaTvDownloadConfig(
-    quality = app.config.pandaTvConfig.quality,
-    cookies = app.config.pandaTvConfig.cookies,
-  )
+class PandaTv(
+  app: App,
+  override val danmu: PandaTvDanmu,
+  override val extractor: PandaTvExtractor,
+) :
+  PlatformDownloader<PandaTvDownloadConfig>(app, danmu, extractor) {
 
   override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    (config.cookies ?: app.config.pandaTvConfig.cookies)?.nonEmptyOrNull()?.also {
-      extractor.cookies = it
-    }
-
+    extractor.cookies = downloadConfig.cookies.orEmpty()
     return super.shouldDownload {
       onLive()
       // init danmu
@@ -62,6 +57,10 @@ class PandaTv(app: App, override val danmu: PandaTvDanmu, override val extractor
       }
     }
   }
+
+  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
+
+  override fun getProgramArgs(): List<String> = emptyList()
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as PandaTvDownloadConfig

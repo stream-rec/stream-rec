@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.engines
+package github.hua0512.plugins.download.engines.ffmpeg
 
 import github.hua0512.app.Programs.ffmpeg
 import github.hua0512.app.Programs.streamLink
@@ -51,8 +51,6 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
   companion object {
     private val logger = LoggerFactory.getLogger("Streamlink")
   }
-
-  internal val programArgs = mutableListOf<String>()
 
   private var streamlinkProcess: Process? = null
 

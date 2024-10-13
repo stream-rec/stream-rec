@@ -24,15 +24,14 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
+package github.hua0512.app
 
-/**
- * Flv join point
- * @author hua0512
- * @date : 2024/9/12 0:56
- */
-data class FlvJoinPoint(
-  val seamless: Boolean = false,
-  val timestamp: Int = 0,
-  val crc32: Long = 0,
+import io.ktor.http.HttpHeaders
+
+const val COMMON_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+
+val COMMON_HEADERS = arrayOf(
+  HttpHeaders.Accept to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  HttpHeaders.AcceptLanguage to "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
+  HttpHeaders.UserAgent to COMMON_USER_AGENT
 )

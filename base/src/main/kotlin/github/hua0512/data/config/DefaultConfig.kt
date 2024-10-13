@@ -32,9 +32,9 @@ package github.hua0512.data.config
  * @date : 2024/5/31 19:48
  */
 
-const val CONFIG_DEFAULT_ENGINE = "ffmpeg"
-const val CONFIG_DEFAULT_DANMU = false
-const val CONFIG_DEFAULT_OUTPUT_FILE_NAME = "{streamer}-{title}-%Y-%m-%d %H:%M:%S"
-const val CONFIG_DEFAULT_MIN_PART_SIZE = 20971520L
-const val CONFIG_DEFAULT_MAX_PART_SIZE = 2684354560L
-const val CONFIG_DEFAULT_MAX_PART_DURATION = 3600L
+internal const val CONFIG_DEFAULT_ENGINE = "ffmpeg"
+internal const val CONFIG_DEFAULT_DANMU = false
+internal const val CONFIG_DEFAULT_OUTPUT_FILE_NAME = "{streamer}-{title}-%Y-%m-%d %H:%M:%S"
+internal const val CONFIG_DEFAULT_MIN_PART_SIZE = 20971520L
+internal const val CONFIG_DEFAULT_MAX_PART_SIZE = 2684354560L
+internal const val CONFIG_DEFAULT_MAX_PART_DURATION = 3600L

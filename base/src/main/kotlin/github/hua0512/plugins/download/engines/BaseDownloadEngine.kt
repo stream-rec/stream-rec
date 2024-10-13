@@ -61,6 +61,8 @@ abstract class BaseDownloadEngine {
   protected var streamer: Streamer? = null
   private var callback: DownloadCallback? = null
 
+  open val programArgs = mutableListOf<String>()
+
 
   /**
    * Instantiates the download engine with the required parameters.

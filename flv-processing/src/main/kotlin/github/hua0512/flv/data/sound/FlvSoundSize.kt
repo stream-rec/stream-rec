@@ -31,9 +31,9 @@ package github.hua0512.flv.data.sound
  * @author hua0512
  * @date : 2024/6/9 9:34
  */
-enum class FlvSoundSize(val value: Int) {
-  SOUND_8_BIT(0),
-  SOUND_16_BIT(1);
+enum class FlvSoundSize(val value: Int, val size: Int = 0) {
+  SOUND_8_BIT(0, 8),
+  SOUND_16_BIT(1, 16);
 
   companion object {
     fun from(size: Int): FlvSoundSize {

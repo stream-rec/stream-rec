@@ -50,9 +50,9 @@ import github.hua0512.flv.data.video.FlvVideoFrameType
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
+import github.hua0512.flv.utils.readUI24
 import github.hua0512.utils.crc32
 import github.hua0512.utils.logger
-import github.hua0512.flv.utils.readUI24
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
@@ -215,9 +215,9 @@ internal fun InputStream.parseTagHeader(): FlvTagHeader {
   // 3 bytes timestamp
   val timestamp = buffer.read3BytesAsInt().toUInt()
   // 1 byte timestamp extended
-  val timestampExtended = buffer.get().toUInt()
+  val timestampExtended = buffer.get().toUInt() and 0xFFu
   // final timestamp, 3 bytes timestamp (lower bits) + 1 byte timestamp extended (higher 8 bits)
-  val finalTimestamp = (timestampExtended shl 24 or timestamp).toLong()
+  val finalTimestamp = (timestampExtended shl 24 or timestamp).toInt()
   // 3 bytes stream id
   val streamId = buffer.read3BytesAsInt()
   return FlvTagHeader(

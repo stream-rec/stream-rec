@@ -37,6 +37,7 @@ import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
 
 private const val TAG = "FlvAnalyzerRule"
 
@@ -78,7 +79,12 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerCo
   }
 
   // Collects and processes each FlvData object in the flow
-  collect { value ->
+  onCompletion {
+    // Push the final metadata information and reset the analyzer
+    pushMetadata()
+    reset()
+    streamIndex = -1
+  }.collect { value ->
     if (value.isHeader()) {
       streamIndex++
       pushMetadata()
@@ -92,9 +98,4 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerCo
     // Emit the value
     emit(value)
   }
-
-  // Push the final metadata information and reset the analyzer
-  pushMetadata()
-  reset()
-  streamIndex = -1
 }

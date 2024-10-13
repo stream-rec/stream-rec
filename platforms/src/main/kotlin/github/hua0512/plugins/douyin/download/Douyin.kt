@@ -33,7 +33,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
-import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.base.PlatformDownloader
 
 /**
  * This class represents a Douyin downloader.
@@ -43,25 +43,25 @@ import github.hua0512.plugins.download.base.Download
  * @property streamer The [Streamer] instance.
  * @property downloadUrl The URL of the video to be downloaded.
  */
-class Douyin(app: App, override val danmu: DouyinDanmu, override val extractor: DouyinExtractor) :
-  Download<DouyinDownloadConfig>(app, danmu, extractor) {
-
-  override fun createDownloadConfig(): DouyinDownloadConfig = DouyinDownloadConfig(
-    quality = app.config.douyinConfig.quality,
-    sourceFormat = app.config.douyinConfig.sourceFormat,
-    cookies = app.config.douyinConfig.cookies
-  )
+class Douyin(
+  app: App,
+  override val danmu: DouyinDanmu,
+  override val extractor: DouyinExtractor,
+) :
+  PlatformDownloader<DouyinDownloadConfig>(app, danmu, extractor) {
 
   override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    (config.cookies ?: app.config.douyinConfig.cookies)?.also {
-      extractor.cookies = it
-    }
+    extractor.cookies = downloadConfig.cookies.orEmpty()
     return super.shouldDownload {
       onLive()
       // bind idStr to danmu
       danmu.idStr = extractor.idStr
     }
   }
+
+  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
+
+  override fun getProgramArgs(): List<String> = emptyList()
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyinDownloadConfig

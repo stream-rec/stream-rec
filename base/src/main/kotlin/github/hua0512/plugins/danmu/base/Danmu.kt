@@ -50,6 +50,7 @@ import java.io.EOFException
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import java.net.SocketException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -274,7 +275,10 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         addToBuffer(it)
       }
       .catch {
-        if (!(it is EOFException && hasReceivedEnd)) throw it
+        if (hasReceivedEnd) throw CancellationException("End of danmu received")
+        else if (it is SocketException) return@catch
+        else if (it is EOFException) return@catch
+        else logger.error("$filePath danmu error", it)
       }
       .onCompletion {
         it ?: return@onCompletion

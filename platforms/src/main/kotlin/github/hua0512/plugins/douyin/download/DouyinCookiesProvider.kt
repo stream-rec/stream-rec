@@ -26,9 +26,9 @@
 
 package github.hua0512.plugins.douyin.download
 
+import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.LIVE_DOUYIN_URL
-import github.hua0512.plugins.download.COMMON_HEADERS
 import github.hua0512.utils.generateRandomString
 import github.hua0512.utils.logger
 import io.ktor.client.HttpClient

@@ -32,15 +32,20 @@ import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
 import github.hua0512.data.platform.TwitchQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
-import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
 
 /**
+ * Twitch downloader.
  * @author hua0512
  * @date : 2024/5/3 21:47
  */
-class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Download<TwitchDownloadConfig>(app, danmu, extractor) {
+class Twitch(
+  app: App,
+  danmu: TwitchDanmu,
+  override val extractor: TwitchExtractor,
+) : PlatformDownloader<TwitchDownloadConfig>(app, danmu, extractor) {
 
 
   init {
@@ -48,21 +53,28 @@ class Twitch(app: App, danmu: TwitchDanmu, extractor: TwitchExtractor) : Downloa
   }
 
 
-  override fun createDownloadConfig(): TwitchDownloadConfig = TwitchDownloadConfig(
-    quality = app.config.twitchConfig.quality,
-    authToken = app.config.twitchConfig.authToken,
-  )
-
   override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    val authToken = (config.authToken?.nonEmptyOrNull() ?: app.config.twitchConfig.authToken).nonEmptyOrNull()
-      ?: throw InvalidExtractionUrlException("Twitch requires an auth token to download")
-    (extractor as TwitchExtractor).authToken = authToken
-
-    (config.cookies ?: app.config.twitchConfig.cookies)?.nonEmptyOrNull()?.also {
-      extractor.cookies = it
+    val authToken = downloadConfig.authToken.orEmpty().ifEmpty {
+      throw InvalidExtractionUrlException("Twitch requires an auth token to download")
     }
-
+    extractor.authToken = authToken
+    extractor.cookies = downloadConfig.cookies.orEmpty()
     return super.shouldDownload(onLive)
+  }
+
+  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
+
+  override fun getProgramArgs(): List<String> = buildList {
+    val config = app.config.twitchConfig
+    // check if skip ads is enabled
+    if (config.skipAds) {
+      // add skip ads to streamlink args
+      add("--twitch-disable-ads")
+    }
+    // configure streamlink-ttvlol
+    config.twitchProxyPlaylist?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist=$it") }
+    config.twitchProxyPlaylistExclude?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist-exclude=$it") }
+    if (config.twitchProxyPlaylistFallback) add("--twitch-proxy-playlist-fallback")
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {

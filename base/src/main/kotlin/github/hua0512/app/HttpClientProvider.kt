@@ -27,7 +27,6 @@
 package github.hua0512.app
 
 import github.hua0512.app.App.Companion.logger
-import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.utils.RemoveWebSocketExtensionsInterceptor
 import io.ktor.client.*
 import io.ktor.client.engine.*

@@ -52,7 +52,7 @@ data class FlvTagHeader(
   /**
    * FLV tag timestamp
    */
-  val timestamp: Long,
+  val timestamp: Int,
   /**
    * FLV tag stream id, 1 byte
    */
@@ -71,9 +71,9 @@ data class FlvTagHeader(
       // write 3 bytes data size
       write3BytesInt(dataSize)
       // write 3 bytes timestamp
-      write3BytesInt(timestamp.toInt() and 0x00FFFFFF)
+      write3BytesInt(timestamp and 0x00FFFFFF)
       // write 1 byte timestamp extension
-      write((timestamp.toInt() shr 24))
+      write((timestamp shr 24))
       // write 3 bytes stream id
       write3BytesInt(streamId)
     }

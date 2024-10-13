@@ -66,13 +66,13 @@ private const val TOLERANCE = 1
  */
 internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
-  var delta: Long = 0
+  var delta: Int = 0
   var lastTag: FlvTag? = null
   var lastAudioTag: FlvTag? = null
   var lastVideoTag: FlvTag? = null
   var frameRate = 30.0
-  var videoFrameInterval = (1000 / frameRate)
-  var soundSampleInterval = (1000 / 44.1)
+  var videoFrameInterval: Int = ceil((1000 / frameRate).toDouble()).toInt()
+  var soundSampleInterval: Int = ceil((1000 / 44).toDouble()).toInt()
 
   /**
    * Resets the correction state.
@@ -85,8 +85,8 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     lastAudioTag = null
     lastVideoTag = null
     frameRate = 30.0
-    videoFrameInterval = (1000 / frameRate)
-    soundSampleInterval = (1000 / 44.1)
+    videoFrameInterval = ceil((1000 / frameRate).toDouble()).toInt()
+    soundSampleInterval = ceil((1000 / 44).toDouble()).toInt()
   }
 
   /**
@@ -95,7 +95,7 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    * @param fps Double The frame rate.
    * @return Double The calculated video frame interval.
    */
-  fun calculateVideoFrameInterval(fps: Double) = ceil(1000.0 / fps)
+  fun calculateVideoFrameInterval(fps: Double) = ceil(1000 / fps).toInt()
 
   /**
    * Updates the video parameters based on the given properties.
@@ -118,9 +118,9 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     }
     videoFrameInterval = calculateVideoFrameInterval(frameRate)
 
-    val amfSoundRate = properties["audiosamplerate"] ?: Amf0Value.Number(44100.0)
-    val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
-    soundSampleInterval = ceil(1000 / soundRate)
+//    val amfSoundRate = properties["audiosamplerate"] ?: Amf0Value.Number(44100.0)
+//    val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
+//    soundSampleInterval = ceil(1000 / soundRate).toInt()
 
     logger.debug("${context.name} fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
   }
@@ -169,16 +169,16 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    */
   fun updateDelta(tag: FlvTag) {
     if (tag.isVideoTag() && lastVideoTag != null) {
-      delta = (lastVideoTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval).toLong()
+      delta = lastVideoTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval
     } else if (tag.isAudioTag() && lastAudioTag != null) {
-      delta = (lastAudioTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval).toLong()
+      delta = lastAudioTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval
     }
 
     if (lastTag != null && tag.header.timestamp + delta <= lastTag!!.header.timestamp) {
       if (tag.isVideoTag()) {
-        delta = (lastTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval).toLong()
+        delta = lastTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval
       } else if (tag.isAudioTag()) {
-        delta = (lastTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval).toLong()
+        delta = lastTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval
       }
     }
   }
@@ -189,8 +189,8 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    * @receiver tag FlvTag The FLV tag to correct.
    * @return FlvTag The FLV tag with the corrected timestamp.
    */
-  fun FlvTag.correctTs(delta: Long): FlvTag =
-    if (delta == 0L) this
+  fun FlvTag.correctTs(delta: Int): FlvTag =
+    if (delta == 0) this
     else copy(header = header.copy(timestamp = header.timestamp + delta))
 
   /**

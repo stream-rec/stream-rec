@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.engines
+package github.hua0512.plugins.download.engines.ffmpeg
 
 import github.hua0512.app.Programs.ffmpeg
 import github.hua0512.app.Programs.ffprobe
@@ -32,6 +32,7 @@ import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.Streamer
 import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.flv.data.video.VideoResolution
+import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
 import github.hua0512.utils.process.Redirect

@@ -26,26 +26,28 @@
 
 package github.hua0512.plugins.twitch.download
 
-import github.hua0512.plugins.download.COMMON_HEADERS
+import github.hua0512.app.COMMON_HEADERS
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.auth.*
 import kotlinx.serialization.json.*
 
 private const val POST_URL = "https://gql.twitch.tv/gql"
-private const val CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
-private const val CLIENT_ID_HEADER = "Client-Id"
+internal const val CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
+internal const val CLIENT_ID_HEADER = "Client-Id"
 
-internal suspend fun twitchPostQPL(client: HttpClient, json: Json, data: String, authToken: String? = null): JsonElement {
+internal suspend fun twitchPostQPL(client: HttpClient, json: Json, data: String, headers: Map<String, String>): JsonElement {
   val request = client.post(POST_URL) {
-    header(CLIENT_ID_HEADER, CLIENT_ID)
-    header(HttpHeaders.ContentType, "text/plain")
-    // auth token is required
-    authToken?.let {
-      header(HttpHeaders.Authorization, "${AuthScheme.OAuth} $it")
+    headers.forEach { (key, value) ->
+      header(key, value)
     }
+
+    if (headers.containsKey(HttpHeaders.Authorization).not()) {
+      throw InvalidExtractionParamsException("Authorization header is required")
+    }
+
     COMMON_HEADERS.forEach { (key, value) ->
       header(key, value)
     }

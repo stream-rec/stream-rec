@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.engines
+package github.hua0512.plugins.download.engines.ffmpeg
 
 import github.hua0512.data.media.VideoFormat
 import io.ktor.http.*
@@ -106,8 +106,8 @@ private fun buildDefaultOutputArgs(
     }
     if (useSegmentation) {
       if (segmentPart != 0L) logger.debug("Ignoring segmentPart($segmentPart)s for segmentation, using segmentTime instead")
-      // segment time, default is 2 hours
-      val time = segmentTime ?: 2.toDuration(DurationUnit.HOURS).inWholeSeconds
+      // segment time, default is 12 hours
+      val time = segmentTime?.run { if (segmentTime <= 0) null } ?: 12.toDuration(DurationUnit.HOURS).inWholeSeconds
       addAll(
         arrayOf(
           "-f",
@@ -204,7 +204,7 @@ fun buildFFprobeCmd(
   headers: Map<String, String> = emptyMap(),
   cookies: String? = null,
   downloadUrl: String,
-) : Array<String>{
+): Array<String> {
   val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies)
 
   val defaultOutputArgs = arrayOf(

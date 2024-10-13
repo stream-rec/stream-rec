@@ -27,14 +27,15 @@
 package github.hua0512.data.media
 
 
-enum class VideoFormat(val ffmpegMuxer: String) {
-  mp4("mp4"),
-  avi("avi"),
-  mov("mov"),
-  flv("flv"),
-  hls("hls"),
-  mkv("matroska"),
-  ts("mpegts");
+enum class VideoFormat(val ffmpegMuxer: String, val fileExtension: String) {
+  mp4("mp4", "mp4"),
+  avi("avi", "avi"),
+  mov("mov", "mov"),
+  flv("flv", "flv"),
+  hls("hls", "m3u8"),
+  mkv("matroska", "mkv"),
+  ts("mpegts", "ts"),
+  ;
 
   companion object {
     fun format(extension: String): VideoFormat? {

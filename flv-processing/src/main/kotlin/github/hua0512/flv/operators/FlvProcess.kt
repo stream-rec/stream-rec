@@ -33,7 +33,6 @@ import github.hua0512.plugins.StreamerContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 
@@ -64,9 +63,5 @@ fun Flow<FlvData>.process(
     .extractJoinPoints(context = context)
     .injectMetadata(context)
     .removeDuplicates(context, gopCount, duplicateTagFiltering)
-    .catch {
-      it.printStackTrace()
-      println("Error processing FLV data: $it")
-    }
     .flowOn(Dispatchers.Default)
 }

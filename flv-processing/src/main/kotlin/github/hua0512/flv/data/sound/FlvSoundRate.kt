@@ -30,11 +30,11 @@ package github.hua0512.flv.data.sound
  * @author hua0512
  * @date : 2024/6/9 9:34
  */
-enum class FlvSoundRate(val value: Int) {
-  RATE_5_5KHZ(0),
-  RATE_11KHZ(1),
-  RATE_22KHZ(2),
-  RATE_44KHZ(3),
+enum class FlvSoundRate(val value: Int, val rate: Int = 44100) {
+  RATE_5_5KHZ(0, 5512),
+  RATE_11KHZ(1, 11025),
+  RATE_22KHZ(2, 22050),
+  RATE_44KHZ(3, 44100),
   ;
 
   companion object {

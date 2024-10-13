@@ -26,7 +26,7 @@
 
 package github.hua0512.plugins.douyin.download
 
-import github.hua0512.plugins.download.COMMON_USER_AGENT
+import github.hua0512.app.COMMON_USER_AGENT
 
 
 internal typealias DouyinParams = DouyinRequestParams.Companion

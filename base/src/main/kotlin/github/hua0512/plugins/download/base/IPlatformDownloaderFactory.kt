@@ -44,6 +44,6 @@ interface IPlatformDownloaderFactory {
    * @param url the url to download from
    * @return a downloader instance
    */
-  fun createDownloader(app: App, platform: StreamingPlatform, url: String): Download<DownloadConfig>
+  fun createDownloader(app: App, platform: StreamingPlatform, url: String): PlatformDownloader<out DownloadConfig>
 
 }

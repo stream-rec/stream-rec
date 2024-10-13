@@ -41,4 +41,9 @@ interface GlobalPlatformConfig {
    * Delay in seconds before retrying a parted download
    */
   val partedDownloadRetry: Int?
+
+  /**
+   * Cookies for the platform
+   */
+  val cookies: String?
 }
