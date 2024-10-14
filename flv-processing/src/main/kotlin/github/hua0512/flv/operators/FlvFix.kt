@@ -30,6 +30,7 @@ import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isAudioTag
@@ -110,7 +111,7 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
     frameRate = if (fps is Amf0Value.Number) fps.value
     else if (fps is Amf0Value.String) fps.value.toDouble()
-    else throw IllegalArgumentException("${context.name} Invalid fps type: $fps")
+    else throw FlvDataErrorException("${context.name} Invalid fps type: $fps")
 
     if (frameRate <= 0) {
       logger.warn("${context.name} Invalid frame rate: $frameRate")
@@ -138,7 +139,7 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     when (amf) {
       is Amf0Value.Object -> updateVideoParams(amf.properties)
       is Amf0Value.EcmaArray -> updateVideoParams(amf.properties)
-      else -> throw IllegalArgumentException("${context.name} Invalid script tag data: $amf")
+      else -> throw FlvDataErrorException("${context.name} Invalid script tag data: $amf")
     }
   }
 
