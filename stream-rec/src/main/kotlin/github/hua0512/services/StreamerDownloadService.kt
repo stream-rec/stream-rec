@@ -161,7 +161,7 @@ class StreamerDownloadService(
     return plugin.shouldDownload()
   }
 
-  private suspend fun handleLiveStreamer(definedStartTime: String?, definedStopTime: String?) = coroutineScope {
+  private suspend fun CoroutineScope.handleLiveStreamer(definedStartTime: String?, definedStopTime: String?) {
     // save streamer to the database with the new isLive value
     if (!streamer.isLive) {
       EventCenter.sendEvent(
@@ -173,7 +173,6 @@ class StreamerDownloadService(
           Clock.System.now()
         )
       )
-      streamer.isLive = true
       callback?.onLiveStatusChanged(streamer.id, true)
     }
     updateLastLiveTime()
@@ -242,7 +241,6 @@ class StreamerDownloadService(
   private suspend fun updateLastLiveTime() {
     val now = Clock.System.now()
     callback?.onLastLiveTimeChanged(streamer.id, now.epochSeconds)
-    streamer.lastLiveTime = now.epochSeconds
   }
 
   private suspend fun handleOfflineStreamer() {
@@ -388,13 +386,14 @@ class StreamerDownloadService(
     }
   }
 
-  fun CoroutineScope.launchStopTask(duration: Long) {
+  private fun CoroutineScope.launchStopTask(duration: Long) {
     logger.debug("(${streamer.name}) stopping download after $duration ms")
     if (stopTimerJob?.isActive == true) {
-      stopTimerJob?.cancel()
+      stopTimerJob!!.cancel()
     }
     stopTimerJob = launch {
-      delay(duration)
+      // add 10 seconds to the duration to ensure the download is stopped
+      delay(if (duration <= 10000) 10000 else duration)
       inTimerRange = false
       if (isDownloading) {
         val result = stop(TimerEndedDownloadException())
@@ -406,7 +405,6 @@ class StreamerDownloadService(
 
   private suspend fun resetStreamerLiveStatus() {
     if (streamer.isLive) {
-      streamer.isLive = false
       callback?.onLiveStatusChanged(streamer.id, false)
     }
   }

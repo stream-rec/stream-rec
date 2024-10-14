@@ -86,35 +86,37 @@ class DownloadService(
     this.scope = downloadScope
     callback = object : StreamerCallback {
       override suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean) {
-        scope.launch {
-          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
-          val status = repo.update(streamer.copy(isLive = newStatus))
-          logger.debug("({}) updated live status -> {} = {}", streamer.name, newStatus, status)
-        }.join()
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        val status = repo.update(streamer.copy(isLive = newStatus))
+        logger.debug("({}) updated live status -> {} = {}", streamer.name, newStatus, status)
+        if (status)
+          streamer.isLive = newStatus
       }
 
       override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long) {
-        scope.launch {
-          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
-          logger.debug("({}) updated last live time -> {}", streamer.name, newLiveTime)
-          repo.update(streamer.copy(lastLiveTime = newLiveTime))
-        }.join()
+
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        logger.debug("({}) updated last live time -> {}", streamer.name, newLiveTime)
+        val status = repo.update(streamer.copy(lastLiveTime = newLiveTime))
+        if (status)
+          streamer.lastLiveTime = newLiveTime
+
       }
 
       override suspend fun onDescriptionChanged(id: Long, description: String) {
-        scope.launch {
-          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
-          logger.debug("({}) updated description -> {}", streamer.name, description)
-          repo.update(streamer.copy(streamTitle = description))
-        }.join()
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        logger.debug("({}) updated description -> {}", streamer.name, description)
+        val status = repo.update(streamer.copy(streamTitle = description))
+        if (status)
+          streamer.streamTitle = description
       }
 
       override suspend fun onAvatarChanged(id: Long, avatar: String) {
-        scope.launch {
-          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
-          logger.debug("({}) updated avatar url -> {}", streamer.name, avatar)
-          repo.update(streamer.copy(avatar = avatar))
-        }.join()
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        logger.debug("({}) updated avatar url -> {}", streamer.name, avatar)
+        val status = repo.update(streamer.copy(avatar = avatar))
+        if (status)
+          streamer.avatar = avatar
       }
 
       override fun onStreamDownloaded(id: Long, stream: StreamData, shouldInjectMetaInfo: Boolean, metaInfo: FlvMetadataInfo?) {
