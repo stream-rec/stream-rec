@@ -114,7 +114,7 @@ internal fun createEndOfSequenceHeader(timestamp: Int, streamId: Int): FlvTagHea
 internal fun createEndOfSequenceData(): FlvTagData = FlvVideoTagData(
   frameType = FlvVideoFrameType.KEY_FRAME,
   codecId = FlvVideoCodecId.AVC,
-  compositionTime = 0u,
+  compositionTime = 0,
   avcPacketType = AvcPacketType.AVC_END_OF_SEQUENCE,
   binaryData = byteArrayOf()
 )

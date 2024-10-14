@@ -35,7 +35,7 @@ import java.util.LinkedHashMap
  * @date : 2024/6/9 20:13
  */
 fun readAmf0Value(input: DataInputStream): Amf0Value {
-  val type = input.readByte().toInt()
+  val type = input.readByte()
 
   return when (type) {
     Amf0Type.NUMBER.byte -> Amf0Value.Number(input.readDouble())

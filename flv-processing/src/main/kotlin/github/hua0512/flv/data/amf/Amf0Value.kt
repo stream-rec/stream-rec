@@ -26,10 +26,8 @@
 
 package github.hua0512.flv.data.amf
 
-import github.hua0512.flv.utils.writeDouble
-import github.hua0512.flv.utils.writeInt
-import github.hua0512.flv.utils.writeShort
-import java.io.OutputStream
+import kotlinx.io.Sink
+import kotlinx.io.writeDouble
 
 /**
  * AMF0 data types
@@ -37,7 +35,7 @@ import java.io.OutputStream
  * @date : 2024/6/9 9:58
  * @see <a href="https://en.wikipedia.org/wiki/Action_Message_Format#AMF0">AMF0 spec</a>
  */
-enum class Amf0Type(val byte: Int) {
+enum class Amf0Type(val byte: Byte) {
   NUMBER(0x00),
   BOOLEAN(0x01),
   STRING(0x02),
@@ -58,10 +56,10 @@ enum class Amf0Type(val byte: Int) {
  * @author hua0512
  * @date : 2024/6/8 20:24
  */
-sealed class Amf0Value(open val type: Int) : AmfValue {
+sealed class Amf0Value(open val type: Byte) : AmfValue {
 
-  override fun write(output: OutputStream) {
-    output.write(type)
+  override fun write(sink: Sink) {
+    sink.writeByte(type)
   }
 
 
@@ -75,9 +73,9 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
 
     override val size: Int = 9
 
-    override fun write(output: OutputStream) {
-      super.write(output)
-      output.writeDouble(value)
+    override fun write(sink: Sink) {
+      super.write(sink)
+      sink.writeDouble(value)
     }
 
   }
@@ -86,9 +84,9 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
 
     override val size: Int = 2
 
-    override fun write(output: OutputStream) {
-      super.write(output)
-      output.write(if (value) 0x01 else 0x00)
+    override fun write(sink: Sink) {
+      super.write(sink)
+      sink.writeByte(if (value) 0x01 else 0x00)
     }
   }
 
@@ -96,11 +94,11 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
 
     override val size: Int = 3 + value.toByteArray(Charsets.UTF_8).size
 
-    override fun write(output: OutputStream) {
-      super.write(output)
+    override fun write(sink: Sink) {
+      super.write(sink)
       val bytes = value.toByteArray(Charsets.UTF_8)
-      output.writeShort(bytes.size)
-      output.write(bytes)
+      sink.writeShort(bytes.size.toShort())
+      sink.write(bytes)
     }
   }
 
@@ -119,9 +117,9 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
         return totalSize
       }
 
-    override fun write(output: OutputStream) {
-      super.write(output)
-      properties.write(output)
+    override fun write(sink: Sink) {
+      super.write(sink)
+      properties.write(sink)
     }
 
     override fun toString(): kotlin.String {
@@ -159,10 +157,10 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
       }
 
 
-    override fun write(output: OutputStream) {
-      super.write(output)
-      output.writeInt(properties.size)
-      properties.write(output)
+    override fun write(sink: Sink) {
+      super.write(sink)
+      sink.writeInt(properties.size)
+      properties.write(sink)
     }
   }
 
@@ -172,10 +170,10 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
     override val size: Int
       get() = 5 + values.sumOf { it.size }
 
-    override fun write(output: OutputStream) {
-      super.write(output)
-      output.writeInt(values.size)
-      values.forEach { it.write(output) }
+    override fun write(sink: Sink) {
+      super.write(sink)
+      sink.writeInt(values.size)
+      values.forEach { it.write(sink) }
     }
   }
 
@@ -183,10 +181,10 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
 
     override val size: Int = 11
 
-    override fun write(output: OutputStream) {
-      super.write(output)
-      output.writeDouble(value)
-      output.writeShort(timezone.toInt())
+    override fun write(sink: Sink) {
+      super.write(sink)
+      sink.writeDouble(value)
+      sink.writeShort(timezone)
     }
   }
 
@@ -195,11 +193,11 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
     // 1 byte type + 4 byte length + string bytes
     override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
 
-    override fun write(output: OutputStream) {
-      super.write(output)
+    override fun write(sink: Sink) {
+      super.write(sink)
       val bytes = value.toByteArray(Charsets.UTF_8)
-      output.writeInt(bytes.size)
-      output.write(bytes)
+      sink.writeInt(bytes.size)
+      sink.write(bytes)
     }
   }
 
@@ -207,11 +205,11 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
 
     override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
 
-    override fun write(output: OutputStream) {
-      super.write(output)
+    override fun write(sink: Sink) {
+      super.write(sink)
       val bytes = value.toByteArray(Charsets.UTF_8)
-      output.writeInt(bytes.size)
-      output.write(bytes)
+      sink.writeInt(bytes.size)
+      sink.write(bytes)
     }
 
   }
@@ -231,24 +229,24 @@ sealed class Amf0Value(open val type: Int) : AmfValue {
         return totalSize
       }
 
-    override fun write(output: OutputStream) {
-      super.write(output)
+    override fun write(sink: Sink) {
+      super.write(sink)
       val bytes = className.toByteArray(Charsets.UTF_8)
-      output.writeShort(bytes.size)
-      output.write(bytes)
-      properties.write(output)
+      sink.writeShort(bytes.size.toShort())
+      sink.write(bytes)
+      properties.write(sink)
     }
   }
 
-  protected fun Map<kotlin.String, Amf0Value>.write(output: OutputStream) {
+  protected fun Map<kotlin.String, Amf0Value>.write(sink: Sink) {
     this.forEach { (key, value) ->
       val bytes = key.toByteArray(Charsets.UTF_8)
-      output.writeShort(bytes.size)
-      output.write(bytes)
-      value.write(output)
+      sink.writeShort(bytes.size.toShort())
+      sink.write(bytes)
+      value.write(sink)
     }
-    output.writeShort(0) // Empty string key to mark end
-    output.write(Amf0Type.OBJECT_END.byte) // End marker
+    sink.writeShort(0) // Empty string key to mark end
+    sink.writeByte(Amf0Type.OBJECT_END.byte) // End marker
   }
 }
 

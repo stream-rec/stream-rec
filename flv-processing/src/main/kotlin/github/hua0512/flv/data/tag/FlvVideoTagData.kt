@@ -32,8 +32,9 @@ import github.hua0512.flv.data.video.FlvVideoFrameType
 import github.hua0512.flv.data.video.VideoResolution
 import github.hua0512.flv.utils.extractResolution
 import github.hua0512.flv.utils.isAvcHeader
-import github.hua0512.flv.utils.write3BytesInt
-import java.io.OutputStream
+import github.hua0512.flv.utils.writeI24
+import kotlinx.io.Buffer
+import kotlinx.io.Sink
 
 /**
  * Flv video tag data
@@ -43,7 +44,7 @@ import java.io.OutputStream
 data class FlvVideoTagData(
   val frameType: FlvVideoFrameType,
   val codecId: FlvVideoCodecId,
-  val compositionTime: UInt,
+  val compositionTime: Int,
   val avcPacketType: AvcPacketType? = null,
   override val binaryData: ByteArray,
 ) : FlvTagData(binaryData) {
@@ -63,14 +64,19 @@ data class FlvVideoTagData(
 
   override val headerSize = if (codecId == FlvVideoCodecId.AVC || codecId == FlvVideoCodecId.HEVC) 5 else 1
 
-  override fun write(os: OutputStream) {
-    val info = (frameType.value shl 4) or codecId.value
-    os.write(info)
-    if (codecId == FlvVideoCodecId.AVC || codecId == FlvVideoCodecId.HEVC) {
-      os.write(avcPacketType!!.value.toInt())
+  override fun write(sink: Sink) {
+    val buffer = Buffer()
+    with(buffer) {
+      val info = (frameType.value shl 4) or codecId.value
+      writeByte(info.toByte())
+      if (codecId == FlvVideoCodecId.AVC || codecId == FlvVideoCodecId.HEVC) {
+        writeByte(avcPacketType!!.value.toByte())
+      }
+      writeI24(compositionTime)
+      write(binaryData)
     }
-    os.write3BytesInt(compositionTime.toInt())
-    os.write(binaryData)
+    buffer.transferTo(sink)
+    sink.flush()
   }
 
   override fun toString(): String {

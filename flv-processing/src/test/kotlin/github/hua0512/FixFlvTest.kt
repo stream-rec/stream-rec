@@ -63,8 +63,9 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Clock
+import kotlinx.io.asSource
+import kotlinx.io.buffered
 import org.junit.Test
-import java.io.DataInputStream
 import java.io.File
 import kotlin.time.Duration
 
@@ -102,11 +103,10 @@ class FixFlvTest {
 
   @Test
   fun testFix() = runTest(timeout = Duration.INFINITE) {
-    val file = File("E:/test/早安-2024-09-17 12_33_18.flv")
+    val file = File("D:/Downloads/AH师妹Lucky-2024-10-10_03-56-04-【粤】求保灯，油光群快进来.flv")
 
-    val bufferedIns = file.inputStream().buffered()
+    val source = file.inputStream().asSource().buffered()
 
-    val dis = DataInputStream(bufferedIns)
     val memoryProvider = FlvMemoryProvider()
 
     val metaInfoProvider = FlvMetaInfoProvider()
@@ -114,7 +114,7 @@ class FixFlvTest {
     val limitsProvider = { 0L to 3600.0f }
 
     val streamerContext = StreamerContext("test", "")
-    dis.asFlvFlow()
+    source.asFlvFlow()
       .process(limitsProvider, streamerContext)
       .analyze(metaInfoProvider, streamerContext)
       .dump(pathProvider) { index, path, createdAt, updatedAt ->

@@ -31,9 +31,9 @@ import github.hua0512.flv.data.tag.FlvVideoTagData
 import github.hua0512.flv.data.video.VideoResolution
 import github.hua0512.flv.utils.isVideoSequenceHeader
 import kotlinx.coroutines.test.runTest
+import kotlinx.io.asSource
+import kotlinx.io.buffered
 import org.junit.Test
-import java.io.BufferedInputStream
-import java.io.DataInputStream
 import java.io.File
 
 /*
@@ -73,7 +73,7 @@ class FlvReaderTest {
   @Test
   fun testReadTags() = runTest {
     val file = File("E:/record/test2/瞳瞳/✌️-2024-4-22 15_30_40.flv")
-    val ins = DataInputStream(BufferedInputStream(file.inputStream())).use {
+    val ins = file.inputStream().asSource().buffered().use {
       val reader = FlvReader(it)
       var header: FlvHeader? = null
       reader.readHeader {

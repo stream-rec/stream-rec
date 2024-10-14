@@ -33,6 +33,7 @@ import github.hua0512.plugins.StreamerContext
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.CancellationException
 import io.ktor.utils.io.jvm.javaio.toInputStream
+import io.ktor.utils.io.streams.asInput
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -49,7 +50,7 @@ import kotlinx.coroutines.flow.flow
 fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerContext): Flow<FlvData> = flow {
   val ins = this@asStreamFlow.toInputStream()
 
-  val flvReader = FlvReader(ins)
+  val flvReader = FlvReader(ins.asInput())
   var tag: FlvData? = null
 
   with(flvReader) {

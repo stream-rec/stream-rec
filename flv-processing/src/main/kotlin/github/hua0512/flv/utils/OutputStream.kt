@@ -29,23 +29,6 @@ package github.hua0512.flv.utils
 import java.io.OutputStream
 
 /**
- * File containing extension functions for OutputStream.
- * @author hua0512
- * @date : 2024/9/15 22:35
- */
-
-/**
- * Writes a 3-byte integer to the OutputStream.
- *
- * @param value The integer value to write.
- */
-internal fun OutputStream.write3BytesInt(value: Int) {
-  write((value shr 16).toInt())
-  write((value shr 8).toInt())
-  write(value)
-}
-
-/**
  * Writes a 4-byte integer to the OutputStream in big-endian order.
  *
  * @param value The integer value to write.
@@ -83,35 +66,3 @@ internal fun OutputStream.writeDouble(value: Double) {
   write((longBits ushr 8).toInt())
   write(longBits.toInt())
 }
-
-internal fun OutputStream.writeU29(value: Int) {
-  var v = value
-  if (v < 0x80) {
-    write(v)
-  } else if (v < 0x4000) {
-    write((v shr 7 and 0x7F or 0x80))
-    write(v and 0x7F)
-  } else if (v < 0x200000) {
-    write((v shr 14 and 0x7F or 0x80))
-    write((v shr 7 and 0x7F or 0x80))
-    write(v and 0x7F)
-  } else if (v < 0x40000000) {
-    write((v shr 22 and 0x7F or 0x80))
-    write((v shr 15 and 0x7F or 0x80))
-    write((v shr 8 and 0x7F or 0x80))
-    write(v and 0xFF)
-  } else {
-    write((v shr 29 and 0x7F or 0x80))
-    write((v shr 22 and 0x7F or 0x80))
-    write((v shr 15 and 0x7F or 0x80))
-    write((v shr 8 and 0x7F or 0x80))
-    write(v and 0xFF)
-  }
-}
-
-internal fun OutputStream.writeUtf8(value: String) {
-  val bytes = value.toByteArray(Charsets.UTF_8)
-  writeU29(bytes.size shl 1 or 1)
-  write(bytes)
-}
-

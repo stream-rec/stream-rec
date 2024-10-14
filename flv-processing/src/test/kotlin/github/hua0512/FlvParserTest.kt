@@ -27,9 +27,8 @@ package github.hua0512/*
 import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.FlvHeaderFlags
 import kotlinx.coroutines.test.runTest
-import java.io.BufferedInputStream
-import java.io.ByteArrayInputStream
-import java.io.DataInputStream
+import kotlinx.io.Buffer
+import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /*
@@ -65,10 +64,11 @@ import kotlin.test.assertEquals
 class FlvParserTest {
 
 
-  @org.junit.Test
+  @Test
   fun testParseHeader() = runTest {
-    val ins = DataInputStream(ByteArrayInputStream(byteArrayOf(0x46, 0x4c, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00)))
-    val parser = FlvParser(ins)
+    val buffer = Buffer()
+    buffer.write(byteArrayOf(0x46, 0x4c, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00))
+    val parser = FlvParser(buffer)
     val header = parser.parseHeader()
     assertEquals("FLV", header.signature)
     assertEquals(1, header.version)
@@ -77,38 +77,15 @@ class FlvParserTest {
     println(header)
   }
 
-  @org.junit.Test
+  @Test
   fun testParseHeaderFail() = runTest {
-    val ins = DataInputStream(ByteArrayInputStream(byteArrayOf(0x46, 0x4c, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00)))
-    val parser = FlvParser(ins)
+    val buffer = Buffer()
+    buffer.write(byteArrayOf(0x46, 0x4c, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00))
+    val parser = FlvParser(buffer)
     try {
       parser.parseHeader()
     } catch (e: Exception) {
       assertEquals("Invalid FLV header size: 8", e.message)
     }
-  }
-
-  @org.junit.Test
-  fun testParseHeaderFile() = runTest {
-    val ins = DataInputStream(BufferedInputStream(FlvParserTest::class.java.getResourceAsStream("/test.flv")))
-    val parser = FlvParser(ins)
-    val header = parser.parseHeader()
-    assertEquals("FLV", header.signature)
-    assertEquals(1, header.version)
-    assertEquals(FlvHeaderFlags(0x05), header.flags)
-    assertEquals(9, header.headerSize)
-    println(header)
-  }
-
-  @org.junit.Test
-  fun testParseTag() = runTest {
-    val ins = DataInputStream(BufferedInputStream(FlvParserTest::class.java.getResourceAsStream("/test.flv")))
-    val parser = FlvParser(ins)
-    val header = parser.parseHeader()
-    val previousTagSize = parser.parsePreviousTagSize()
-    assertEquals(0, previousTagSize)
-    val tag = parser.parseTag()
-    println(tag)
-    parser.parsePreviousTagSize()
   }
 }

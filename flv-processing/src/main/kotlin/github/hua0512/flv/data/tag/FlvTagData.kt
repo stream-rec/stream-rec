@@ -26,7 +26,7 @@
 
 package github.hua0512.flv.data.tag
 
-import java.io.OutputStream
+import kotlinx.io.Sink
 
 /**
  * FLV Tag, 11 bytes tag header + tag data
@@ -40,6 +40,6 @@ sealed class FlvTagData(open val binaryData: ByteArray) {
   open val size: Int get() = headerSize + binaryData.size
 
 
-  abstract fun write(os: OutputStream)
+  abstract fun write(sink: Sink)
 
 }

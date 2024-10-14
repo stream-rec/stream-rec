@@ -27,7 +27,9 @@
 package github.hua0512.flv.data
 
 import github.hua0512.flv.exceptions.FlvHeaderErrorException
-import java.io.OutputStream
+import kotlinx.io.Buffer
+import kotlinx.io.Sink
+import kotlinx.io.writeString
 
 /**
  * FLV header data class
@@ -55,18 +57,18 @@ data class FlvHeader(val signature: String, val version: Int, val flags: FlvHead
   override val size = headerSize.toLong()
 
 
-  fun write(os: OutputStream) {
-    with(os) {
+  fun write(sink: Sink) {
+    val buffer = Buffer()
+    with(buffer) {
       // write 'FLV' signature
-      write(signature.toByteArray())
-      write(version)
-      write(flags.value)
+      writeString(signature)
+      writeByte(version.toByte())
+      writeByte(flags.value.toByte())
       // write header size as Int (4 bytes)
-      write(headerSize shr 24)
-      write(headerSize shr 16)
-      write(headerSize shr 8)
-      write(headerSize)
+      writeInt(headerSize)
     }
+    buffer.transferTo(sink)
+    sink.flush()
   }
 
   companion object {
