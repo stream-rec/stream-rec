@@ -107,7 +107,7 @@ private fun buildDefaultOutputArgs(
     if (useSegmentation) {
       if (segmentPart != 0L) logger.debug("Ignoring segmentPart($segmentPart)s for segmentation, using segmentTime instead")
       // segment time, default is 12 hours
-      val time = segmentTime?.run { if (segmentTime <= 0) null } ?: 12.toDuration(DurationUnit.HOURS).inWholeSeconds
+      val time: Long = segmentTime?.let { if (it <= 0) null else it } ?: 12.toDuration(DurationUnit.HOURS).inWholeSeconds
       addAll(
         arrayOf(
           "-f",
