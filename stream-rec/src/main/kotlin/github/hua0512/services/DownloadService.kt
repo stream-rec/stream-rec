@@ -155,6 +155,10 @@ class DownloadService(
       override fun onStreamFinished(id: Long, streams: List<StreamData>) {
         scope.launch {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
+          val status = repo.update(streamer.copy(isLive = false))
+          if (status) {
+            streamer.isLive = false
+          }
           logger.debug("({}) stream finished", streamer.name)
           executeStreamFinishedActions(streamer, streams)
         }
