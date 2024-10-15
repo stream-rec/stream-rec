@@ -622,10 +622,14 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   private suspend fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
     if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
-      streamerCallback?.onAvatarChanged(streamer.id, mediaInfo.artistImageUrl)
+      streamerCallback?.onAvatarChanged(streamer.id, mediaInfo.artistImageUrl) {
+        streamer.avatar = mediaInfo.artistImageUrl
+      }
     }
     if (mediaInfo.title.isNotEmpty() && mediaInfo.title != streamer.streamTitle) {
-      streamerCallback?.onDescriptionChanged(streamer.id, mediaInfo.title)
+      streamerCallback?.onDescriptionChanged(streamer.id, mediaInfo.title) {
+        streamer.streamTitle = mediaInfo.title
+      }
     }
   }
 
