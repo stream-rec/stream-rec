@@ -38,13 +38,13 @@ import github.hua0512.flv.data.other.FlvMetadataInfo
  */
 interface StreamerCallback {
 
-  suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean)
+  suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean, onSuccessful: () -> Unit)
 
-  suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long)
+  suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit)
 
-  suspend fun onDescriptionChanged(id: Long, description: String)
+  suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit)
 
-  suspend fun onAvatarChanged(id: Long, avatar: String)
+  suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit)
 
   fun onStreamDownloaded(id: Long, stream: StreamData, shouldInjectMetaInfo: Boolean = false, metaInfo: FlvMetadataInfo? = null)
 

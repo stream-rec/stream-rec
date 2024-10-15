@@ -85,38 +85,40 @@ class DownloadService(
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
     this.scope = downloadScope
     callback = object : StreamerCallback {
-      override suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean) {
+      override suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.isLive == newStatus) return
         val status = repo.update(streamer.copy(isLive = newStatus))
         logger.debug("({}) updated live status -> {} = {}", streamer.name, newStatus, status)
         if (status)
-          streamer.isLive = newStatus
+          onSuccessful()
       }
 
-      override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long) {
-
+      override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.lastLiveTime == newLiveTime) return
         logger.debug("({}) updated last live time -> {}", streamer.name, newLiveTime)
         val status = repo.update(streamer.copy(lastLiveTime = newLiveTime))
         if (status)
-          streamer.lastLiveTime = newLiveTime
-
+          onSuccessful()
       }
 
-      override suspend fun onDescriptionChanged(id: Long, description: String) {
+      override suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.streamTitle == description) return
         logger.debug("({}) updated description -> {}", streamer.name, description)
         val status = repo.update(streamer.copy(streamTitle = description))
         if (status)
-          streamer.streamTitle = description
+          onSuccessful()
       }
 
-      override suspend fun onAvatarChanged(id: Long, avatar: String) {
+      override suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.avatar == avatar) return
         logger.debug("({}) updated avatar url -> {}", streamer.name, avatar)
         val status = repo.update(streamer.copy(avatar = avatar))
         if (status)
-          streamer.avatar = avatar
+          onSuccessful()
       }
 
       override fun onStreamDownloaded(id: Long, stream: StreamData, shouldInjectMetaInfo: Boolean, metaInfo: FlvMetadataInfo?) {
@@ -155,9 +157,8 @@ class DownloadService(
       override fun onStreamFinished(id: Long, streams: List<StreamData>) {
         scope.launch {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
-          val status = repo.update(streamer.copy(isLive = false))
-          if (status) {
-            streamer.isLive = false
+          if (streamer.isLive != false) {
+            repo.update(streamer.copy(isLive = false))
           }
           logger.debug("({}) stream finished", streamer.name)
           executeStreamFinishedActions(streamer, streams)

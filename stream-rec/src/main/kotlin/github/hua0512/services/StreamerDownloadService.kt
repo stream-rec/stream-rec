@@ -116,11 +116,6 @@ class StreamerDownloadService(
    */
   private var callback: StreamerCallback? = null
 
-  /**
-   * Whether to stop the download after the timer ends
-   */
-  private var jobDuration: Long = 0
-
 
   suspend fun init(callback: StreamerCallback) {
     setCallback(callback)
@@ -173,12 +168,18 @@ class StreamerDownloadService(
           Clock.System.now()
         )
       )
-      callback?.onLiveStatusChanged(streamer.id, true)
+      callback?.onLiveStatusChanged(streamer.id, true) {
+        streamer.isLive = true
+      }
     }
     updateLastLiveTime()
 
     if (definedStartTime != null && definedStopTime != null) {
-      val (_, durationMillis) = parseTimerDuration(definedStartTime, definedStopTime)
+      val (delay, durationMillis) = parseTimerDuration(definedStartTime, definedStopTime)
+      if (delay != 0L) {
+        throw CancellationException("${streamer.name} outside timer range")
+      }
+      inTimerRange = true
       launchStopTask(durationMillis)
     }
 
@@ -219,8 +220,9 @@ class StreamerDownloadService(
         when (e) {
           // in those cases, cancel the download and throw the exception
           is FatalDownloadErrorException, is CancellationException -> {
-            streamer.isLive = false
-            callback?.onLiveStatusChanged(streamer.id, false)
+            callback?.onLiveStatusChanged(streamer.id, false) {
+              streamer.isLive = false
+            }
             if (e is FatalDownloadErrorException)
               logger.error("${streamer.name} fatal exception", e)
             throw e
@@ -240,7 +242,9 @@ class StreamerDownloadService(
 
   private suspend fun updateLastLiveTime() {
     val now = Clock.System.now()
-    callback?.onLastLiveTimeChanged(streamer.id, now.epochSeconds)
+    callback?.onLastLiveTimeChanged(streamer.id, now.epochSeconds) {
+      streamer.lastLiveTime = now.epochSeconds
+    }
   }
 
   private suspend fun handleOfflineStreamer() {
@@ -375,7 +379,6 @@ class StreamerDownloadService(
 
       currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime) -> {
         val duration = java.time.Duration.between(currentTime, jEndTime).toMillis()
-        jobDuration = duration
         0L to duration
       }
 
@@ -405,7 +408,9 @@ class StreamerDownloadService(
 
   private suspend fun resetStreamerLiveStatus() {
     if (streamer.isLive) {
-      callback?.onLiveStatusChanged(streamer.id, false)
+      callback?.onLiveStatusChanged(streamer.id, false) {
+        streamer.isLive = false
+      }
     }
   }
 }
