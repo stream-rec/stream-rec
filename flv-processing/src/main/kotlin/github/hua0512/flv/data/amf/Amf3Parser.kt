@@ -26,32 +26,36 @@
 
 package github.hua0512.flv.data.amf
 
-import java.io.DataInputStream
+import io.ktor.utils.io.readText
+import kotlinx.io.Source
+import kotlinx.io.readByteArray
+import kotlinx.io.readDouble
+import kotlinx.io.readString
+import kotlinx.io.readUByte
 
 /**
  * Read AMF3 value from input stream
  * @author hua0512
  * @date : 2024/6/8 20:47
  */
-fun readAmf3Value(input: DataInputStream): Amf3Value {
-  val type = input.readByte()
+fun readAmf3Value(source: Source): Amf3Value {
+  val type = source.readByte()
   return when (type) {
     Amf3Type.UNDEFINED.byte -> Amf3Undefined
     Amf3Type.NULL.byte -> Amf3Null
     Amf3Type.BOOLEAN_FALSE.byte -> Amf3BooleanFalse
     Amf3Type.BOOLEAN_TRUE.byte -> Amf3BooleanTrue
-    Amf3Type.INTEGER.byte -> Amf3Integer(readU29(input))
-    Amf3Type.DOUBLE.byte -> Amf3Double(input.readDouble())
-    Amf3Type.STRING.byte -> readAmf3String(input)
-    Amf3Type.XML_DOCUMENT.byte -> Amf3XmlDocument(readUtf8(input))
-    Amf3Type.DATE.byte -> readAmf3Date(input)
-    Amf3Type.ARRAY.byte -> readAmf3Array(input)
-    Amf3Type.OBJECT.byte -> readAmf3Object(input)
-    Amf3Type.XML.byte -> Amf3Xml(readUtf8(input))
+    Amf3Type.INTEGER.byte -> Amf3Integer(readU29(source))
+    Amf3Type.DOUBLE.byte -> Amf3Double(source.readDouble())
+    Amf3Type.STRING.byte -> readAmf3String(source)
+    Amf3Type.XML_DOCUMENT.byte -> Amf3XmlDocument(readUtf8(source))
+    Amf3Type.DATE.byte -> readAmf3Date(source)
+    Amf3Type.ARRAY.byte -> readAmf3Array(source)
+    Amf3Type.OBJECT.byte -> readAmf3Object(source)
+    Amf3Type.XML.byte -> Amf3Xml(readUtf8(source))
     Amf3Type.BYTEARRAY.byte -> {
-      val length = readU29(input) shr 1
-      val byteArray = ByteArray(length)
-      input.read(byteArray)
+      val length = readU29(source) shr 1
+      val byteArray = source.readByteArray(length)
       return Amf3ByteArray(byteArray)
     }
 
@@ -59,45 +63,43 @@ fun readAmf3Value(input: DataInputStream): Amf3Value {
   }
 }
 
-private fun readAmf3String(input: DataInputStream): Amf3String {
-  return Amf3String(readUtf8(input))
-}
+private fun readAmf3String(source: Source): Amf3String = Amf3String(source.readText())
 
-private fun readAmf3Date(input: DataInputStream): Amf3Date {
-  input.readByte() // Ignore timezone
-  val timestamp = input.readDouble()
+private fun readAmf3Date(source: Source): Amf3Date {
+  source.readByte() // Ignore timezone
+  val timestamp = source.readDouble()
   return Amf3Date(timestamp)
 }
 
-private fun readAmf3Array(input: DataInputStream): Amf3Array {
-  val u29 = readU29(input)
+private fun readAmf3Array(source: Source): Amf3Array {
+  val u29 = readU29(source)
   if (u29.and(1) == 0) {
     val length = u29 shr 1
     val array = mutableListOf<Amf3Value>()
     repeat(length) {
-      array.add(readAmf3Value(input))
+      array.add(readAmf3Value(source))
     }
     return Amf3Array(array)
   } else {
     val length = u29 shr 1
     val array = mutableListOf<Amf3Value>()
-    val key = readUtf8(input)
+    val key = readUtf8(source)
     while (key.isNotEmpty()) {
       array.add(Amf3String(key))
-      array.add(readAmf3Value(input))
+      array.add(readAmf3Value(source))
     }
     return Amf3Array(array)
   }
 }
 
 
-private fun readAmf3Object(input: DataInputStream): Amf3Value {
-  val u29 = readU29(input)
+private fun readAmf3Object(source: Source): Amf3Value {
+  val u29 = readU29(source)
   if (u29.and(1) == 0) {
     return Amf3Reference(u29.ushr(1))
   }
 
-  val className = readAmf3String(input)
+  val className = readAmf3String(source)
   if (className.value.isEmpty()) {
     return Amf3Reference(u29.ushr(1))
   }
@@ -108,7 +110,7 @@ private fun readAmf3Object(input: DataInputStream): Amf3Value {
   }
 
   if (flags.and(4) == 4) {
-    val externalizable = input.readBoolean()
+    val externalizable = source.readByte() == 1.toByte()
     if (externalizable) {
       throw UnsupportedOperationException("Externalizable objects are not supported.")
     }
@@ -118,18 +120,18 @@ private fun readAmf3Object(input: DataInputStream): Amf3Value {
   val numTraits = u29.ushr(4)
   val traits: MutableList<Amf3String> = mutableListOf()
   for (i in 0 until numTraits) {
-    traits.add(readAmf3String(input))
+    traits.add(readAmf3String(source))
   }
 
   val properties: MutableMap<Amf3String, Amf3Value> = mutableMapOf()
 
   if (dynamic) {
     while (true) {
-      val key = readAmf3String(input)
+      val key = readAmf3String(source)
       if (key.value.isEmpty()) {
         break
       }
-      val value = readAmf3Object(input)
+      val value = readAmf3Object(source)
       properties[key] = value
     }
   }
@@ -137,12 +139,12 @@ private fun readAmf3Object(input: DataInputStream): Amf3Value {
 }
 
 
-private fun readU29(input: DataInputStream): Int {
+private fun readU29(source: Source): Int {
   var result = 0
   var shift = 0
   var b: Int
   do {
-    b = input.readUnsignedByte().toInt()
+    b = source.readUByte().toInt()
     result = result or ((b and 0x7f) shl shift)
     shift += 7
   } while (b and 0x80 != 0)
@@ -150,13 +152,12 @@ private fun readU29(input: DataInputStream): Int {
 }
 
 
-private fun readUtf8(input: DataInputStream): String {
-  val u29 = readU29(input)
+private fun readUtf8(source: Source): String {
+  val u29 = readU29(source)
   if (u29.and(1) == 0) {
     return ""
   }
   val length = u29 shr 1
-  val bytes = ByteArray(length)
-  input.readFully(bytes)
-  return String(bytes, Charsets.UTF_8)
+
+  return source.readString(length.toLong())
 }

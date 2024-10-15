@@ -32,7 +32,6 @@ import github.hua0512.flv.data.FlvHeaderFlags
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.AmfValue
 import github.hua0512.flv.data.amf.readAmf0Value
-import github.hua0512.flv.data.amf.readAmf3Value
 import github.hua0512.flv.data.avc.AvcPacketType
 import github.hua0512.flv.data.sound.AACPacketType
 import github.hua0512.flv.data.sound.FlvSoundFormat
@@ -55,12 +54,11 @@ import github.hua0512.utils.crc32
 import github.hua0512.utils.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.io.Buffer
 import kotlinx.io.EOFException
 import kotlinx.io.Source
 import kotlinx.io.readByteArray
 import kotlinx.io.readUByte
-import java.io.ByteArrayInputStream
-import java.io.DataInputStream
 import java.nio.ByteBuffer
 import kotlin.experimental.and
 
@@ -116,7 +114,7 @@ internal class FlvParser(private val source: Source) {
     try {
       source.require(bodySize.toLong())
     } catch (e: EOFException) {
-      throw FlvDataErrorException("FLV audio tag data not complete")
+      throw FlvDataErrorException("FLV tag data not complete")
     }
 
     when (header.tagType) {
@@ -240,37 +238,25 @@ internal fun Source.parseTagHeader(): FlvTagHeader {
 
 
 internal fun Source.parseScriptTagData(bodySize: Int): Pair<FlvScriptTagData, Long> {
+  val buffer = Buffer()
+  readTo(buffer, bodySize.toLong())
 
-  fun identifyMetadataType(input: DataInputStream): Int {
-    input.mark(1)
-    val firstByte = input.readByte().toInt()
-    input.reset()
-    return firstByte
+  try {
+    buffer.require(2)
+  } catch (e: EOFException) {
+    throw FlvDataErrorException("FLV script tag data not complete")
   }
 
-  val body = readByteArray(bodySize)
-  val crc32 = body.crc32()
-  val dataInputStream = DataInputStream(ByteArrayInputStream(body))
+  // TODO : FIND A WAY TO OPTIMIZE THIS (AVOID COPYING)
+  val byteArray = buffer.copy().readByteArray()
+  val crc32 = byteArray.crc32()
+
   val amfValues = mutableListOf<AmfValue>()
 
-  dataInputStream.use {
-    val metadataType = identifyMetadataType(dataInputStream)
-    when (metadataType) {
-      3 -> {
-        while (dataInputStream.available() > 0)
-          readAmf3Value(dataInputStream).also {
-            amfValues.add(it)
-          }
-      }
-
-      else -> {
-        while (dataInputStream.available() > 0)
-          readAmf0Value(dataInputStream).also {
-            amfValues.add(it)
-          }
-      }
-    }
+  // amf3 metadata is not supported/used in flv format, so we only read amf0 values
+  buffer.use {
+    while (!it.exhausted())
+      amfValues.add(readAmf0Value(it))
   }
-
   return FlvScriptTagData(amfValues) to crc32
 }

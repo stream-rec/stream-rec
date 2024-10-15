@@ -26,126 +26,87 @@
 
 package github.hua0512.flv.data.amf
 
-import java.io.DataInputStream
-import java.util.LinkedHashMap
+import kotlinx.io.Source
+import kotlinx.io.bytestring.decodeToString
+import kotlinx.io.readByteString
+import kotlinx.io.readDouble
+import kotlinx.io.readString
+import kotlinx.io.readUShort
 
 /**
  * Read AMF0 value from input stream
  * @author hua0512
  * @date : 2024/6/9 20:13
  */
-fun readAmf0Value(input: DataInputStream): Amf0Value {
-  val type = input.readByte()
+fun readAmf0Value(source: Source): Amf0Value {
+  val type = source.readByte()
 
   return when (type) {
-    Amf0Type.NUMBER.byte -> Amf0Value.Number(input.readDouble())
-    Amf0Type.BOOLEAN.byte -> Amf0Value.Boolean(input.readBoolean())
+    Amf0Type.NUMBER.byte -> Amf0Value.Number(source.readDouble())
+    Amf0Type.BOOLEAN.byte -> Amf0Value.Boolean(source.readByte() != 0.toByte())
     Amf0Type.STRING.byte, Amf0Type.LONG_STRING.byte, Amf0Type.XML_DOCUMENT.byte -> {
-      val length: Int = if (type == Amf0Type.STRING.byte) input.readUnsignedShort() else input.readInt()
-      val str = ByteArray(length)
-      input.readFully(str)
+      val length: Int = if (type == Amf0Type.STRING.byte) source.readUShort().toInt() else source.readInt()
+      val str = source.readByteString(length).decodeToString()
       when (type) {
-        Amf0Type.STRING.byte -> Amf0Value.String(String(str).trim(0.toChar()))
-        Amf0Type.LONG_STRING.byte -> Amf0Value.LongString(String(str).trim(0.toChar()))
-        else -> Amf0Value.XmlDocument(String(str).trim(0.toChar()))
+        Amf0Type.STRING.byte -> Amf0Value.String(str.trim(0.toChar()))
+        Amf0Type.LONG_STRING.byte -> Amf0Value.LongString(str.trim(0.toChar()))
+        else -> Amf0Value.XmlDocument(str.trim(0.toChar()))
       }
     }
 
-    Amf0Type.OBJECT.byte -> readAmf0Object(input)
-    Amf0Type.ECMA_ARRAY.byte -> readAmf0EcmaArray(input)
-    Amf0Type.STRICT_ARRAY.byte -> readAmf0StrictArray(input)
-    Amf0Type.DATE.byte -> readAmf0Date(input)
-    Amf0Type.AMF3_OBJECT.byte -> readAmf0TypedObject(input)
+    Amf0Type.OBJECT.byte -> readAmf0Object(source)
+    Amf0Type.ECMA_ARRAY.byte -> readAmf0EcmaArray(source)
+    Amf0Type.STRICT_ARRAY.byte -> readAmf0StrictArray(source)
+    Amf0Type.DATE.byte -> Amf0Value.Date(source.readDouble(), source.readShort())
+    Amf0Type.AMF3_OBJECT.byte, Amf0Type.TYPED_OBJECT.byte -> readAmf0TypedObject(source)
     Amf0Type.NULL.byte -> Amf0Value.Null
-    Amf0Type.TYPED_OBJECT.byte -> readAmf0TypedObject(input)
     else -> throw IllegalArgumentException("Unsupported AMF0 type: $type")
   }
 }
 
-
-private fun readAmf0Object(input: DataInputStream): Amf0Value.Object {
-  val properties = LinkedHashMap<kotlin.String, Amf0Value>()
-
-  while (true) {
-    val keyLength = input.readUnsignedShort()
-    if (keyLength == 0) {
-      // End of object (empty key with marker)
-      input.readByte() // Read and discard the marker byte
-      break
-    }
-
-    val keyBytes = ByteArray(keyLength)
-    input.readFully(keyBytes)
-    val key = String(keyBytes)
-
-    val value = readAmf0Value(input)
-    properties[key] = value
-  }
-
+private fun readAmf0Object(source: Source): Amf0Value.Object {
+  val properties = readAmf0Properties(source)
   return Amf0Value.Object(properties)
 }
 
-private fun readAmf0EcmaArray(input: DataInputStream): Amf0Value.EcmaArray {
-  val arrayLength = input.readInt()
-  val properties = mutableMapOf<kotlin.String, Amf0Value>()
-
-  while (true) {
-    val keyLength = input.readUnsignedShort()
-    if (keyLength == 0) {
-      input.readByte() // Read and discard the marker byte
-      break
-    }
-
-    val keyBytes = ByteArray(keyLength)
-    input.readFully(keyBytes)
-    val key = String(keyBytes)
-
-    val value = readAmf0Value(input)
-    properties[key] = value
-  }
-
+private fun readAmf0EcmaArray(source: Source): Amf0Value.EcmaArray {
+  val arrayLength = source.readInt()
+  require(arrayLength >= 0) { "Invalid array length: $arrayLength" }
+  val properties = readAmf0Properties(source)
   return Amf0Value.EcmaArray(properties)
 }
 
-private fun readAmf0StrictArray(input: DataInputStream): Amf0Value.StrictArray {
-  val arrayLength = input.readInt()
+private fun readAmf0StrictArray(source: Source): Amf0Value.StrictArray {
+  val arrayLength = source.readInt()
   val values = mutableListOf<Amf0Value>()
 
   repeat(arrayLength) {
-    values.add(readAmf0Value(input))
+    values.add(readAmf0Value(source))
   }
 
   return Amf0Value.StrictArray(values)
 }
 
-private fun readAmf0Date(input: DataInputStream): Amf0Value.Date {
-  val timestamp = input.readDouble()
-  val timezone = input.readShort()
-  return Amf0Value.Date(timestamp, timezone)
+private fun readAmf0TypedObject(source: Source): Amf0Value.TypedObject {
+  val classNameLength = source.readUShort().toLong()
+  val classNameKey = source.readString(classNameLength)
+  val properties = readAmf0Properties(source)
+  return Amf0Value.TypedObject(classNameKey, properties)
 }
 
-private fun readAmf0TypedObject(input: DataInputStream): Amf0Value.TypedObject {
-  val classNameLength = input.readUnsignedShort()
-  val classNameBytes = ByteArray(classNameLength)
-  input.readFully(classNameBytes)
-  val className = String(classNameBytes)
-
-  val properties = mutableMapOf<kotlin.String, Amf0Value>()
+private fun readAmf0Properties(source: Source): MutableMap<String, Amf0Value> {
+  val properties = mutableMapOf<String, Amf0Value>()
 
   while (true) {
-    val keyLength = input.readUnsignedShort()
-    if (keyLength == 0) {
-      input.readByte() // Read and discard the marker byte
+    val keyLength = source.readUShort().toLong()
+    if (keyLength == 0L) {
+      source.readByte() // Read and discard the marker byte
       break
     }
-
-    val keyBytes = ByteArray(keyLength)
-    input.readFully(keyBytes)
-    val key = String(keyBytes)
-
-    val value = readAmf0Value(input)
+    val key = source.readString(keyLength)
+    val value = readAmf0Value(source)
     properties[key] = value
   }
 
-  return Amf0Value.TypedObject(className, properties)
+  return properties
 }
