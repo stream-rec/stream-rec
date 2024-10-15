@@ -30,6 +30,7 @@ import github.hua0512.flv.data.avc.AVCSequenceHeaderParser
 import github.hua0512.flv.data.avc.nal.NalUnitParser
 import github.hua0512.flv.data.avc.nal.SequenceParameterSetRBSPParser
 import github.hua0512.flv.data.video.VideoResolution
+import github.hua0512.flv.exceptions.FlvDataErrorException
 
 /**
  * Extracts the resolution of a video stream from an AVC sequence header.
@@ -39,10 +40,10 @@ import github.hua0512.flv.data.video.VideoResolution
  * @author hua0512
  * @date : 2024/6/10 13:03
  */
-fun extractResolution(packet: ByteArray): VideoResolution {
+internal fun extractResolution(packet: ByteArray): VideoResolution {
   val record = AVCSequenceHeaderParser.parse(packet)
   if (record.numOfSequenceParameterSets < 1 || record.sequenceParameterSets.isEmpty()) {
-    throw IllegalArgumentException("No sequence parameter sets found in the AVC sequence header.")
+    throw FlvDataErrorException("No sequence parameter sets found in the AVC sequence header.")
   }
   val sps = record.sequenceParameterSets.first()
   val nalUnit = NalUnitParser.parseNalUnit(sps.nalUnit)

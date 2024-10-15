@@ -37,11 +37,11 @@ import github.hua0512.flv.data.avc.nal.SequenceParameterSet
  * AVCDecoderConfigurationRecord
  */
 data class AVCDecoderConfigurationRecord(
-  val configurationVersion: Int,
-  val avcProfileIndication: Int,
-  val profileCompatibility: Int,
-  val avcLevelIndication: Int,
-  val lengthSizeMinusOne: Int,
+  val configurationVersion: UByte,
+  val avcProfileIndication: UByte,
+  val profileCompatibility: UByte,
+  val avcLevelIndication: UByte,
+  val lengthSizeMinusOne: UByte,
   val numOfSequenceParameterSets: Int,
   val sequenceParameterSets: List<SequenceParameterSet>,
   val numOfPictureParameterSets: Int,
