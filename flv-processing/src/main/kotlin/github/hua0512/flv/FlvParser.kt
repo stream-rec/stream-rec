@@ -84,12 +84,13 @@ internal class FlvParser(private val source: Source) {
   private var tagNum = 0
 
   suspend fun parseHeader(): FlvHeader = withContext(Dispatchers.IO) {
-    source.require(9)
-    val buffer = source.readByteArray(9)
-
-    if (buffer.size < 9) {
-      throw FlvHeaderErrorException("FLV header not complete, buffer size: ${buffer.size}")
+    try {
+      source.require(9)
+    } catch (e: EOFException) {
+      throw FlvHeaderErrorException("FLV header not complete}")
     }
+
+    val buffer = source.readByteArray(9)
     val signature = buffer.sliceArray(0 until 3).toString(Charsets.UTF_8)
     val version = buffer[3]
     val flags = FlvHeaderFlags(buffer[4].toInt())
@@ -173,7 +174,8 @@ internal class FlvParser(private val source: Source) {
   private fun parseVideoTagData(bodySize: Int): FlvVideoTagData {
     val flag = source.readUByte().toInt()
     val frameTypeValue = flag ushr 4
-    val frameType = FlvVideoFrameType.from(frameTypeValue) ?: throw FlvDataErrorException("Unsupported flv video frame type: $frameTypeValue")
+    val frameType = FlvVideoFrameType.from(frameTypeValue)
+      ?: throw FlvDataErrorException("Unsupported flv video frame type: $frameTypeValue")
     val codecId = flag and 0b0000_1111
     val codec = FlvVideoCodecId.from(codecId) ?: throw FlvDataErrorException("Unsupported flv video codec id: $codecId")
     // TODO : SUPPORT CHINESE HEVC
