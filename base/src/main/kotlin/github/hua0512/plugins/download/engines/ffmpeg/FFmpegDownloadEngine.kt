@@ -60,7 +60,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
 
   companion object {
     @JvmStatic
-    private val logger = LoggerFactory.getLogger(FFmpegDownloadEngine::class.java)
+    internal val logger = LoggerFactory.getLogger(FFmpegDownloadEngine::class.java)
   }
 
   /**

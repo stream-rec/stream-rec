@@ -28,12 +28,8 @@ package github.hua0512.plugins.download.engines.ffmpeg
 
 import github.hua0512.data.media.VideoFormat
 import io.ktor.http.*
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
-
-private val logger: Logger = LoggerFactory.getLogger("FFmpeg")
 
 
 /**
@@ -105,9 +101,10 @@ private fun buildDefaultOutputArgs(
       add("h264_mp4toannexb")
     }
     if (useSegmentation) {
-      if (segmentPart != 0L) logger.debug("Ignoring segmentPart($segmentPart)s for segmentation, using segmentTime instead")
+      if (segmentPart != 0L) FFmpegDownloadEngine.logger.debug("Ignoring segmentPart($segmentPart)s for segmentation, using segmentTime instead")
       // segment time, default is 12 hours
-      val time: Long = segmentTime?.let { if (it <= 0) null else it } ?: 12.toDuration(DurationUnit.HOURS).inWholeSeconds
+      val time: Long =
+        segmentTime?.let { if (it <= 0) null else it } ?: 12.toDuration(DurationUnit.HOURS).inWholeSeconds
       addAll(
         arrayOf(
           "-f",
@@ -187,7 +184,8 @@ fun buildFFMpegCmd(
   val defaultFFmpegInputArgs = buildDefaultInputArgs(headers, cookies, exitOnError = exitOnError)
 
   // default output args
-  val defaultFFmpegOutputArgs = buildDefaultOutputArgs(downloadFormat, segmentPart, segmentTime, useSegmentation == true)
+  val defaultFFmpegOutputArgs =
+    buildDefaultOutputArgs(downloadFormat, segmentPart, segmentTime, useSegmentation == true)
   // build the ffmpeg command
   return buildFFMpegRunningCmd(
     defaultFFmpegInputArgs,
@@ -230,7 +228,7 @@ internal fun processFFmpegOutputLine(
 ) {
   when {
     !line.startsWith("size=") && !line.startsWith("frame=") -> {
-      logger.info("$streamer - $line")
+      FFmpegDownloadEngine.logger.info("$streamer - $line")
       // handle opening segment for writing
       if (line.startsWith("[segment @") && line.contains("Opening")) {
         // [segment @ 000001c2e7450a40] Opening '2024-05-05_22-37-27.mp4' for writing
