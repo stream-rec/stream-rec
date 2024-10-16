@@ -35,6 +35,7 @@ import github.hua0512.plugins.download.base.IPlatformDownloaderFactory
 import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.fillDownloadConfig
 import github.hua0512.plugins.event.EventCenter
+import github.hua0512.utils.logger
 import io.ktor.util.collections.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -67,7 +68,7 @@ class DownloadPlatformService(
 
   companion object {
     @JvmStatic
-    private val logger: Logger = LoggerFactory.getLogger(DownloadPlatformService::class.java)
+    private val logger: Logger = logger(DownloadPlatformService::class.java)
 
     /**
      * Maximum number of streamers permitted by the platform
@@ -206,11 +207,16 @@ class DownloadPlatformService(
     } finally {
       streamers.remove(streamer)
       downloadingStreamers.remove(streamer.url)
+      managers.remove(streamer.url)
     }
   }
 
   private suspend fun downloadStreamerInternal(streamer: Streamer) {
-    val newDownloadConfig = streamer.downloadConfig?.fillDownloadConfig(streamer.platform, streamer.templateStreamer?.downloadConfig, app.config)
+    val newDownloadConfig = streamer.downloadConfig?.fillDownloadConfig(
+      streamer.platform,
+      streamer.templateStreamer?.downloadConfig,
+      app.config
+    )
     val streamer = streamer.copy(downloadConfig = newDownloadConfig)
     val plugin = try {
       downloadFactory.createDownloader(app, streamer.platform, streamer.url)
@@ -219,7 +225,7 @@ class DownloadPlatformService(
       EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
       return
     }
-    val streamerDownload = StreamerDownloadService(
+    val streamerDownloader = StreamerDownloadService(
       app,
       streamer,
       plugin,
@@ -227,8 +233,9 @@ class DownloadPlatformService(
     ).apply {
       init(callback)
     }
-    managers[streamer.url] = streamerDownload
-    streamerDownload.start()
+    managers[streamer.url] = streamerDownloader
+    // suspend here
+    streamerDownloader.start()
   }
 
   fun cancel() {

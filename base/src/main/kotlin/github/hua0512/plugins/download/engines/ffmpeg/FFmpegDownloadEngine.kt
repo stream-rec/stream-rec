@@ -69,7 +69,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   internal var useSegmenter: Boolean = false
   internal var detectErrors: Boolean = false
 
-  var ous: OutputStream? = null
+  protected var ous: OutputStream? = null
   protected var process: Process? = null
   protected var ffprobeProcess: Process? = null
 
@@ -285,11 +285,11 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
 
 
   protected open fun sendStopSignal() {
-    ous?.apply {
-      // check if the process is still running
-      if (process?.isAlive == false) {
-        return
-      }
+    if (ous == null) return
+    // check if the process is still running
+    if (process?.isAlive == false) return
+
+    with(ous!!) {
       try {
         write("q\n".toByteArray())
         flush()

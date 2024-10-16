@@ -124,7 +124,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   private var maxSize: Long = 0
     set(value) {
       if (value < 0) {
-        throw IllegalArgumentException("Max download size must be greater than 0")
+        throw FatalDownloadErrorException("Max download size must be greater than 0")
       }
       field = value
     }
@@ -132,7 +132,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   private var maxTime: Long = 0
     set(value) {
       if (value < 0) {
-        throw IllegalArgumentException("Max download time must be greater than 0")
+        throw FatalDownloadErrorException("Max download time must be greater than 0")
       }
       field = value
     }
@@ -181,19 +181,22 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * Check if download should be started
    * @param onLive the callback to be called if the stream is live
    * @return true if download should be started, false otherwise
+   * @throws FatalDownloadErrorException
+   * @throws InvalidExtractionInitializationException
+   * @throws InvalidExtractionUrlException
    */
   open suspend fun shouldDownload(onLive: () -> Unit = {}): Boolean {
     if (!isInitialized) {
-      throw IllegalArgumentException("Downloader is not initialized")
+      throw FatalDownloadErrorException("Downloader is not initialized")
     }
 
     if (state.value == DownloadState.Downloading) {
-      throw IllegalStateException("Downloader is already downloading")
+      throw FatalDownloadErrorException("Downloader is already downloading")
       return false
     }
 
     if (state.value == DownloadState.Finished) {
-      throw IllegalStateException("Downloader is already finished")
+      throw FatalDownloadErrorException("Downloader is already finished")
       return false
     }
 
@@ -377,7 +380,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
     }
 
-    val engine = DownloadEngineFactory.createEngine(downloadConfig.engine!!, format).apply {
+    engine = DownloadEngineFactory.createEngine(downloadConfig.engine!!, format).apply {
       // init engine
       init(
         url,
@@ -405,11 +408,11 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       engine.clean()
       pb = null
       if (state.value is DownloadState.Error) {
-        logger.error("(${streamer.name}) finally download error:, ${(state.value as DownloadState.Error).error}")
-
         val (filePath, error) = state.value as DownloadState.Error
+        logger.error("(${streamer.name}) {} finally download error:", filePath, error)
         // clean up the outputs
         danmuJob?.let {
+          danmu.finish()
           stopDanmuJob(it)
           if (filePath.isNullOrEmpty()) {
             // delete the danmu file
@@ -447,7 +450,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
   private fun buildOutputFilePath(config: DownloadConfig, title: String, fileExtension: String): Path {
 
-    val configOutputFileName = config.outputFileName?.nonEmptyOrNull() ?: throw FatalDownloadErrorException("Output file name is null")
+    val configOutputFileName =
+      config.outputFileName?.nonEmptyOrNull() ?: throw FatalDownloadErrorException("Output file name is null")
 
     val finalFileName = PART_PREFIX + (configOutputFileName.replacePlaceholders(
       streamer.name,
@@ -455,10 +459,11 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       replaceTimestamps = false
     ) + ".$fileExtension").formatToFileNameFriendly()
 
-    val outputFolder = (config.outputFolder?.nonEmptyOrNull() ?: throw FatalDownloadErrorException("Output folder is null")).run {
-      val str = if (endsWith(File.separator)) this else this + File.separator
-      str.replacePlaceholders(streamer.name, title)
-    }
+    val outputFolder =
+      (config.outputFolder?.nonEmptyOrNull() ?: throw FatalDownloadErrorException("Output folder is null")).run {
+        val str = if (endsWith(File.separator)) this else this + File.separator
+        str.replacePlaceholders(streamer.name, title)
+      }
     val sum = outputFolder + finalFileName
 
     return Path(sum).also {

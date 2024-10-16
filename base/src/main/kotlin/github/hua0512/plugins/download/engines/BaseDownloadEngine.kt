@@ -143,7 +143,8 @@ abstract class BaseDownloadEngine {
    * @throws IllegalArgumentException If the download format is null.
    */
   private fun ensureDownloadFormat() {
-    downloadFormat = downloadFormat ?: extractFormatFromPath(downloadFilePath) ?: throw IllegalArgumentException("downloadFormat is null")
+    downloadFormat = downloadFormat ?: extractFormatFromPath(downloadFilePath)
+            ?: throw IllegalArgumentException("downloadFormat is null")
   }
 
   protected fun onInit() {
@@ -194,5 +195,15 @@ abstract class BaseDownloadEngine {
   protected fun onDestroy() {
     callback?.onDestroy()
     downloads.clear()
+    headers.clear()
+    streamer = null
+    callback = null
+    programArgs.clear()
+    isInitialized = false
+    cookies = ""
+    downloadUrl = null
+    downloadFormat = null
+    fileLimitSize = 0
+    fileLimitDuration = null
   }
 }

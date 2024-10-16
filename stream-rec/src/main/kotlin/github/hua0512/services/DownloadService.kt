@@ -34,7 +34,7 @@ import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.flv.FlvMetaInfoProcessor
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.download.base.StreamerCallback
-import github.hua0512.plugins.download.platformConfig
+import github.hua0512.plugins.download.globalConfig
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
@@ -180,7 +180,7 @@ class DownloadService(
 
 
   private fun getOrInitPlatformService(platform: StreamingPlatform): DownloadPlatformService {
-    val fetchDelay = (platform.platformConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
+    val fetchDelay = (platform.globalConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
     val service = taskJobs.computeIfAbsent(platform) {
       logger.info("({}) initializing...", platform)
       DownloadPlatformService(

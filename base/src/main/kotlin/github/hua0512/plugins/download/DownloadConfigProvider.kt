@@ -29,7 +29,6 @@ package github.hua0512.plugins.download
 import github.hua0512.data.config.Action
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.dto.platform.DouyinConfigDTO
 import github.hua0512.data.dto.platform.DouyuConfigDTO
@@ -56,12 +55,17 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
   val streamerConfig = this
 
   val newEngine = templateConfig?.engine ?: streamerConfig.engine ?: DownloadEngines.fromString(appConfig.engine)
-  val newCookies = templateConfig?.cookies.orEmpty().ifEmpty { streamerConfig.cookies.orEmpty().ifEmpty { platformConfig(appConfig).cookies } }
+  val newCookies = templateConfig?.cookies.orEmpty()
+    .ifEmpty {
+      streamerConfig.cookies.orEmpty()
+        .ifEmpty { platform.globalConfig(appConfig).cookies }
+    }
   val newDanmu = templateConfig?.danmu ?: streamerConfig.danmu ?: appConfig.danmu
   val newMaxBitRate = templateConfig?.maxBitRate ?: streamerConfig.maxBitRate
   val newOutputFolder = templateConfig?.outputFolder ?: streamerConfig.outputFolder ?: appConfig.outputFolder
   val newOutputFileName = templateConfig?.outputFileName ?: streamerConfig.outputFileName ?: appConfig.outputFileName
-  val newOutputFileFormat = templateConfig?.outputFileFormat ?: streamerConfig.outputFileFormat ?: appConfig.outputFileFormat
+  val newOutputFileFormat =
+    templateConfig?.outputFileFormat ?: streamerConfig.outputFileFormat ?: appConfig.outputFileFormat
   val onPartedDownload = templateConfig?.onPartedDownload ?: streamerConfig.onPartedDownload
   val onStreamingFinished = templateConfig?.onStreamingFinished ?: streamerConfig.onStreamingFinished
 
@@ -94,8 +98,8 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
     UNKNOWN -> throw UnsupportedOperationException("Platform not supported")
   } as T
 
-  return platformBasedConfig.also {
-    it.applyCommonConfig(
+  return platformBasedConfig.apply {
+    applyCommonFields(
       newEngine,
       newCookies,
       newDanmu,
@@ -109,7 +113,7 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
   }
 }
 
-private fun DownloadConfig.applyCommonConfig(
+private fun DownloadConfig.applyCommonFields(
   newEngine: DownloadEngines?,
   newCookies: String?,
   newDanmu: Boolean?,
@@ -131,24 +135,13 @@ private fun DownloadConfig.applyCommonConfig(
   this.onStreamingFinished = onStreamingFinished
 }
 
-
-private fun <T : DownloadConfigDTO> T.platformConfig(appConfig: AppConfig): GlobalPlatformConfig = when (this) {
-  is DouyinConfigDTO -> appConfig.douyinConfig
-  is DouyuConfigDTO -> appConfig.douyuConfig
-  is HuyaConfigDTO -> appConfig.huyaConfig
-  is PandaTvConfigDTO -> appConfig.pandaTvConfig
-  is TwitchConfigDTO -> appConfig.twitchConfig
-  else -> throw UnsupportedOperationException("Platform not supported")
-}
-
-
 /**
  * Returns the global platform config for the platform
  *
  * @param config [AppConfig] global app config
  * @return [GlobalPlatformConfig] streaming global platform config
  */
-fun StreamingPlatform.platformConfig(config: AppConfig): GlobalPlatformConfig = when (this) {
+fun StreamingPlatform.globalConfig(config: AppConfig): GlobalPlatformConfig = when (this) {
   HUYA -> config.huyaConfig
   DOUYIN -> config.douyinConfig
   DOUYU -> config.douyuConfig

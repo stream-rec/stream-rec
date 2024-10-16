@@ -34,10 +34,12 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.TimerEndedDownloadException
 import github.hua0512.download.exceptions.UserStoppedDownloadException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.base.OnStreamDownloaded
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.download.base.StreamerCallback
-import github.hua0512.plugins.download.platformConfig
+import github.hua0512.plugins.download.globalConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.utils.logger
 import kotlinx.coroutines.*
@@ -86,7 +88,7 @@ class StreamerDownloadService(
 
   // retry delay for parted downloads
   private val platformRetryDelay =
-    (streamer.platform.platformConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
+    (streamer.platform.globalConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
 
   // max download retries
   private val maxRetry = app.config.maxDownloadRetries
@@ -119,7 +121,12 @@ class StreamerDownloadService(
 
   suspend fun init(callback: StreamerCallback) {
     setCallback(callback)
-    plugin.init(streamer, this@StreamerDownloadService.callback, app.config.maxPartSize, app.config.maxPartDuration ?: 0)
+    plugin.init(
+      streamer,
+      this@StreamerDownloadService.callback,
+      app.config.maxPartSize,
+      app.config.maxPartDuration ?: 0
+    )
   }
 
   private suspend fun handleMaxRetry() {
@@ -150,10 +157,18 @@ class StreamerDownloadService(
     delay(downloadInterval)
   }
 
-  private suspend fun checkStreamerLiveStatus(): Boolean {
-    // check if streamer is live
-    // only InvalidExtractionUrlException is thrown if the url is invalid
-    return plugin.shouldDownload()
+  /**
+   * Check if streamer status is live
+   * @return true if live stream is present, otherwise false
+   * @throws CancellationException if downloader state mismatch
+   * @throws InvalidExtractionUrlException if the streamer url is not supported by this extractor
+   * @throws InvalidExtractionInitializationException if the initialization of the extractor failed
+   */
+  private suspend fun checkStreamerLiveStatus(): Boolean = try {
+    plugin.shouldDownload()
+  } catch (e: Exception) {
+    // cancel streamer scope by throwing CancellationException
+    throw CancellationException(e.message)
   }
 
   private suspend fun CoroutineScope.handleLiveStreamer(definedStartTime: String?, definedStopTime: String?) {
@@ -223,7 +238,7 @@ class StreamerDownloadService(
             callback?.onLiveStatusChanged(streamer.id, false) {
               streamer.isLive = false
             }
-            if (e is FatalDownloadErrorException)
+            if (e !is CancellationException)
               logger.error("${streamer.name} fatal exception", e)
             throw e
           }
@@ -264,12 +279,12 @@ class StreamerDownloadService(
         if (it) {
           val result = stop(UserStoppedDownloadException())
           logger.info("${streamer.name} download stopped: $result")
-          // cancel the timer job if it's active
-          if (stopTimerJob?.isActive == true) {
-            stopTimerJob?.cancel()
+          if (result) {
+            // cancel the timer job if it's active
+            if (stopTimerJob?.isActive == true) {
+              stopTimerJob?.cancel()
+            }
           }
-          stopTimerJob = null
-          this@supervisorScope.cancel("Download cancelled")
         }
       }
     }
@@ -300,6 +315,8 @@ class StreamerDownloadService(
       retryCount++
       delay(getDelay())
     }
+
+    clean()
     throw CancellationException("Download cancelled")
   }
 
@@ -412,5 +429,14 @@ class StreamerDownloadService(
         streamer.isLive = false
       }
     }
+  }
+
+  fun clean() {
+    isCancelled.value = true
+    isDownloading = false
+    dataList.clear()
+    inTimerRange = false
+    stopTimerJob?.cancel()
+    callback = null
   }
 }
