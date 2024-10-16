@@ -123,7 +123,7 @@ private fun buildDefaultOutputArgs(
       add("1")
     } else {
       // segment the file, according to the maxPartDuration
-      if (segmentTime != null) {
+      if (segmentTime != null && segmentTime > 0) {
         add("-to")
         add(segmentTime.toString())
       } else { // segment the file, according to the maxPartSize
