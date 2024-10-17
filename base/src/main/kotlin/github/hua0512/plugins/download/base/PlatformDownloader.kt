@@ -414,7 +414,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
         danmuJob?.let {
           danmu.finish()
           stopDanmuJob(it)
-          if (filePath.isNullOrEmpty()) {
+          val shouldDeleteDanmu = filePath.isNullOrEmpty() || !(Path(filePath).exists())
+          if (shouldDeleteDanmu) {
             // delete the danmu file
             danmu.filePath.let { path ->
               Path(path).deleteFile()

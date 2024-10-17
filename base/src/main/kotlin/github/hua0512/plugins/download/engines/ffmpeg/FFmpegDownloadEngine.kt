@@ -216,7 +216,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
 
   protected fun handleExitCodeAndStreamer(exitCode: Int, streamer: Streamer) {
     if (lastOpeningFile == null) {
-      logger.error("({}) ffmpeg download failed, exit code: $exitCode")
+      logger.error("({}) ffmpeg download failed, exit code: {}", streamer.name, exitCode)
       onDownloadError(downloadFilePath, DownloadErrorException("ffmpeg download failed (exit code: $exitCode)"))
       return
     }
@@ -228,7 +228,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
         onDownloaded(FileInfo(file.pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
         onDownloadFinished()
       } else {
-        onDownloadError(file.pathString, DownloadErrorException("ffmpeg download failed"))
+        onDownloadError(file.pathString, DownloadErrorException("ffmpeg download failed, file not created"))
       }
     } else {
       // case when download is successful (exit code is 0)
