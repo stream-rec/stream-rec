@@ -87,7 +87,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     if (!useSegmenter) {
       lastOpeningFileTime = startInstant.epochSeconds
       // replace time placeholders if not using segmenter
-      outputFileName = outputFileName.replacePlaceholders(context.name, "", startInstant, true)
+      outputFileName = outputFileName.replacePlaceholders(context.name, context.title, startInstant)
       // update downloadFilePath
       downloadFilePath = outputFolder.resolve(outputFileName).pathString
       lastOpeningFile = outputFileName

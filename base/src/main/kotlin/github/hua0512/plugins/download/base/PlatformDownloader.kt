@@ -459,8 +459,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val finalFileName = PART_PREFIX + (configOutputFileName.replacePlaceholders(
       streamer.name,
-      title,
-      replaceTimestamps = false
+      title
     ) + ".$fileExtension").formatToFileNameFriendly()
 
     val outputFolder =

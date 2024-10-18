@@ -35,16 +35,16 @@ import kotlinx.datetime.TimeZone
  *
  * @param streamer The name of the streamer. This value will replace the "{streamer}" placeholder in the string.
  * @param title The title of the stream. This value will replace the "{title}" placeholder in the string.
- * @param time The time of the stream as an Instant object. The date and time parts of this value will replace the corresponding placeholders in the string. Defaults to the current system time if not provided.
+ * @param time The time of the stream as an Instant object. The date and time parts of this value will replace the corresponding placeholders in the string.
  * @return The string with all placeholders replaced with their corresponding values.
  */
-fun String.replacePlaceholders(streamer: String, title: String, time: Instant? = Clock.System.now(), replaceTimestamps: Boolean = true): String {
+fun String.replacePlaceholders(streamer: String, title: String, time: Instant? = null): String {
   // Define a map of placeholders to their replacement values
   val toReplace: Map<String, String> = mapOf(
     "{streamer}" to streamer,
     "{title}" to title,
-  ) + if (replaceTimestamps) {
-    val instant = time ?: Clock.System.now()
+  ) + if (time != null) {
+    val instant = time
     // Convert the Instant time to a LocalDateTime object in the system's default time zone
     val localDateTime: LocalDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     mapOf(
