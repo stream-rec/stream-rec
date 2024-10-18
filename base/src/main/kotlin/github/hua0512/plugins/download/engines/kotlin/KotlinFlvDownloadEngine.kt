@@ -55,6 +55,7 @@ import kotlinx.datetime.Clock
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 import kotlin.io.path.Path
+import kotlin.io.path.createParentDirectories
 import kotlin.io.path.fileSize
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
@@ -70,11 +71,11 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
   override val pathProvider: (Int) -> String = { index: Int ->
     val time = Clock.System.now()
     lastDownloadedTime = time.epochSeconds
-    downloadFilePath.replacePlaceholders(context.name, index.toString(), time).also {
-      onDownloadStarted(it, time.epochSeconds)
-    }.run {
-      // force flv file extension
-      val path = Path(this)
+    downloadFilePath.replacePlaceholders(context.name, index.toString(), time).let {
+      val path = Path(it).apply {
+        createParentDirectories()
+        onDownloadStarted(it, time.epochSeconds)
+      }
       lastDownloadFilePath = path.resolveSibling("${path.nameWithoutExtension}.flv").pathString
       lastDownloadFilePath
     }

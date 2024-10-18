@@ -75,7 +75,7 @@ open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) 
   private val resulutionSet = mutableSetOf<VideoResolution>()
 
   protected fun initPath(startInstant: Instant) {
-    outputFolder = Path(downloadFilePath).parent
+    updateOutputFolder(startInstant)
     outputFileName = Path(downloadFilePath).name
     if (!useSegmenter) {
       lastOpeningFileTime = startInstant.epochSeconds
@@ -85,6 +85,11 @@ open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) 
       downloadFilePath = outputFolder.resolve(outputFileName).pathString
       lastOpeningFile = outputFileName
     }
+  }
+
+  private fun updateOutputFolder(startInstant: Instant) {
+    outputFolder = Path(downloadFilePath.replacePlaceholders(context.name, context.title, startInstant)).parent
+    outputFolder.createDirectories()
   }
 
   override suspend fun start() = coroutineScope {
@@ -148,7 +153,7 @@ open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) 
     val exitCode: Int = executeProcess(
       ffmpeg,
       *cmds,
-      directory = Path(downloadFilePath).parent.toFile(),
+      directory = outputFolder.toFile(),
       stdout = Redirect.CAPTURE,
       stderr = Redirect.CAPTURE,
       destroyForcibly = false,
@@ -246,14 +251,16 @@ open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) 
       onDownloadStarted(folder.resolve(fileName).pathString, now)
       return
     }
-    val now = Clock.System.now().epochSeconds
+    val now = Clock.System.now()
+    val nowEpoch = now.epochSeconds
+    updateOutputFolder(now)
     debug("segment finished: {}", lastOpeningFile)
     // construct file data
     val fileData = FileInfo(
       path = folder.resolve(lastOpeningFile!!).pathString,
       size = lastOpeningSize,
       createdAt = lastOpeningFileTime,
-      updatedAt = now
+      updatedAt = nowEpoch
     )
     // notify last segment finished
     onDownloaded(fileData)
@@ -262,8 +269,8 @@ open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) 
     // reset lastOpeningSize
     lastOpeningSize = 0
     lastOpeningFile = fileName
-    lastOpeningFileTime = now
-    onDownloadStarted(folder.resolve(fileName).pathString, now)
+    lastOpeningFileTime = nowEpoch
+    onDownloadStarted(folder.resolve(fileName).pathString, nowEpoch)
   }
 
 

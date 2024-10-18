@@ -42,6 +42,7 @@ import kotlinx.datetime.Clock
 import java.net.SocketTimeoutException
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.io.path.createParentDirectories
 import kotlin.io.path.fileSize
 import kotlin.io.path.pathString
 
@@ -63,9 +64,10 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
     lastDownloadedTime = time.epochSeconds
     downloadFilePath.replacePlaceholders(context.name, index.toString(), time).run {
       // use parent folder for m3u8 with combining files disabled
-      lastDownloadFilePath = if (!combineTsFiles) {
-        Path(this).parent.pathString
-      } else this
+      lastDownloadFilePath = Path(this).let {
+        it.createParentDirectories()
+        if (!combineTsFiles) it.parent.pathString else it.pathString
+      }
       lastDownloadFilePath
     }
   }

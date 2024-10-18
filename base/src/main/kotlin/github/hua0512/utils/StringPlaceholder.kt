@@ -44,9 +44,8 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant? =
     "{streamer}" to streamer,
     "{title}" to title,
   ) + if (time != null) {
-    val instant = time
     // Convert the Instant time to a LocalDateTime object in the system's default time zone
-    val localDateTime: LocalDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    val localDateTime: LocalDateTime = time.toLocalDateTime(TimeZone.currentSystemDefault())
     mapOf(
       "%Y" to localDateTime.year.toString(),
       "%m" to formatLeadingZero(localDateTime.monthNumber),

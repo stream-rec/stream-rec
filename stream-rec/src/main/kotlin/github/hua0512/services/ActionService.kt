@@ -46,6 +46,8 @@ import java.io.File
 import kotlin.io.path.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createParentDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 import kotlin.io.path.moveTo
 import kotlin.io.path.name
 
@@ -121,12 +123,17 @@ class ActionService(private val app: App, private val uploadService: UploadServi
           val downloadOutputFolder: File? = (downloadConfig?.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).let {
             val instant = Instant.fromEpochSeconds(streamData.dateStart!!)
             val path = it.replacePlaceholders(streamer.name, streamData.title, instant)
-            Path(path).toFile().also { file ->
-              // if the folder does not exist, then it should be an error
-              if (!file.exists()) {
-                logger.error("Output folder $this does not exist")
+            Path(path).let { path ->
+              if (!path.exists()) {
+                logger.error("Output folder $path does not exist")
                 return@let null
               }
+
+              if (!path.isDirectory()) {
+                logger.error("Output folder $path is not a directory")
+                return@let null
+              }
+              path.toFile()
             }
           }
           // files + danmu files

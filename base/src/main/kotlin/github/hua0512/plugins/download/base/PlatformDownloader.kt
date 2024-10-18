@@ -258,7 +258,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
 
     // check disk space
-    checkDiskSpace(genericOutputPath.parent, maxSize)
+    checkDiskSpace(genericOutputPath.root, maxSize)
 
     val headers = getPlatformHeaders().plus(COMMON_HEADERS)
 
@@ -473,7 +473,6 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     val sum = outputFolder + finalFileName
 
     return Path(sum).also {
-      Files.createDirectories(it.parent)
       Files.exists(it).let { exists ->
         if (exists) {
           logger.error("(${sum}) file already exists")
