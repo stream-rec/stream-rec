@@ -86,13 +86,12 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       }
     }
 
-    val streamer = streamer ?: throw IllegalArgumentException("Streamer is not set")
     // streamlink args
     val streamlinkArgs = streamlinkInputArgs.toTypedArray() + arrayOf(downloadUrl!!, "best", "-O")
-    logger.debug("${streamer.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
+    logger.debug("${context.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
     val ffmpegCmdArgs =
       buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, detectErrors, outputFileName)
-    logger.debug("${streamer.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
+    logger.debug("${context.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
     // streamlink process builder
     val streamLinkBuilder = ProcessBuilder(streamLink, *streamlinkArgs).apply {
       redirectInput(ProcessBuilder.Redirect.PIPE)
@@ -108,7 +107,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     launch(Dispatchers.IO) {
       try {
         streamlinkProcess?.errorReader()?.forEachLine {
-          logger.info("${streamer.name} $it")
+          logger.info("${context.name} $it")
         }
       } catch (e: Exception) {
         logger.error("Error reading streamlink output", e)
@@ -120,7 +119,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
     // listen for streamlink exit
     streamlinkProcess!!.onExit().thenApply {
-      logger.debug("${streamer.name} streamlink exited({})", { it.exitValue() })
+      logger.debug("${context.name} streamlink exited({})", { it.exitValue() })
       super.sendStopSignal()
     }
 
@@ -143,7 +142,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       }) { line ->
       processFFmpegOutputLine(
         line = line,
-        streamer = streamer.name,
+        streamer = context.name,
         lastSize = lastOpeningSize,
         onSegmentStarted = { name ->
           processSegment(outputFolder, name)
@@ -153,7 +152,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       }
     }
 
-    handleExitCodeAndStreamer(exitCode, streamer)
+    handleExitCodeAndStreamer(exitCode, context)
     // ensure the streamlink process is destroyed
     streamlinkProcess?.destroy()
     streamlinkProcess = null

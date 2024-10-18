@@ -29,9 +29,9 @@ package github.hua0512.plugins.download.engines.ffmpeg
 import github.hua0512.app.Programs.ffmpeg
 import github.hua0512.app.Programs.ffprobe
 import github.hua0512.data.stream.FileInfo
-import github.hua0512.data.stream.Streamer
 import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.flv.data.video.VideoResolution
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.executeProcess
@@ -87,7 +87,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     if (!useSegmenter) {
       lastOpeningFileTime = startInstant.epochSeconds
       // replace time placeholders if not using segmenter
-      outputFileName = outputFileName.replacePlaceholders(streamer!!.name, "", startInstant, true)
+      outputFileName = outputFileName.replacePlaceholders(context.name, "", startInstant, true)
       // update downloadFilePath
       downloadFilePath = outputFolder.resolve(outputFileName).pathString
       lastOpeningFile = outputFileName
@@ -110,7 +110,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       outputFileName
     )
 
-    val streamer = streamer!!
+    val streamer = context
     logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
     if (!useSegmenter) {
       onDownloadStarted(downloadFilePath, startTime.epochSeconds)
@@ -179,7 +179,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
         handleDownloadProgress(bitrate, size, diff)
       }
     }
-    handleExitCodeAndStreamer(exitCode, streamer)
+    handleExitCodeAndStreamer(exitCode, context)
     process = null
     ffprobeProcess = null
     ous = null
@@ -198,7 +198,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       val newDiff = currentSize - lastOpeningSize
       logger.trace(
         "({}) currentSize: {}, lastPartedSize: {}, diff: {}, bitrate: {}",
-        streamer!!.name,
+        context.name,
         currentSize,
         lastOpeningSize,
         newDiff,
@@ -214,7 +214,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     }
   }
 
-  protected fun handleExitCodeAndStreamer(exitCode: Int, streamer: Streamer) {
+  protected fun handleExitCodeAndStreamer(exitCode: Int, streamer: StreamerContext) {
     if (lastOpeningFile == null) {
       logger.error("({}) ffmpeg download failed, exit code: {}", streamer.name, exitCode)
       onDownloadError(downloadFilePath, DownloadErrorException("ffmpeg download failed (exit code: $exitCode)"))
@@ -247,7 +247,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   protected fun processSegment(folder: Path, fileName: String) {
     // first segment
     if (lastOpeningFile == null) {
-      logger.debug("({}) first segment: {}", streamer!!.name, fileName)
+      logger.debug("({}) first segment: {}", context.name, fileName)
       lastOpeningFile = fileName
       val now = Clock.System.now().epochSeconds
       lastOpeningFileTime = now
@@ -255,7 +255,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       return
     }
     val now = Clock.System.now().epochSeconds
-    logger.debug("({}) segment finished: {}", streamer!!.name, lastOpeningFile)
+    logger.debug("({}) segment finished: {}", context.name, lastOpeningFile)
     // construct file data
     val fileData = FileInfo(
       path = folder.resolve(lastOpeningFile!!).pathString,
@@ -266,7 +266,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     // notify last segment finished
     onDownloaded(fileData)
     // notify segment started
-    logger.debug("({}) segment started: {}", streamer!!.name, fileName)
+    logger.debug("({}) segment started: {}", context.name, fileName)
     // reset lastOpeningSize
     lastOpeningSize = 0
     lastOpeningFile = fileName

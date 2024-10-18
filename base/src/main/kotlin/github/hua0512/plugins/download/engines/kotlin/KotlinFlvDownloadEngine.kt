@@ -68,12 +68,12 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
   override val pathProvider: (Int) -> String = { index: Int ->
     val time = Clock.System.now()
     lastDownloadedTime = time.epochSeconds
-    downloadFilePath.replacePlaceholders(streamer!!.name, index.toString(), time).also {
+    downloadFilePath.replacePlaceholders(context.name, index.toString(), time).also {
       onDownloadStarted(it, time.epochSeconds)
     }.run {
       // force flv file extension
       val path = Path(this)
-      path.resolveSibling("${path.nameWithoutExtension}.flv").pathString.also { lastDownloadFilePath = it }
+      lastDownloadFilePath = path.resolveSibling("${path.nameWithoutExtension}.flv").pathString
       lastDownloadFilePath
     }
   }
@@ -110,7 +110,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
         val channel = httpResponse.bodyAsChannel()
         if (enableFlvFix) {
           channel
-            .asStreamFlow(context = streamerContext)
+            .asStreamFlow(context = context)
             .catch {
               exception = it
             }
@@ -130,7 +130,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
     } catch (e: Exception) {
       exception = e
     }
-    logger.debug("${streamerContext.name} flv download completed, exception: $exception")
+    logger.debug("${context.name} flv download completed, exception: $exception")
     if (exception is CancellationException) {
       exception = null
     }
@@ -138,7 +138,6 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
   }
 
   override suspend fun processDownload() {
-    val context = streamerContext
     producer.receiveAsFlow()
       .process(limitsProvider, context, enableFlvDuplicateTagFiltering)
       .analyze(metaInfoProvider, context)

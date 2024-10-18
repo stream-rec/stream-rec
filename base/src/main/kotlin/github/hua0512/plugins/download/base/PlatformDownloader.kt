@@ -40,6 +40,7 @@ import github.hua0512.download.exceptions.DownloadFilePresentException
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.flv.data.other.FlvMetadataInfo
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
@@ -380,13 +381,15 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
     }
 
+    val streamerContext = StreamerContext(streamer.name, title)
+
     engine = DownloadEngineFactory.createEngine(downloadConfig.engine!!, format).apply {
       // init engine
       init(
         url,
         format,
         genericOutputPath.pathString,
-        streamer,
+        streamerContext,
         downloadConfig.cookies,
         headers,
         fileLimitSize = maxSize,

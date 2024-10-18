@@ -32,7 +32,6 @@ import github.hua0512.app.HttpClientFactory
 import github.hua0512.download.DownloadLimitsProvider
 import github.hua0512.download.DownloadPathProvider
 import github.hua0512.download.DownloadProgressUpdater
-import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.utils.logger
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -88,8 +87,6 @@ abstract class KotlinDownloadEngine<T : Any> : BaseDownloadEngine() {
       onDownloadProgress(kbSizeDiff, bitrate.toInt().toDouble())
     lastSize = size
   }
-
-  protected val streamerContext: StreamerContext by lazy { StreamerContext(streamer!!.name, "") }
 
   abstract fun ensureDownloadFormat(downloadUrl: String)
 

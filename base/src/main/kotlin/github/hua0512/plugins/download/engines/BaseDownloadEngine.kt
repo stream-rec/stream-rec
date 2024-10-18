@@ -28,8 +28,8 @@ package github.hua0512.plugins.download.engines
 
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.FileInfo
-import github.hua0512.data.stream.Streamer
 import github.hua0512.flv.data.other.FlvMetadataInfo
+import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.download.base.DownloadCallback
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.rename
@@ -58,7 +58,7 @@ abstract class BaseDownloadEngine {
   protected var fileLimitDuration: Long? = null
   protected var fileLimitSize: Long = 0
   protected var isInitialized = false
-  protected var streamer: Streamer? = null
+  protected lateinit var context: StreamerContext
   private var callback: DownloadCallback? = null
 
   open val programArgs = mutableListOf<String>()
@@ -70,7 +70,7 @@ abstract class BaseDownloadEngine {
    * @param downloadUrl The URL of the video to be downloaded.
    * @param downloadFormat The format of the video to be downloaded.
    * @param downloadFilePath The file path where the video will be saved.
-   * @param streamer The streamer object representing the source of the video.
+   * @param context The context of the streamer.
    * @param cookies The optional cookies to be used for the download.
    * @param headers The optional headers to be used for the download.
    * @param fileLimitSize The optional file size limit for the download.
@@ -81,7 +81,7 @@ abstract class BaseDownloadEngine {
     downloadUrl: String,
     downloadFormat: VideoFormat,
     downloadFilePath: String,
-    streamer: Streamer,
+    context: StreamerContext,
     cookies: String? = "",
     headers: Map<String, String> = emptyMap(),
     fileLimitSize: Long = 0,
@@ -93,7 +93,7 @@ abstract class BaseDownloadEngine {
     ensureDownloadUrl()
     ensureDownloadFormat()
     this.downloadFilePath = downloadFilePath
-    this.streamer = streamer
+    this.context = context
     this.cookies = cookies
     this.headers = headers.toMutableMap()
     this.fileLimitSize = fileLimitSize
@@ -196,7 +196,6 @@ abstract class BaseDownloadEngine {
     callback?.onDestroy()
     downloads.clear()
     headers.clear()
-    streamer = null
     callback = null
     programArgs.clear()
     isInitialized = false

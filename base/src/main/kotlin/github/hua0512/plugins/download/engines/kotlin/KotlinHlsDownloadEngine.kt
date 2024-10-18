@@ -61,7 +61,7 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
   override val pathProvider: (Int) -> String = { index: Int ->
     val time = Clock.System.now()
     lastDownloadedTime = time.epochSeconds
-    downloadFilePath.replacePlaceholders(streamer!!.name, index.toString(), time).run {
+    downloadFilePath.replacePlaceholders(context.name, index.toString(), time).run {
       // use parent folder for m3u8 with combining files disabled
       lastDownloadFilePath = if (!combineTsFiles) {
         Path(this).parent.pathString
@@ -81,10 +81,10 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
 
   override suspend fun handleDownload() {
     downloadUrl!!
-      .downloadHls(client, streamerContext)
+      .downloadHls(client, context)
       .onEach { producer.send(it) }
       .onCompletion { cause ->
-        mainLogger.debug("${streamerContext.name} Completed hls producer due to: $cause")
+        mainLogger.debug("${context.name} Completed hls producer due to: $cause")
       }.collect()
 
     producer.close(SocketTimeoutException("HLS download completed"))
@@ -93,7 +93,7 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
   override suspend fun processDownload() {
     producer.receiveAsFlow()
       .process(
-        streamerContext, limitsProvider,
+        context, limitsProvider,
         pathProvider,
         combineTsFiles,
         ::onDownloadStarted,
