@@ -47,7 +47,6 @@ class Douyu(
 
 
   override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    extractor.cookies = downloadConfig.cookies.orEmpty()
     extractor.selectedCdn = (downloadConfig.cdn ?: app.config.douyuConfig.cdn)
     return super.shouldDownload {
       onLive()

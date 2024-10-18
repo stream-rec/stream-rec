@@ -205,6 +205,9 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       return true
     }
 
+    // set cookies
+    extractor.cookies = streamer.downloadConfig?.cookies.orEmpty()
+
     val mediaInfo = try {
       extractor.extract()
     } catch (e: Exception) {

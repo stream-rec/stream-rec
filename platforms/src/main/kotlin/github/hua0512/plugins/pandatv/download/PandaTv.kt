@@ -46,15 +46,12 @@ class PandaTv(
 ) :
   PlatformDownloader<PandaTvDownloadConfig>(app, danmu, extractor) {
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    extractor.cookies = downloadConfig.cookies.orEmpty()
-    return super.shouldDownload {
-      onLive()
-      // init danmu
-      danmu.apply {
-        userIdx = extractor.userIdx
-        token = extractor.token
-      }
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean = super.shouldDownload {
+    onLive()
+    // init danmu
+    danmu.apply {
+      userIdx = extractor.userIdx
+      token = extractor.token
     }
   }
 

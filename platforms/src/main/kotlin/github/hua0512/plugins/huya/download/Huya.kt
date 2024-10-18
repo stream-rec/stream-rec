@@ -48,14 +48,11 @@ class Huya(
   }
 
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    extractor.cookies = downloadConfig.cookies.orEmpty()
-    return super.shouldDownload {
-      onLive()
-      // bind danmu properties
-      with(danmu) {
-        presenterUid = extractor.presenterUid
-      }
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean = super.shouldDownload {
+    onLive()
+    // bind danmu properties
+    with(danmu) {
+      presenterUid = extractor.presenterUid
     }
   }
 

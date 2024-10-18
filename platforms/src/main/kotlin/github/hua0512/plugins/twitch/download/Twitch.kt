@@ -49,7 +49,8 @@ class Twitch(
 
 
   init {
-    extractor.skipStreamInfo = app.config.twitchConfig.skipAds || app.config.twitchConfig.twitchProxyPlaylist?.nonEmptyOrNull() != null
+    extractor.skipStreamInfo =
+      app.config.twitchConfig.skipAds || app.config.twitchConfig.twitchProxyPlaylist?.nonEmptyOrNull() != null
   }
 
 
@@ -58,7 +59,6 @@ class Twitch(
       throw InvalidExtractionUrlException("Twitch requires an auth token to download")
     }
     extractor.authToken = authToken
-    extractor.cookies = downloadConfig.cookies.orEmpty()
     return super.shouldDownload(onLive)
   }
 

@@ -50,13 +50,10 @@ class Douyin(
 ) :
   PlatformDownloader<DouyinDownloadConfig>(app, danmu, extractor) {
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    extractor.cookies = downloadConfig.cookies.orEmpty()
-    return super.shouldDownload {
-      onLive()
-      // bind idStr to danmu
-      danmu.idStr = extractor.idStr
-    }
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean = super.shouldDownload {
+    onLive()
+    // bind idStr to danmu
+    danmu.idStr = extractor.idStr
   }
 
   override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
