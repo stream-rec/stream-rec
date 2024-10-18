@@ -70,11 +70,15 @@ class Douyin(
       ifEmpty { streams }
     }
     val userSelectedSourceFormat = (sourceFormat ?: app.config.douyinConfig.sourceFormat) ?: VideoFormat.flv
+
+    val selectedFormatStreams = selectedQualityStreams.filter { it.format == userSelectedSourceFormat }.run {
+      ifEmpty { selectedQualityStreams }
+    }
+
     // prioritize flv format if user selected format is not available
-    return selectedQualityStreams.firstOrNull { it.format == userSelectedSourceFormat }
-      ?: selectedQualityStreams.filter { it.format == VideoFormat.flv }
-        .maxBy { it.bitrate }.also {
-          logger.info("No stream with format $userSelectedSourceFormat, using flv stream, bitrate: ${it.bitrate}")
-        }
+    return selectedFormatStreams.maxByOrNull { it.bitrate } ?: selectedFormatStreams.filter { it.format == VideoFormat.flv }
+      .maxBy { it.bitrate }.also {
+        logger.info("No stream with format $userSelectedSourceFormat, using flv stream, bitrate: ${it.bitrate}")
+      }
   }
 }
