@@ -31,7 +31,9 @@ import github.hua0512.data.stream.FileInfo
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.download.base.DownloadCallback
-import github.hua0512.utils.mainLogger
+import github.hua0512.utils.StreamerLoggerContext
+import github.hua0512.utils.debug
+import github.hua0512.utils.error
 import github.hua0512.utils.rename
 import java.util.*
 import kotlin.io.path.*
@@ -41,7 +43,7 @@ import kotlin.io.path.*
  * @author hua0512
  * @date : 2024/5/5 18:30
  */
-abstract class BaseDownloadEngine {
+abstract class BaseDownloadEngine : StreamerLoggerContext {
 
   companion object {
 
@@ -58,7 +60,7 @@ abstract class BaseDownloadEngine {
   protected var fileLimitDuration: Long? = null
   protected var fileLimitSize: Long = 0
   protected var isInitialized = false
-  protected lateinit var context: StreamerContext
+  override lateinit var context: StreamerContext
   private var callback: DownloadCallback? = null
 
   open val programArgs = mutableListOf<String>()
@@ -164,10 +166,10 @@ abstract class BaseDownloadEngine {
     val oldPath = Path(data.path)
     // check if the file exists
     if (!oldPath.exists()) {
-      mainLogger.error("Downloaded file does not exist: {}", oldPath)
+      error("Downloaded file does not exist: {}", oldPath)
       return
     }
-    mainLogger.debug("Downloaded file: {}", oldPath)
+    debug("Downloaded file: {}", oldPath)
     // remove the file name PART_ prefix
     val newPath = oldPath.parent.resolve(oldPath.name.removePrefix(PART_PREFIX))
     // rename the file

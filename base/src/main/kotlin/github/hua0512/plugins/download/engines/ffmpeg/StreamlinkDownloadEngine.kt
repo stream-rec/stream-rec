@@ -28,7 +28,10 @@ package github.hua0512.plugins.download.engines.ffmpeg
 
 import github.hua0512.app.Programs.ffmpeg
 import github.hua0512.app.Programs.streamLink
+import github.hua0512.utils.debug
+import github.hua0512.utils.error
 import github.hua0512.utils.executeProcess
+import github.hua0512.utils.info
 import github.hua0512.utils.isWindows
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.InputSource
@@ -38,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.io.path.Path
 
@@ -46,10 +50,11 @@ import kotlin.io.path.Path
  * @author hua0512
  * @date : 2024/5/7 13:46
  */
-class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
+class StreamlinkDownloadEngine(override val logger: Logger = StreamlinkDownloadEngine.logger) :
+  FFmpegDownloadEngine() {
 
   companion object {
-    private val logger = LoggerFactory.getLogger("Streamlink")
+    private val logger = LoggerFactory.getLogger(this::class.java)
   }
 
   private var streamlinkProcess: Process? = null
@@ -57,41 +62,51 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
   override suspend fun start() = coroutineScope {
     ensureHlsUrl()
     initPath(Clock.System.now())
-    val streamlinkInputArgs = mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
-      // add program args
-      if (programArgs.isNotEmpty()) {
-        addAll(programArgs)
-      }
-      // check if windows
-      val isWindows = isWindows()
-      // add headers
-      headers.forEach {
-        val (key, value) = it
-        add("--http-header")
+    val streamlinkInputArgs =
+      mutableListOf("--stream-segment-threads", "3", "--hls-playlist-reload-attempts", "1").apply {
+        // add program args
+        if (programArgs.isNotEmpty()) {
+          addAll(programArgs)
+        }
         // check if windows
-        if (isWindows) {
-          add("\"$key=$value\"")
-        } else {
-          add("$key=$value")
+        val isWindows = isWindows()
+        // add headers
+        headers.forEach {
+          val (key, value) = it
+          add("--http-header")
+          // check if windows
+          if (isWindows) {
+            add("\"$key=$value\"")
+          } else {
+            add("$key=$value")
+          }
+        }
+        // add cookies if any
+        if (cookies?.nonEmptyOrNull() != null) {
+          val separatedCookies = cookies!!.split(";").map { it.trim() }
+          separatedCookies.forEach {
+            if (it.nonEmptyOrNull() == null) return@forEach
+            add("--http-cookie")
+            add(it)
+          }
         }
       }
-      // add cookies if any
-      if (cookies?.nonEmptyOrNull() != null) {
-        val separatedCookies = cookies!!.split(";").map { it.trim() }
-        separatedCookies.forEach {
-          if (it.nonEmptyOrNull() == null) return@forEach
-          add("--http-cookie")
-          add(it)
-        }
-      }
-    }
 
     // streamlink args
     val streamlinkArgs = streamlinkInputArgs.toTypedArray() + arrayOf(downloadUrl!!, "best", "-O")
-    logger.debug("${context.name} streamlink command: ${streamlinkArgs.joinToString(" ")}")
-    val ffmpegCmdArgs =
-      buildFFMpegCmd(emptyMap(), null, "pipe:0", downloadFormat!!, fileLimitSize, fileLimitDuration, useSegmenter, detectErrors, outputFileName)
-    logger.debug("${context.name} ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
+    debug("streamlink command: ${streamlinkArgs.joinToString(" ")}")
+    val ffmpegCmdArgs = buildFFMpegCmd(
+      emptyMap(),
+      null,
+      "pipe:0",
+      downloadFormat!!,
+      fileLimitSize,
+      fileLimitDuration,
+      useSegmenter,
+      detectErrors,
+      outputFileName
+    )
+    debug("ffmpeg command: ${ffmpegCmdArgs.joinToString(" ")}")
     // streamlink process builder
     val streamLinkBuilder = ProcessBuilder(streamLink, *streamlinkArgs).apply {
       redirectInput(ProcessBuilder.Redirect.PIPE)
@@ -107,10 +122,10 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
     launch(Dispatchers.IO) {
       try {
         streamlinkProcess?.errorReader()?.forEachLine {
-          logger.info("${context.name} $it")
+          info(it)
         }
       } catch (e: Exception) {
-        logger.error("Error reading streamlink output", e)
+        error("Error reading streamlink output", throwable = e)
       }
     }
     if (!useSegmenter) {
@@ -119,7 +134,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
 
     // listen for streamlink exit
     streamlinkProcess!!.onExit().thenApply {
-      logger.debug("${context.name} streamlink exited({})", { it.exitValue() })
+      debug("streamlink exited({})", { it.exitValue() })
       super.sendStopSignal()
     }
 
@@ -152,7 +167,7 @@ class StreamlinkDownloadEngine : FFmpegDownloadEngine() {
       }
     }
 
-    handleExitCodeAndStreamer(exitCode, context)
+    handleExitCode(exitCode)
     // ensure the streamlink process is destroyed
     streamlinkProcess?.destroy()
     streamlinkProcess = null

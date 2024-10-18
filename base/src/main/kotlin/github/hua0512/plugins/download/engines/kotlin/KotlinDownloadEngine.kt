@@ -34,6 +34,7 @@ import github.hua0512.download.DownloadPathProvider
 import github.hua0512.download.DownloadProgressUpdater
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.utils.logger
+import github.hua0512.utils.warn
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -44,6 +45,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import org.slf4j.Logger
 
 /**
  * Download engine using Ktor client
@@ -52,7 +54,7 @@ import kotlinx.serialization.json.Json
  */
 abstract class KotlinDownloadEngine<T : Any> : BaseDownloadEngine() {
 
-  protected val logger = logger(this::class.java)
+  override val logger: Logger = logger(this::class.java)
 
 
   /**
@@ -127,7 +129,7 @@ abstract class KotlinDownloadEngine<T : Any> : BaseDownloadEngine() {
     }
 
     if (result == null) {
-      logger.warn("Producer channel not closed")
+      warn("Producer channel not closed")
       return false
     }
 

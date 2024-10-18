@@ -35,7 +35,9 @@ import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.operators.stats
 import github.hua0512.flv.utils.asStreamFlow
+import github.hua0512.utils.debug
 import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.warn
 import github.hua0512.utils.writeToFile
 import io.ktor.client.request.header
 import io.ktor.client.request.prepareGet
@@ -130,7 +132,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
     } catch (e: Exception) {
       exception = e
     }
-    logger.debug("${context.name} flv download completed, exception: $exception")
+    debug("flv download completed, exception: $exception")
     if (exception is CancellationException) {
       exception = null
     }
@@ -143,7 +145,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
       .analyze(metaInfoProvider, context)
       .dump(pathProvider) { index, path, createdAt, openAt ->
         val metaInfo = metaInfoProvider[index] ?: run {
-          logger.warn("${context.name} $index meta info not found")
+          warn("$index meta info not found")
           return@dump
         }
         onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)
@@ -153,21 +155,23 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
       .stats(sizedUpdater)
       .flowOn(Dispatchers.Default)
       .onCompletion { cause ->
-        logger.debug("${context.name} flv process completed : {}, {}", cause, metaInfoProvider.size)
+        debug("flv process completed : {}, {}", arrayOf(cause, metaInfoProvider.size))
         // nothing is downloaded
         if (metaInfoProvider.size == 0 && cause != null) {
           // clear meta info provider when completed
+          // Other exceptions like IO or something
           metaInfoProvider.clear()
           onDownloadError(lastDownloadFilePath, cause as Exception)
           return@onCompletion
         } else if (metaInfoProvider.size == 0 && cause == null) {
-          // case when download is completed with 0 segments is downloaded
+          // case when download is completed, 0 segments downloaded
+          // normally triggered by CancellationException
           metaInfoProvider.clear()
           val cause = FatalDownloadErrorException("No segments downloaded")
           onDownloadError(lastDownloadFilePath, cause)
           return@onCompletion
         }
-        // case when download is completed with more than 0 segments is downloaded
+        // case when download is completed, and 1 or more segments are downloaded
         metaInfoProvider.clear()
       }
       .collect()

@@ -31,9 +31,9 @@ import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.operators.downloadHls
 import github.hua0512.hls.operators.process
-import github.hua0512.utils.mainLogger
+import github.hua0512.utils.debug
 import github.hua0512.utils.replacePlaceholders
-import io.ktor.http.Url
+import io.ktor.http.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
@@ -84,7 +84,7 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
       .downloadHls(client, context)
       .onEach { producer.send(it) }
       .onCompletion { cause ->
-        mainLogger.debug("${context.name} Completed hls producer due to: $cause")
+        debug("Completed hls producer due to: $cause")
       }.collect()
 
     producer.close(SocketTimeoutException("HLS download completed"))
@@ -102,7 +102,7 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
         onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), null)
       }
       .onCompletion {
-        mainLogger.debug("processHlsDownload completed : $it")
+        debug("processHlsDownload completed : $it")
         if (it != null) {
           throw it // rethrow exception
         }
