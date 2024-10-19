@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.7.2]
+
+## What's Changed
+
+* build(deps): dependencies updates
+* feat(douyu-extractor): support huo3 CDN by @hua0512 in https://github.com/stream-rec/stream-rec/pull/162
+* feat: flv avc/hls parser by @hua0512 in https://github.com/stream-rec/stream-rec/pull/159
+* feat(server): config version api by @hua0512 in https://github.com/stream-rec/stream-rec/pull/165
+* feat(server): add an api to manage streamer's activation state by @hua0512 in https://github.com/stream-rec/stream-rec/pull/166
+* feat(streamlink-engine): add support for ttvlol plugin by @hua0512 in https://github.com/stream-rec/stream-rec/pull/167
+* feat(douyin-danmu): add multiple websocket domains by @hua0512 in https://github.com/stream-rec/stream-rec/pull/168
+* docs: add buy me a coffee by @hua0512 in https://github.com/stream-rec/stream-rec/pull/170
+* docs: add afdian by @hua0512 in https://github.com/stream-rec/stream-rec/pull/171
+* refactor(ffmpeg-engine): use ffprobe to detect resolution changes by @hua0512 in https://github.com/stream-rec/stream-rec/pull/180
+* feat: add support for timer task downloads by @hua0512 in https://github.com/stream-rec/stream-rec/pull/185
+* chore: prepare to bump to `0.7.2` ver by @hua0512 in https://github.com/stream-rec/stream-rec/pull/20
+
+- ---------------------------------------
+
+* 构建(deps): 更新依赖
+* 增加(斗鱼): 支持火山CDN
+* 增加: 新下载引擎，支持flv avc修复
+* 增加(后端): 配置版本API
+* 增加(后端): 管理主播激活状态的API
+* 增加(streamlink): 支持ttvlol插件
+* 增加(抖音): 添加多个websocket域名
+* 文档: 添加爱发电链接
+* 重构(ffmpeg): 使用ffprobe检测分辨率变化（实验性）
+* 增加: 支持定时任务下载
+
+**Full Changelog**: https://github.com/stream-rec/stream-rec/compare/v0.7.1...v0.7.2
+
 ## [0.7.1]
 
 ## What's Changed
