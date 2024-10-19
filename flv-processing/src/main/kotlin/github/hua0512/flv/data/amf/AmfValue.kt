@@ -26,7 +26,7 @@
 
 package github.hua0512.flv.data.amf
 
-import java.io.OutputStream
+import kotlinx.io.Sink
 
 /**
  * AMF value interface
@@ -35,7 +35,7 @@ import java.io.OutputStream
  */
 interface AmfValue {
 
-  fun write(output: OutputStream)
+  fun write(sink: Sink)
 
   val size: Int
 }

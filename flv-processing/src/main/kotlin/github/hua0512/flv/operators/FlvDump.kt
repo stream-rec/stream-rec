@@ -37,10 +37,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.datetime.Clock
+import kotlinx.io.asSink
+import kotlinx.io.buffered
 import java.nio.file.Files
 import kotlin.io.path.Path
-import kotlin.io.path.extension
-import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 
 
@@ -63,7 +63,7 @@ fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDow
   fun init(path: String) {
     val file = Files.createFile(Path(path))
     logger.info("Starting write to: {}", file)
-    writer = FlvWriter(file.outputStream().buffered())
+    writer = FlvWriter(file.outputStream().asSink().buffered())
     lastPath = path
     lastOpenTime = Clock.System.now().toEpochMilliseconds()
   }

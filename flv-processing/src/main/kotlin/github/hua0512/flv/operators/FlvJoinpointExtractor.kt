@@ -116,7 +116,7 @@ private fun makeJoinPoint(joinPointTag: FlvTag, nextTag: FlvTag, context: Stream
 
   val joinPoint = FlvJoinPoint(
     seamless = (joinPointProps["seamless"] as Amf0Value.Boolean).value,
-    timestamp = (joinPointProps["timestamp"] as Amf0Value.Number).value.toLong(),
+    timestamp = (joinPointProps["timestamp"] as Amf0Value.Number).value.toInt(),
     crc32 = (joinPointProps["crc32"] as Amf0Value.Number).value.toLong()
   )
 

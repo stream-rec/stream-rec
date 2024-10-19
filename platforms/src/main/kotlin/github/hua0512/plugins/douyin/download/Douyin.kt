@@ -33,7 +33,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
-import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.base.PlatformDownloader
 
 /**
  * This class represents a Douyin downloader.
@@ -43,25 +43,22 @@ import github.hua0512.plugins.download.base.Download
  * @property streamer The [Streamer] instance.
  * @property downloadUrl The URL of the video to be downloaded.
  */
-class Douyin(app: App, override val danmu: DouyinDanmu, override val extractor: DouyinExtractor) :
-  Download<DouyinDownloadConfig>(app, danmu, extractor) {
+class Douyin(
+  app: App,
+  override val danmu: DouyinDanmu,
+  override val extractor: DouyinExtractor,
+) :
+  PlatformDownloader<DouyinDownloadConfig>(app, danmu, extractor) {
 
-  override fun createDownloadConfig(): DouyinDownloadConfig = DouyinDownloadConfig(
-    quality = app.config.douyinConfig.quality,
-    sourceFormat = app.config.douyinConfig.sourceFormat,
-    cookies = app.config.douyinConfig.cookies
-  )
-
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    (config.cookies ?: app.config.douyinConfig.cookies)?.also {
-      extractor.cookies = it
-    }
-    return super.shouldDownload {
-      onLive()
-      // bind idStr to danmu
-      danmu.idStr = extractor.idStr
-    }
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean = super.shouldDownload {
+    onLive()
+    // bind idStr to danmu
+    danmu.idStr = extractor.idStr
   }
+
+  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
+
+  override fun getProgramArgs(): List<String> = emptyList()
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyinDownloadConfig
@@ -73,11 +70,15 @@ class Douyin(app: App, override val danmu: DouyinDanmu, override val extractor: 
       ifEmpty { streams }
     }
     val userSelectedSourceFormat = (sourceFormat ?: app.config.douyinConfig.sourceFormat) ?: VideoFormat.flv
+
+    val selectedFormatStreams = selectedQualityStreams.filter { it.format == userSelectedSourceFormat }.run {
+      ifEmpty { selectedQualityStreams }
+    }
+
     // prioritize flv format if user selected format is not available
-    return selectedQualityStreams.firstOrNull { it.format == userSelectedSourceFormat }
-      ?: selectedQualityStreams.filter { it.format == VideoFormat.flv }
-        .maxBy { it.bitrate }.also {
-          logger.info("No stream with format $userSelectedSourceFormat, using flv stream, bitrate: ${it.bitrate}")
-        }
+    return selectedFormatStreams.maxByOrNull { it.bitrate } ?: selectedFormatStreams.filter { it.format == VideoFormat.flv }
+      .maxBy { it.bitrate }.also {
+        logger.info("No stream with format $userSelectedSourceFormat, using flv stream, bitrate: ${it.bitrate}")
+      }
   }
 }

@@ -29,26 +29,16 @@ package github.hua0512.flv
 import github.hua0512.flv.FlvParser.Companion.POINTER_SIZE
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
-import java.io.DataOutputStream
-import java.io.OutputStream
+import kotlinx.io.Sink
 
 /**
  * FLV writer, write FLV file
  * @author hua0512
  * @date : 2024/6/10 19:51
  */
-internal class FlvWriter private constructor() : AutoCloseable {
+internal class FlvWriter(val sink: Sink) : AutoCloseable {
 
-  private lateinit var dumper: FlvDumper
-
-  private lateinit var os: DataOutputStream
-
-  constructor (os: OutputStream) : this() {
-    this.os = getOutputStream(os)
-    dumper = FlvDumper(this.os)
-  }
-
-  private fun getOutputStream(os: OutputStream): DataOutputStream = os as? DataOutputStream ?: DataOutputStream(os)
+  private var dumper: FlvDumper = FlvDumper(sink)
 
   fun writeHeader(header: FlvHeader): Int {
     dumper.dumpHeader(header)
@@ -67,6 +57,6 @@ internal class FlvWriter private constructor() : AutoCloseable {
   }
 
   override fun close() {
-    os.close()
+    sink.close()
   }
 }

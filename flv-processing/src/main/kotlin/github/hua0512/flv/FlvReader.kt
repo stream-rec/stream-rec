@@ -32,8 +32,7 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.utils.logger
-import java.io.DataInputStream
-import java.io.InputStream
+import kotlinx.io.Source
 
 
 internal typealias onTagRead = suspend (FlvData) -> Unit
@@ -43,21 +42,16 @@ internal typealias onTagRead = suspend (FlvData) -> Unit
  * @author hua0512
  * @date : 2024/6/9 12:05
  */
-internal class FlvReader(ins: InputStream) : AutoCloseable {
+internal class FlvReader(val source: Source) : AutoCloseable {
 
   companion object {
     private const val TAG = "FlvReader"
     val logger = logger(TAG)
   }
 
-
-  private var ins: DataInputStream = getInputStream(ins)
-  private var parser: FlvParser = FlvParser(this.ins)
+  private var parser: FlvParser = FlvParser(source)
 
   private lateinit var header: FlvHeader
-
-
-  private fun getInputStream(ins: InputStream): DataInputStream = ins as? DataInputStream ?: DataInputStream(ins)
 
   suspend fun readHeader(onTagRead: onTagRead) {
     if (::header.isInitialized) {
@@ -106,16 +100,10 @@ internal class FlvReader(ins: InputStream) : AutoCloseable {
     readTags(onTagRead)
   }
 
-  private fun seekToPreviousTag() {
-    try {
-      parser.seekToPreviousTag()
-    } catch (e: Exception) {
-      e.printStackTrace()
-    }
-  }
+
 
   override fun close() {
-    ins.close()
+    source.close()
   }
 
 

@@ -70,15 +70,16 @@ class FlvAnalyzer(val context: StreamerContext) {
   private var audioDataSize: Long = 0
   private var videoTagsSize: Long = 0
   private var videoDataSize: Long = 0
-  private var lastTimestamp: Long = 0
-  private var lastAudioTimestamp: Long = 0
-  private var lastVideoTimestamp: Long = 0
+  private var lastTimestamp: Int = 0
+  private var lastAudioTimestamp: Int = 0
+  private var lastVideoTimestamp: Int = 0
 
   private var resolution: VideoResolution? = null
   private var keyframesMap = mutableMapOf<Long, Long>()
-  private var lastKeyframeTimestamp: Long = 0
+  private var lastKeyframeTimestamp: Int = 0
   private var hasAudio = false
   private var audioInfo: AudioData? = null
+  private var duration = 0
 
 
   private var hasVideo = false
@@ -90,21 +91,17 @@ class FlvAnalyzer(val context: StreamerContext) {
   var metadataCount = 0
 
   val frameRate: Float
-    get() {
-      return try {
-        numVideoTags / lastVideoTimestamp.toFloat() * 1000
-      } catch (e: Exception) {
-        0.0f
-      }
+    get() = if (lastVideoTimestamp > 0) {
+      numVideoTags.toFloat() * 1000 / lastVideoTimestamp
+    } else {
+      0.0f
     }
 
   val audioDataRate: Float
-    get() {
-      return try {
-        audioDataSize * 8f / lastAudioTimestamp
-      } catch (e: Exception) {
-        0.0f
-      }
+    get() = if (lastAudioTimestamp > 0) {
+      audioDataSize * 8f / lastAudioTimestamp
+    } else {
+      0.0f
     }
 
   val videoDataRate: Float
@@ -126,11 +123,12 @@ class FlvAnalyzer(val context: StreamerContext) {
       hasScript = true,
       hasKeyframes = keyframes.isNotEmpty(),
       canSeekToEnd = lastVideoTimestamp == lastKeyframeTimestamp,
-      duration = lastTimestamp / 1000,
+      duration = lastTimestamp / 1000.0,
       fileSize = fileSize,
       audioSize = audioTagsSize,
       audioDataSize = audioDataSize,
       audioCodecId = audioInfo?.format,
+      audioDataRate = audioDataRate,
       audioSampleRate = audioInfo?.rate,
       audioSampleSize = audioInfo?.soundSize,
       audioSoundType = audioInfo?.type,
@@ -141,9 +139,9 @@ class FlvAnalyzer(val context: StreamerContext) {
       videoDataRate = videoDataRate,
       width = resolution!!.width,
       height = resolution!!.height,
-      lastTimestamp = lastTimestamp,
-      lastKeyframeTimestamp = lastKeyframeTimestamp,
-      lastKeyframeFilePosition = keyframesMap[lastKeyframeTimestamp] ?: 0,
+      lastTimestamp = lastTimestamp.toLong(),
+      lastKeyframeTimestamp = lastKeyframeTimestamp.toLong(),
+      lastKeyframeFilePosition = keyframesMap[lastKeyframeTimestamp.toLong()] ?: 0,
       keyframes = keyframes
     )
 
@@ -173,6 +171,7 @@ class FlvAnalyzer(val context: StreamerContext) {
     headerSize = 0
     fileSize = 0
     metadataCount = 0
+    duration = 0
   }
 
   fun analyzeHeader(header: FlvHeader) {
@@ -222,7 +221,7 @@ class FlvAnalyzer(val context: StreamerContext) {
     tag.data as VideoData
 
     if (tag.isKeyFrame()) {
-      keyframesMap[tag.header.timestamp] = fileSize
+      keyframesMap[tag.header.timestamp.toLong()] = fileSize
       if (tag.isVideoSequenceHeader() && resolution == null) {
         resolution = tag.data.resolution
         logger.debug("{} Video resolution: {}", context.name, pprint(resolution))

@@ -31,35 +31,33 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
-import github.hua0512.plugins.download.base.Download
-import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.plugins.download.base.PlatformDownloader
 
 /**
  * Douyu live stream downloader.
  * @author hua0512
  * @date : 2024/3/23 0:06
  */
-class Douyu(app: App, override val danmu: DouyuDanmu, override val extractor: DouyuExtractor) :
-  Download<DouyuDownloadConfig>(app, danmu = danmu, extractor = extractor) {
+class Douyu(
+  app: App,
+  override val danmu: DouyuDanmu,
+  override val extractor: DouyuExtractor,
+) :
+  PlatformDownloader<DouyuDownloadConfig>(app, danmu = danmu, extractor) {
 
-  override fun createDownloadConfig(): DouyuDownloadConfig {
-    return DouyuDownloadConfig(
-      app.config.douyuConfig.cdn,
-      app.config.douyuConfig.quality
-    )
-  }
 
   override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    (config.cookies ?: app.config.douyuConfig.cookies)?.nonEmptyOrNull()?.also {
-      extractor.cookies = it
-    }
-    extractor.selectedCdn = (config.cdn ?: app.config.douyuConfig.cdn)
+    extractor.selectedCdn = (downloadConfig.cdn ?: app.config.douyuConfig.cdn)
     return super.shouldDownload {
       onLive()
       // bind rid to avoid second time extraction
       danmu.rid = extractor.rid
     }
   }
+
+  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
+
+  override fun getProgramArgs(): List<String> = emptyList()
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyuDownloadConfig

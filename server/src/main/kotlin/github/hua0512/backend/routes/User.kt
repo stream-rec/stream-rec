@@ -42,7 +42,6 @@ import github.hua0512.repo.UserRepo
 import github.hua0512.utils.generateRandomString
 import github.hua0512.utils.md5
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.*
 import io.ktor.server.response.*

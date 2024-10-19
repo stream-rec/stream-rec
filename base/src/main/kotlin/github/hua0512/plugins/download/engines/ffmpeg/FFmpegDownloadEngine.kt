@@ -24,42 +24,36 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.engines
+package github.hua0512.plugins.download.engines.ffmpeg
 
 import github.hua0512.app.Programs.ffmpeg
 import github.hua0512.app.Programs.ffprobe
 import github.hua0512.data.stream.FileInfo
-import github.hua0512.data.stream.Streamer
 import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.flv.data.video.VideoResolution
-import github.hua0512.utils.deleteFile
-import github.hua0512.utils.executeProcess
+import github.hua0512.plugins.download.engines.BaseDownloadEngine
+import github.hua0512.utils.*
 import github.hua0512.utils.process.Redirect
-import github.hua0512.utils.replacePlaceholders
-import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import org.slf4j.LoggerFactory
+import org.slf4j.Logger
 import java.io.OutputStream
 import java.nio.file.Path
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import kotlin.io.path.fileSize
-import kotlin.io.path.name
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 
 /**
  * FFmpegDownloadEngine is a download engine that uses ffmpeg to download the stream.
  * @author hua0512
  * @date : 2024/5/5 21:16
  */
-open class FFmpegDownloadEngine : BaseDownloadEngine() {
+open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) :
+  BaseDownloadEngine() {
 
   companion object {
     @JvmStatic
-    private val logger = LoggerFactory.getLogger(FFmpegDownloadEngine::class.java)
+    internal val logger = logger(FFmpegDownloadEngine::class.java)
   }
 
   /**
@@ -68,7 +62,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   internal var useSegmenter: Boolean = false
   internal var detectErrors: Boolean = false
 
-  var ous: OutputStream? = null
+  protected var ous: OutputStream? = null
   protected var process: Process? = null
   protected var ffprobeProcess: Process? = null
 
@@ -81,16 +75,21 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   private val resulutionSet = mutableSetOf<VideoResolution>()
 
   protected fun initPath(startInstant: Instant) {
-    outputFolder = Path(downloadFilePath).parent
+    updateOutputFolder(startInstant)
     outputFileName = Path(downloadFilePath).name
     if (!useSegmenter) {
       lastOpeningFileTime = startInstant.epochSeconds
       // replace time placeholders if not using segmenter
-      outputFileName = outputFileName.replacePlaceholders(streamer!!.name, "", startInstant, true)
+      outputFileName = outputFileName.replacePlaceholders(context.name, context.title, startInstant)
       // update downloadFilePath
       downloadFilePath = outputFolder.resolve(outputFileName).pathString
       lastOpeningFile = outputFileName
     }
+  }
+
+  private fun updateOutputFolder(startInstant: Instant) {
+    outputFolder = Path(downloadFilePath.replacePlaceholders(context.name, context.title, startInstant)).parent
+    outputFolder.createDirectories()
   }
 
   override suspend fun start() = coroutineScope {
@@ -109,8 +108,8 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       outputFileName
     )
 
-    val streamer = streamer!!
-    logger.debug("${streamer.name} ffmpeg command: ${cmds.joinToString(" ")}")
+    val streamer = context
+    debug("ffmpeg command: ${cmds.joinToString(" ")}")
     if (!useSegmenter) {
       onDownloadStarted(downloadFilePath, startTime.epochSeconds)
     }
@@ -137,10 +136,10 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
               val resolution = VideoResolution(res[0].toInt(), res[1].toInt())
               val result = resulutionSet.add(resolution)
               if (result) {
-                logger.debug("({}) resolution detected: {}", streamer.name, resolution)
+                debug("resolution detected: {}", resolution)
 
                 if (resulutionSet.size > 1) {
-                  logger.error("({}) resolution changed: {}", streamer.name, resolution)
+                  error("resolution changed: {}", resolution)
                   sendStopSignal()
                   ffprobeProcess?.destroy()
                   ffprobeProcess = null
@@ -154,7 +153,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     val exitCode: Int = executeProcess(
       ffmpeg,
       *cmds,
-      directory = Path(downloadFilePath).parent.toFile(),
+      directory = outputFolder.toFile(),
       stdout = Redirect.CAPTURE,
       stderr = Redirect.CAPTURE,
       destroyForcibly = false,
@@ -178,7 +177,7 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
         handleDownloadProgress(bitrate, size, diff)
       }
     }
-    handleExitCodeAndStreamer(exitCode, streamer)
+    handleExitCode(exitCode)
     process = null
     ffprobeProcess = null
     ous = null
@@ -195,9 +194,8 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
       // calculate the total size of the file
       val currentSize = lastOpeningFile?.let { outputFolder.resolve(it).fileSize() } ?: 0
       val newDiff = currentSize - lastOpeningSize
-      logger.trace(
-        "({}) currentSize: {}, lastPartedSize: {}, diff: {}, bitrate: {}",
-        streamer!!.name,
+      trace(
+        "currentSize: {}, lastPartedSize: {}, diff: {}, bitrate: {}",
         currentSize,
         lastOpeningSize,
         newDiff,
@@ -213,21 +211,21 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
     }
   }
 
-  protected fun handleExitCodeAndStreamer(exitCode: Int, streamer: Streamer) {
+  protected fun handleExitCode(exitCode: Int) {
     if (lastOpeningFile == null) {
-      logger.error("({}) ffmpeg download failed, exit code: $exitCode")
+      error("ffmpeg download failed, exit code: {}", exitCode)
       onDownloadError(downloadFilePath, DownloadErrorException("ffmpeg download failed (exit code: $exitCode)"))
       return
     }
     val file = outputFolder.resolve(lastOpeningFile!!)
     if (exitCode != 0) {
-      logger.error("(${streamer.name}) ffmpeg download failed, exit code: $exitCode")
+      error("ffmpeg download failed, exit code: $exitCode")
       // check if the file exists
       if (file.exists()) {
         onDownloaded(FileInfo(file.pathString, 0, lastOpeningFileTime, Clock.System.now().epochSeconds))
         onDownloadFinished()
       } else {
-        onDownloadError(file.pathString, DownloadErrorException("ffmpeg download failed"))
+        onDownloadError(file.pathString, DownloadErrorException("ffmpeg download failed, file not created"))
       }
     } else {
       // case when download is successful (exit code is 0)
@@ -246,67 +244,67 @@ open class FFmpegDownloadEngine : BaseDownloadEngine() {
   protected fun processSegment(folder: Path, fileName: String) {
     // first segment
     if (lastOpeningFile == null) {
-      logger.debug("({}) first segment: {}", streamer!!.name, fileName)
+      debug("first segment: {}", fileName)
       lastOpeningFile = fileName
       val now = Clock.System.now().epochSeconds
       lastOpeningFileTime = now
       onDownloadStarted(folder.resolve(fileName).pathString, now)
       return
     }
-    val now = Clock.System.now().epochSeconds
-    logger.debug("({}) segment finished: {}", streamer!!.name, lastOpeningFile)
+    val now = Clock.System.now()
+    val nowEpoch = now.epochSeconds
+    updateOutputFolder(now)
+    debug("segment finished: {}", lastOpeningFile)
     // construct file data
     val fileData = FileInfo(
       path = folder.resolve(lastOpeningFile!!).pathString,
       size = lastOpeningSize,
       createdAt = lastOpeningFileTime,
-      updatedAt = now
+      updatedAt = nowEpoch
     )
     // notify last segment finished
     onDownloaded(fileData)
     // notify segment started
-    logger.debug("({}) segment started: {}", streamer!!.name, fileName)
+    debug("segment started: {}", fileName)
     // reset lastOpeningSize
     lastOpeningSize = 0
     lastOpeningFile = fileName
-    lastOpeningFileTime = now
-    onDownloadStarted(folder.resolve(fileName).pathString, now)
+    lastOpeningFileTime = nowEpoch
+    onDownloadStarted(folder.resolve(fileName).pathString, nowEpoch)
   }
 
 
-  protected fun getBitrate(bitrate: String): Double {
-    return try {
-      bitrate.substring(0, bitrate.indexOf("k")).toDouble()
-    } catch (e: Exception) {
-      0.0
-    }
+  protected fun getBitrate(bitrate: String): Double = try {
+    bitrate.substring(0, bitrate.indexOf("k")).toDouble()
+  } catch (e: Exception) {
+    0.0
   }
 
 
   protected open fun sendStopSignal() {
-    ous?.apply {
-      // check if the process is still running
-      if (process?.isAlive == false) {
-        return
-      }
+    if (ous == null) return
+    // check if the process is still running
+    if (process?.isAlive == false) return
+
+    with(ous!!) {
       try {
         write("q\n".toByteArray())
         flush()
       } catch (e: Exception) {
-        logger.error("Error sending stop signal to ffmpeg process", e)
+        error("Error sending stop signal to ffmpeg process", throwable = e)
       }
     }
   }
 
   override suspend fun stop(exception: Exception?): Boolean {
     withIOContext {
-      logger.info("$downloadUrl stopping ffmpeg process...")
+      info("$downloadUrl stopping ffmpeg process...")
       ffprobeProcess?.destroy()
       sendStopSignal()
     }
     val code = withIOContext { process?.waitFor() }
     if (code != 0) {
-      logger.error("ffmpeg process exited with code $code")
+      error("ffmpeg process exited with code $code")
     }
     return code == 0
   }

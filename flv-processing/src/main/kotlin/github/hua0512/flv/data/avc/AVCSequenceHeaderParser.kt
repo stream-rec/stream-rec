@@ -28,57 +28,72 @@ package github.hua0512.flv.data.avc
 
 import github.hua0512.flv.data.avc.nal.PictureParameterSet
 import github.hua0512.flv.data.avc.nal.SequenceParameterSet
+import github.hua0512.flv.exceptions.FlvDataErrorException
+import kotlinx.io.asSource
+import kotlinx.io.buffered
+import kotlinx.io.readByteArray
+import kotlinx.io.readUByte
+import kotlinx.io.readUShort
 import java.io.ByteArrayInputStream
 
-internal object AVCSequenceHeaderParser {
+internal class AVCSequenceHeaderParser {
 
-  fun parse(data: ByteArray): AVCDecoderConfigurationRecord {
-    val reader = StructReader(ByteArrayInputStream(data))
-    reader.use {
-      val configurationVersion = reader.readUI8()
-      val avcProfileIndication = reader.readUI8()
-      val profileCompatibility = reader.readUI8()
-      val avcLevelIndication = reader.readUI8()
-      val lengthSizeMinusOne = reader.readUI8() and 0b11
+  companion object {
+    fun parse(data: ByteArray): AVCDecoderConfigurationRecord {
+      val reader = ByteArrayInputStream(data).asSource().buffered()
 
-      val numOfSequenceParameterSets = reader.readUI8() and 0b11111
-      val sequenceParameterSets = mutableListOf<SequenceParameterSet>()
-
-      repeat(numOfSequenceParameterSets) {
-        val sequenceParameterSetLength = reader.readUI16()
-        val sequenceParameterSetNalUnit = reader.readBytes(sequenceParameterSetLength)
-        sequenceParameterSets.add(
-          SequenceParameterSet(
-            sequenceParameterSetLength,
-            sequenceParameterSetNalUnit
-          )
-        )
+      try {
+        reader.require(5)
+      } catch (e: Throwable) {
+        throw FlvDataErrorException("AVCDecoderConfigurationRecord data is too short")
       }
 
-      val numOfPictureParameterSets = reader.readUI8()
-      val pictureParameterSets = mutableListOf<PictureParameterSet>()
+      reader.use { source ->
+        val configurationVersion = source.readUByte()
+        val avcProfileIndication = source.readUByte()
+        val profileCompatibility = source.readUByte()
+        val avcLevelIndication = source.readUByte()
+        val lengthSizeMinusOne = source.readUByte() and 3u
 
-      repeat(numOfPictureParameterSets) {
-        val pictureParameterSetLength = reader.readUI16()
-        val pictureParameterSetNalUnit = reader.readBytes(pictureParameterSetLength)
-        pictureParameterSets.add(
-          PictureParameterSet(
-            pictureParameterSetLength,
-            pictureParameterSetNalUnit
+        val numOfSequenceParameterSets = source.readUByte().toInt() and 0b11111
+        val sequenceParameterSets = mutableListOf<SequenceParameterSet>()
+
+        repeat(numOfSequenceParameterSets.toInt()) {
+          val sequenceParameterSetLength = source.readUShort().toInt()
+          val sequenceParameterSetNalUnit = source.readByteArray(sequenceParameterSetLength)
+          sequenceParameterSets.add(
+            SequenceParameterSet(
+              sequenceParameterSetLength,
+              sequenceParameterSetNalUnit
+            )
           )
+        }
+
+        val numOfPictureParameterSets = source.readUByte().toInt()
+        val pictureParameterSets = mutableListOf<PictureParameterSet>()
+
+        repeat(numOfPictureParameterSets) {
+          val pictureParameterSetLength = source.readUShort().toInt()
+          val pictureParameterSetNalUnit = source.readByteArray(pictureParameterSetLength)
+          pictureParameterSets.add(
+            PictureParameterSet(
+              pictureParameterSetLength,
+              pictureParameterSetNalUnit
+            )
+          )
+        }
+        return AVCDecoderConfigurationRecord(
+          configurationVersion,
+          avcProfileIndication,
+          profileCompatibility,
+          avcLevelIndication,
+          lengthSizeMinusOne,
+          numOfSequenceParameterSets,
+          sequenceParameterSets,
+          numOfPictureParameterSets,
+          pictureParameterSets
         )
       }
-      return AVCDecoderConfigurationRecord(
-        configurationVersion,
-        avcProfileIndication,
-        profileCompatibility,
-        avcLevelIndication,
-        lengthSizeMinusOne,
-        numOfSequenceParameterSets,
-        sequenceParameterSets,
-        numOfPictureParameterSets,
-        pictureParameterSets
-      )
     }
   }
 }

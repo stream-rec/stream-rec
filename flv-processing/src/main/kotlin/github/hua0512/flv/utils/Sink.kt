@@ -24,15 +24,51 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
+package github.hua0512.flv.utils
+
+import kotlinx.io.Buffer
+import kotlinx.io.Sink
 
 /**
- * Flv join point
+ * File containing extension functions for OutputStream.
  * @author hua0512
- * @date : 2024/9/12 0:56
+ * @date : 2024/9/15 22:35
  */
-data class FlvJoinPoint(
-  val seamless: Boolean = false,
-  val timestamp: Int = 0,
-  val crc32: Long = 0,
-)
+
+/**
+ * Writes a 3-byte integer to the OutputStream.
+ *
+ * @param value The integer value to write.
+ */
+internal fun Sink.writeI24(value: Int) {
+  writeByte(((value shr 16).toByte()))
+  writeByte(((value shr 8).toByte()))
+  writeByte((value and 0xFF).toByte())
+}
+
+
+internal fun Sink.writeU29(value: Int) {
+  val buffer = Buffer()
+
+  with(buffer) {
+    var v = value
+    while (true) {
+      if (v >= 0x80) {
+        writeByte(((v and 0x7F) or 0x80).toByte())
+        v = v ushr 7
+      } else {
+        writeByte((v and 0x7F or 0x00).toByte())
+        break
+      }
+    }
+  }
+  buffer.transferTo(this)
+  flush()
+}
+
+internal fun Sink.writeUtf8(value: String) {
+  val bytes = value.toByteArray(Charsets.UTF_8)
+  writeU29(bytes.size shl 1 or 1)
+  write(bytes)
+}
+

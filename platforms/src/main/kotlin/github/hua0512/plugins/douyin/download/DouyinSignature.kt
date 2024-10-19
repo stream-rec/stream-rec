@@ -26,6 +26,7 @@
 
 package github.hua0512.plugins.douyin.download
 
+import github.hua0512.app.COMMON_USER_AGENT
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_VALUE
@@ -35,13 +36,13 @@ import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.USER
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.VERSION_CODE_KEY
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.VERSION_CODE_VALUE
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.WEBCAST_SDK_VERSION_KEY
-import github.hua0512.plugins.douyu.download.DouyuExtractor.Companion.logger
-import github.hua0512.plugins.download.COMMON_USER_AGENT
 import github.hua0512.plugins.jsEngine
-import github.hua0512.utils.mainLogger
+import github.hua0512.utils.logger
 import github.hua0512.utils.toMD5Hex
 import kotlinx.atomicfu.atomic
 
+
+private val logger by lazy { logger(DouyinExtractor::class.java) }
 
 /**
  * Douyin webmssdk SDK JS
@@ -94,16 +95,16 @@ internal fun getSignature(roomId: String, userId: String): String {
   // build signature param
   val sigParam =
     "live_id=1,${AID_KEY}=${AID_VALUE},${VERSION_CODE_KEY}=${VERSION_CODE_VALUE},${WEBCAST_SDK_VERSION_KEY}=$SDK_VERSION,${ROOM_ID_KEY}=$roomId,sub_room_id=,sub_channel_id=,did_rule=3,${USER_UNIQUE_KEY}=$userId,device_platform=web,device_type=,ac=,identity=audience"
-  mainLogger.debug("SigParam: {}", sigParam)
+  logger.debug("SigParam: {}", sigParam)
   // get MD5 of sigParam
   val md5SigParam = sigParam.toByteArray().toMD5Hex()
-  mainLogger.debug("MD5 sigParam: {}", md5SigParam)
+  logger.debug("MD5 sigParam: {}", md5SigParam)
   // build function caller
   val functionCaller = "get_sign('${md5SigParam}')"
   // call JS function
   return try {
     (jsEngine.eval(functionCaller) as String).also {
-      mainLogger.debug("Signature: {}", it)
+      logger.debug("Signature: {}", it)
     }
   } catch (e: Exception) {
     throw InvalidExtractionInitializationException("Failed to get signature, error: ${e.message}")

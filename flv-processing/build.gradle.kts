@@ -16,6 +16,7 @@ dependencies {
   implementation(libs.io.ktor.client.core)
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.org.jetbrains.kotlinx.datetime)
+  implementation(libs.org.jetbrains.kotlinx.io)
   testImplementation(libs.bundles.test.jvm)
   testImplementation(libs.io.ktor.client.okhttp)
 }

@@ -102,7 +102,6 @@ class HuyaTest : BaseTest() {
     }
     val streamInfo = downloader.shouldDownload()
     println(streamInfo)
-    println(downloader.downloadUrl)
     assertNotNull(streamInfo)
   }
 

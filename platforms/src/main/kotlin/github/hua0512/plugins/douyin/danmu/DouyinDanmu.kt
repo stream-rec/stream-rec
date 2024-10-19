@@ -52,8 +52,6 @@ import github.hua0512.plugins.douyin.download.populateDouyinCookieMissedParams
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.datetime.Instant
@@ -94,28 +92,7 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     // get room id
     val webRid = extractDouyinWebRid(streamer.url) ?: return false
 
-    val config: DouyinDownloadConfig = if (streamer.templateStreamer != null) {
-      // try to get templates download config
-      streamer.templateStreamer?.downloadConfig?.run {
-        /**
-         * template config uses basic config [DefaultDownloadConfig], build a new douyin config using global platform values
-         */
-        DouyinDownloadConfig(
-          quality = app.config.douyinConfig.quality,
-          cookies = app.config.douyinConfig.cookies,
-        ).also {
-          it.danmu = this.danmu
-          it.maxBitRate = this.maxBitRate
-          it.outputFileFormat = this.outputFileFormat
-          it.outputFileName = this.outputFileName
-          it.outputFolder = this.outputFolder
-          it.onPartedDownload = this.onPartedDownload ?: emptyList()
-          it.onStreamingFinished = this.onStreamingFinished ?: emptyList()
-        }
-      } ?: throw IllegalArgumentException("${streamer.name} has template streamer but no download config") // should not happen
-    } else {
-      streamer.downloadConfig as? DouyinDownloadConfig ?: DouyinDownloadConfig()
-    }
+    val config: DouyinDownloadConfig = streamer.downloadConfig as DouyinDownloadConfig
 
     var cookies = (config.cookies?.nonEmptyOrNull() ?: app.config.douyinConfig.cookies)?.nonEmptyOrNull() ?: ""
 

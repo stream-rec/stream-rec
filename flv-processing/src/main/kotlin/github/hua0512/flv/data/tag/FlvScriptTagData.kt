@@ -27,9 +27,9 @@
 package github.hua0512.flv.data.tag
 
 import github.hua0512.flv.data.amf.AmfValue
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
-import java.io.OutputStream
+import kotlinx.io.Buffer
+import kotlinx.io.Sink
+import kotlinx.io.readByteArray
 
 /**
  * A script tag data, usually used for metadata
@@ -51,15 +51,14 @@ data class FlvScriptTagData(val values: List<AmfValue>) : FlvTagData(binaryData 
   operator fun get(index: Int): AmfValue = values[index]
 
 
-  override fun write(os: OutputStream) {
-    values.forEach { it.write(os) }
+  override fun write(sink: Sink) {
+    values.forEach { it.write(sink) }
   }
 
-  fun toByteArray(): ByteArray = ByteArrayOutputStream().use { baos ->
-    DataOutputStream(baos).use { dos ->
-      write(dos)
-      baos.toByteArray()
-    }
+  fun toByteArray(): ByteArray {
+    val buffer = Buffer()
+    write(buffer)
+    return buffer.readByteArray()
   }
 
   override fun toString(): String {

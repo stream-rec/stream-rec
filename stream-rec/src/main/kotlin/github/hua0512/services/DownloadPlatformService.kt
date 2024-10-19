@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download
+package github.hua0512.services
 
 import github.hua0512.app.App
 import github.hua0512.data.event.StreamerEvent.StreamerException
@@ -33,7 +33,9 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.base.IPlatformDownloaderFactory
 import github.hua0512.plugins.download.base.StreamerCallback
+import github.hua0512.plugins.download.fillDownloadConfig
 import github.hua0512.plugins.event.EventCenter
+import github.hua0512.utils.logger
 import io.ktor.util.collections.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -66,7 +68,7 @@ class DownloadPlatformService(
 
   companion object {
     @JvmStatic
-    private val logger: Logger = LoggerFactory.getLogger(DownloadPlatformService::class.java)
+    private val logger: Logger = logger(DownloadPlatformService::class.java)
 
     /**
      * Maximum number of streamers permitted by the platform
@@ -79,7 +81,7 @@ class DownloadPlatformService(
   private val streamers = mutableListOf<Streamer>()
   private val cancelledStreamers = ConcurrentSet<String>()
   private val downloadingStreamers = ConcurrentSet<String>()
-  private val managers = ConcurrentHashMap<String, StreamerDownloadManager>()
+  private val managers = ConcurrentHashMap<String, StreamerDownloadService>()
 
   /**
    * Streamer channel with a capacity of MAX_STREAMERS
@@ -117,7 +119,7 @@ class DownloadPlatformService(
    * @param streamer the streamer to cancel
    */
   suspend fun cancelStreamer(streamer: Streamer, reason: String? = null, newStreamer: Streamer) {
-    logger.debug("({}) request to cancel streamer: {} reason : {}", platform, streamer.url, reason)
+    logger.debug("({}) request to cancel: {} reason: {}", platform, streamer.url, reason)
     // check if streamer is present in the list
     if (!streamers.contains(streamer) &&
       !downloadingStreamers.contains(streamer.url) &&
@@ -128,8 +130,8 @@ class DownloadPlatformService(
     }
 
     cancelledStreamers.add(streamer.url)
-    logger.debug("({}), streamer {} received cancellation signal : {}", platform, streamer.url, reason)
-    managers[streamer.url]?.cancelBlocking(newStreamer)
+    logger.debug("({}), {} received cancellation signal : {}", platform, streamer.url, reason)
+    managers[streamer.url]?.cancelBlocking()
 
     EventCenter.sendEvent(
       StreamerRecordStop(
@@ -205,10 +207,17 @@ class DownloadPlatformService(
     } finally {
       streamers.remove(streamer)
       downloadingStreamers.remove(streamer.url)
+      managers.remove(streamer.url)
     }
   }
 
   private suspend fun downloadStreamerInternal(streamer: Streamer) {
+    val newDownloadConfig = streamer.downloadConfig?.fillDownloadConfig(
+      streamer.platform,
+      streamer.templateStreamer?.downloadConfig,
+      app.config
+    )
+    val streamer = streamer.copy(downloadConfig = newDownloadConfig)
     val plugin = try {
       downloadFactory.createDownloader(app, streamer.platform, streamer.url)
     } catch (e: Exception) {
@@ -216,7 +225,7 @@ class DownloadPlatformService(
       EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
       return
     }
-    val streamerDownload = StreamerDownloadManager(
+    val streamerDownloader = StreamerDownloadService(
       app,
       streamer,
       plugin,
@@ -224,8 +233,9 @@ class DownloadPlatformService(
     ).apply {
       init(callback)
     }
-    managers[streamer.url] = streamerDownload
-    streamerDownload.start()
+    managers[streamer.url] = streamerDownloader
+    // suspend here
+    streamerDownloader.start()
   }
 
   fun cancel() {

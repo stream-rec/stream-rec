@@ -31,7 +31,8 @@ import github.hua0512.flv.data.sound.FlvSoundFormat
 import github.hua0512.flv.data.sound.FlvSoundRate
 import github.hua0512.flv.data.sound.FlvSoundSize
 import github.hua0512.flv.data.sound.FlvSoundType
-import java.io.OutputStream
+import kotlinx.io.Buffer
+import kotlinx.io.Sink
 
 /**
  * A flv audio tag data
@@ -53,13 +54,18 @@ data class FlvAudioTagData(
 
   override val headerSize: Int = if (format == FlvSoundFormat.AAC) 2 else 1
 
-  override fun write(os: OutputStream) {
-    val info = (format.value shl 4) or (rate.value shl 2) or (soundSize.value shl 1) or type.value
-    os.write(info)
-    if (format == FlvSoundFormat.AAC) {
-      os.write(packetType!!.value.toInt())
+  override fun write(sink: Sink) {
+    val buffer = Buffer()
+    with(buffer) {
+      val info = (format.value shl 4) or (rate.value shl 2) or (soundSize.value shl 1) or type.value
+      writeByte(info.toByte())
+      if (format == FlvSoundFormat.AAC) {
+        writeByte(packetType!!.value.toByte())
+      }
+      write(binaryData)
     }
-    os.write(binaryData)
+    buffer.transferTo(sink)
+    sink.flush()
   }
 
 }

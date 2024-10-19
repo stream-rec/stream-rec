@@ -27,17 +27,18 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
+import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.flv.FlvMetaInfoProcessor
 import github.hua0512.flv.data.other.FlvMetadataInfo
-import github.hua0512.plugins.download.DownloadPlatformService
 import github.hua0512.plugins.download.base.StreamerCallback
-import github.hua0512.plugins.download.platformConfig
+import github.hua0512.plugins.download.globalConfig
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
+import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.buffer
@@ -84,37 +85,46 @@ class DownloadService(
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
     this.scope = downloadScope
     callback = object : StreamerCallback {
-      override fun onLiveStatusChanged(streamer: Streamer, isLive: Boolean) {
-        scope.launch {
-          val status = repo.update(streamer.copy(isLive = isLive))
-          logger.debug("({}) live -> {} = {}", streamer.name, isLive, status)
-        }
+      override suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean, onSuccessful: () -> Unit) {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.isLive == newStatus) return
+        val status = repo.update(streamer.copy(isLive = newStatus))
+        logger.debug("({}) updated live status -> {} = {}", streamer.name, newStatus, status)
+        if (status)
+          onSuccessful()
       }
 
-      override fun onLastLiveTimeChanged(streamer: Streamer, lastLiveTime: Long) {
-        scope.launch {
-          logger.debug("({}) last live time -> {}", streamer.name, lastLiveTime)
-          repo.update(streamer.copy(lastLiveTime = lastLiveTime))
-        }
+      override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit) {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.lastLiveTime == newLiveTime) return
+        logger.debug("({}) updated last live time -> {}", streamer.name, newLiveTime)
+        val status = repo.update(streamer.copy(lastLiveTime = newLiveTime))
+        if (status)
+          onSuccessful()
       }
 
-      override fun onDescriptionChanged(streamer: Streamer, description: String) {
-        scope.launch {
-          logger.debug("({}) description -> {}", streamer.name, description)
-          repo.update(streamer.copy(streamTitle = description))
-        }
+      override suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit) {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.streamTitle == description) return
+        logger.debug("({}) updated description -> {}", streamer.name, description)
+        val status = repo.update(streamer.copy(streamTitle = description))
+        if (status)
+          onSuccessful()
       }
 
-      override fun onAvatarChanged(streamer: Streamer, avatar: String) {
-        scope.launch {
-          logger.debug("({}) avatar url -> {}", streamer.name, avatar)
-          repo.update(streamer.copy(avatar = avatar))
-        }
+      override suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit) {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+        if (streamer.avatar == avatar) return
+        logger.debug("({}) updated avatar url -> {}", streamer.name, avatar)
+        val status = repo.update(streamer.copy(avatar = avatar))
+        if (status)
+          onSuccessful()
       }
 
-      override fun onStreamDownloaded(streamer: Streamer, stream: StreamData, shouldInjectMetaInfo: Boolean, metaInfo: FlvMetadataInfo?) {
+      override fun onStreamDownloaded(id: Long, stream: StreamData, shouldInjectMetaInfo: Boolean, metaInfo: FlvMetadataInfo?) {
         var stream = stream
         scope.launch {
+          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
           if (shouldInjectMetaInfo) {
             if (metaInfo != null) {
               val status = FlvMetaInfoProcessor.process(stream.outputFilePath, metaInfo, true)
@@ -140,19 +150,23 @@ class DownloadService(
         }
       }
 
-      override fun onStreamDownloadFailed(streamer: Streamer, stream: StreamData, e: Exception) {
+      override fun onStreamDownloadFailed(id: Long, stream: StreamData, e: Exception) {
 
       }
 
-      override fun onStreamFinished(streamer: Streamer, streams: List<StreamData>) {
+      override fun onStreamFinished(id: Long, streams: List<StreamData>) {
         scope.launch {
+          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
+          if (streamer.isLive != false) {
+            repo.update(streamer.copy(isLive = false))
+          }
           logger.debug("({}) stream finished", streamer.name)
           executeStreamFinishedActions(streamer, streams)
         }
       }
     }
 
-    val streamers = github.hua0512.utils.withIOContext {
+    val streamers = withIOContext {
       repo.getStreamersActive()
     }
     this.streamers = streamers
@@ -166,7 +180,7 @@ class DownloadService(
 
 
   private fun getOrInitPlatformService(platform: StreamingPlatform): DownloadPlatformService {
-    val fetchDelay = (platform.platformConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
+    val fetchDelay = (platform.globalConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
     val service = taskJobs.computeIfAbsent(platform) {
       logger.info("({}) initializing...", platform)
       DownloadPlatformService(

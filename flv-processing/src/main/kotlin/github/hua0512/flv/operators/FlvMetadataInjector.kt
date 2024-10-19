@@ -153,10 +153,6 @@ internal fun FlvMetadataInfo.toAmfMap(): Map<String, Amf0Value> {
   }
 
   return mapOf(
-    "hasAudio" to Amf0Value.Boolean(hasAudio),
-    "hasVideo" to Amf0Value.Boolean(hasVideo),
-    "hasMetadata" to Amf0Value.Boolean(hasScript),
-    "hasKeyframes" to Amf0Value.Boolean(hasKeyframes),
     "canSeekToEnd" to Amf0Value.Boolean(canSeekToEnd),
     "duration" to Amf0Value.Number(duration.toDouble()),
     "filesize" to Amf0Value.Number(fileSize.toDouble()),
@@ -164,6 +160,14 @@ internal fun FlvMetadataInfo.toAmfMap(): Map<String, Amf0Value> {
     "width" to Amf0Value.Number(width.toDouble()),
     "height" to Amf0Value.Number(height.toDouble()),
     "keyframes" to amf0Keyframes,
+    "audiosize" to Amf0Value.Number(audioSize.toDouble()),
+    "audiodatarate" to Amf0Value.Number(audioDataRate.toDouble()),
+    "audiocodecid" to Amf0Value.Number(audioCodecId?.value?.toDouble() ?: 0.0),
+    "audiosamplerate" to Amf0Value.Number(audioSampleRate?.rate?.toDouble() ?: 0.0),
+    "audiosamplesize" to Amf0Value.Number(audioSampleSize?.size?.toDouble() ?: 0.0),
+    "videosize" to Amf0Value.Number(videoSize.toDouble()),
+    "videodatarate" to Amf0Value.Number(videoDataRate.toDouble()),
+    "videocodecid" to Amf0Value.Number(videoCodecId?.value?.toDouble() ?: 0.0),
     "stereo" to Amf0Value.Boolean(audioSoundType == FlvSoundType.STEREO),
     "lasttimestamp" to Amf0Value.Number(lastTimestamp.toDouble()),
     "lastkeyframetimestamp" to Amf0Value.Number(keyframes.lastOrNull()?.timestamp?.toDouble() ?: 0.0),

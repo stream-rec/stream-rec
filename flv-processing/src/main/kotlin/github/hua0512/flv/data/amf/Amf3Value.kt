@@ -26,10 +26,10 @@
 
 package github.hua0512.flv.data.amf
 
-import github.hua0512.flv.utils.writeDouble
 import github.hua0512.flv.utils.writeU29
 import github.hua0512.flv.utils.writeUtf8
-import java.io.OutputStream
+import kotlinx.io.Sink
+import kotlinx.io.writeDouble
 
 
 /**
@@ -61,8 +61,8 @@ enum class Amf3Type(val byte: Byte) {
  */
 sealed class Amf3Value(val type: Amf3Type) : AmfValue {
 
-  override fun write(output: OutputStream) {
-    output.write(type.byte.toInt())
+  override fun write(sink: Sink) {
+    sink.writeByte(type.byte)
   }
 }
 
@@ -70,8 +70,8 @@ data object Amf3Undefined : Amf3Value(Amf3Type.UNDEFINED) {
 
   override val size: Int = 1
 
-  override fun write(output: OutputStream) {
-    super.write(output)
+  override fun write(sink: Sink) {
+    super.write(sink)
   }
 }
 
@@ -79,8 +79,8 @@ data object Amf3Null : Amf3Value(Amf3Type.NULL) {
 
   override val size: Int = 1
 
-  override fun write(output: OutputStream) {
-    super.write(output)
+  override fun write(sink: Sink) {
+    super.write(sink)
   }
 }
 
@@ -88,8 +88,8 @@ data object Amf3BooleanFalse : Amf3Value(Amf3Type.BOOLEAN_FALSE) {
 
   override val size: Int = 1
 
-  override fun write(output: OutputStream) {
-    super.write(output)
+  override fun write(sink: Sink) {
+    super.write(sink)
   }
 }
 
@@ -97,8 +97,8 @@ data object Amf3BooleanTrue : Amf3Value(Amf3Type.BOOLEAN_TRUE) {
 
   override val size: Int = 1
 
-  override fun write(output: OutputStream) {
-    super.write(output)
+  override fun write(sink: Sink) {
+    super.write(sink)
   }
 
 }
@@ -112,9 +112,9 @@ data class Amf3Integer(val value: Int) : Amf3Value(Amf3Type.INTEGER) {
     else -> 3
   }
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.writeU29(value)
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeU29(value)
   }
 }
 
@@ -122,9 +122,9 @@ data class Amf3Double(val value: Double) : Amf3Value(Amf3Type.DOUBLE) {
 
   override val size: Int = 9
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.writeDouble(value)
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeDouble(value)
   }
 }
 
@@ -132,9 +132,9 @@ data class Amf3String(val value: String) : Amf3Value(Amf3Type.STRING) {
 
   override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.writeUtf8(value)
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeUtf8(value)
   }
 }
 
@@ -142,9 +142,9 @@ data class Amf3XmlDocument(val value: String) : Amf3Value(Amf3Type.XML_DOCUMENT)
 
   override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.writeUtf8(value)
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeUtf8(value)
   }
 }
 
@@ -152,10 +152,10 @@ data class Amf3Date(val value: Double) : Amf3Value(Amf3Type.DATE) {
 
   override val size: Int = 9
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.write(0) // No timezone
-    output.writeDouble(value)
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeByte(0) // No timezone
+    sink.writeDouble(value)
   }
 }
 
@@ -163,11 +163,11 @@ data class Amf3Array(val values: List<Amf3Value>) : Amf3Value(Amf3Type.ARRAY) {
 
   override val size: Int = 1 + 4 + values.sumOf { it.size }
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.writeU29(values.size shl 1 or 1)
-    output.write(0x01) // Empty string key to mark end of associative part
-    values.forEach { it.write(output) }
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeU29(values.size shl 1 or 1)
+    sink.writeByte(0x01) // Empty string key to mark end of associative part
+    values.forEach { it.write(sink) }
   }
 }
 
@@ -186,17 +186,17 @@ data class Amf3Object(val traits: List<String>, val properties: Map<String, Amf3
       return size
     }
 
-  override fun write(output: OutputStream) {
-    super.write(output)
+  override fun write(sink: Sink) {
+    super.write(sink)
     val traitsInfo = (traits.size shl 4) or 0x03 // Traits, dynamic, externalizable
-    output.writeU29(traitsInfo)
-    output.writeUtf8("") // Empty class name for dynamic class
-    traits.forEach { output.writeUtf8(it) }
+    sink.writeU29(traitsInfo)
+    sink.writeUtf8("") // Empty class name for dynamic class
+    traits.forEach { sink.writeUtf8(it) }
     properties.forEach { (key, value) ->
-      output.writeUtf8(key)
-      value.write(output)
+      sink.writeUtf8(key)
+      value.write(sink)
     }
-    output.write(0x01) // Empty string key to mark end of associative part
+    sink.writeByte(0x01) // Empty string key to mark end of associative part
   }
 }
 
@@ -204,9 +204,9 @@ data class Amf3Xml(val value: String) : Amf3Value(Amf3Type.XML) {
 
   override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.writeUtf8(value)
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeUtf8(value)
   }
 }
 
@@ -214,10 +214,10 @@ data class Amf3ByteArray(val value: ByteArray) : Amf3Value(Amf3Type.BYTEARRAY) {
 
   override val size: Int = 1 + 4 + value.size
 
-  override fun write(output: OutputStream) {
-    super.write(output)
-    output.writeU29(value.size shl 1 or 1)
-    output.write(value)
+  override fun write(sink: Sink) {
+    super.write(sink)
+    sink.writeU29(value.size shl 1 or 1)
+    sink.write(value)
   }
 }
 
@@ -226,7 +226,7 @@ data class Amf3Reference(val index: Int) : Amf3Value(Amf3Type.OBJECT) {
 
   override val size: Int = 1
 
-  override fun write(output: OutputStream) {
+  override fun write(sink: Sink) {
     throw UnsupportedOperationException("References are not supported in write")
   }
 }

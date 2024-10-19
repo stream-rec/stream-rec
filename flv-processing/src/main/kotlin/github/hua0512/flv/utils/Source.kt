@@ -33,9 +33,9 @@ import github.hua0512.flv.exceptions.FlvErrorException
 import io.ktor.utils.io.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.io.Source
+import kotlinx.io.readUByte
 import java.io.EOFException
-import java.io.InputStream
-import kotlin.toUInt
 import kotlin.use
 
 
@@ -50,7 +50,7 @@ import kotlin.use
  * @author hua0512
  * @date : 2024/9/9 12:13
  */
-fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
+fun Source.asFlvFlow(): Flow<FlvData> = flow {
   val flvReader = FlvReader(this@asFlvFlow)
 
   var lastTag: FlvData? = null
@@ -72,7 +72,7 @@ fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
   } finally {
     lastTag?.let {
       if (it is FlvTag && it.isAvcEndSequence()) return@let
-      if (it is FlvTag) emit(createEndOfSequenceTag(it.num + 1, it.header.timestamp, it.header.streamId.toInt()))
+      if (it is FlvTag) emit(createEndOfSequenceTag(it.num + 1, it.header.timestamp, it.header.streamId))
     }
     try {
       close()
@@ -83,14 +83,18 @@ fun InputStream.asFlvFlow(): Flow<FlvData> = flow {
 }
 
 /**
- * Read an unsigned 24-bit integer from the InputStream.
- * @receiver InputStream The input stream from which to read the unsigned 24-bit integer.
- * @return UInt The unsigned 24-bit integer read from the InputStream.
+ * Read an unsigned 24-bit integer from the Source.
+ * @receiver Source The source from which to read the unsigned 24-bit integer.
+ * @return UInt The unsigned 24-bit integer read from the Source.
  * @author hua0512
  * @date : 2024/6/10 19:31
  */
-fun InputStream.readUI24(): UInt = readNBytes(3).let {
-  return ((it[0].toUInt() and 0xFFu) shl 16) or
-          ((it[1].toUInt() and 0xFFu) shl 8) or
-          (it[2].toUInt() and 0xFFu)
+internal fun Source.readUI24(): UInt {
+  require(3)
+
+  // Read 3 bytes from the buffer and convert to int
+  val b1 = readUByte().toUInt() shl 16
+  val b2 = readUByte().toUInt() shl 8
+  val b3 = readUByte().toUInt() and 0xFFU
+  return b1 or b2 or b3
 }

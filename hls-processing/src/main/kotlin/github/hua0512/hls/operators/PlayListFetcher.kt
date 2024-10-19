@@ -53,7 +53,7 @@ import org.slf4j.Logger
 
  */
 
-class PlayListFetcher(val client: HttpClient, override val streamerContext: StreamerContext) : StreamerLoggerContext {
+class PlayListFetcher(val client: HttpClient, override val context: StreamerContext) : StreamerLoggerContext {
 
 
   companion object {
@@ -132,7 +132,7 @@ class PlayListFetcher(val client: HttpClient, override val streamerContext: Stre
         delay = playlist.targetDuration() * 1000L
         emit(playlist)
       } catch (e: Exception) {
-        debug("Failed to fetch playlist: $e")
+        debug("Failed to fetch playlist:", throwable = e)
         // end loop
         throw e
       } finally {

@@ -32,22 +32,22 @@ import github.hua0512.flv.utils.asFlvFlow
 import github.hua0512.flv.utils.createEndOfSequenceTag
 import github.hua0512.flv.utils.isAvcEndSequence
 import github.hua0512.flv.utils.readUI24
-import github.hua0512.flv.utils.writeInt
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.io.Buffer
 import org.junit.jupiter.api.assertThrows
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
 import kotlin.test.Test
+import kotlin.test.assertNotNull
 import kotlin.test.expect
 
-class InputStreamExtensionsTest {
+class SourceExtensionsTest {
 
   @Test
   fun readUI24_readsCorrectValue() {
-    val inputStream: InputStream = ByteArrayInputStream(byteArrayOf(0x12, 0x34, 0x56))
-    val result = inputStream.readUI24()
+    val source = Buffer().apply {
+      write(byteArrayOf(0x12, 0x34, 0x56))
+    }
+    val result = source.readUI24()
     expect(0x123456u) {
       result
     }
@@ -55,8 +55,10 @@ class InputStreamExtensionsTest {
 
   @Test
   fun readUI24_readsZero() {
-    val inputStream: InputStream = ByteArrayInputStream(byteArrayOf(0x00, 0x00, 0x00))
-    val result = inputStream.readUI24()
+    val source = Buffer().apply {
+      write(byteArrayOf(0x00, 0x00, 0x00))
+    }
+    val result = source.readUI24()
     expect(0x000000u) {
       result
     }
@@ -64,8 +66,10 @@ class InputStreamExtensionsTest {
 
   @Test
   fun readUI24_readsMaxValue() {
-    val inputStream: InputStream = ByteArrayInputStream(byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()))
-    val result = inputStream.readUI24()
+    val source = Buffer().apply {
+      write(byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()))
+    }
+    val result = source.readUI24()
     expect(0xFFFFFFu) {
       result
     }
@@ -73,20 +77,24 @@ class InputStreamExtensionsTest {
 
   @Test
   fun readUI24_handlesEndOfStream() {
-    val inputStream: InputStream = ByteArrayInputStream(byteArrayOf(0x12, 0x34))
+    val source = Buffer().apply {
+      write(byteArrayOf(0x12, 0x34))
+    }
     assertThrows<ArrayIndexOutOfBoundsException> {
-      inputStream.readUI24()
+      source.readUI24()
     }
   }
 
   @Test
   fun asFlvFlow_readsFlvDataCorrectly() = runBlocking {
-    val inputStream = ByteArrayInputStream(
-      byteArrayOf(
-        0x46, 0x4C, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00
+    val buffer = Buffer().apply {
+      write(
+        byteArrayOf(
+          0x46, 0x4C, 0x56, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00
+        )
       )
-    )
-    val result = inputStream.asFlvFlow().toList()
+    }
+    val result = buffer.asFlvFlow().toList()
     expect(1) {
       result.size
     }
@@ -104,9 +112,11 @@ class InputStreamExtensionsTest {
 
   @Test
   fun asFlvFlow_handlesEOFException(): Unit = runBlocking {
-    val inputStream = ByteArrayInputStream(byteArrayOf(0x46, 0x4C, 0x56, 0x01, 0x05, 0x00, 0x00))
+    val buffer = Buffer().apply {
+      byteArrayOf(0x46, 0x4C, 0x56, 0x01, 0x05, 0x00, 0x00)
+    }
 
-    val result = inputStream.asFlvFlow().toList()
+    val result = buffer.asFlvFlow().toList()
     expect(0) {
       result.size
     }
@@ -114,9 +124,11 @@ class InputStreamExtensionsTest {
 
   @Test
   fun asFlvFlow_handlesFlvErrorException(): Unit = runBlocking {
-    val inputStream = ByteArrayInputStream(byteArrayOf(0x46, 0x4C, 0x56, 0x01, 0xFF.toByte(), 0x00, 0x00, 0x00, 0x09))
+    val buffer = Buffer().apply {
+      write(byteArrayOf(0x46, 0x4C, 0x56, 0x01, 0xFF.toByte(), 0x00, 0x00, 0x00, 0x09))
+    }
 
-    val result = inputStream.asFlvFlow().toList()
+    val result = buffer.asFlvFlow().toList()
     expect(0) {
       result.size
     }
@@ -124,31 +136,39 @@ class InputStreamExtensionsTest {
 
   @Test
   fun asFlvFlow_emitsEndOfSequenceTag() = runBlocking {
-    val baos = ByteArrayOutputStream()
-    val eosTag = createEndOfSequenceTag(1, 0, 0).apply {
-      header.write(baos)
-      data.write(baos)
-      baos.writeInt(size.toInt())
+    val buffer = Buffer()
+
+    var eosTag: FlvTag? = null
+    with(buffer) {
+
+      write(
+        byteArrayOf(
+          0x46,
+          0x4C,
+          0x56,
+          0x01,
+          0x05,
+          0x00,
+          0x00,
+          0x00,
+          0x09,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+        )
+      )
+      eosTag = createEndOfSequenceTag(1, 0, 0).apply {
+        header.write(this@with)
+        data.write(this@with)
+        this@with.writeInt(size.toInt())
+      }
+
     }
 
-    val inputStream = ByteArrayInputStream(
-      byteArrayOf(
-        0x46,
-        0x4C,
-        0x56,
-        0x01,
-        0x05,
-        0x00,
-        0x00,
-        0x00,
-        0x09,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-      ) + baos.toByteArray()
-    )
-    val result = inputStream.asFlvFlow().toList()
+    assertNotNull(eosTag)
+
+    val result = buffer.asFlvFlow().toList()
     expect(2) {
       result.size
     }

@@ -35,6 +35,8 @@ import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import io.ktor.client.*
 import io.ktor.client.request.*
+import io.ktor.http.HttpHeaders
+import io.ktor.http.auth.AuthScheme
 import kotlinx.serialization.json.*
 
 /**
@@ -58,6 +60,11 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
   private lateinit var bodyJson: JsonObject
 
   internal lateinit var authToken: String
+
+  init {
+    platformHeaders[CLIENT_ID_HEADER] = CLIENT_ID
+    platformHeaders[HttpHeaders.Referrer] = BASE_URL
+  }
 
   override fun match(): Boolean {
     return super.match().also {
@@ -87,7 +94,10 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
         }
       ),
     )
-    val response = twitchPostQPL(http, json, queries.contentToString(), authToken)
+    if (platformHeaders[HttpHeaders.Authorization] == null) {
+      platformHeaders[HttpHeaders.Authorization] = "${AuthScheme.OAuth} $authToken"
+    }
+    val response = twitchPostQPL(http, json, queries.contentToString(), getRequestHeaders())
     val data =
       response.jsonArray[1].jsonObject["data"]?.jsonObject
         ?: throw InvalidExtractionParamsException("($id) failed to get stream data, response: $response")
@@ -137,7 +147,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
         put("isClip", false)
         put("clipID", "")
       }),
-      authToken
+      getRequestHeaders()
     )
 
     val accessToken = accessTokenResponse.jsonObject["data"]?.jsonObject?.get("streamPlaybackAccessToken")?.jsonObject

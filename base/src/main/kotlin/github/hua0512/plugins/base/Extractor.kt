@@ -26,11 +26,11 @@
 
 package github.hua0512.plugins.base
 
+import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
-import github.hua0512.plugins.download.COMMON_HEADERS
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -126,6 +126,14 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    */
   protected open fun match(): Boolean = regexPattern.matches(url)
 
+
+  /**
+   * Function to get the platform specific headers
+   * @return a map of platform headers
+   */
+  open fun getRequestHeaders(): Map<String, String> = platformHeaders.toMap()
+
+
   /**
    * Function to check if the stream is live
    * @return a boolean value
@@ -136,6 +144,10 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * Function to extract the media info from the stream
    * @return a [MediaInfo] object
    * @see MediaInfo
+   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
+   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
    */
   abstract suspend fun extract(): MediaInfo
 

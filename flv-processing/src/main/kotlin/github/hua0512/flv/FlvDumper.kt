@@ -36,7 +36,8 @@ import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
 import github.hua0512.flv.utils.AudioData
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.VideoData
-import java.io.DataOutputStream
+import io.ktor.utils.io.core.size
+import kotlinx.io.Sink
 import java.lang.AutoCloseable
 
 /**
@@ -44,26 +45,25 @@ import java.lang.AutoCloseable
  * @author hua0512
  * @date : 2024/6/10 19:16
  */
-internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
+internal class FlvDumper(val sink: Sink) : AutoCloseable {
 
   val offset: Int
-    get() = os.size()
+    get() = sink.size
 
   fun dumpHeader(header: FlvHeader) {
-    header.write(os)
+    header.write(sink)
   }
 
   fun dumpPreviousTagSize(size: Int) {
-    os.writeInt(size)
+    sink.writeInt(size)
   }
 
 
   private fun dumpTagHeader(header: FlvTagHeader) {
-    header.write(os)
+    header.write(sink)
   }
 
   fun dumpTag(tag: FlvTag) {
-
     if (tag.header.timestamp < 0) {
       throw FlvTagHeaderErrorException("Invalid timestamp: ${tag.header.timestamp}")
     }
@@ -77,7 +77,7 @@ internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
       is ScriptData -> tag.data.dump()
       else -> throw FlvDataErrorException("Unsupported tag data: ${tag.data}")
     }
-    os.flush()
+    sink.flush()
   }
 
 
@@ -85,7 +85,7 @@ internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
     if (format != FlvSoundFormat.AAC) {
       throw FlvDataErrorException("Unsupported sound format: ${this.format}")
     }
-    write(os)
+    write(sink)
   }
 
   private fun VideoData.dump() {
@@ -94,15 +94,15 @@ internal class FlvDumper(val os: DataOutputStream) : AutoCloseable {
     if (codecId != FlvVideoCodecId.AVC) {
       throw FlvDataErrorException("Unsupported video codec id: $codecId")
     }
-    write(os)
+    write(sink)
   }
 
   private fun ScriptData.dump() {
-    write(os)
+    write(sink)
   }
 
   override fun close() {
-    os.apply {
+    with(sink) {
       flush()
       close()
     }

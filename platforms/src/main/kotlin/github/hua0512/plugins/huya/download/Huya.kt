@@ -31,39 +31,34 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.plugins.download.base.Download
+import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
-import github.hua0512.utils.nonEmptyOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class Huya(app: App, override val danmu: HuyaDanmu, override val extractor: HuyaExtractor) :
-  Download<HuyaDownloadConfig>(app, danmu, extractor) {
+class Huya(
+  app: App,
+  override val danmu: HuyaDanmu,
+  override val extractor: HuyaExtractor,
+) :
+  PlatformDownloader<HuyaDownloadConfig>(app, danmu, extractor) {
 
   init {
     extractor.forceOrigin = app.config.huyaConfig.forceOrigin
   }
 
 
-  override fun createDownloadConfig(): HuyaDownloadConfig {
-    return HuyaDownloadConfig(
-      primaryCdn = app.config.huyaConfig.primaryCdn,
-      sourceFormat = app.config.huyaConfig.sourceFormat,
-    )
+  override suspend fun shouldDownload(onLive: () -> Unit): Boolean = super.shouldDownload {
+    onLive()
+    // bind danmu properties
+    with(danmu) {
+      presenterUid = extractor.presenterUid
+    }
   }
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
-    (config.cookies ?: app.config.huyaConfig.cookies)?.nonEmptyOrNull()?.also {
-      extractor.cookies = it
-    }
-    return super.shouldDownload {
-      onLive()
-      // bind danmu properties
-      with(danmu) {
-        presenterUid = extractor.presenterUid
-      }
-    }
-  }
+  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
+
+  override fun getProgramArgs(): List<String> = emptyList()
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as HuyaDownloadConfig

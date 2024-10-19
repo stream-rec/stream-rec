@@ -30,13 +30,16 @@ import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.*
+import github.hua0512.plugins.download.engines.DownloadEngines
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 sealed interface DownloadConfig : DownloadConfigDTO {
 
-  abstract override val cookies: String?
+  //  abstract override val isInherited: Boolean
+  abstract override var engine: DownloadEngines?
+  abstract override var cookies: String?
   abstract override var danmu: Boolean?
   abstract override var maxBitRate: Int?
   abstract override var outputFolder: String?
@@ -48,7 +51,8 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   @Serializable
   @SerialName("template")
   data class DefaultDownloadConfig(
-    override val cookies: String? = null,
+    override var engine: DownloadEngines? = null,
+    override var cookies: String? = null,
     override var danmu: Boolean? = null,
     override var maxBitRate: Int? = null,
     override var outputFolder: String? = null,
@@ -61,10 +65,11 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   @SerialName("douyin")
   @Serializable
   data class DouyinDownloadConfig(
-    override val cookies: String? = null,
     override val quality: DouyinQuality? = null,
     override val sourceFormat: VideoFormat? = null,
   ) : DownloadConfig, DouyinConfigDTO {
+    override var engine: DownloadEngines? = null
+    override var cookies: String? = null
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null
@@ -82,7 +87,7 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override val sourceFormat: VideoFormat? = null,
   ) : DownloadConfig, HuyaConfigDTO {
 
-
+    override var engine: DownloadEngines? = null
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null
@@ -116,6 +121,7 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override val quality: DouyuQuality? = null,
   ) : DownloadConfig, DouyuConfigDTO {
 
+    override var engine: DownloadEngines? = null
     override var cookies: String? = null
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
@@ -132,6 +138,9 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override val authToken: String? = null,
     override val quality: TwitchQuality? = null,
   ) : DownloadConfig, TwitchConfigDTO {
+
+    override var engine: DownloadEngines? = null
+
     override var cookies: String? = null
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
@@ -148,6 +157,8 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override val quality: PandaTvQuality? = null,
     override var cookies: String? = null,
   ) : DownloadConfig, PandaTvConfigDTO {
+
+    override var engine: DownloadEngines? = null
     override var danmu: Boolean? = null
     override var maxBitRate: Int? = null
     override var outputFolder: String? = null

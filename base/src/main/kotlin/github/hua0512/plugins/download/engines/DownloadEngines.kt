@@ -24,14 +24,47 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download
+package github.hua0512.plugins.download.engines
 
-import io.ktor.http.HttpHeaders
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-const val COMMON_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+private const val KOTLIN_ENGINE = "kotlin"
+private const val FFMPEG_ENGINE = "ffmpeg"
+private const val STREAMLINK_ENGINE = "streamlink"
 
-val COMMON_HEADERS = arrayOf(
-  HttpHeaders.Accept to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-  HttpHeaders.AcceptLanguage to "zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3",
-  HttpHeaders.UserAgent to COMMON_USER_AGENT
-)
+/**
+ * Download engines
+ * @property engine the engine name
+ * @author hua0512
+ * @date : 2024/10/10 21:34
+ */
+@Serializable
+sealed class DownloadEngines(val engine: String) {
+
+  @Serializable
+  @SerialName(KOTLIN_ENGINE)
+  public object KOTLIN : DownloadEngines(KOTLIN_ENGINE)
+
+  @Serializable
+  @SerialName(FFMPEG_ENGINE)
+  public object FFMPEG : DownloadEngines(FFMPEG_ENGINE)
+
+  @Serializable
+  @SerialName(STREAMLINK_ENGINE)
+  public object STREAMLINK : DownloadEngines(STREAMLINK_ENGINE)
+
+
+  public companion object {
+
+    public fun fromString(engine: String): DownloadEngines {
+      return when (engine) {
+        KOTLIN_ENGINE -> KOTLIN
+        FFMPEG_ENGINE -> FFMPEG
+        STREAMLINK_ENGINE -> STREAMLINK
+        else -> throw IllegalArgumentException("Unknown engine type: $engine")
+      }
+    }
+  }
+
+}

@@ -29,6 +29,7 @@ package github.hua0512.flv.data
 import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.tag.FlvTagData
 import github.hua0512.flv.data.tag.FlvTagHeader
+import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
 
 /**
  * FLV tag data class
@@ -47,7 +48,7 @@ data class FlvTag(
 
   init {
     if (header.dataSize != data.size) {
-      throw IllegalArgumentException("Data size not match : $this, ${header.dataSize}, ${data.size}")
+      throw FlvTagHeaderErrorException("Data size not match : $this, ${header.dataSize}, ${data.size}")
     }
   }
 

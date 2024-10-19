@@ -24,37 +24,45 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.avc;
+package github.hua0512.flv.utils
 
-import java.io.DataInputStream
-import java.io.EOFException
-import java.io.InputStream
+import java.io.OutputStream
 
-internal class StructReader(input: InputStream) : AutoCloseable {
+/**
+ * Writes a 4-byte integer to the OutputStream in big-endian order.
+ *
+ * @param value The integer value to write.
+ */
+internal fun OutputStream.writeInt(value: Int) {
+  write(value ushr 24)
+  write(value ushr 16)
+  write(value ushr 8)
+  write(value)
+}
 
-  private val dataInput = DataInputStream(input)
+/**
+ * Writes a 2-byte short to the OutputStream in big-endian order.
+ *
+ * @param value The short value to write.
+ */
+internal fun OutputStream.writeShort(value: Int) {
+  write(value ushr 8)
+  write(value)
+}
 
-  fun readUI8(): Int {
-    return dataInput.readUnsignedByte()
-  }
-
-  fun readUI16(): Int {
-    return dataInput.readUnsignedShort()
-  }
-
-  fun readBytes(length: Int): ByteArray {
-    val availableBytes = dataInput.available()
-    // Check if the required bytes are greater than the available bytes.
-    if (length > availableBytes) {
-      throw EOFException("Trying to read $length bytes but only $availableBytes are available.")
-    }
-
-    val byteArray = ByteArray(length)
-    dataInput.readFully(byteArray)
-    return byteArray
-  }
-
-  override fun close() {
-    dataInput.close()
-  }
+/**
+ * Writes an 8-byte double to the OutputStream in big-endian order.
+ *
+ * @param value The double value to write.
+ */
+internal fun OutputStream.writeDouble(value: Double) {
+  val longBits = java.lang.Double.doubleToLongBits(value)
+  write((longBits ushr 56).toInt())
+  write((longBits ushr 48).toInt())
+  write((longBits ushr 40).toInt())
+  write((longBits ushr 32).toInt())
+  write((longBits ushr 24).toInt())
+  write((longBits ushr 16).toInt())
+  write((longBits ushr 8).toInt())
+  write(longBits.toInt())
 }

@@ -24,30 +24,41 @@
  * SOFTWARE.
  */
 
+@file:Suppress("NOTHING_TO_INLINE")
+
 package github.hua0512.utils
 
 import github.hua0512.plugins.StreamerContext
 import org.slf4j.Logger
 
 /**
+ * Streamer logging context
  * @author hua0512
  * @date : 2024/9/26 22:52
  */
 
 interface StreamerLoggerContext {
 
-  val streamerContext: StreamerContext
+  val context: StreamerContext
 
   val logger: Logger
 }
 
-inline fun StreamerContext.slogger(name: String) = logger("$name-${this.name}")
+inline fun StreamerLoggerContext.trace(content: String, vararg objs: Any?) = logger.trace(content, *objs)
 
-inline fun StreamerLoggerContext.debug(content: String, throwable: Throwable? = null) =
-  logger.debug("${streamerContext.name} $content", throwable)
+inline fun StreamerLoggerContext.debug(content: String, vararg objs: Any?, throwable: Throwable? = null) =
+  logger.debug("${context.name} $content", *objs, throwable)
 
-inline fun StreamerLoggerContext.debug(content: String, vararg objs: Any?) =
-  logger.debug("${streamerContext.name} $content", objs)
+inline fun StreamerLoggerContext.debug(content: String) = debug(content, null)
 
-inline fun StreamerLoggerContext.debug(content: String) =
-  logger.debug("${streamerContext.name} $content")
+
+inline fun StreamerLoggerContext.info(content: String, vararg objs: Any?, throwable: Throwable? = null) =
+  logger.info("${context.name} $content", *objs, throwable)
+
+inline fun StreamerLoggerContext.info(content: String) = info(content, null)
+
+inline fun StreamerLoggerContext.error(content: String, vararg objs: Any?, throwable: Throwable? = null) =
+  logger.error("${context.name} $content", *objs, throwable)
+
+inline fun StreamerLoggerContext.warn(content: String, vararg objs: Any?, throwable: Throwable? = null) =
+  logger.warn("${context.name} $content", *objs, throwable)

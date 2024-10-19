@@ -27,8 +27,10 @@
 package github.hua0512.flv.data.tag
 
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
-import github.hua0512.flv.utils.write3BytesInt
-import java.io.OutputStream
+import github.hua0512.flv.utils.writeI24
+import kotlinx.io.Buffer
+import kotlinx.io.Sink
+import kotlin.experimental.and
 
 /**
  * FLV tag header representation
@@ -52,7 +54,7 @@ data class FlvTagHeader(
   /**
    * FLV tag timestamp
    */
-  val timestamp: Long,
+  val timestamp: Int,
   /**
    * FLV tag stream id, 1 byte
    */
@@ -65,17 +67,20 @@ data class FlvTagHeader(
     }
   }
 
-  fun write(outputStream: OutputStream) {
-    with(outputStream) {
-      write(tagType.value.toInt() and 0x1F)
+  fun write(sink: Sink) {
+    val buffer = Buffer()
+    with(buffer) {
+      writeByte(tagType.value and 0x1F)
       // write 3 bytes data size
-      write3BytesInt(dataSize)
+      writeI24(dataSize)
       // write 3 bytes timestamp
-      write3BytesInt(timestamp.toInt() and 0x00FFFFFF)
+      writeI24(timestamp and 0x00FFFFFF)
       // write 1 byte timestamp extension
-      write((timestamp.toInt() shr 24))
+      writeByte(((timestamp shr 24).toByte()))
       // write 3 bytes stream id
-      write3BytesInt(streamId)
+      writeI24(streamId)
     }
+    buffer.transferTo(sink)
+    sink.flush()
   }
 }

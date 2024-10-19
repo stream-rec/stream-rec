@@ -69,7 +69,7 @@ private const val MAX_DURATION = 20_000
  */
 internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flow {
 
-  var delta = 0L
+  var delta = 0
 
   var action: FlvConcatAction = NOOP
 
@@ -155,15 +155,15 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
   }
 
   fun updateDeltaDuplicated(tag: FlvTag) {
-    delta = (lastTags.last() as FlvTag).header.timestamp - tag.header.timestamp
+    delta = ((lastTags.last() as FlvTag).header.timestamp - tag.header.timestamp).toInt()
   }
 
   fun updateDeltaNonDuplicated(tag: FlvTag) {
-    delta = (lastTags.last() as FlvTag).header.timestamp - tag.header.timestamp + 10
+    delta = ((lastTags.last() as FlvTag).header.timestamp - tag.header.timestamp + 10).toInt()
   }
 
   fun correctTs(tag: FlvTag): FlvTag {
-    if (delta == 0L) {
+    if (delta == 0) {
       return tag
     }
     return tag.copy(header = tag.header.copy(timestamp = tag.header.timestamp + delta))

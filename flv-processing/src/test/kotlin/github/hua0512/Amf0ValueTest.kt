@@ -25,7 +25,8 @@
  */
 
 import github.hua0512.flv.data.amf.Amf0Value
-import java.io.ByteArrayOutputStream
+import kotlinx.io.Buffer
+import kotlinx.io.readByteArray
 import kotlin.test.Test
 import kotlin.test.expect
 
@@ -33,21 +34,21 @@ class Amf0ValueTest {
 
   @Test
   fun nullValue_writesCorrectBytes() {
-    val outputStream = ByteArrayOutputStream()
-    Amf0Value.Null.write(outputStream)
-    expect(1) { outputStream.size() }
+    val buffer = Buffer()
+    Amf0Value.Null.write(buffer)
+    expect(1) { buffer.size }
     expect(true) {
-      byteArrayOf(0x05).contentEquals(outputStream.toByteArray())
+      byteArrayOf(0x05).contentEquals(buffer.readByteArray())
     }
   }
 
   @Test
   fun numberValue_writesCorrectBytes() {
-    val outputStream = ByteArrayOutputStream()
+    val buffer = Buffer()
     val number = 1234.5678
-    Amf0Value.Number(number).write(outputStream)
-    expect(9) { outputStream.size() }
-    val bytes = outputStream.toByteArray()
+    Amf0Value.Number(number).write(buffer)
+    expect(9) { buffer.size }
+    val bytes = buffer.readByteArray()
     expect(true) {
       bytes[0] == 0x00.toByte()
     }
@@ -73,25 +74,25 @@ class Amf0ValueTest {
 
   @Test
   fun booleanValue_writesCorrectBytes() {
-    val outputStream = ByteArrayOutputStream()
-    Amf0Value.Boolean(true).write(outputStream)
+    val buffer = Buffer()
+    Amf0Value.Boolean(true).write(buffer)
     expect(true) {
-      byteArrayOf(0x01, 0x01).contentEquals(outputStream.toByteArray())
+      byteArrayOf(0x01, 0x01).contentEquals(buffer.readByteArray())
     }
   }
 
   @Test
   fun stringValue_writesCorrectBytes() {
-    val outputStream = ByteArrayOutputStream()
-    Amf0Value.String("test").write(outputStream)
+    val buffer = Buffer()
+    Amf0Value.String("test").write(buffer)
     expect(true) {
-      byteArrayOf(0x02, 0x00, 0x04, 0x74, 0x65, 0x73, 0x74).contentEquals(outputStream.toByteArray())
+      byteArrayOf(0x02, 0x00, 0x04, 0x74, 0x65, 0x73, 0x74).contentEquals(buffer.readByteArray())
     }
   }
 
   @Test
   fun objectValue_writesCorrectBytes() {
-    val outputStream = ByteArrayOutputStream()
+    val outputStream = Buffer()
     val properties = mapOf("key" to Amf0Value.String("value"))
     Amf0Value.Object(properties).write(outputStream)
     expect(true) {
@@ -113,15 +114,15 @@ class Amf0ValueTest {
         0x00,
         0x00,
         0x09
-      ).contentEquals(outputStream.toByteArray())
+      ).contentEquals(outputStream.readByteArray())
     }
   }
 
   @Test
   fun ecmaArrayValue_writesCorrectBytes() {
-    val outputStream = ByteArrayOutputStream()
+    val buffer = Buffer()
     val properties = mapOf("name" to Amf0Value.String("John"), "age" to Amf0Value.Number(30.0))
-    Amf0Value.EcmaArray(properties).write(outputStream)
+    Amf0Value.EcmaArray(properties).write(buffer)
     val ecmaArray = byteArrayOf(
       0x08,                   // Type marker for ECMA Array
       0x00, 0x00, 0x00, 0x02, // Number of key-value pairs (2)
@@ -143,15 +144,15 @@ class Amf0ValueTest {
       0x00, 0x00, 0x09
     )
     expect(true) {
-      ecmaArray.contentEquals(outputStream.toByteArray())
+      ecmaArray.contentEquals(buffer.readByteArray())
     }
   }
 
   @Test
   fun strictArrayValue_writesCorrectBytes() {
-    val outputStream = ByteArrayOutputStream()
+    val buffer = Buffer()
     val values = listOf(Amf0Value.String("value"))
-    Amf0Value.StrictArray(values).write(outputStream)
+    Amf0Value.StrictArray(values).write(buffer)
 
     expect(true) {
       byteArrayOf(
@@ -168,7 +169,7 @@ class Amf0ValueTest {
         0x6C,
         0x75,
         0x65
-      ).contentEquals(outputStream.toByteArray())
+      ).contentEquals(buffer.readByteArray())
     }
   }
 
