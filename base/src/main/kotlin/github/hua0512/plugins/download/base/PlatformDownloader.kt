@@ -623,7 +623,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       return false
     }
     val finalStreamInfo = userConfig.applyFilters(mediaInfo.streams)
-    state.value = DownloadState.Preparing(finalStreamInfo.url, finalStreamInfo.format, mediaInfo.title)
+    state.value = DownloadState.Preparing(finalStreamInfo.url, userConfig.outputFileFormat ?: finalStreamInfo.format, mediaInfo.title)
     return true
   }
 
