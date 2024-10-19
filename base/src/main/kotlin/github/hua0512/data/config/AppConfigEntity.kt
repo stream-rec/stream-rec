@@ -88,4 +88,6 @@ data class AppConfigEntity(
   val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
   @ColumnInfo(name = "pandaTvConfig")
   val pandaTvConfig: PandaTvConfigGlobal = PandaTvConfigGlobal(),
+  @ColumnInfo(name = "weiboConfig", defaultValue = "{}")
+  val weiboConfig: WeiboConfigGlobal = WeiboConfigGlobal(),
 )

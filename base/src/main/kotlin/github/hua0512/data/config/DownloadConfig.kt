@@ -167,4 +167,21 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override var onPartedDownload: List<Action>? = emptyList()
     override var onStreamingFinished: List<Action>? = emptyList()
   }
+
+  @Serializable
+  @SerialName("weibo")
+  data class WeiboDownloadConfig(
+    override var cookies: String? = null,
+    override val sourceFormat: VideoFormat? = null,
+  ) : DownloadConfig, WeiboConfigDTO {
+
+    override var engine: DownloadEngines? = null
+    override var danmu: Boolean? = null
+    override var maxBitRate: Int? = null
+    override var outputFolder: String? = null
+    override var outputFileName: String? = null
+    override var outputFileFormat: VideoFormat? = null
+    override var onPartedDownload: List<Action>? = emptyList()
+    override var onStreamingFinished: List<Action>? = emptyList()
+  }
 }

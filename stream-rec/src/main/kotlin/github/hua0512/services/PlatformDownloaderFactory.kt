@@ -28,6 +28,7 @@ package github.hua0512.services
 
 import github.hua0512.app.App
 import github.hua0512.data.stream.StreamingPlatform
+import github.hua0512.plugins.danmu.base.NoDanmu
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.Douyin
 import github.hua0512.plugins.douyin.download.DouyinExtractor
@@ -45,6 +46,8 @@ import github.hua0512.plugins.pandatv.download.PandaTvExtractor
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.plugins.twitch.download.Twitch
 import github.hua0512.plugins.twitch.download.TwitchExtractor
+import github.hua0512.plugins.weibo.download.Weibo
+import github.hua0512.plugins.weibo.download.WeiboExtractor
 
 /**
  * Platform downloader factory
@@ -71,6 +74,7 @@ object PlatformDownloaderFactory : IPlatformDownloaderFactory {
     StreamingPlatform.DOUYU -> Douyu(app, DouyuDanmu(app), DouyuExtractor(app.client, app.json, url))
     StreamingPlatform.TWITCH -> Twitch(app, TwitchDanmu(app), TwitchExtractor(app.client, app.json, url))
     StreamingPlatform.PANDATV -> PandaTv(app, PandaTvDanmu(app), PandaTvExtractor(app.client, app.json, url))
+    StreamingPlatform.WEIBO -> Weibo(app, NoDanmu(app), WeiboExtractor(app.client, app.json, url))
     else -> throw IllegalArgumentException("Platform not supported")
   }
 }

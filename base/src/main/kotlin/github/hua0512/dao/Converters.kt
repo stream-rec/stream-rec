@@ -113,6 +113,16 @@ class Converters {
   }
 
   @TypeConverter
+  fun fromWeiboGlobalConfig(value: String?): WeiboConfigGlobal? {
+    return value?.let { json.decodeFromString(it) }
+  }
+
+  @TypeConverter
+  fun toWeiboGlobalConfig(value: WeiboConfigGlobal?): String? {
+    return value?.let { json.encodeToString(it) }
+  }
+
+  @TypeConverter
   fun fromDownloadConfig(value: String?): DownloadConfig? {
     return value?.let { json.decodeFromString(it) }
   }

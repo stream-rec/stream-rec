@@ -24,31 +24,43 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.plugins.danmu.base
 
+import github.hua0512.app.App
+import github.hua0512.data.media.DanmuDataWrapper
+import github.hua0512.data.stream.Streamer
+import io.ktor.websocket.WebSocketSession
+import kotlinx.datetime.Instant
 
 /**
- * TODO : Use KSP to generate this class
+ * No danmu implementation
+ * @author hua0512
+ * @date : 2024/10/20 0:08
  */
-enum class StreamingPlatform(val id: Int) {
-  HUYA(0),
-  DOUYIN(1),
-  DOUYU(2),
-  TWITCH(3),
-  PANDATV(4),
-  WEIBO(5),
-  UNKNOWN(Int.MAX_VALUE);
+class NoDanmu(app: App) : Danmu(app) {
 
+  override val websocketUrl: String = ""
 
-  companion object {
-    fun fromId(id: Int): StreamingPlatform? {
-      for (platform in entries) {
-        if (platform.id == id) {
-          return platform
-        }
-      }
-      return null
-    }
+  override val heartBeatDelay: Long = 0
+
+  override val heartBeatPack: ByteArray = byteArrayOf()
+
+  override suspend fun initDanmu(streamer: Streamer, startTime: Instant): Boolean {
+    return false
   }
 
+  override fun oneHello(): ByteArray {
+    return byteArrayOf()
+  }
+
+  override fun onDanmuRetry(retryCount: Int) {
+
+  }
+
+  override suspend fun decodeDanmu(
+    session: WebSocketSession,
+    data: ByteArray,
+  ): List<DanmuDataWrapper?> {
+    return emptyList()
+  }
 }

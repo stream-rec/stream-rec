@@ -90,3 +90,12 @@ data class PandaTvConfigGlobal(
   override val quality: PandaTvQuality = PandaTvQuality.Source,
   override val fetchDelay: Long = 30,
 ) : GlobalPlatformConfig, PandaTvConfigDTO
+
+
+@Serializable
+data class WeiboConfigGlobal(
+  override val cookies: String? = null,
+  override val fetchDelay: Long? = 0,
+  override val partedDownloadRetry: Int? = 0,
+  override val sourceFormat: VideoFormat? = VideoFormat.flv,
+) : GlobalPlatformConfig, WeiboConfigDTO

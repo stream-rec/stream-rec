@@ -124,7 +124,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * Function to match the url with the regex pattern
    * @return a boolean value
    */
-  protected open fun match(): Boolean = regexPattern.matches(url)
+  open fun match(): Boolean = regexPattern.matches(url)
 
 
   /**

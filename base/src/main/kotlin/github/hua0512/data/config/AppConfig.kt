@@ -62,6 +62,7 @@ data class AppConfig(
   val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
   val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
   val pandaTvConfig: PandaTvConfigGlobal = PandaTvConfigGlobal(),
+  val weiboConfig: WeiboConfigGlobal = WeiboConfigGlobal(),
 ) {
 
   constructor(entity: AppConfigEntity) : this(
@@ -90,6 +91,7 @@ data class AppConfig(
     entity.douyuConfig,
     entity.twitchConfig,
     entity.pandaTvConfig,
+    entity.weiboConfig,
   )
 
 
@@ -119,5 +121,6 @@ data class AppConfig(
     douyuConfig,
     twitchConfig,
     pandaTvConfig,
+    weiboConfig,
   )
 }

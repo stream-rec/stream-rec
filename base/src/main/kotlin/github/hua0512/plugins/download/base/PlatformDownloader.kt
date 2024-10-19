@@ -45,6 +45,7 @@ import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.danmu.base.Danmu
+import github.hua0512.plugins.danmu.base.NoDanmu
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.download.ProgressBarManager
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
@@ -253,7 +254,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
 
     val fileExtension = format.fileExtension
-    val isDanmuEnabled = downloadConfig.danmu == true
+    val isDanmuEnabled = downloadConfig.danmu == true && danmu !is NoDanmu
     val genericOutputPath = buildOutputFilePath(downloadConfig, title, fileExtension)
 
 
