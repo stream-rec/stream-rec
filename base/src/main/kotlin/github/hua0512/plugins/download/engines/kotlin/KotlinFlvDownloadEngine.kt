@@ -163,7 +163,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
           // Other exceptions like IO or something
           metaInfoProvider.clear()
           // remove PART prefix as onDownloaded is called before and the file is renamed
-          onDownloadError(lastDownloadFilePath.removePrefix(PART_PREFIX), cause as Exception)
+          onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), cause as Exception)
           return@onCompletion
         } else if (metaInfoProvider.size == 0 && cause == null) {
           // case when download is completed, 0 segments downloaded
