@@ -29,6 +29,8 @@
 * 文档: 添加爱发电链接
 * 重构(ffmpeg): 使用ffprobe检测分辨率变化（实验性）
 * 增加: 支持定时任务下载
+* 添加: 下载引擎功能对比文档
+* 修复: 部分主播未成功下播
 
 **Full Changelog**: https://github.com/stream-rec/stream-rec/compare/v0.7.1...v0.7.2
 
