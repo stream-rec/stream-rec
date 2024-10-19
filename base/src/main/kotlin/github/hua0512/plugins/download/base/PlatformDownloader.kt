@@ -585,6 +585,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * @throws InsufficientDownloadSizeException if there is not enough disk space
    */
   private fun checkDiskSpace(path: Path, size: Long) {
+    if (size == 0L) return
+
     val fileStore = Files.getFileStore(path)
     val usableSpace = fileStore.usableSpace
     if (usableSpace < size) {
