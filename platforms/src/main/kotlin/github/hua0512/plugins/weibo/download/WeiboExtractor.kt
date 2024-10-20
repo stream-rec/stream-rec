@@ -47,6 +47,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
+ * Weibo live stream extractor
+ *
+ * Logic and credits from: https://github.com/ihmily/DouyinLiveRecorder
  * @author hua0512
  * @date : 2024/10/19 21:35
  */
