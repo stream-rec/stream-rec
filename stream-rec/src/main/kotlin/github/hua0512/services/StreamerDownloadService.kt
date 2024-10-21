@@ -172,36 +172,22 @@ class StreamerDownloadService(
   }
 
   private suspend fun CoroutineScope.handleLiveStreamer(definedStartTime: String?, definedStopTime: String?) {
-    // save streamer to the database with the new isLive value
-    if (!streamer.isLive) {
-      EventCenter.sendEvent(
-        StreamerOnline(
-          streamer.name,
-          streamer.url,
-          streamer.platform,
-          streamer.streamTitle ?: "",
-          Clock.System.now()
-        )
-      )
-      callback?.onLiveStatusChanged(streamer.id, true) {
-        streamer.isLive = true
-      }
-    }
-    updateLastLiveTime()
-
+    inTimerRange = true
     if (definedStartTime != null && definedStopTime != null) {
       val (delay, durationMillis) = parseTimerDuration(definedStartTime, definedStopTime)
       if (delay != 0L) {
         throw CancellationException("${streamer.name} outside timer range")
       }
-      inTimerRange = true
       launchStopTask(durationMillis)
     }
 
     var hasError = false
     // while loop for parted download
     while (!isCancelled.value && inTimerRange) {
-      downloadStream(onDownloaded = { stream, metaInfo ->
+      downloadStream(onStarted = {
+        updateStreamerLiveStatus()
+        updateLastLiveTime()
+      }, onDownloaded = { stream, metaInfo ->
         callback?.onStreamDownloaded(streamer.id, stream, metaInfo != null, metaInfo)
         dataList.add(stream)
       }) {
@@ -216,6 +202,7 @@ class StreamerDownloadService(
   }
 
   private suspend inline fun downloadStream(
+    onStarted: () -> Unit,
     noinline onDownloaded: OnStreamDownloaded = { _, _ -> },
     crossinline onStreamDownloadError: (e: Throwable) -> Unit = {},
   ) {
@@ -223,6 +210,7 @@ class StreamerDownloadService(
     // while loop for parting the download
     return downloadSemaphore.withPermit {
       isDownloading = true
+      onStarted()
       try {
         with(plugin) {
           onStreamDownloaded = onDownloaded
@@ -427,6 +415,24 @@ class StreamerDownloadService(
     if (streamer.isLive) {
       callback?.onLiveStatusChanged(streamer.id, false) {
         streamer.isLive = false
+      }
+    }
+  }
+
+  private suspend fun updateStreamerLiveStatus() {
+    // save streamer to the database with the new isLive value
+    if (!streamer.isLive) {
+      EventCenter.sendEvent(
+        StreamerOnline(
+          streamer.name,
+          streamer.url,
+          streamer.platform,
+          streamer.streamTitle ?: "",
+          Clock.System.now()
+        )
+      )
+      callback?.onLiveStatusChanged(streamer.id, true) {
+        streamer.isLive = true
       }
     }
   }
