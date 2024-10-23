@@ -95,6 +95,11 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
       cookies = newCookies,
     )
 
+    WEIBO -> DownloadConfig.WeiboDownloadConfig(
+      cookies = newCookies,
+      sourceFormat = (streamerConfig as DownloadConfig.WeiboDownloadConfig).sourceFormat ?: appConfig.weiboConfig.sourceFormat,
+    )
+
     UNKNOWN -> throw UnsupportedOperationException("Platform not supported")
   } as T
 
@@ -147,5 +152,6 @@ fun StreamingPlatform.globalConfig(config: AppConfig): GlobalPlatformConfig = wh
   DOUYU -> config.douyuConfig
   TWITCH -> config.twitchConfig
   PANDATV -> config.pandaTvConfig
+  WEIBO -> config.weiboConfig
   else -> throw UnsupportedOperationException("Platform not supported")
 }

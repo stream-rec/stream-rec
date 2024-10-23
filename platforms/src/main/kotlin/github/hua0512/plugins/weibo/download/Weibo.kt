@@ -24,31 +24,29 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.stream
+package github.hua0512.plugins.weibo.download
 
+import github.hua0512.app.App
+import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.config.DownloadConfig.WeiboDownloadConfig
+import github.hua0512.data.media.VideoFormat
+import github.hua0512.data.stream.StreamInfo
+import github.hua0512.plugins.danmu.base.Danmu
+import github.hua0512.plugins.download.base.PlatformDownloader
 
 /**
- * TODO : Use KSP to generate this class
+ * Weibo platform downloader.
+ * @author hua0512
+ * @date : 2024/10/20 0:04
  */
-enum class StreamingPlatform(val id: Int) {
-  HUYA(0),
-  DOUYIN(1),
-  DOUYU(2),
-  TWITCH(3),
-  PANDATV(4),
-  WEIBO(5),
-  UNKNOWN(Int.MAX_VALUE);
+class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) : PlatformDownloader<WeiboDownloadConfig>(app, danmu, extractor) {
 
+  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
-  companion object {
-    fun fromId(id: Int): StreamingPlatform? {
-      for (platform in entries) {
-        if (platform.id == id) {
-          return platform
-        }
-      }
-      return null
-    }
+  override fun getProgramArgs(): List<String> = emptyList()
+
+  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
+    val selectedStreamFormat = downloadConfig.sourceFormat ?: VideoFormat.flv
+    return streams.firstOrNull { it.format == selectedStreamFormat } ?: streams.first()
   }
-
 }
