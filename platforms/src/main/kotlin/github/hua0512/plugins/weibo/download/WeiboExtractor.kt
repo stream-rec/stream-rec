@@ -147,7 +147,7 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
       val user = list.firstOrNull()?.jsonObject["user"]?.jsonObject
         ?: throw InvalidExtractionParamsException("$url user info not found")
       artist = user["screen_name"]?.jsonPrimitive?.content ?: ""
-      avatarUrl = user["profile_image_url"]?.jsonPrimitive?.content ?: ""
+//      avatarUrl = user["profile_image_url"]?.jsonPrimitive?.content ?: ""
       return false
     }
 
