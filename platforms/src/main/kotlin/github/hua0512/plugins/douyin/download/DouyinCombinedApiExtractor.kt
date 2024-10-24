@@ -28,6 +28,7 @@ package github.hua0512.plugins.douyin.download
 
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.APP_ROOM_REFLOW
+import github.hua0512.utils.mainLogger
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -55,7 +56,8 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
       val mobileResponse = getResponse(APP_ROOM_REFLOW) {
         fillDouyinAppCommonParams()
         fillSecUid(secRid)
-        parameter(DouyinParams.ROOM_ID_KEY, idStr)
+        // no id str check preset
+        parameter(DouyinParams.ROOM_ID_KEY, idStr.ifEmpty { "2" })
       }
       if (!(mobileResponse.status.isSuccess())) {
         throw InvalidExtractionResponseException("$url mobile api failed, status code = ${mobileResponse.status}")
@@ -65,6 +67,7 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
       val dataObj = liveData.jsonObject["data"]?.jsonObject
         ?: throw InvalidExtractionResponseException("$url mobile api failed to get data")
 
+      mainLogger.debug("$url dataObj : $dataObj")
       val roomInfo = dataObj["room"]?.jsonObject
         ?: throw InvalidExtractionResponseException("$url mobile api failed to get room info")
 
