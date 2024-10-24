@@ -41,23 +41,26 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import kotlinx.serialization.json.*
 
+
+internal class FallbackToDouyinMobileException : InvalidExtractionResponseException("PC api failed!")
+
 /**
  *
  * Douyin live stream extractor
  * @author hua0512
  * @date : 2024/3/16 13:10
  */
-class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : Extractor(http, json) {
+open class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : Extractor(http, json) {
 
   companion object {
-    const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:live\\.)?douyin\\.com/([a-zA-Z0-9_\\.]+)"
+    internal const val URL_REGEX = "(?:https?://)?(?:www\\.)?(?:v|live\\.)?douyin\\.com/([a-zA-Z0-9_\\.]+)"
   }
 
   override val regexPattern: Regex = URL_REGEX.toRegex()
+  protected lateinit var webRid: String
+  protected lateinit var secRid: String
 
-  private lateinit var webRid: String
-
-  private var jsonData: JsonElement = JsonNull
+  protected var liveData: JsonElement = JsonNull
 
   init {
     platformHeaders[HttpHeaders.Referrer] = LIVE_DOUYIN_URL
@@ -82,37 +85,46 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
       }
       fillWebRid(webRid)
     }
-    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("$url failed, status code = ${response.status}")
+    if (!(response.status.isSuccess())) throw InvalidExtractionResponseException("$url failed, status code = ${response.status}")
+
     val textBody = response.bodyAsText()
     if (textBody.isEmpty()) {
       logger.info("$url response is empty")
       return false
     }
-    jsonData = json.parseToJsonElement(textBody)
-    val data = jsonData.jsonObject["data"]?.jsonObject ?: throw InvalidExtractionParamsException("$url failed to get data")
 
-    val errorMsg = data.jsonObject["prompts"]?.jsonPrimitive?.content
+    val dataInfo = json.parseToJsonElement(textBody).jsonObject["data"]?.jsonObject
+      ?: throw InvalidExtractionParamsException("$url failed to get data")
 
+    val errorMsg = dataInfo.jsonObject["prompts"]?.jsonPrimitive?.content
     if (errorMsg != null) {
       logger.error("$url : $errorMsg")
       return false
     }
 
-    val dataArray = data["data"]?.jsonArray
+    val user = dataInfo["user"]?.jsonObject ?: throw InvalidExtractionParamsException("$url user section is missing")
 
-    if (dataArray == null || dataArray.isEmpty()) {
-      logger.debug("$url unable to get live data")
-      return false
-    }
+    secRid =
+      user["sec_uid"]?.jsonPrimitive?.content ?: throw InvalidExtractionResponseException("$url failed to get sec uid")
 
-    idStr = data["enter_room_id"]?.jsonPrimitive?.content ?: run {
+    logger.debug("$url sec_uid : $secRid")
+
+    idStr = dataInfo["enter_room_id"]?.jsonPrimitive?.content ?: run {
       logger.debug("$url unable to get id_str")
       return false
     }
 
-    val liveData = dataArray[0].jsonObject
+    // check if data["data"] section is present
+    // if not, throw FallbackToDouyinMobileException
+    if (!dataInfo.containsKey("data") || dataInfo["data"]!! !is JsonArray || dataInfo["data"]!!.jsonArray.isEmpty()) {
+      liveData = JsonNull
+      throw FallbackToDouyinMobileException()
+    }
 
-    val status = liveData["status"]?.jsonPrimitive?.int ?: run {
+    val dataArray = dataInfo["data"]!!.jsonArray
+    liveData = dataArray.first().jsonObject
+
+    val status = (liveData as JsonObject)["status"]?.jsonPrimitive?.int ?: run {
       logger.debug("$url unable to get live status")
       return false
     }
@@ -122,20 +134,12 @@ class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : 
   override suspend fun extract(): MediaInfo {
     val isLive = isLive()
 
-    if (jsonData is JsonNull) {
+    if (liveData is JsonNull) {
       logger.debug("$url unable to get json data")
       return MediaInfo(url, "", "", "", "")
     }
 
-    val data = jsonData.jsonObject["data"]?.jsonObject?.get("data")?.jsonArray ?: return MediaInfo(url, "", "", "", "")
-
-    val dataArray = data.jsonArray
-    if (dataArray.isEmpty()) {
-      logger.debug("$url unable to get live data")
-      return MediaInfo(url, "", "", "", "")
-    }
-
-    val liveData = dataArray[0].jsonObject
+    val liveData = liveData as JsonObject
     val title = liveData["title"]!!.jsonPrimitive.content
     val owner = liveData["owner"]
     val nickname = owner?.jsonObject?.get("nickname")?.jsonPrimitive?.content ?: ""

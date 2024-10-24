@@ -31,5 +31,5 @@ package github.hua0512.plugins.base.exceptions
  * @author hua0512
  * @date : 2024/7/5 14:15
  */
-class InvalidExtractionResponseException(override val message: String) : IllegalArgumentException(message) {
+open class InvalidExtractionResponseException(override val message: String) : IllegalArgumentException(message) {
 }

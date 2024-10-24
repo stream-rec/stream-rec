@@ -46,7 +46,7 @@ import github.hua0512.plugins.download.base.PlatformDownloader
 class Douyin(
   app: App,
   override val danmu: DouyinDanmu,
-  override val extractor: DouyinExtractor,
+  override val extractor: DouyinCombinedApiExtractor,
 ) :
   PlatformDownloader<DouyinDownloadConfig>(app, danmu, extractor) {
 
