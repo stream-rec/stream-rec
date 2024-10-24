@@ -49,7 +49,8 @@ import kotlin.collections.set
  * @author hua0512
  * @date : 2024/3/22 13:21
  */
-open class DouyuExtractor(override val http: HttpClient, override val json: Json, override val url: String) : Extractor(http, json) {
+open class DouyuExtractor(override val http: HttpClient, override val json: Json, override val url: String) :
+  Extractor(http, json) {
 
 
   companion object {
@@ -170,7 +171,11 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     return mediaInfo.copy(title = title, artist = artist, artistImageUrl = avatar, coverUrl = cover, streams = streams)
   }
 
-  private suspend fun getStreamInfo(selectedCdn: String = "", selectedRate: String = "0", encMap: Map<String, Any?>): Pair<StreamInfo, JsonArray> {
+  private suspend fun getStreamInfo(
+    selectedCdn: String = "",
+    selectedRate: String = "0",
+    encMap: Map<String, Any?>
+  ): Pair<StreamInfo, JsonArray> {
     val liveDataResponse = postResponse("https://www.douyu.com/lapi/live/getH5Play/$rid") {
       //  ws-5（线路1） tctc-h5（备用线路4）, tct-h5（备用线路5）, ali-h5（备用线路6）, hw-h5（备用线路7）, hs-h5（备用线路13）
       val cdn = if (selectedCdn == HS_CDN) {
@@ -218,14 +223,14 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     // list of supported rates
     val multirates = liveData["multirates"]?.jsonArray
     // rate should be 0, but we obtain it from the live data just in case
-    val rate = liveData["rate"]?.jsonPrimitive?.intOrNull
+    val rate = liveData["rate"]?.jsonPrimitive?.intOrNull ?: 0
     // cdn, usually tct-h5
     val cdn = if (selectedCdn == HS_CDN)
       HS_CDN
     else
       liveData["rtmp_cdn"]!!.jsonPrimitive.content
 
-    val qualityName = getRateInfo(multirates!!.find { it.jsonObject["rate"]!!.jsonPrimitive.intOrNull === rate }!!.jsonObject)
+    val qualityName = getRateInfo(multirates!!.find { it.jsonObject["rate"]!!.jsonPrimitive.int == rate }!!.jsonObject)
     return StreamInfo(
       url = url,
       format = VideoFormat.flv,

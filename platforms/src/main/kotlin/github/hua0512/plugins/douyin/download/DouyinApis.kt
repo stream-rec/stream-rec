@@ -44,7 +44,7 @@ class DouyinApis {
 
 
     internal const val WEBCAST_ENTER = "${LIVE_DOUYIN_URL}/webcast/room/web/enter/"
-
+    internal const val APP_ROOM_REFLOW = "https://webcast.amemv.com/webcast/room/reflow/info/"
 
     internal val webSocketDomains = arrayOf(
       "wss://webcast5-ws-web-lq.douyin.com",

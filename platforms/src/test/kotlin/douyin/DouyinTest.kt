@@ -30,6 +30,7 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.DouyinExtractor
+import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
 import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.DefaultAsserter.assertEquals
@@ -76,7 +77,7 @@ class DouyinTest : BaseTest() {
 
   @Test
   override fun testLive(): Unit = runTest {
-    val extractor = DouyinExtractor(app.client, app.json, testUrl).apply {
+    val extractor = DouyinCombinedApiExtractor(app.client, app.json, testUrl).apply {
       prepare()
     }
     val info = extractor.extract()

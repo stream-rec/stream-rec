@@ -46,10 +46,12 @@ internal class DouyinRequestParams {
     internal const val WEBCAST_SDK_VERSION_KEY = "webcast_sdk_version"
     internal const val UPDATE_VERSION_CODE_KEY = "update_version_code"
 
+
     internal const val SDK_VERSION = "1.0.14-beta.0"
 
     internal const val ROOM_ID_KEY = "room_id"
     internal const val WEB_RID_KEY = "web_rid"
+    internal const val SEC_USER_ID_KEY = "sec_user_id"
     internal const val USER_UNIQUE_KEY = "user_unique_id"
     internal const val SIGNATURE_KEY = "signature"
 
@@ -85,6 +87,17 @@ internal class DouyinRequestParams {
       "endpoint" to "live_pc",
       "identity" to "audience",
       "heartbeatDuration" to "0",
+    )
+
+
+    /**
+     * Douyin app common params
+     */
+    internal val appCommonParams = mapOf(
+      "type_id" to "0",
+      "live_id" to "1",
+      "version_code" to "99.99.99",
+      "app_id" to "1128",
     )
   }
 }

@@ -58,10 +58,20 @@ internal fun HttpRequestBuilder.fillDouyinCommonParams() {
   }
 }
 
+internal fun HttpRequestBuilder.fillDouyinAppCommonParams() {
+  DouyinParams.appCommonParams.forEach { (t, u) ->
+    parameter(t, u)
+  }
+}
+
 internal fun MutableMap<String, String>.fillDouyinCommonParams() {
   putAll(DouyinParams.commonParams)
 }
 
 internal fun HttpRequestBuilder.fillWebRid(webRid: String) {
   parameter(DouyinParams.WEB_RID_KEY, webRid)
+}
+
+internal fun HttpRequestBuilder.fillSecUid(secUid: String) {
+  parameter(DouyinParams.SEC_USER_ID_KEY, secUid)
 }
