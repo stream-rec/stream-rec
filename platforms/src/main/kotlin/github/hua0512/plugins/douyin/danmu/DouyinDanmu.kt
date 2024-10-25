@@ -55,6 +55,7 @@ import github.hua0512.utils.withIOContext
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.datetime.Instant
+import java.util.zip.ZipException
 
 
 /**
@@ -141,9 +142,17 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     val pushFrame = PushFrame.parseFrom(data)
     val logId = pushFrame.logId
     val payload = pushFrame.payload.toByteArray()
+
     val decompressed = withIOContext {
-      decompressGzip(payload)
+      try {
+        decompressGzip(payload)
+      } catch (e: ZipException) {
+        // should be cases when payload is not compressed
+        // use it directly
+        payload
+      }
     }
+
     val payloadPackage = Dy.Response.parseFrom(decompressed)
     val internalExt = payloadPackage.internalExtBytes
     if (payloadPackage.needAck) {
