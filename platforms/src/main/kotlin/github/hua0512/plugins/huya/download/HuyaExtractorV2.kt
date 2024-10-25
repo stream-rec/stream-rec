@@ -44,7 +44,8 @@ import kotlinx.serialization.json.*
  * @author hua0512
  * @date : 2024/5/21 20:20
  */
-class HuyaExtractorV2(override val http: HttpClient, override val json: Json, override val url: String) : HuyaExtractor(http, json, url) {
+class HuyaExtractorV2(override val http: HttpClient, override val json: Json, override val url: String) :
+  HuyaExtractor(http, json, url) {
 
   companion object {
     private const val MP_BASE_URL = "https://mp.huya.com/cache.php"
@@ -157,12 +158,17 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
       throw InvalidExtractionParamsException("stream is null from $url")
     }
 
+    if (streamJson is JsonArray && streamJson.isEmpty()) {
+      throw InvalidExtractionParamsException("$url stream is empty")
+    }
+
     if (streamJson !is JsonObject) {
       throw InvalidExtractionParamsException("stream is not a json object from $url : $streamJson")
     }
 
     val baseStreamInfoList =
-      streamJson["baseSteamInfoList"]?.jsonArray ?: throw InvalidExtractionParamsException("baseStreamInfoList is null from $url")
+      streamJson["baseSteamInfoList"]?.jsonArray
+        ?: throw InvalidExtractionParamsException("baseStreamInfoList is null from $url")
     if (baseStreamInfoList.isEmpty()) {
       throw InvalidExtractionParamsException("baseStreamInfoList is empty from $url")
     }
@@ -170,7 +176,8 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     // get bitrate list
     val bitrateInfo = livedata?.get("bitRateInfo")?.jsonPrimitive?.content?.run {
       json.parseToJsonElement(this).jsonArray
-    } ?: streamJson["flv"]?.jsonObject?.get("rateArray")?.jsonArray ?: throw InvalidExtractionParamsException("bitRateInfo is null from $url")
+    } ?: streamJson["flv"]?.jsonObject?.get("rateArray")?.jsonArray
+    ?: throw InvalidExtractionParamsException("bitRateInfo is null from $url")
 
     val maxBitRate = livedata?.get("bitRate")?.jsonPrimitive?.int ?: 0
 
