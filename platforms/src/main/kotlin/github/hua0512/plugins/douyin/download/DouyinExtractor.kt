@@ -102,12 +102,11 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
       return false
     }
 
-    val user = dataInfo["user"]?.jsonObject ?: throw InvalidExtractionParamsException("$url user section is missing")
+    val user = dataInfo["user"]?.jsonObject
+      ?: throw InvalidExtractionParamsException("$url user section is missing")
 
-    secRid =
-      user["sec_uid"]?.jsonPrimitive?.content ?: throw InvalidExtractionResponseException("$url failed to get sec uid")
-
-    logger.debug("$url sec_uid : $secRid")
+    secRid = user["sec_uid"]?.jsonPrimitive?.content
+      ?: throw InvalidExtractionResponseException("$url failed to get sec uid")
 
     idStr = dataInfo["enter_room_id"]?.jsonPrimitive?.content ?: run {
       logger.debug("$url unable to get id_str")
