@@ -160,6 +160,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   private var hasReceivedEnd = false
 
   /**
+   * Callback triggered when danmu is closed
+   */
+  private var onDanmuClosedCallback: (() -> Unit)? = null
+
+  /**
    * Initialize danmu
    *
    * @param streamer streamer
@@ -310,6 +315,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
           is EndOfDanmu -> {
             logger.info("$filePath End of danmu received")
             hasReceivedEnd = true
+            onDanmuClosedCallback?.invoke()
             close()
           }
 
@@ -504,6 +510,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       String.format("%.3f", time / 1000.0).toDouble()
     }
     return delta
+  }
+
+
+  fun setOnDanmuClosedCallback(callback: () -> Unit) {
+    onDanmuClosedCallback = callback
   }
 
 }

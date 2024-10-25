@@ -190,10 +190,13 @@ class StreamerDownloadService(
       }, onDownloaded = { stream, metaInfo ->
         callback?.onStreamDownloaded(streamer.id, stream, metaInfo != null, metaInfo)
         dataList.add(stream)
-      }) {
+      }, onStreamDownloadError = {
         logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
         hasError = true
-      }
+      }, onDownloadFinished = {
+        hasError = true
+      })
+
       // break the loop if error occurred or download is cancelled
       if (hasError || isCancelled.value) break
 
@@ -205,15 +208,21 @@ class StreamerDownloadService(
     onStarted: () -> Unit,
     noinline onDownloaded: OnStreamDownloaded = { _, _ -> },
     crossinline onStreamDownloadError: (e: Throwable) -> Unit = {},
+    noinline onDownloadFinished: () -> Unit = {},
   ) {
     // streamer is live, start downloading
-    // while loop for parting the download
+    var isStreamEnd = false
     return downloadSemaphore.withPermit {
       isDownloading = true
+      isStreamEnd = false
       onStarted()
       try {
         with(plugin) {
           onStreamDownloaded = onDownloaded
+          onStreamFinished = {
+            isStreamEnd = true
+            onDownloadFinished()
+          }
           download()
         }
         logger.debug("${streamer.name} download finished")
@@ -233,6 +242,8 @@ class StreamerDownloadService(
 
           else -> {
             logger.error("${streamer.name} download error", e)
+            // do not log error if the stream has ended
+            if (isStreamEnd) return
             onStreamDownloadError(e)
           }
         }

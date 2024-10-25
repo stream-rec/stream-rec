@@ -135,6 +135,12 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   open var onStreamDownloaded: OnStreamDownloaded? = null
 
+  /**
+   * Callback triggered when the stream is finished
+   * This callback is invoked after end of danmu is detected
+   */
+  open var onStreamFinished: (() -> Unit)? = null
+
   private var pb: ProgressBar? = null
 
 
@@ -261,6 +267,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     var danmuJob: Job? = null
 
+    var hasEndOfDanmu = false
 
     val downloadCallback = object : DownloadCallback {
       override fun onInit() {
@@ -397,6 +404,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       if (definedArgs.isNotEmpty()) programArgs.addAll(definedArgs)
       // configure engine
       configureEngine(app)
+      // listen for end of danmu event
+      danmu.setOnDanmuClosedCallback { hasEndOfDanmu = true }
     }
     // start download
     try {
@@ -406,6 +415,10 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       ProgressBarManager.deleteProgressBar(url)
       engine.clean()
       pb = null
+      // call onStreamFinished if danmu is enabled and end of danmu is detected
+      if (isDanmuEnabled && hasEndOfDanmu) {
+        onStreamFinished?.invoke()
+      }
       when (state.value) {
         is DownloadState.Error -> {
           val (filePath, error) = state.value as DownloadState.Error

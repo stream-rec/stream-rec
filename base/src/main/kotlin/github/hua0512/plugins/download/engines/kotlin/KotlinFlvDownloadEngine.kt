@@ -39,26 +39,15 @@ import github.hua0512.utils.debug
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.warn
 import github.hua0512.utils.writeToFile
-import io.ktor.client.request.header
-import io.ktor.client.request.prepareGet
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.http.HttpHeaders
-import io.ktor.http.Url
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.datetime.Clock
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
-import kotlin.io.path.Path
-import kotlin.io.path.createParentDirectories
-import kotlin.io.path.fileSize
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 
 /**
  * Kotlin download engine for flv format
@@ -110,6 +99,11 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
         this@KotlinFlvDownloadEngine.headers.forEach { header(it.key, it.value) }
         cookies?.let { header(HttpHeaders.Cookie, it) }
       }.execute { httpResponse ->
+        if (!httpResponse.status.isSuccess()) {
+          exception = FatalDownloadErrorException("Failed to download flv, status: ${httpResponse.status}")
+          onDownloadError(lastDownloadFilePath, exception as Exception)
+          throw exception!!
+        }
         val channel = httpResponse.bodyAsChannel()
         if (enableFlvFix) {
           channel
