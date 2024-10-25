@@ -153,6 +153,7 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
 
     if (it.isHeader()) {
       reset()
+      lastHeader = it as FlvHeader
       emit(it)
       return@collect
     }
