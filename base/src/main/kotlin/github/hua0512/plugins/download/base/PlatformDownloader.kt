@@ -54,13 +54,8 @@ import github.hua0512.plugins.download.engines.ffmpeg.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.kotlin.KotlinFlvDownloadEngine
 import github.hua0512.plugins.download.engines.kotlin.KotlinHlsDownloadEngine
 import github.hua0512.plugins.event.EventCenter
-import github.hua0512.utils.deleteFile
-import github.hua0512.utils.formatToFileNameFriendly
-import github.hua0512.utils.logger
-import github.hua0512.utils.nonEmptyOrNull
-import github.hua0512.utils.replacePlaceholders
-import github.hua0512.utils.withIORetry
-import io.ktor.http.ContentType
+import github.hua0512.utils.*
+import io.ktor.http.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,11 +67,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.io.path.Path
-import kotlin.io.path.exists
-import kotlin.io.path.extension
-import kotlin.io.path.fileSize
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 
 
 typealias OnStreamDownloaded = (StreamData, FlvMetadataInfo?) -> Unit
@@ -84,7 +75,7 @@ typealias OnStreamDownloaded = (StreamData, FlvMetadataInfo?) -> Unit
 
 sealed class DownloadState {
   data object Idle : DownloadState()
-  data class Preparing(val downloadUrl: String, val format: VideoFormat, val title: String) : DownloadState()
+  data class Preparing(val downloadUrl: String, val format: VideoFormat, val userSelectedFormat: VideoFormat?, val title: String) : DownloadState()
   data object Downloading : DownloadState()
   data object Paused : DownloadState()
   data object Stopped : DownloadState()
@@ -175,7 +166,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   fun oneShotInit(downloadUrl: String, downloadFormat: VideoFormat) {
     isInitialized = true
     isOneShot = true
-    state.value = DownloadState.Preparing(downloadUrl, downloadFormat, "")
+    state.value = DownloadState.Preparing(downloadUrl, downloadFormat, downloadFormat, "")
   }
 
 
@@ -231,6 +222,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
 
   suspend fun download() = supervisorScope {
+    require(isInitialized) { "Downloader is not initialized" }
     if (state.value == DownloadState.Downloading) {
       throw IllegalStateException("Downloader is already downloading")
       return@supervisorScope
@@ -246,10 +238,10 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       return@supervisorScope
     }
 
-    val (url, format, title) = when (val state = state.value) {
-      is DownloadState.Preparing -> state.run { Triple(downloadUrl, format, title) }
-      else -> throw IllegalStateException("Invalid state")
-    }
+    require(state.value is DownloadState.Preparing) { "${streamer.name} Invalid state" }
+
+    val (url, format, userSelectedFormat, title) = state.value as DownloadState.Preparing
+
     logger.debug("{}, starting download {}", streamer.name, url)
 
 
@@ -391,7 +383,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       // init engine
       init(
         url,
-        format,
+        userSelectedFormat ?: format,
         genericOutputPath.pathString,
         streamerContext,
         downloadConfig.cookies,
@@ -414,38 +406,46 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       ProgressBarManager.deleteProgressBar(url)
       engine.clean()
       pb = null
-      if (state.value is DownloadState.Error) {
-        val (filePath, error) = state.value as DownloadState.Error
-        logger.error("(${streamer.name}) {} finally download error:", filePath, error)
-        // clean up the outputs
-        danmuJob?.let {
-          danmu.finish()
-          stopDanmuJob(it)
-          val shouldDeleteDanmu = filePath.isNullOrEmpty() || !(Path(filePath).exists())
-          if (shouldDeleteDanmu) {
-            // delete the danmu file
-            danmu.filePath.let { path ->
-              Path(path).deleteFile()
+      when (state.value) {
+        is DownloadState.Error -> {
+          val (filePath, error) = state.value as DownloadState.Error
+          logger.error("(${streamer.name}) {} finally download error:", filePath, error)
+          // clean up the outputs
+          danmuJob?.let {
+            danmu.finish()
+            stopDanmuJob(it)
+            val shouldDeleteDanmu = filePath.isNullOrEmpty() || !(Path(filePath).exists())
+            if (shouldDeleteDanmu) {
+              // delete the danmu file
+              danmu.filePath.let { path ->
+                Path(path).deleteFile()
+              }
             }
+            danmuJob = null
           }
-          danmuJob = null
+          throw error
         }
-        throw error
-      } else if (state.value is DownloadState.Downloading) {
-        // we should clean up the outputs
-        // this is an abnormal termination
-        logger.error("(${streamer.name}) abnormal termination")
-        danmuJob?.let {
-          stopDanmuJob(it)
+
+        is DownloadState.Downloading -> {
+          // we should clean up the outputs
+          // this is an abnormal termination
+          logger.error("(${streamer.name}) abnormal termination")
+          danmuJob?.let {
+            stopDanmuJob(it)
+          }
         }
-      } else if (state.value is DownloadState.Finished) {
-        // clean up the outputs
-        danmuJob?.let {
-          stopDanmuJob(it)
+
+        is DownloadState.Finished -> {
+          // clean up the outputs
+          danmuJob?.let {
+            stopDanmuJob(it)
+          }
         }
+
+        else -> {}
       }
       // we reset the state here
-      state.value = DownloadState.Preparing(url, format, title)
+      state.value = DownloadState.Preparing(url, format, userSelectedFormat, title)
       danmuJob = null
     }
   }
@@ -624,7 +624,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       return false
     }
     val finalStreamInfo = userConfig.applyFilters(mediaInfo.streams)
-    state.value = DownloadState.Preparing(finalStreamInfo.url, userConfig.outputFileFormat ?: finalStreamInfo.format, mediaInfo.title)
+    state.value = DownloadState.Preparing(finalStreamInfo.url, finalStreamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
     return true
   }
 

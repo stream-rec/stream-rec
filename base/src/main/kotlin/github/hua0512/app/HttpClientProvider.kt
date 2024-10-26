@@ -55,76 +55,74 @@ interface IHttpClientFactory {
 
 class HttpClientFactory : IHttpClientFactory {
 
-  override fun getClient(json: Json, installTimeout: Boolean, installWebSockets: Boolean): HttpClient {
-    return HttpClient(OkHttp) {
-      engine {
-        pipelining = true
-        setProxy<OkHttpConfig>()
+  override fun getClient(json: Json, installTimeout: Boolean, installWebSockets: Boolean): HttpClient = HttpClient(OkHttp) {
+    engine {
+      pipelining = true
+      setProxy()
 
-        config {
-          // Workaround for: https://youtrack.jetbrains.com/issue/KTOR-6266/OkHttp-Remove-the-default-WebSocket-extension-header-Sec-WebSocket-Extensions
-          addInterceptor(RemoveWebSocketExtensionsInterceptor())
+      config {
+        // Workaround for: https://youtrack.jetbrains.com/issue/KTOR-6266/OkHttp-Remove-the-default-WebSocket-extension-header-Sec-WebSocket-Extensions
+        addInterceptor(RemoveWebSocketExtensionsInterceptor())
 
-          if (installTimeout) {
-            connectTimeout(15, TimeUnit.SECONDS)
-            writeTimeout(20, TimeUnit.SECONDS)
-            readTimeout(60, TimeUnit.SECONDS)
-          }
+        if (installTimeout) {
+          connectTimeout(15, TimeUnit.SECONDS)
+          writeTimeout(20, TimeUnit.SECONDS)
+          readTimeout(60, TimeUnit.SECONDS)
         }
       }
-      install(Logging) {
-        logger = Logger.DEFAULT
-        level = LogLevel.NONE
-      }
+    }
+    install(Logging) {
+      logger = Logger.DEFAULT
+      level = LogLevel.NONE
+    }
 
-      install(UserAgent) {
-        agent = COMMON_USER_AGENT
-      }
+    install(UserAgent) {
+      agent = COMMON_USER_AGENT
+    }
 
-      install(HttpRequestRetry) {
-        retryOnServerErrors(maxRetries = 3)
-        exponentialDelay()
-      }
+    install(HttpRequestRetry) {
+      retryOnServerErrors(maxRetries = 3)
+      exponentialDelay()
+    }
 
-      install(ContentNegotiation) {
-        json(json)
-      }
+    install(ContentNegotiation) {
+      json(json)
+    }
 
-      install(ContentEncoding) {
-        gzip(0.9F)
-        deflate(1.0F)
-      }
+    install(ContentEncoding) {
+      gzip(0.9F)
+      deflate(1.0F)
+    }
 
 //      install(HttpCookies) {
 //        storage = AcceptAllCookiesStorage()
 //      }
 
-      if (installTimeout) {
-        install(HttpTimeout) {
-          requestTimeoutMillis = 15000
-          connectTimeoutMillis = 15000
-          socketTimeoutMillis = 60.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
-        }
+    if (installTimeout) {
+      install(HttpTimeout) {
+        requestTimeoutMillis = 15000
+        connectTimeoutMillis = 15000
+        socketTimeoutMillis = 60.toDuration(DurationUnit.SECONDS).inWholeMilliseconds
       }
+    }
 
-      if (installWebSockets) {
-        install(WebSockets)
-      }
+    if (installWebSockets) {
+      install(WebSockets)
     }
   }
 
-  private fun <T : HttpClientEngineConfig> HttpClientEngineConfig.setProxy() {
+  private fun <T : HttpClientEngineConfig> T.setProxy() {
     val proxies = listOf("HTTP_PROXY", "HTTPS_PROXY", "SOCKS_PROXY").mapNotNull { env ->
       System.getenv(env)?.let { env to Url(it) }
     }
 
     proxies.firstOrNull()?.let { (type, url) ->
-      logger.info("Using $type proxy: {}", url)
       proxy = when (type) {
         "HTTP_PROXY", "HTTPS_PROXY" -> ProxyBuilder.http(url)
         "SOCKS_PROXY" -> ProxyBuilder.socks(url.host, url.port)
         else -> null
       }
+      logger.info("Using proxy: {}", proxy)
     }
   }
 

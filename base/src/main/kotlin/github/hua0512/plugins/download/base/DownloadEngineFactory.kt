@@ -52,7 +52,7 @@ class DownloadEngineFactory {
           } else if (videoFormat == VideoFormat.hls) {
             KotlinHlsDownloadEngine()
           } else {
-            throw IllegalArgumentException("Kotlin engine only supports FLV format")
+            throw IllegalArgumentException("Kotlin engine only supports FLV and HLS format")
           }
         }
 
