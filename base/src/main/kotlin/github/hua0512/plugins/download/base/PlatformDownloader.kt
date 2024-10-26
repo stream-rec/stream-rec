@@ -225,17 +225,14 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     require(isInitialized) { "Downloader is not initialized" }
     if (state.value == DownloadState.Downloading) {
       throw IllegalStateException("Downloader is already downloading")
-      return@supervisorScope
     }
 
     if (state.value == DownloadState.Finished) {
       throw IllegalStateException("Downloader is already finished")
-      return@supervisorScope
     }
 
     if (state.value == DownloadState.Idle) {
       throw IllegalStateException("Downloader is not initialized")
-      return@supervisorScope
     }
 
     require(state.value is DownloadState.Preparing) { "${streamer.name} Invalid state" }
@@ -247,7 +244,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val fileExtension = format.fileExtension
     val isDanmuEnabled = downloadConfig.danmu == true && danmu !is NoDanmu
-    val genericOutputPath = buildOutputFilePath(downloadConfig, title, fileExtension)
+    val genericOutputPath = buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 
 
     // check disk space
@@ -275,9 +272,6 @@ abstract class PlatformDownloader<T : DownloadConfig>(
         } else if (pb!!.current != 0L) {
           pb!!.reset()
         }
-
-        val filePath = filePath
-        val time = time
 
         if (isDanmuEnabled) {
           danmu.videoStartTime = Instant.fromEpochSeconds(time)
