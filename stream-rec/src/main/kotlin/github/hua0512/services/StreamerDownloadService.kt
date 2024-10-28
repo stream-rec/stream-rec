@@ -298,8 +298,7 @@ class StreamerDownloadService(
     } else {
       logger.info("${streamer.name} is not live")
     }
-    retryCount++
-    downloadState changeTo DownloadRetry(retryCount)
+    downloadState changeTo DownloadRetry(retryCount + 1)
   }
 
   suspend fun start(): Unit = sScope@ supervisorScope {
