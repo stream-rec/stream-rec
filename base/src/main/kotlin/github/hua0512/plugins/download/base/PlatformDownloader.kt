@@ -36,6 +36,7 @@ import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
+import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.download.exceptions.DownloadFilePresentException
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.InsufficientDownloadSizeException
@@ -79,7 +80,7 @@ sealed class DownloadState {
     val downloadUrl: String,
     val format: VideoFormat,
     val userSelectedFormat: VideoFormat?,
-    val title: String
+    val title: String,
   ) : DownloadState()
 
   data object Downloading : DownloadState()
@@ -372,7 +373,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
 
       override fun onDownloadError(filePath: String?, e: Exception) {
-        logger.error("(${streamer.name}) $filePath download error:", e)
+//        logger.error("(${streamer.name}) $filePath download error:", e)
         state.value = DownloadState.Error(filePath, e)
       }
 
@@ -440,7 +441,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
             }
             danmuJob = null
           }
-          if (!isDanmuEnabled || !hasEndOfDanmu) throw error
+          if (!hasEndOfDanmu) throw error
         }
 
         is DownloadState.Downloading -> {
@@ -637,8 +638,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     updateStreamerInfo(mediaInfo, streamer)
     if (!mediaInfo.live) return false
     if (mediaInfo.streams.isEmpty()) {
-      throw IllegalStateException("${streamer.name} no streams found")
-      return false
+      throw DownloadErrorException("${streamer.name} no streams found")
     }
     val finalStreamInfo = userConfig.applyFilters(mediaInfo.streams)
     state.value =

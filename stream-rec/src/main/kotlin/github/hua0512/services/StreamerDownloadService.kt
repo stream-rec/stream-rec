@@ -225,6 +225,7 @@ class StreamerDownloadService(
         shouldEnd = true
       }, onDownloadFinished = {
         shouldEnd = true
+        retryCount = 3
       })
 
       // break the loop if error occurred or download is cancelled
@@ -291,16 +292,14 @@ class StreamerDownloadService(
     }
   }
 
-  private fun handleOfflineStreamer(duration: Long) {
+  private fun handleOfflineStreamer() {
     if (dataList.isNotEmpty()) {
       logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
-      retryCount++
-      downloadState changeTo DownloadRetry(retryCount)
-      return
     } else {
       logger.info("${streamer.name} is not live")
     }
-    downloadState changeTo CheckingDownload(duration, Clock.System.now().epochSeconds)
+    retryCount++
+    downloadState changeTo DownloadRetry(retryCount)
   }
 
   suspend fun start(): Unit = sScope@ supervisorScope {
@@ -406,7 +405,7 @@ class StreamerDownloadService(
             val duration = it.duration
             val liveStatus = checkStreamerLiveStatus()
             if (!liveStatus) {
-              handleOfflineStreamer(duration)
+              handleOfflineStreamer()
             } else {
               downloadState changeTo Downloading(duration)
               return@onEach
