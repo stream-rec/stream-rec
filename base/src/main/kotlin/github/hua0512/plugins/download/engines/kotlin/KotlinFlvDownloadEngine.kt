@@ -27,6 +27,7 @@
 package github.hua0512.plugins.download.engines.kotlin
 
 import github.hua0512.data.stream.FileInfo
+import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
@@ -100,9 +101,8 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
         cookies?.let { header(HttpHeaders.Cookie, it) }
       }.execute { httpResponse ->
         if (!httpResponse.status.isSuccess()) {
-          exception = FatalDownloadErrorException("Failed to download flv, status: ${httpResponse.status}")
-          onDownloadError(lastDownloadFilePath, exception as Exception)
-          throw exception!!
+          exception = DownloadErrorException("Failed to download flv, status: ${httpResponse.status}")
+          return@execute
         }
         val channel = httpResponse.bodyAsChannel()
         if (enableFlvFix) {
