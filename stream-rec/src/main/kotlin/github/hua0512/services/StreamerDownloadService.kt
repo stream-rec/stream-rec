@@ -46,9 +46,7 @@ import github.hua0512.utils.logger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
@@ -146,7 +144,7 @@ class StreamerDownloadService(
   private var callback: StreamerCallback? = null
 
 
-  private val downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+  private val downloadState = MutableStateFlow<DownloadState>(Idle)
 
 
   suspend fun init(callback: StreamerCallback) {
@@ -206,7 +204,7 @@ class StreamerDownloadService(
     if (duration > 0)
       launchStopTask(duration)
 
-    var hasError = false
+    var shouldEnd = false
     // while loop for parted download
     while (!isCancelled.value && inTimerRange) {
       downloadStream(onStarted = {
@@ -217,13 +215,13 @@ class StreamerDownloadService(
         dataList.add(stream)
       }, onStreamDownloadError = {
         logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
-        hasError = true
+        shouldEnd = true
       }, onDownloadFinished = {
-        hasError = true
+        shouldEnd = true
       })
 
       // break the loop if error occurred or download is cancelled
-      if (hasError || isCancelled.value) break
+      if (shouldEnd || isCancelled.value) break
 
       delay(platformRetryDelay)
     }
@@ -314,7 +312,7 @@ class StreamerDownloadService(
             if (stopTimerJob?.isActive == true) {
               stopTimerJob?.cancel()
             }
-            downloadState changeTo DownloadState.Cancelled
+            downloadState changeTo Cancelled
           }
         }
       }
@@ -323,7 +321,7 @@ class StreamerDownloadService(
     downloadState.asStateFlow()
       .onEach {
         when (it) {
-          is DownloadState.AwaitingDownload -> {
+          is AwaitingDownload -> {
             val delay = it.delay
             val duration = it.duration
             // delay to wait before downloading
@@ -332,12 +330,13 @@ class StreamerDownloadService(
             downloadState changeTo CheckingDownload(duration, Clock.System.now().epochSeconds)
           }
 
-          DownloadState.Cancelled -> {
+          Cancelled -> {
+            logger.debug("({}) download cancelled", streamer.name)
             clean()
             throw CancellationException("Download cancelled")
           }
 
-          is DownloadState.DownloadRetry -> {
+          is DownloadRetry -> {
             val count = it.count
             val error = it.error
 
@@ -347,21 +346,21 @@ class StreamerDownloadService(
             downloadState changeTo Preparing
           }
 
-          is DownloadState.Downloading -> {
+          is Downloading -> {
             handleLiveStreamer(it.duration)
             // retry after the download is finished
             downloadState changeTo DownloadRetry(retryCount + 1)
           }
 
-          DownloadState.Finished -> {
+          Finished -> {
 
           }
 
-          DownloadState.Idle -> {
+          Idle -> {
 
           }
 
-          DownloadState.Preparing -> {
+          Preparing -> {
             val recordStartTime = streamer.startTime
             val recordEndTime = streamer.endTime
             var delay = 0L
@@ -377,7 +376,8 @@ class StreamerDownloadService(
             downloadState changeTo AwaitingDownload(delay, duration = duration)
           }
 
-          is DownloadState.CheckingDownload -> {
+          is CheckingDownload -> {
+            if (isCancelled.value) return@onEach
             val duration = it.duration
             val liveStatus = checkStreamerLiveStatus()
             if (!liveStatus) {
@@ -391,7 +391,7 @@ class StreamerDownloadService(
         }
       }
       .collect {
-        logger.info("(${streamer.name}) download state: $it")
+        logger.debug("({}) download state: {}", streamer.name, it)
       }
     clean()
     throw CancellationException("Download cancelled")
@@ -521,7 +521,7 @@ class StreamerDownloadService(
   }
 
   fun clean() {
-    downloadState changeTo DownloadState.Idle
+    downloadState changeTo Idle
     isDownloading = false
     dataList.clear()
     inTimerRange = false

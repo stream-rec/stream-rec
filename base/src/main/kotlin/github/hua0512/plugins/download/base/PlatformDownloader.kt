@@ -75,7 +75,13 @@ typealias OnStreamDownloaded = (StreamData, FlvMetadataInfo?) -> Unit
 
 sealed class DownloadState {
   data object Idle : DownloadState()
-  data class Preparing(val downloadUrl: String, val format: VideoFormat, val userSelectedFormat: VideoFormat?, val title: String) : DownloadState()
+  data class Preparing(
+    val downloadUrl: String,
+    val format: VideoFormat,
+    val userSelectedFormat: VideoFormat?,
+    val title: String
+  ) : DownloadState()
+
   data object Downloading : DownloadState()
   data object Paused : DownloadState()
   data object Stopped : DownloadState()
@@ -250,7 +256,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val fileExtension = format.fileExtension
     val isDanmuEnabled = downloadConfig.danmu == true && danmu !is NoDanmu
-    val genericOutputPath = buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
+    val genericOutputPath =
+      buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 
 
     // check disk space
@@ -409,14 +416,17 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       ProgressBarManager.deleteProgressBar(url)
       engine.clean()
       pb = null
-      // call onStreamFinished if danmu is enabled and end of danmu is detected
-      if (isDanmuEnabled && hasEndOfDanmu) {
-        onStreamFinished?.invoke()
-      }
+
       when (state.value) {
         is DownloadState.Error -> {
           val (filePath, error) = state.value as DownloadState.Error
-          logger.error("(${streamer.name}) {} finally download error:", filePath, error)
+
+          // call onStreamFinished if danmu is enabled and end of danmu is detected
+          if (isDanmuEnabled && hasEndOfDanmu) {
+            logger.info("(${streamer.name}) end of stream detected")
+            onStreamFinished?.invoke()
+          } else logger.error("(${streamer.name}) {} finally download error:", filePath, error.message)
+
           // clean up the outputs
           danmuJob?.let {
             danmu.finish()
@@ -430,7 +440,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
             }
             danmuJob = null
           }
-          throw error
+          if (!isDanmuEnabled || !hasEndOfDanmu) throw error
         }
 
         is DownloadState.Downloading -> {
@@ -631,7 +641,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       return false
     }
     val finalStreamInfo = userConfig.applyFilters(mediaInfo.streams)
-    state.value = DownloadState.Preparing(finalStreamInfo.url, finalStreamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
+    state.value =
+      DownloadState.Preparing(finalStreamInfo.url, finalStreamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
     return true
   }
 
