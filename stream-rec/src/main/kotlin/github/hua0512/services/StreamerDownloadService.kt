@@ -296,6 +296,7 @@ class StreamerDownloadService(
       logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
       retryCount++
       downloadState changeTo DownloadRetry(retryCount)
+      return
     } else {
       logger.info("${streamer.name} is not live")
     }
