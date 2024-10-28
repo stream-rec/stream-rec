@@ -440,14 +440,13 @@ class StreamerDownloadService(
     val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
     val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
     var jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
-    var jEndTime = jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
+    var jEndTime = jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec).let {
+      if (it.hour < jStartTime.hour) it.plusDays(1) else it
+    }
 
     return when {
       currentTime.isBefore(jStartTime) -> {
         val delay = java.time.Duration.between(currentTime, jStartTime).toMillis()
-        if (jEndTime.hour < jStartTime.hour) {
-          jEndTime = jEndTime.plusDays(1)
-        }
         val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
         logger.info("${streamer.name} before start time, waiting for $delay ms")
         delay to duration
@@ -456,9 +455,6 @@ class StreamerDownloadService(
       currentTime.isAfter(jEndTime) -> {
         jStartTime = jStartTime.plusDays(1)
         jEndTime = jEndTime.plusDays(1)
-        if (jEndTime.hour < jStartTime.hour) {
-          jEndTime = jEndTime.plusDays(1)
-        }
         val delay = java.time.Duration.between(currentTime, jStartTime).toMillis()
         val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
         logger.info("${streamer.name} end time passed, waiting for $delay ms")
