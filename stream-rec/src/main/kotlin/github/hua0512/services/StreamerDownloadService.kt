@@ -342,7 +342,7 @@ class StreamerDownloadService(
               downloadState changeTo CheckingDownload(duration, Clock.System.now().epochSeconds)
             }
             // wait for the timer job to finish
-            awaitTimerJob?.join()
+            awaitTimerJob!!.join()
             awaitTimerJob = null
           }
 
@@ -411,7 +411,10 @@ class StreamerDownloadService(
               downloadState changeTo Downloading(duration)
               return@onEach
             }
-            delay(getDelay())
+            awaitTimerJob = launch {
+              delay(getDelay())
+            }
+            awaitTimerJob!!.join()
           }
         }
       }
@@ -465,11 +468,22 @@ class StreamerDownloadService(
     val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
     val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
     var jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
-    var jEndTime = jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec).let {
-      if (it.hour < jStartTime.hour) it.plusDays(1) else it
+    var jEndTime = if (endHour == 0 && endMin == 0 && endSec == 0) {
+      // if the end time is not defined, set to 10 days from the start time
+      jStartTime.plusDays(10).withHour(endHour).withMinute(endMin).withSecond(endSec)
+    } else {
+      jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec).let {
+        // set to the next day if the end time is before the start time
+        if (it.hour < jStartTime.hour) it.plusDays(1) else it
+      }
     }
 
     return when {
+      currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime) -> {
+        val duration = java.time.Duration.between(currentTime, jEndTime).toMillis()
+        0L to duration
+      }
+
       currentTime.isBefore(jStartTime) -> {
         val delay = java.time.Duration.between(currentTime, jStartTime).toMillis()
         val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
@@ -484,11 +498,6 @@ class StreamerDownloadService(
         val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
         logger.info("${streamer.name} end time passed, waiting for $delay ms")
         delay to duration
-      }
-
-      currentTime.isAfter(jStartTime) && currentTime.isBefore(jEndTime) -> {
-        val duration = java.time.Duration.between(currentTime, jEndTime).toMillis()
-        0L to duration
       }
 
       else -> { // Should never reach here
