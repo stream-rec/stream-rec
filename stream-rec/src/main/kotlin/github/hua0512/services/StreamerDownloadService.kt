@@ -41,9 +41,14 @@ import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.globalConfig
 import github.hua0512.plugins.event.EventCenter
+import github.hua0512.services.DownloadState.*
 import github.hua0512.utils.logger
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
@@ -54,6 +59,25 @@ import org.slf4j.Logger
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
+
+private sealed class DownloadState {
+  object Idle : DownloadState()
+
+  object Preparing : DownloadState()
+
+  data class CheckingDownload(val duration: Long, val time: Long) : DownloadState()
+
+  data class AwaitingDownload(val delay: Long, val duration: Long) : DownloadState()
+
+  data class Downloading(val duration: Long) : DownloadState()
+
+  data class DownloadRetry(val count: Int, val error: Exception? = null) : DownloadState()
+
+  data object Cancelled : DownloadState()
+
+  data object Finished : DownloadState()
+}
+
 
 /**
  * Class responsible for downloading streamer streams
@@ -119,6 +143,9 @@ class StreamerDownloadService(
   private var callback: StreamerCallback? = null
 
 
+  private val downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+
+
   suspend fun init(callback: StreamerCallback) {
     setCallback(callback)
     plugin.init(
@@ -171,15 +198,10 @@ class StreamerDownloadService(
     throw CancellationException(e.message)
   }
 
-  private suspend fun CoroutineScope.handleLiveStreamer(definedStartTime: String?, definedStopTime: String?) {
+  private suspend fun CoroutineScope.handleLiveStreamer(duration: Long) {
     inTimerRange = true
-    if (definedStartTime != null && definedStopTime != null) {
-      val (delay, durationMillis) = parseTimerDuration(definedStartTime, definedStopTime)
-      if (delay != 0L) {
-        throw CancellationException("${streamer.name} outside timer range")
-      }
-      launchStopTask(durationMillis)
-    }
+    if (duration > 0)
+      launchStopTask(duration)
 
     var hasError = false
     // while loop for parted download
@@ -261,18 +283,24 @@ class StreamerDownloadService(
     }
   }
 
-  private suspend fun handleOfflineStreamer() {
+  private fun handleOfflineStreamer(duration: Long) {
     if (dataList.isNotEmpty()) {
       logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
+      retryCount++
     } else {
       logger.info("${streamer.name} is not live")
     }
+    downloadState changeTo CheckingDownload(duration, Clock.System.now().epochSeconds)
+  }
+
+  suspend fun start(): Unit = sScope@ supervisorScope {
     // there might be a case when the user exited the app while the stream is live
     // we reset the isLive value to false to avoid any issues
     resetStreamerLiveStatus()
-  }
 
-  suspend fun start(): Unit = supervisorScope {
+    // prepare download
+    downloadState changeTo Preparing
+
     launch {
       isCancelled.collect {
         if (it) {
@@ -283,40 +311,91 @@ class StreamerDownloadService(
             if (stopTimerJob?.isActive == true) {
               stopTimerJob?.cancel()
             }
+            downloadState changeTo DownloadState.Cancelled
           }
         }
       }
     }
 
-    while (!isCancelled.value) {
-      if (retryCount >= maxRetry) {
-        handleMaxRetry()
-        continue
-      }
+    downloadState.asStateFlow()
+      .onEach {
+        when (it) {
+          is DownloadState.AwaitingDownload -> {
+            val delay = it.delay
+            val duration = it.duration
+            // delay to wait before downloading
+            delay(delay)
+            // check if the streamer is live
+            downloadState changeTo CheckingDownload(duration, Clock.System.now().epochSeconds)
+          }
 
-      val recordStartTime = streamer.startTime
-      val recordEndTime = streamer.endTime
-      if (recordStartTime != null && recordEndTime != null) {
-        if (recordStartTime == recordEndTime) {
-          throw CancellationException("${streamer.name} SAME_START_END_TIME")
+          DownloadState.Cancelled -> {
+            clean()
+            throw CancellationException("Download cancelled")
+          }
+
+          is DownloadState.DownloadRetry -> {
+            val count = it.count
+            val error = it.error
+
+            if (count >= maxRetry) {
+              handleMaxRetry()
+            }
+            downloadState changeTo Preparing
+          }
+
+          is DownloadState.Downloading -> {
+            handleLiveStreamer(it.duration)
+            // retry after the download is finished
+            downloadState changeTo DownloadRetry(retryCount + 1)
+          }
+
+          DownloadState.Finished -> {
+
+          }
+
+          DownloadState.Idle -> {
+
+          }
+
+          DownloadState.Preparing -> {
+            val recordStartTime = streamer.startTime
+            val recordEndTime = streamer.endTime
+            var delay = 0L
+            var duration = 0L
+            if (recordStartTime != null && recordEndTime != null) {
+              if (recordStartTime == recordEndTime) {
+                throw CancellationException("${streamer.name} SAME_START_END_TIME")
+              }
+              val timePair = parseTimerDuration(recordStartTime, recordEndTime)
+              delay = timePair.first
+              duration = timePair.second
+            }
+            downloadState changeTo AwaitingDownload(delay, duration = duration)
+          }
+
+          is DownloadState.CheckingDownload -> {
+            val duration = it.duration
+            val liveStatus = checkStreamerLiveStatus()
+            if (!liveStatus) {
+              handleOfflineStreamer(duration)
+            } else {
+              downloadState changeTo Downloading(duration)
+              return@onEach
+            }
+            delay(getDelay())
+          }
         }
-        handleTimerDuration(recordStartTime, recordEndTime)
       }
-
-      val isLive = checkStreamerLiveStatus()
-
-      if (isLive) {
-        handleLiveStreamer(recordStartTime, recordEndTime)
-      } else {
-        handleOfflineStreamer()
+      .collect {
+        logger.info("(${streamer.name}) download state: $it")
       }
-      if (isCancelled.value) break
-      retryCount++
-      delay(getDelay())
-    }
-
     clean()
     throw CancellationException("Download cancelled")
+  }
+
+  private infix fun MutableStateFlow<DownloadState>.changeTo(state: DownloadState) {
+    value = state
   }
 
   /**
@@ -352,33 +431,20 @@ class StreamerDownloadService(
     this.callback = callback
   }
 
-  private suspend fun CoroutineScope.handleTimerDuration(definedStartTime: String, definedStopTime: String) {
-    val (delayMillis, durationMillis) = parseTimerDuration(definedStartTime, definedStopTime)
-    if (delayMillis == 0L) {
-      inTimerRange = true
-      // do not handle timer if the streamer is already in the timer range
-      return
-    }
-    // ensure the streamer is not live
-    resetStreamerLiveStatus()
-    delay(delayMillis)
-    inTimerRange = true
-    launchStopTask(durationMillis)
-  }
-
 
   private fun parseTimerDuration(definedStartTime: String, definedStopTime: String): Pair<Long, Long> {
     val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
     val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
     val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
     var jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
-    var jEndTime = jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec).let {
-      if (endHour < startHour) it.plusDays(1) else it
-    }
+    var jEndTime = jStartTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
 
     return when {
       currentTime.isBefore(jStartTime) -> {
         val delay = java.time.Duration.between(currentTime, jStartTime).toMillis()
+        if (jEndTime.hour < jStartTime.hour) {
+          jEndTime = jEndTime.plusDays(1)
+        }
         val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
         logger.info("${streamer.name} before start time, waiting for $delay ms")
         delay to duration
@@ -387,6 +453,9 @@ class StreamerDownloadService(
       currentTime.isAfter(jEndTime) -> {
         jStartTime = jStartTime.plusDays(1)
         jEndTime = jEndTime.plusDays(1)
+        if (jEndTime.hour < jStartTime.hour) {
+          jEndTime = jEndTime.plusDays(1)
+        }
         val delay = java.time.Duration.between(currentTime, jStartTime).toMillis()
         val duration = java.time.Duration.between(jStartTime, jEndTime).toMillis()
         logger.info("${streamer.name} end time passed, waiting for $delay ms")
@@ -449,7 +518,7 @@ class StreamerDownloadService(
   }
 
   fun clean() {
-    isCancelled.value = true
+    downloadState changeTo DownloadState.Idle
     isDownloading = false
     dataList.clear()
     inTimerRange = false
