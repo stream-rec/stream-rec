@@ -138,6 +138,12 @@ class StreamerDownloadService(
    */
   private var stopTimerJob: Job? = null
 
+
+  /**
+   * Timer job to await before downloading
+   */
+  private var awaitTimerJob: Job? = null
+
   /**
    * Callback to handle download events
    */
@@ -182,6 +188,7 @@ class StreamerDownloadService(
     // call onStreamingFinished callback with the copy of the list
     callback?.onStreamFinished(streamer.id, dataList.toList())
     dataList.clear()
+    if (isCancelled.value) return
     delay(downloadInterval)
   }
 
@@ -288,6 +295,7 @@ class StreamerDownloadService(
     if (dataList.isNotEmpty()) {
       logger.error("${streamer.name} unable to get stream data (${retryCount + 1}/$maxRetry)")
       retryCount++
+      downloadState changeTo DownloadRetry(retryCount)
     } else {
       logger.info("${streamer.name} is not live")
     }
@@ -309,8 +317,11 @@ class StreamerDownloadService(
           logger.info("${streamer.name} download stopped: $result")
           if (result) {
             // cancel the timer job if it's active
-            if (stopTimerJob?.isActive == true) {
-              stopTimerJob?.cancel()
+            stopTimerJob?.let {
+              if (it.isActive) it.cancel()
+            }
+            awaitTimerJob?.let {
+              if (it.isActive) it.cancel()
             }
             downloadState changeTo Cancelled
           }
@@ -325,9 +336,13 @@ class StreamerDownloadService(
             val delay = it.delay
             val duration = it.duration
             // delay to wait before downloading
-            delay(delay)
-            // check if the streamer is live
-            downloadState changeTo CheckingDownload(duration, Clock.System.now().epochSeconds)
+            awaitTimerJob = launch {
+              delay(delay)
+              downloadState changeTo CheckingDownload(duration, Clock.System.now().epochSeconds)
+            }
+            // wait for the timer job to finish
+            awaitTimerJob?.join()
+            awaitTimerJob = null
           }
 
           Cancelled -> {
@@ -339,15 +354,24 @@ class StreamerDownloadService(
           is DownloadRetry -> {
             val count = it.count
             val error = it.error
-
+            retryCount++ // increment retry count
             if (count >= maxRetry) {
               handleMaxRetry()
+            }
+            if (isCancelled.value) {
+              downloadState changeTo Cancelled
+              return@onEach
             }
             downloadState changeTo Preparing
           }
 
           is Downloading -> {
             handleLiveStreamer(it.duration)
+            if (isCancelled.value) {
+              retryCount = 3
+              downloadState changeTo DownloadRetry(retryCount)
+              return@onEach
+            }
             // retry after the download is finished
             downloadState changeTo DownloadRetry(retryCount + 1)
           }
@@ -521,6 +545,7 @@ class StreamerDownloadService(
     isDownloading = false
     dataList.clear()
     inTimerRange = false
+    awaitTimerJob?.cancel()
     stopTimerJob?.cancel()
     callback = null
   }
