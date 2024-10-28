@@ -105,17 +105,20 @@ class StreamerDownloadService(
   private var retryCount = 0
 
   // delay to wait before retrying the download, used when streams goes from live to offline
-  private val retryDelay = app.config.downloadRetryDelay.toDuration(DurationUnit.SECONDS)
+  private val retryDelay
+    get() = app.config.downloadRetryDelay.toDuration(DurationUnit.SECONDS)
 
   // delay between download checks
-  private val downloadInterval = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
+  private val downloadInterval
+    get() = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
 
   // retry delay for parted downloads
-  private val platformRetryDelay =
-    (streamer.platform.globalConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
+  private val platformRetryDelay
+    get() = (streamer.platform.globalConfig(app.config).partedDownloadRetry ?: 0).toDuration(DurationUnit.SECONDS)
 
   // max download retries
-  private val maxRetry = app.config.maxDownloadRetries
+  private val maxRetry
+    get() = app.config.maxDownloadRetries
 
   /**
    * Flag to check if the download is cancelled
