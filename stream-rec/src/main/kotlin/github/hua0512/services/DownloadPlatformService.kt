@@ -30,6 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.event.StreamerEvent.StreamerException
 import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.base.IPlatformDownloaderFactory
 import github.hua0512.plugins.download.base.StreamerCallback
@@ -168,6 +169,7 @@ class DownloadPlatformService(
         // check if streamer is already in the list
         // or is already being downloaded
         if (streamers.contains(it) || downloadingStreamers.contains(it.url)) {
+          logger.debug("({}) streamer {} status {}", it.platform, it.url, it.state)
           logger.debug("({}) streamer {} is already in the list", it.platform, it.url)
           return@onEach
         }

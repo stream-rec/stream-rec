@@ -32,6 +32,7 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.use
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.utils.md5
 
 /**
@@ -78,6 +79,56 @@ object Migrate3To4 : Migration(3, 4) {
             it.bindText(2, id)
             it.step()
           }
+        }
+      }
+    }
+  }
+}
+
+
+object Migrate11To12 : Migration(11, 12) {
+
+  override fun migrate(connection: SQLiteConnection) {
+    with(connection) {
+      val statement = prepare("SELECT * FROM streamer")
+      // add state column
+      val alterStatement = prepare("ALTER TABLE streamer ADD COLUMN state INTEGER NOT NULL DEFAULT 0")
+      alterStatement.use {
+        it.step()
+      }
+
+      statement.use {
+        while (it.step()) {
+          val idIndex = it.getColumnNames().indexOf("id")
+          val isLiveIndex = it.getColumnNames().indexOf("is_live")
+          val isActivatedIndex = it.getColumnNames().indexOf("is_active")
+          val id = it.getLong(idIndex)
+          val isLive = it.getBoolean(isLiveIndex)
+          val isActive = it.getBoolean(isActivatedIndex)
+
+          // add state column
+          val state = if (!isActive) {
+            StreamerState.CANCELLED
+          } else if (isLive) {
+            StreamerState.LIVE
+          } else {
+            StreamerState.NOT_LIVE
+          }
+
+          val updateStatement = prepare("UPDATE streamer SET state = ? WHERE id = ?")
+          updateStatement.use {
+            it.bindLong(1, state.value.toLong())
+            it.bindLong(2, id)
+            it.step()
+          }
+        }
+      }
+
+      // remove is_live and is_active columns
+      arrayOf("is_live", "is_active").forEach { column ->
+        val deleteStatement = prepare("ALTER TABLE streamer DROP COLUMN $column")
+        deleteStatement.use {
+          it.step()
         }
       }
     }

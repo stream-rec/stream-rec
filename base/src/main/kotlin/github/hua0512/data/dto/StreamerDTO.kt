@@ -27,6 +27,7 @@
 package github.hua0512.data.dto
 
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 
 /**
@@ -38,8 +39,7 @@ interface StreamerDTO {
   val url: String
   val platform: StreamingPlatform
   val lastLiveTime: Long
-  val isLive: Boolean
-  val isActivated: Boolean
+  val state: StreamerState
   val avatar: String?
   val streamTitle: String?
   val downloadConfig: DownloadConfig?
