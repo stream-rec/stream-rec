@@ -366,7 +366,7 @@ class StreamerDownloadService(
           is Downloading -> {
             val exception = handleLiveStreamer({ this }, it.duration)
             if (isCancelled.value) {
-              retryCount = 3
+              retryCount = maxRetry
               downloadState changeTo DownloadRetry(retryCount)
               return@onEach
             }
