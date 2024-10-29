@@ -232,7 +232,7 @@ class StreamerDownloadService(
         shouldEnd = true
       }, onDownloadFinished = {
         shouldEnd = true
-        retryCount = 3
+        retryCount = maxRetry
       })
 
       // break the loop if error occurred or download is cancelled
