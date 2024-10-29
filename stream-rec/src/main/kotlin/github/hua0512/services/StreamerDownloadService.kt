@@ -54,6 +54,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
+import java.time.LocalDateTime
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -452,18 +453,19 @@ class StreamerDownloadService(
     this.callback = callback
   }
 
+  private fun String.toJavaLocalDateTime(now: LocalDateTime? = null): java.time.LocalDateTime {
+    val (hour, min, sec) = split(":").map { it.toInt() }
+    val current = now ?: java.time.LocalDateTime.now()
+    return current.withHour(hour).withMinute(min).withSecond(sec)
+  }
 
   private fun isInTimerRange(definedStartTime: String, definedStopTime: String): Boolean {
-
     if (definedStartTime.isEmpty() || definedStopTime.isEmpty()) {
       return true
     }
-
     val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
-    val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
-    val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
-    var jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
-    var jEndTime = currentTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
+    var jStartTime = definedStartTime.toJavaLocalDateTime(currentTime)
+    var jEndTime = definedStopTime.toJavaLocalDateTime(currentTime)
     return if (jStartTime.isAfter(jEndTime)) {
       currentTime.isAfter(jStartTime) || currentTime.isBefore(jEndTime)
     } else
@@ -475,8 +477,7 @@ class StreamerDownloadService(
       return 0
     }
     val currentLocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
-    val (startHour, startMin, startSec) = startTime.split(":").map { it.toInt() }
-    val jStartTime = currentLocalDateTime.withHour(startHour).withMinute(startMin).withSecond(startSec)
+    val jStartTime = startTime.toJavaLocalDateTime(currentLocalDateTime)
     val delay = java.time.Duration.between(currentLocalDateTime, jStartTime).toMillis().let {
       if (it < 0 || inTimerRange) 0 else it
     }
@@ -489,12 +490,12 @@ class StreamerDownloadService(
       return 0
     }
     val currentLocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
-    val (endHour, endMin, endSec) = endTime.split(":").map { it.toInt() }
 
-    val jEndTime = if (endHour == 0 && endMin == 0 && endSec == 0) {
+    // if the end time is 00:00:00, then the stream ends the next day
+    val jEndTime = if (endTime == "00:00:00") {
       currentLocalDateTime.plusDays(1)
     } else {
-      currentLocalDateTime.withHour(endHour).withMinute(endMin).withSecond(endSec)
+      endTime.toJavaLocalDateTime(currentLocalDateTime)
     }
     // calculate the duration in milliseconds
     val duration = java.time.Duration.between(currentLocalDateTime, jEndTime).toMillis().let {
