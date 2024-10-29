@@ -135,6 +135,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
   }
 
   override suspend fun processDownload() {
+    var lastStreamIndex = -1
     producer.receiveAsFlow()
       .process(limitsProvider, context, enableFlvDuplicateTagFiltering)
       .analyze(metaInfoProvider, context)
@@ -144,31 +145,33 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
           return@dump
         }
         onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)
+        lastStreamIndex = index
         metaInfoProvider.remove(index)
       }
       .flowOn(Dispatchers.IO)
       .stats(sizedUpdater)
       .flowOn(Dispatchers.Default)
       .onCompletion { cause ->
-        debug("flv process completed : {}, {}", arrayOf(cause, metaInfoProvider.size))
+        debug("flv process completed : {}, {}", cause, lastStreamIndex)
         // nothing is downloaded
-        if (metaInfoProvider.size == 0 && cause != null) {
+        if (lastStreamIndex == -1) {
           // clear meta info provider when completed
-          // Other exceptions like IO or something
           metaInfoProvider.clear()
+          // when exception is null, it means download is completed without any segments(user canceled, triggered by cancellation)
+          // non-null exceptions is due to IO, parsing, etc. errors exceptions
+          val realCause = cause ?: FatalDownloadErrorException("No segments downloaded")
           // remove PART prefix as onDownloaded is called before and the file is renamed
-          onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), cause as Exception)
-          return@onCompletion
-        } else if (metaInfoProvider.size == 0 && cause == null) {
-          // case when download is completed, 0 segments downloaded
-          // normally triggered by CancellationException
-          metaInfoProvider.clear()
-          val cause = FatalDownloadErrorException("No segments downloaded")
-          onDownloadError(lastDownloadFilePath, cause)
+          onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), realCause as Exception)
           return@onCompletion
         }
         // case when download is completed, and 1 or more segments are downloaded
+        // in those cases, we ignore the exception and just await for the final callback.
         metaInfoProvider.clear()
+        lastStreamIndex = -1
+        cause?.let {
+          onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), it as Exception)
+          throw it
+        }
       }
       .collect()
   }
