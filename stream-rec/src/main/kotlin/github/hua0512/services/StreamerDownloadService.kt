@@ -354,7 +354,7 @@ class StreamerDownloadService(
           is Downloading -> {
             handleLiveStreamer(it.duration)
             if (isCancelled.value) {
-              retryCount = 3
+              retryCount = maxRetry
               downloadState changeTo DownloadRetry(retryCount)
               return@onEach
             }
