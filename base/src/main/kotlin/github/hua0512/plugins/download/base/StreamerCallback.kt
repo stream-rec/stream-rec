@@ -28,6 +28,7 @@ package github.hua0512.plugins.download.base
 
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.flv.data.other.FlvMetadataInfo
 
 /**
@@ -38,7 +39,7 @@ import github.hua0512.flv.data.other.FlvMetadataInfo
  */
 interface StreamerCallback {
 
-  suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean, onSuccessful: () -> Unit)
+  suspend fun onStateChanged(id: Long, newState: StreamerState, onSuccessful: () -> Unit)
 
   suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit)
 

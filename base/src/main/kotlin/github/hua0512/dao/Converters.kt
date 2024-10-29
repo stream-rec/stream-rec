@@ -29,6 +29,7 @@ package github.hua0512.dao
 import androidx.room.TypeConverter
 import github.hua0512.data.config.*
 import github.hua0512.data.media.VideoFormat
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadPlatform
@@ -50,6 +51,12 @@ class Converters {
       encodeDefaults = false
     }
   }
+
+  @TypeConverter
+  fun fromStreamerState(value: Int?): StreamerState? = value?.let { StreamerState.valueOf(it) }
+
+  @TypeConverter
+  fun toStreamerState(value: StreamerState): Int? = value.value
 
   @TypeConverter
   fun fromVideoFormat(value: String?): VideoFormat? {

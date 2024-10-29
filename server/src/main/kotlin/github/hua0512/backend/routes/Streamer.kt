@@ -29,6 +29,7 @@ package github.hua0512.backend.routes
 import github.hua0512.backend.logger
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.Streamer
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.repo.stream.StreamerRepo
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -134,13 +135,18 @@ fun Route.streamerRoute(repo: StreamerRepo) {
 
     put("{id}") {
       val id = call.parameters["id"]?.toLongOrNull() ?: return@put call.respond(HttpStatusCode.BadRequest, "Invalid id")
-      val state = call.request.queryParameters["state"]?.toBooleanStrictOrNull()
+      val state = call.request.queryParameters["state"]?.toIntOrNull()
 
       if (state != null) {
         try {
-          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@put call.respond(HttpStatusCode.NotFound, "Streamer not found")
-          // only ensure live status is same as activated status if false
-          val newStreamer = if (!state) streamer.copy(isLive = state, isActivated = state) else streamer.copy(isActivated = state, isLive = false)
+          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@put call.respond(
+            HttpStatusCode.NotFound,
+            "Streamer not found"
+          )
+          val newState = StreamerState.valueOf(state)
+            ?: return@put call.respond(HttpStatusCode.BadRequest, "Invalid state")
+
+          val newStreamer = streamer.copy(state = newState)
           val status = repo.update(newStreamer)
           if (!status) return@put call.respond(HttpStatusCode.InternalServerError, "Error updating stream state")
           call.respond(HttpStatusCode.OK, buildJsonObject {
@@ -161,22 +167,25 @@ fun Route.streamerRoute(repo: StreamerRepo) {
 
         if (streamer.id != id) return@put call.respond(HttpStatusCode.BadRequest, "Invalid id : mismatch")
 
-        val old = repo.getStreamerById(StreamerId(id)) ?: return@put call.respond(HttpStatusCode.BadRequest, "Error updating stream, not found in db")
+        val old = repo.getStreamerById(StreamerId(id)) ?: return@put call.respond(
+          HttpStatusCode.BadRequest,
+          "Error updating stream, not found in db"
+        )
         val dbStreamer = repo.findStreamerByUrl(streamer.url)
-        if (dbStreamer != null && dbStreamer.id != id) return@put call.respond(HttpStatusCode.BadRequest, "Streamer url already exists")
+        if (dbStreamer != null && dbStreamer.id != id) return@put call.respond(
+          HttpStatusCode.BadRequest,
+          "Streamer url already exists"
+        )
 
         if (old.isTemplate && !streamer.isTemplate) {
           val count = repo.countStreamersUsingTemplate(StreamerId(id))
-          if (count > 0) return@put call.respond(HttpStatusCode.BadRequest, "Template stream is used by $count streamers")
+          if (count > 0) return@put call.respond(
+            HttpStatusCode.BadRequest,
+            "Template stream is used by $count streamers"
+          )
         }
 
         try {
-          // only ensure live status is same as activated status if false
-          streamer = if (!streamer.isActivated) {
-            streamer.copy(isLive = streamer.isActivated)
-          } else {
-            streamer.copy(isLive = false)
-          }
           repo.update(streamer)
           call.respond(streamer)
         } catch (e: Exception) {

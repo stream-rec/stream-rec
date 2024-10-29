@@ -31,6 +31,7 @@ import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.TimerEndedDownloadException
 import github.hua0512.download.exceptions.UserStoppedDownloadException
@@ -167,8 +168,9 @@ class StreamerDownloadService(
   private suspend fun handleMaxRetry() {
     // reset retry count
     retryCount = 0
-    // update db with the new isLive value
-    resetStreamerLiveStatus()
+    if (streamer.state != StreamerState.NOT_LIVE && !isCancelled.value) {
+      updateStreamerState(StreamerState.NOT_LIVE)
+    }
     // stream is not live or without data
     if (dataList.isEmpty()) {
       return
@@ -215,7 +217,7 @@ class StreamerDownloadService(
     // while loop for parted download
     while (!isCancelled.value) {
       downloadStream(onStarted = {
-        updateStreamerLiveStatus()
+        updateStreamerState(StreamerState.LIVE)
         updateLastLiveTime()
       }, onDownloaded = { stream, metaInfo ->
         callback?.onStreamDownloaded(streamer.id, stream, metaInfo != null, metaInfo)
@@ -263,9 +265,7 @@ class StreamerDownloadService(
         when (e) {
           // in those cases, cancel the download and throw the exception
           is FatalDownloadErrorException, is CancellationException -> {
-            callback?.onLiveStatusChanged(streamer.id, false) {
-              streamer.isLive = false
-            }
+            updateStreamerState(StreamerState.FATAL_ERROR)
             if (e !is CancellationException)
               logger.error("${streamer.name} fatal exception", e)
             throw e
@@ -303,8 +303,8 @@ class StreamerDownloadService(
 
   suspend fun start(): Unit = sScope@ supervisorScope {
     // there might be a case when the user exited the app while the stream is live
-    // we reset the isLive value to false to avoid any issues
-    resetStreamerLiveStatus()
+    // reset the streamer state to not live
+    updateStreamerState(StreamerState.NOT_LIVE)
 
     // prepare download
     downloadState changeTo Preparing
@@ -333,6 +333,7 @@ class StreamerDownloadService(
         when (it) {
           Cancelled -> {
             logger.debug("({}) download cancelled", streamer.name)
+            updateStreamerState(StreamerState.CANCELLED)
             clean()
             throw CancellationException("Download cancelled")
           }
@@ -343,7 +344,10 @@ class StreamerDownloadService(
             retryCount++ // increment retry count
             if (count >= maxRetry) {
               handleMaxRetry()
+            } else {
+              updateStreamerState(StreamerState.INSPECTING_LIVE)
             }
+
             if (isCancelled.value) {
               downloadState changeTo Cancelled
               return@onEach
@@ -393,7 +397,9 @@ class StreamerDownloadService(
 
           is CheckingDownload -> {
             if (isCancelled.value) return@onEach
-            inTimerRange = isInTimerRange(streamer.startTime ?: "", streamer.endTime ?: "")
+            inTimerRange = isInTimerRange(streamer.startTime ?: "", streamer.endTime ?: "").also {
+              if (!it) updateStreamerState(StreamerState.OUT_OF_SCHEDULE)
+            }
 
             if (!inTimerRange || !checkStreamerLiveStatus()) {
               handleOfflineStreamer()
@@ -517,33 +523,26 @@ class StreamerDownloadService(
       if (isDownloading) {
         val result = stop(TimerEndedDownloadException())
         logger.info("(${streamer.name}) timer task stop triggered: $result")
-        resetStreamerLiveStatus()
       }
     }
   }
 
-  private suspend fun resetStreamerLiveStatus() {
-    if (streamer.isLive) {
-      callback?.onLiveStatusChanged(streamer.id, false) {
-        streamer.isLive = false
-      }
-    }
-  }
-
-  private suspend fun updateStreamerLiveStatus() {
+  private suspend fun updateStreamerState(state: StreamerState) {
     // save streamer to the database with the new isLive value
-    if (!streamer.isLive) {
-      EventCenter.sendEvent(
-        StreamerOnline(
-          streamer.name,
-          streamer.url,
-          streamer.platform,
-          streamer.streamTitle ?: "",
-          Clock.System.now()
+    if (streamer.state != state) {
+      if (state == StreamerState.LIVE) {
+        EventCenter.sendEvent(
+          StreamerOnline(
+            streamer.name,
+            streamer.url,
+            streamer.platform,
+            streamer.streamTitle ?: "",
+            Clock.System.now()
+          )
         )
-      )
-      callback?.onLiveStatusChanged(streamer.id, true) {
-        streamer.isLive = true
+      }
+      callback?.onStateChanged(streamer.id, state) {
+        streamer.state = state
       }
     }
   }

@@ -30,6 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.flv.FlvMetaInfoProcessor
 import github.hua0512.flv.data.other.FlvMetadataInfo
@@ -85,11 +86,19 @@ class DownloadService(
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
     this.scope = downloadScope
     callback = object : StreamerCallback {
-      override suspend fun onLiveStatusChanged(id: Long, newStatus: Boolean, onSuccessful: () -> Unit) {
+
+      override suspend fun onStateChanged(
+        id: Long,
+        newState: StreamerState,
+        onSuccessful: () -> Unit
+      ) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
-        if (streamer.isLive == newStatus) return
-        val status = repo.update(streamer.copy(isLive = newStatus))
-        logger.debug("({}) updated live status -> {} = {}", streamer.name, newStatus, status)
+        if (streamer.state == newState) {
+          onSuccessful()
+          return
+        }
+        val status = repo.update(streamer.copy(state = newState))
+        logger.debug("({}) updated state -> {} = {}", streamer.name, newState, status)
         if (status)
           onSuccessful()
       }
@@ -121,7 +130,12 @@ class DownloadService(
           onSuccessful()
       }
 
-      override fun onStreamDownloaded(id: Long, stream: StreamData, shouldInjectMetaInfo: Boolean, metaInfo: FlvMetadataInfo?) {
+      override fun onStreamDownloaded(
+        id: Long,
+        stream: StreamData,
+        shouldInjectMetaInfo: Boolean,
+        metaInfo: FlvMetadataInfo?
+      ) {
         var stream = stream
         scope.launch {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
@@ -157,8 +171,8 @@ class DownloadService(
       override fun onStreamFinished(id: Long, streams: List<StreamData>) {
         scope.launch {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
-          if (streamer.isLive != false) {
-            repo.update(streamer.copy(isLive = false))
+          if (streamer.state != StreamerState.NOT_LIVE && streamer.state != StreamerState.CANCELLED) {
+            repo.update(streamer.copy(state = StreamerState.NOT_LIVE))
           }
           logger.debug("({}) stream finished", streamer.name)
           executeStreamFinishedActions(streamer, streams)
@@ -247,7 +261,12 @@ class DownloadService(
           // find the change reason
           if (old != new) {
             val reason = when {
-              old.isActivated != new.isActivated -> "activation"
+              old.state != new.state -> when {
+                new.state == StreamerState.CANCELLED && old.state != StreamerState.CANCELLED -> "cancelled"
+                new.state == StreamerState.NOT_LIVE && old.state == StreamerState.CANCELLED -> "enabled"
+                else -> return@forEach
+              }
+
               old.url != new.url -> "url"
               old.downloadConfig != new.downloadConfig -> "download config"
               old.platform != new.platform -> "platform"
@@ -281,7 +300,7 @@ class DownloadService(
    * @return true if the [Streamer] is not activated, false otherwise.
    */
   private fun validateActivation(new: Streamer): Boolean {
-    if (!new.isActivated) {
+    if (new.state == StreamerState.CANCELLED) {
       logger.debug("${new.name}, ${new.url} is not activated")
       return true
     }
@@ -290,7 +309,8 @@ class DownloadService(
 
 
   private suspend fun executePostPartedDownloadActions(streamer: Streamer, streamData: StreamData) {
-    val actions = streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload ?: return
+    val actions =
+      streamer.templateStreamer?.downloadConfig?.onPartedDownload ?: streamer.downloadConfig?.onPartedDownload ?: return
     actionService.runActions(listOf(streamData), actions)
   }
 
