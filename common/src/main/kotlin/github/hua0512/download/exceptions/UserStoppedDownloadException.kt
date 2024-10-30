@@ -27,6 +27,7 @@
 package github.hua0512.download.exceptions
 
 /**
+ * User stopped download exception
  * @author hua0512
  * @date : 2024/10/5 14:07
  */
