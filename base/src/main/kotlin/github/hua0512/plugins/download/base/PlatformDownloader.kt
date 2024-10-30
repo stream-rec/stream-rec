@@ -426,7 +426,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
           if (isDanmuEnabled && hasEndOfDanmu) {
             logger.info("(${streamer.name}) end of stream detected")
             onStreamFinished?.invoke()
-          } else logger.error("(${streamer.name}) {} finally download error:", filePath, error.message)
+          } else logger.error("(${streamer.name}) {} finally download error: {}", filePath, error.message)
 
           // clean up the outputs
           danmuJob?.let {
