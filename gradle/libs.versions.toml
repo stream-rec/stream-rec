@@ -1,5 +1,5 @@
 [versions]
-ktor = "3.0.0"
+ktor = "3.0.1"
 ktor-test = "2.3.12"
 ksp = "2.0.21-1.0.26"
 kotlin = "2.0.21"
