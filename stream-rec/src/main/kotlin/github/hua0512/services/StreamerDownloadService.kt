@@ -345,7 +345,8 @@ class StreamerDownloadService(
             if (count >= maxRetry) {
               handleMaxRetry()
             } else {
-              updateStreamerState(StreamerState.INSPECTING_LIVE)
+              if (streamer.state == StreamerState.LIVE)
+                updateStreamerState(StreamerState.INSPECTING_LIVE)
             }
 
             if (isCancelled.value) {
