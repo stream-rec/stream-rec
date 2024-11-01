@@ -53,7 +53,7 @@ import org.slf4j.Logger
 
  */
 
-class PlayListFetcher(val client: HttpClient, override val context: StreamerContext) : StreamerLoggerContext {
+class PlayListFetcher(val client: HttpClient, override var context: StreamerContext) : StreamerLoggerContext {
 
 
   companion object {

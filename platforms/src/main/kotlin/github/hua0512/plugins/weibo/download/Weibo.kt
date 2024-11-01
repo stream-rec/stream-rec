@@ -33,6 +33,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.download.base.PlatformDownloader
+import github.hua0512.utils.warn
 
 /**
  * Weibo platform downloader.
@@ -47,6 +48,8 @@ class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) : Pl
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     val selectedStreamFormat = downloadConfig.sourceFormat ?: VideoFormat.flv
-    return streams.firstOrNull { it.format == selectedStreamFormat } ?: streams.first()
+    return streams.firstOrNull { it.format == selectedStreamFormat } ?: streams.first().also {
+      warn("No stream found for format {}, using {} instead", selectedStreamFormat, it.format)
+    }
   }
 }
