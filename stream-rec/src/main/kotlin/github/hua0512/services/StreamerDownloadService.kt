@@ -227,7 +227,7 @@ class StreamerDownloadService(
         dataList.add(stream)
       }, onStreamDownloadError = {
         val nextRetry = retryCount + 1
-        logger.error("{} unable to get stream data ({}/{}) due to: {}", streamer.name, nextRetry, maxRetry, it.message)
+        logger.error("{} unable to get stream data ({}/{}) due to: ", streamer.name, nextRetry, maxRetry, it)
         exception = it
         shouldEnd = true
       }, onDownloadFinished = {

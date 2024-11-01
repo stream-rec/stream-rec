@@ -256,6 +256,9 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val (url, format, userSelectedFormat, title) = state.value as DownloadState.Preparing
 
+    // update context title
+    this@PlatformDownloader.context = this@PlatformDownloader.context.copy(title = title)
+
     debug("starting download {}", url)
 
 
@@ -391,16 +394,13 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
     }
 
-    // update context title
-    context = this@PlatformDownloader.context.copy(title = title)
-
     engine = DownloadEngineFactory.createEngine(downloadConfig.engine!!, format).apply {
       // init engine
       init(
         url,
         userSelectedFormat ?: format,
         genericOutputPath.pathString,
-        context,
+        this@PlatformDownloader.context,
         downloadConfig.cookies,
         headers,
         fileLimitSize = maxSize,
