@@ -32,6 +32,7 @@ import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.download.base.PlatformDownloader
+import github.hua0512.utils.warn
 
 /**
  * Douyu live stream downloader.
@@ -64,12 +65,12 @@ class Douyu(
     val selectedCdn = cdn ?: app.config.douyuConfig.cdn
     val selectedQuality = quality ?: app.config.douyuConfig.quality
     if (streams.isEmpty()) {
-      throw IllegalStateException("${streamer.name} no stream found")
+      throw createNoStreamsFoundException()
     }
     val group = streams.groupBy { it.extras["cdn"] }
-    val cdnStreams = group[selectedCdn] ?: group.values.flatten().also { logger.warn("$streamer CDN $selectedCdn not found, using random") }
+    val cdnStreams = group[selectedCdn] ?: group.values.flatten().also { warn("CDN {} not found, using random", selectedCdn) }
     val qualityStreams = cdnStreams.firstOrNull { it.extras["rate"] == selectedQuality.rate.toString() } ?: cdnStreams.firstOrNull()
-      .also { logger.warn("${streamer.name} quality $selectedQuality not found, using first one available") }
+      .also { warn("{} quality not found, using first one available {}", selectedQuality, it) }
     return (qualityStreams ?: streams.first())
   }
 }

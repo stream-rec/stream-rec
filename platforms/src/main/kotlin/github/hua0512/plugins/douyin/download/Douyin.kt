@@ -34,14 +34,14 @@ import github.hua0512.data.platform.DouyinQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.download.base.PlatformDownloader
+import github.hua0512.utils.info
 
 /**
  * This class represents a Douyin downloader.
  *
  * @property app The [App] instance.
  * @property danmu The [DouyinDanmu] instance.
- * @property streamer The [Streamer] instance.
- * @property downloadUrl The URL of the video to be downloaded.
+ * @property extractor The [DouyinCombinedApiExtractor] instance.
  */
 class Douyin(
   app: App,
@@ -78,7 +78,7 @@ class Douyin(
     // prioritize flv format if user selected format is not available
     return selectedFormatStreams.maxByOrNull { it.bitrate } ?: selectedFormatStreams.filter { it.format == VideoFormat.flv }
       .maxBy { it.bitrate }.also {
-        logger.info("No stream with format $userSelectedSourceFormat, using flv stream, bitrate: ${it.bitrate}")
+        info("No stream with {} format, using default flv, bitrate: {}", userSelectedSourceFormat, it.bitrate)
       }
   }
 }

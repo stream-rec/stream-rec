@@ -33,6 +33,7 @@ import github.hua0512.data.platform.PandaTvQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
+import github.hua0512.utils.warn
 
 /**
  * Pandalive live stream downloader.
@@ -77,9 +78,9 @@ class PandaTv(
       }.maxByOrNull {
         it.first
       }?.second?.apply {
-        logger.warn("No stream found with quality $userPreferredQuality, using ${this.quality} instead")
+        warn("No stream found with quality {}, using {} instead", userPreferredQuality, this.quality)
       } ?: run {
-        logger.warn("No stream found with quality $userPreferredQuality, using the best available")
+        warn("No stream found with quality {}, using the best available", userPreferredQuality)
         streams.first()
       }
     }
@@ -90,7 +91,7 @@ class PandaTv(
     }.minByOrNull {
       it.first
     }?.second ?: run {
-      logger.warn("No stream found with quality $userPreferredQuality, using the best available")
+      warn("No stream found with quality {}, using the best available", userPreferredQuality)
       selectedStream.first()
     }
     return filteredStream

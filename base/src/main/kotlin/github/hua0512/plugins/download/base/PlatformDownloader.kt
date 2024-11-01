@@ -36,6 +36,7 @@ import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
+import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.download.exceptions.DownloadFilePresentException
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.InsufficientDownloadSizeException
@@ -43,6 +44,7 @@ import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.danmu.base.NoDanmu
@@ -75,7 +77,13 @@ typealias OnStreamDownloaded = (StreamData, FlvMetadataInfo?) -> Unit
 
 sealed class DownloadState {
   data object Idle : DownloadState()
-  data class Preparing(val downloadUrl: String, val format: VideoFormat, val userSelectedFormat: VideoFormat?, val title: String) : DownloadState()
+  data class Preparing(
+    val downloadUrl: String,
+    val format: VideoFormat,
+    val userSelectedFormat: VideoFormat?,
+    val title: String,
+  ) : DownloadState()
+
   data object Downloading : DownloadState()
   data object Paused : DownloadState()
   data object Stopped : DownloadState()
@@ -93,12 +101,15 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   val app: App,
   open val danmu: Danmu,
   open val extractor: Extractor,
-) {
+) : StreamerLoggerContext {
 
   companion object {
-    @JvmStatic
     protected val logger: Logger = logger(this::class.java)
   }
+
+  override val logger: Logger = PlatformDownloader.logger
+
+  override lateinit var context: StreamerContext
 
   protected lateinit var streamer: Streamer
 
@@ -135,6 +146,12 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   open var onStreamDownloaded: OnStreamDownloaded? = null
 
+  /**
+   * Callback triggered when the stream is finished
+   * This callback is invoked after end of danmu is detected
+   */
+  open var onStreamFinished: (() -> Unit)? = null
+
   private var pb: ProgressBar? = null
 
 
@@ -152,6 +169,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     maxDownloadTime: Long = 0,
   ) {
     this.streamer = streamer
+    this.context = StreamerContext(streamer.name, streamer.streamTitle.orEmpty())
     @Suppress("UNCHECKED_CAST")
     this.downloadConfig = streamer.downloadConfig as T
     extractor.prepare()
@@ -185,12 +203,11 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     if (state.value == DownloadState.Downloading) {
       throw FatalDownloadErrorException("Downloader is already downloading")
-      return false
+
     }
 
     if (state.value == DownloadState.Finished) {
       throw FatalDownloadErrorException("Downloader is already finished")
-      return false
     }
 
     if (isOneShot) {
@@ -203,7 +220,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     val mediaInfo = try {
       extractor.extract()
     } catch (e: Exception) {
-      logger.error("Failed to extract media info", e)
+      error("extraction failed:", throwable = e)
       state.value = DownloadState.Error(null, e)
 
       if (e is InvalidExtractionInitializationException || e is InvalidExtractionUrlException) {
@@ -239,12 +256,14 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val (url, format, userSelectedFormat, title) = state.value as DownloadState.Preparing
 
-    logger.debug("{}, starting download {}", streamer.name, url)
+    debug("starting download {}", url)
 
 
     val fileExtension = format.fileExtension
     val isDanmuEnabled = downloadConfig.danmu == true && danmu !is NoDanmu
-    val genericOutputPath = buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
+
+    val genericOutputPath =
+      buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 
 
     // check disk space
@@ -254,17 +273,18 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val kbMax = maxSize / 1024
 
-    logger.debug("(${streamer.name}) download max size: $kbMax kb, max time: $maxTime s")
+    debug("download max size: {} kb, max time: {} s", kbMax, maxTime)
 
     var danmuJob: Job? = null
 
+    var hasEndOfDanmu = false
 
     val downloadCallback = object : DownloadCallback {
       override fun onInit() {
       }
 
       override fun onDownloadStarted(filePath: String, time: Long) {
-        logger.debug("(${streamer.name}) download started: $filePath at $time")
+        debug("download started: {} at {}", filePath, time)
         state.value = DownloadState.Downloading
         // init progress bar
         if (pb == null) {
@@ -285,14 +305,14 @@ abstract class PlatformDownloader<T : DownloadConfig>(
               val status = withIORetry<Boolean>(
                 maxRetries = 5,
                 maxDelayMillis = 30000,
-                onError = { e, count -> logger.error("(${streamer.name}) danmu failed to initialize($count): $e") }) {
+                onError = { e, count -> error("danmu failed to initialize ({}):", count, throwable = e) }) {
                 danmu.init(streamer, Instant.fromEpochSeconds(time))
               }
               if (!status) {
-                logger.error("(${streamer.name}) danmu failed to initialize")
+                error("danmu failed to initialize")
                 return@async
               } else {
-                logger.debug("(${streamer.name}) danmu :${danmu.filePath} initialized")
+                debug("danmu: {} initialized", danmu.filePath)
               }
               danmu.enableWrite = true
               try {
@@ -336,7 +356,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
 
       override fun onDownloaded(data: FileInfo, metaInfo: FlvMetadataInfo?) {
-        logger.debug("(${streamer.name}) download finished: ${data.path}, meta info: ${metaInfo != null}")
+        debug("download finished: {}, meta info: {}", data.path, metaInfo != null)
         val danmuPath = if (isDanmuEnabled) Path(danmu.filePath) else null
         onFileDownloaded(
           data, StreamData(
@@ -353,17 +373,17 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
 
       override fun onDownloadFinished() {
-        logger.debug("(${streamer.name}) download finished")
+        debug("download finished")
         state.value = DownloadState.Finished
       }
 
       override fun onDownloadError(filePath: String?, e: Exception) {
-        logger.error("(${streamer.name}) $filePath download error:", e)
+//        error("{} download error:", filePath, throwable = e)
         state.value = DownloadState.Error(filePath, e)
       }
 
       override fun onDownloadCancelled() {
-        logger.error("(${streamer.name}) download cancelled")
+        error("download cancelled")
         state.value = DownloadState.Stopped
       }
 
@@ -371,7 +391,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
     }
 
-    val streamerContext = StreamerContext(streamer.name, title)
+    // update context title
+    context = this@PlatformDownloader.context.copy(title = title)
 
     engine = DownloadEngineFactory.createEngine(downloadConfig.engine!!, format).apply {
       // init engine
@@ -379,7 +400,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
         url,
         userSelectedFormat ?: format,
         genericOutputPath.pathString,
-        streamerContext,
+        context,
         downloadConfig.cookies,
         headers,
         fileLimitSize = maxSize,
@@ -391,19 +412,28 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       if (definedArgs.isNotEmpty()) programArgs.addAll(definedArgs)
       // configure engine
       configureEngine(app)
+      // listen for end of danmu event
+      danmu.setOnDanmuClosedCallback { hasEndOfDanmu = true }
     }
     // start download
     try {
       engine.start()
-      logger.debug("(${streamer.name}) platform download finished")
+      debug("platform download finished")
     } finally {
       ProgressBarManager.deleteProgressBar(url)
       engine.clean()
       pb = null
+
       when (state.value) {
         is DownloadState.Error -> {
           val (filePath, error) = state.value as DownloadState.Error
-          logger.error("(${streamer.name}) {} finally download error:", filePath, error)
+
+          // call onStreamFinished if danmu is enabled and end of danmu is detected
+          if (isDanmuEnabled && hasEndOfDanmu) {
+            info("end of stream detected")
+            onStreamFinished?.invoke()
+          } else error("{} finally download error: {}", filePath, error.message)
+
           // clean up the outputs
           danmuJob?.let {
             danmu.finish()
@@ -417,13 +447,13 @@ abstract class PlatformDownloader<T : DownloadConfig>(
             }
             danmuJob = null
           }
-          throw error
+          if (!hasEndOfDanmu) throw error
         }
 
         is DownloadState.Downloading -> {
           // we should clean up the outputs
           // this is an abnormal termination
-          logger.error("(${streamer.name}) abnormal termination")
+          error("abnormal termination")
           danmuJob?.let {
             stopDanmuJob(it)
           }
@@ -470,8 +500,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     return Path(sum).also {
       Files.exists(it).let { exists ->
         if (exists) {
-          logger.error("(${sum}) file already exists")
-          val error = DownloadFilePresentException("File already exists")
+          error("{} file already exists", sum)
+          val error = DownloadFilePresentException("$sum file already exists")
           state.value = DownloadState.Error("", error)
           throw error
         }
@@ -482,7 +512,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   private fun onFileDownloaded(info: FileInfo, streamInfo: StreamData, danmuPath: Path?, metaInfo: FlvMetadataInfo?) {
     // check if the segment is valid
     danmuPath?.let {
-      logger.debug("({}) danmu finished : {}", streamer.name, danmuPath)
+      debug("danmu finished : {}", danmuPath)
       danmu.finish()
     }
 
@@ -528,11 +558,11 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * @param danmuPath the path of the danmu
    * @return true if the segment is invalid, false otherwise
    */
-  protected fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
+  private fun processSegment(segmentPath: Path, danmuPath: Path?): Boolean {
     // check if the segment is valid, a valid segment should exist and have a size greater than the minimum part size
     // m3u8 files are not considered segments
-    if (segmentPath.exists() && segmentPath.extension != "m3u8" && segmentPath.fileSize() < app.config.minPartSize) {
-      logger.error("(${streamer.name}) segment is invalid: ${segmentPath.pathString}")
+    if (segmentPath.exists() && segmentPath.extension != VideoFormat.hls.fileExtension && segmentPath.fileSize() < app.config.minPartSize) {
+      error("segment is invalid: {}", segmentPath.pathString)
       deleteOutputs(segmentPath, danmuPath)
       return true
     }
@@ -567,7 +597,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       danmuJob.join()
     } catch (e: Exception) {
       if (e !is CancellationException)
-        logger.error("(${streamer.name}) failed to cancel danmuJob: $e")
+        error("failed to cancel danmuJob: $e")
     } finally {
       danmu.clean()
     }
@@ -586,7 +616,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     val usableSpace = fileStore.usableSpace
     if (usableSpace < size) {
       val errorMsg = "Not enough disk space: $usableSpace < $size"
-      logger.error("${streamer.name} $errorMsg")
+      error(errorMsg)
       state.value = DownloadState.Error(null, InsufficientDownloadSizeException(errorMsg))
       throw InsufficientDownloadSizeException(errorMsg)
     }
@@ -614,13 +644,15 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     updateStreamerInfo(mediaInfo, streamer)
     if (!mediaInfo.live) return false
     if (mediaInfo.streams.isEmpty()) {
-      throw IllegalStateException("${streamer.name} no streams found")
-      return false
+      throw DownloadErrorException("${streamer.name} no streams found")
     }
     val finalStreamInfo = userConfig.applyFilters(mediaInfo.streams)
-    state.value = DownloadState.Preparing(finalStreamInfo.url, finalStreamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
+    state.value =
+      DownloadState.Preparing(finalStreamInfo.url, finalStreamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
     return true
   }
+
+  protected fun createNoStreamsFoundException() = InvalidExtractionParamsException("${context.name} no streams found")
 
   /**
    * Update streamer info

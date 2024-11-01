@@ -33,6 +33,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
+import github.hua0512.utils.info
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -65,7 +66,7 @@ class Huya(
     // user defined source format
     val userPreferredFormat = (sourceFormat ?: app.config.huyaConfig.sourceFormat).apply {
       if (this !in streams.map { it.format }) {
-        logger.info("${streamer.name} defined source format $this is not available, choosing the best available")
+        info("defined source format {} is not available, choosing the best available", this)
       }
     }
     // user defined max bit rate
@@ -85,16 +86,16 @@ class Huya(
         this as Map<String, List<StreamInfo>>
 
         if (preselectedCdn !in this) {
-          logger.info("${streamer.name} no streams found for $preselectedCdn, choosing the best available")
+          info("no streams found for {}, choosing the best available", preselectedCdn)
 
           // get the best available cdn
           // obv, preselectedCdn is not in the exclude list because is not in the map,
           // so we can safely pass an empty array
           val bestCdn = this.getBestStreamByPriority(emptyArray())
-          logger.info("${streamer.name} best available cdn is $bestCdn")
+          info("best available cdn list: {}", bestCdn)
           bestCdn
         } else {
-          this[preselectedCdn] ?: throw IllegalStateException("${streamer.name} no streams found")
+          this[preselectedCdn] ?: throw createNoStreamsFoundException()
         }
       }.sortedByDescending { it.bitrate }
     }
@@ -102,7 +103,7 @@ class Huya(
     // prioritize flv format if user defined source format is not available
     return selectedCdnStreams.maxByOrNull { it.format == userPreferredFormat }
       ?: selectedCdnStreams.filter { it.format == VideoFormat.flv }.maxByOrNull { it.bitrate }
-      ?: throw IllegalStateException("${streamer.name} no streams found")
+      ?: throw createNoStreamsFoundException()
   }
 }
 

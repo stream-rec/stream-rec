@@ -27,6 +27,7 @@
 package github.hua0512.plugins.download.engines.kotlin
 
 import github.hua0512.data.stream.FileInfo
+import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.flv.FlvMetaInfoProvider
 import github.hua0512.flv.data.FlvData
@@ -39,26 +40,15 @@ import github.hua0512.utils.debug
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.warn
 import github.hua0512.utils.writeToFile
-import io.ktor.client.request.header
-import io.ktor.client.request.prepareGet
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.http.HttpHeaders
-import io.ktor.http.Url
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.datetime.Clock
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
-import kotlin.io.path.Path
-import kotlin.io.path.createParentDirectories
-import kotlin.io.path.fileSize
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.pathString
+import kotlin.io.path.*
 
 /**
  * Kotlin download engine for flv format
@@ -110,6 +100,10 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
         this@KotlinFlvDownloadEngine.headers.forEach { header(it.key, it.value) }
         cookies?.let { header(HttpHeaders.Cookie, it) }
       }.execute { httpResponse ->
+        if (!httpResponse.status.isSuccess()) {
+          exception = DownloadErrorException("Failed to download flv, status: ${httpResponse.status}")
+          return@execute
+        }
         val channel = httpResponse.bodyAsChannel()
         if (enableFlvFix) {
           channel
@@ -141,6 +135,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
   }
 
   override suspend fun processDownload() {
+    var lastStreamIndex = -1
     producer.receiveAsFlow()
       .process(limitsProvider, context, enableFlvDuplicateTagFiltering)
       .analyze(metaInfoProvider, context)
@@ -150,31 +145,33 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
           return@dump
         }
         onDownloaded(FileInfo(path, Path.of(path).fileSize(), createdAt / 1000, openAt / 1000), metaInfo)
+        lastStreamIndex = index
         metaInfoProvider.remove(index)
       }
       .flowOn(Dispatchers.IO)
       .stats(sizedUpdater)
       .flowOn(Dispatchers.Default)
       .onCompletion { cause ->
-        debug("flv process completed : {}, {}", arrayOf(cause, metaInfoProvider.size))
+        debug("flv process completed : {}, {}", cause, lastStreamIndex)
         // nothing is downloaded
-        if (metaInfoProvider.size == 0 && cause != null) {
+        if (lastStreamIndex == -1) {
           // clear meta info provider when completed
-          // Other exceptions like IO or something
           metaInfoProvider.clear()
+          // when exception is null, it means download is completed without any segments(user canceled, triggered by cancellation)
+          // non-null exceptions is due to IO, parsing, etc. errors exceptions
+          val realCause = cause ?: FatalDownloadErrorException("No segments downloaded")
           // remove PART prefix as onDownloaded is called before and the file is renamed
-          onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), cause as Exception)
-          return@onCompletion
-        } else if (metaInfoProvider.size == 0 && cause == null) {
-          // case when download is completed, 0 segments downloaded
-          // normally triggered by CancellationException
-          metaInfoProvider.clear()
-          val cause = FatalDownloadErrorException("No segments downloaded")
-          onDownloadError(lastDownloadFilePath, cause)
+          onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), realCause as Exception)
           return@onCompletion
         }
         // case when download is completed, and 1 or more segments are downloaded
+        // in those cases, we ignore the exception and just await for the final callback.
         metaInfoProvider.clear()
+        lastStreamIndex = -1
+        cause?.let {
+          onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), it as Exception)
+          throw it
+        }
       }
       .collect()
   }

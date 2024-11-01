@@ -39,7 +39,7 @@ import org.slf4j.Logger
 
 interface StreamerLoggerContext {
 
-  val context: StreamerContext
+  var context: StreamerContext
 
   val logger: Logger
 }
@@ -47,18 +47,18 @@ interface StreamerLoggerContext {
 inline fun StreamerLoggerContext.trace(content: String, vararg objs: Any?) = logger.trace(content, *objs)
 
 inline fun StreamerLoggerContext.debug(content: String, vararg objs: Any?, throwable: Throwable? = null) =
-  logger.debug("${context.name} $content", *objs, throwable)
+  logger.debug("{} $content", context.name, *objs, throwable)
 
 inline fun StreamerLoggerContext.debug(content: String) = debug(content, null)
 
 
 inline fun StreamerLoggerContext.info(content: String, vararg objs: Any?, throwable: Throwable? = null) =
-  logger.info("${context.name} $content", *objs, throwable)
+  logger.info("{} $content", context.name, *objs, throwable)
 
 inline fun StreamerLoggerContext.info(content: String) = info(content, null)
 
 inline fun StreamerLoggerContext.error(content: String, vararg objs: Any?, throwable: Throwable? = null) =
-  logger.error("${context.name} $content", *objs, throwable)
+  logger.error("{} $content", context.name, *objs, throwable)
 
 inline fun StreamerLoggerContext.warn(content: String, vararg objs: Any?, throwable: Throwable? = null) =
-  logger.warn("${context.name} $content", *objs, throwable)
+  logger.warn("{} $content", context.name, *objs, throwable)
