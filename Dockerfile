@@ -19,9 +19,9 @@ RUN yum update -y && \
 # Install ffmpeg with architecture check
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-      URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"; \
+      URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"; \
     elif [ "$ARCH" = "aarch64" ]; then \
-      URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz"; \
+      URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz"; \
     fi && \
     curl -L $URL | tar -xJ && \
     mv ffmpeg-*-linux*/bin/{ffmpeg,ffprobe,ffplay} /usr/local/bin/ && \
