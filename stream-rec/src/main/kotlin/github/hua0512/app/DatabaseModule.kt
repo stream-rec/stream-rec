@@ -31,6 +31,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.AppDatabase
+import github.hua0512.dao.Migrate11To12
 import github.hua0512.dao.Migrate3To4
 import github.hua0512.dao.config.AppConfigDao
 import github.hua0512.dao.stats.StatsDao
@@ -72,7 +73,7 @@ class DatabaseModule {
     )
 
     return builder
-      .addMigrations(Migrate3To4)
+      .addMigrations(Migrate3To4, Migrate11To12)
       .fallbackToDestructiveMigration(false)
       .fallbackToDestructiveMigrationOnDowngrade(false)
       .setDriver(BundledSQLiteDriver())

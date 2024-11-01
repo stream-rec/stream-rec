@@ -40,8 +40,7 @@ data class Streamer(
   override val url: String,
   override val platform: StreamingPlatform = StreamingPlatform.UNKNOWN,
   override var lastLiveTime: Long = 0,
-  override var isLive: Boolean = false,
-  override var isActivated: Boolean = true,
+  override var state: StreamerState,
   override var avatar: String? = null,
   override var streamTitle: String? = null,
   override val startTime: String? = null,
@@ -60,8 +59,7 @@ data class Streamer(
     url = entity.url,
     platform = entity.platform,
     lastLiveTime = entity.lastLiveTime,
-    isLive = entity.isLive,
-    isActivated = entity.isActivated,
+    state = entity.state,
     avatar = entity.avatar,
     streamTitle = entity.streamTitle,
     startTime = entity.startTime,
@@ -78,8 +76,7 @@ data class Streamer(
     url = url,
     platform = platform,
     lastLiveTime = lastLiveTime,
-    isLive = isLive,
-    isActivated = isActivated,
+    state = state,
     streamTitle = streamTitle,
     startTime = startTime,
     endTime = endTime,
@@ -99,7 +96,7 @@ data class Streamer(
     if (name != other.name) return false
     if (url != other.url) return false
     if (platform != other.platform) return false
-    if (isActivated != other.isActivated) return false
+    if (state != other.state) return false
     if (startTime != other.startTime) return false
     if (endTime != other.endTime) return false
     if (downloadConfig != other.downloadConfig) return false
@@ -115,7 +112,7 @@ data class Streamer(
     var result = name.hashCode()
     result = 31 * result + url.hashCode()
     result = 31 * result + platform.hashCode()
-    result = 31 * result + isActivated.hashCode()
+    result = 31 * result + state.hashCode()
     result = 31 * result + (startTime?.hashCode() ?: 0)
     result = 31 * result + (endTime?.hashCode() ?: 0)
     result = 31 * result + (downloadConfig?.hashCode() ?: 0)

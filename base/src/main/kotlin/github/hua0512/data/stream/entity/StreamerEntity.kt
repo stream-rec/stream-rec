@@ -33,6 +33,7 @@ import androidx.room.PrimaryKey
 import github.hua0512.data.config.AppConfigEntity
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.StreamerDTO
+import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 
 /**
@@ -61,10 +62,8 @@ data class StreamerEntity(
   override val platform: StreamingPlatform = StreamingPlatform.UNKNOWN,
   @ColumnInfo(name = "last_stream")
   override val lastLiveTime: Long = 0,
-  @ColumnInfo(name = "is_live")
-  override val isLive: Boolean = false,
-  @ColumnInfo(name = "is_active")
-  override val isActivated: Boolean = true,
+  @ColumnInfo(name = "state", defaultValue = "0")
+  override val state: StreamerState = StreamerState.NOT_LIVE,
   @ColumnInfo(name = "avatar")
   override val avatar: String? = null,
   @ColumnInfo(name = "description")
