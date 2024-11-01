@@ -35,6 +35,7 @@ import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.warn
 
 /**
  * Twitch downloader.
@@ -71,7 +72,7 @@ class Twitch(
       // add skip ads to streamlink args
       add("--twitch-disable-ads")
     }
-    // configure streamlink-ttvlol
+    // configure streamlink-ttvlol options
     config.twitchProxyPlaylist?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist=$it") }
     config.twitchProxyPlaylistExclude?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist-exclude=$it") }
     if (config.twitchProxyPlaylistFallback) add("--twitch-proxy-playlist-fallback")
@@ -97,9 +98,9 @@ class Twitch(
       }.maxByOrNull {
         it.first
       }?.second?.apply {
-        logger.warn("No stream found with quality $userPreferredQuality, using ${this.quality} instead")
+        warn("No stream found with quality {}, using {} instead", userPreferredQuality, this.quality)
       } ?: run {
-        logger.warn("No stream found with quality $userPreferredQuality, using the best available")
+        warn("No stream found with quality {}, using the best available", userPreferredQuality)
         streams.first()
       }
     }
@@ -110,7 +111,7 @@ class Twitch(
     }.minByOrNull {
       it.first
     }?.second ?: run {
-      logger.warn("No stream found with quality $userPreferredQuality, using the best available")
+      warn("No stream found with quality {}, using the best available", userPreferredQuality)
       selectedStream.first()
     }
     return filteredStream
