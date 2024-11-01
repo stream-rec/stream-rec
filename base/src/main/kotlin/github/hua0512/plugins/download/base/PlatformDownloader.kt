@@ -261,6 +261,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val fileExtension = format.fileExtension
     val isDanmuEnabled = downloadConfig.danmu == true && danmu !is NoDanmu
+
     val genericOutputPath =
       buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 

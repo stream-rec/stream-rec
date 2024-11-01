@@ -80,6 +80,10 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
     emit(lastHeader!!)
 
     lastMetadata?.let {
+      if (it.num != 1) {
+        emit(it.copy(num = 1))
+        return@let
+      }
       emit(it)
     }
     lastVideoSequenceTag?.let {
