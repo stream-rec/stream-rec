@@ -40,7 +40,7 @@ data class Streamer(
   override val url: String,
   override val platform: StreamingPlatform = StreamingPlatform.UNKNOWN,
   override var lastLiveTime: Long = 0,
-  override var state: StreamerState,
+  override var state: StreamerState = StreamerState.NOT_LIVE,
   override var avatar: String? = null,
   override var streamTitle: String? = null,
   override val startTime: String? = null,
