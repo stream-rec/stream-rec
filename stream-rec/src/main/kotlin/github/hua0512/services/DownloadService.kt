@@ -26,6 +26,7 @@
 
 package github.hua0512.services
 
+import androidx.sqlite.SQLiteException
 import github.hua0512.app.App
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
@@ -40,6 +41,7 @@ import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
+import github.hua0512.utils.withRetry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.buffer
@@ -153,12 +155,17 @@ class DownloadService(
               logger.warn("${stream.outputFilePath} meta info not found, skip meta info processing...")
             }
           }
-          try {
-            val saved = streamDataRepository.save(stream)
-            stream.id = saved.id
-          } catch (e: Exception) {
-            logger.error("Failed to save stream data", e)
+
+          /**
+           * TODO : Investigate https://issuetracker.google.com/issues/347737870 for more information
+           */
+          val newId = withRetry<SQLiteException, Long>(onError = { e, count ->
+            // force acquire write lock
+            logger.error("{} failed to save stream data ({}), {}", streamer.name, count, e.message)
+          }) {
+            streamDataRepository.save(stream).id
           }
+          stream.id = newId
           // run post actions
           executePostPartedDownloadActions(streamer, stream)
         }
@@ -196,7 +203,7 @@ class DownloadService(
   private fun getOrInitPlatformService(platform: StreamingPlatform): DownloadPlatformService {
     val fetchDelay = (platform.globalConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
     val service = taskJobs.computeIfAbsent(platform) {
-      logger.info("({}) initializing...", platform)
+      logger.info("{} initializing...", platform)
       DownloadPlatformService(
         app,
         scope,
