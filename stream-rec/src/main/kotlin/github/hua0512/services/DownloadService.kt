@@ -26,6 +26,7 @@
 
 package github.hua0512.services
 
+import androidx.sqlite.SQLiteException
 import github.hua0512.app.App
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
@@ -40,6 +41,7 @@ import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
+import github.hua0512.utils.withRetry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.buffer
@@ -98,7 +100,7 @@ class DownloadService(
           return
         }
         val status = repo.update(streamer.copy(state = newState))
-        logger.debug("({}) updated state -> {} = {}", streamer.name, newState, status)
+        logger.debug("{} updated state -> {} = {}", streamer.name, newState, status)
         if (status)
           onSuccessful()
       }
@@ -106,7 +108,7 @@ class DownloadService(
       override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.lastLiveTime == newLiveTime) return
-        logger.debug("({}) updated last live time -> {}", streamer.name, newLiveTime)
+        logger.debug("{} updated last live time -> {}", streamer.name, newLiveTime)
         val status = repo.update(streamer.copy(lastLiveTime = newLiveTime))
         if (status)
           onSuccessful()
@@ -115,7 +117,7 @@ class DownloadService(
       override suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.streamTitle == description) return
-        logger.debug("({}) updated description -> {}", streamer.name, description)
+        logger.debug("{} updated description -> {}", streamer.name, description)
         val status = repo.update(streamer.copy(streamTitle = description))
         if (status)
           onSuccessful()
@@ -124,7 +126,7 @@ class DownloadService(
       override suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.avatar == avatar) return
-        logger.debug("({}) updated avatar url -> {}", streamer.name, avatar)
+        logger.debug("{} updated avatar url -> {}", streamer.name, avatar)
         val status = repo.update(streamer.copy(avatar = avatar))
         if (status)
           onSuccessful()
@@ -153,12 +155,17 @@ class DownloadService(
               logger.warn("${stream.outputFilePath} meta info not found, skip meta info processing...")
             }
           }
-          try {
-            val saved = streamDataRepository.save(stream)
-            stream.id = saved.id
-          } catch (e: Exception) {
-            logger.error("Failed to save stream data", e)
+
+          /**
+           * TODO : Investigate https://issuetracker.google.com/issues/347737870 for more information
+           */
+          val newId = withRetry<SQLiteException, Long>(onError = { e, count ->
+            // force acquire write lock
+            logger.error("{} failed to save stream data ({}), {}", streamer.name, count, e.message)
+          }) {
+            streamDataRepository.save(stream).id
           }
+          stream.id = newId
           // run post actions
           executePostPartedDownloadActions(streamer, stream)
         }
@@ -174,7 +181,7 @@ class DownloadService(
           if (streamer.state != StreamerState.NOT_LIVE && streamer.state != StreamerState.CANCELLED) {
             repo.update(streamer.copy(state = StreamerState.NOT_LIVE))
           }
-          logger.debug("({}) stream finished", streamer.name)
+          logger.debug("{} stream finished", streamer.name)
           executeStreamFinishedActions(streamer, streams)
         }
       }
@@ -196,7 +203,7 @@ class DownloadService(
   private fun getOrInitPlatformService(platform: StreamingPlatform): DownloadPlatformService {
     val fetchDelay = (platform.globalConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
     val service = taskJobs.computeIfAbsent(platform) {
-      logger.info("({}) initializing...", platform)
+      logger.info("{} initializing...", platform)
       DownloadPlatformService(
         app,
         scope,
