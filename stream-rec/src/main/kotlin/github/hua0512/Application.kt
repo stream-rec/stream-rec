@@ -68,13 +68,16 @@ class Application {
      */
     private var server: EmbeddedServer<ApplicationEngine, NettyApplicationEngine.Configuration>? = null
 
+    /**
+     * Background job instance
+     */
+    private var backgroundJob: Job? = null
+
     @JvmStatic
     fun main(args: Array<String>): Unit = runBlocking {
       val appComponent: AppComponent = DaggerAppComponent.create()
 
       val app = appComponent.getAppConfig()
-
-      val jobScope = initComponents(this.coroutineContext, appComponent, app)
 
       // start the app
       // add shutdown hook
@@ -82,69 +85,75 @@ class Application {
         mainLogger.info("Stream-rec shutting down...")
         server?.stop(1000, 1000)
         Thread.sleep(1000)
-        jobScope.cancel()
+        if (backgroundJob?.isActive == true) {
+          mainLogger.info("Cancelling background job...")
+          backgroundJob?.cancel()
+        }
         app.releaseAll()
         appComponent.getDatabase().close()
         EventCenter.stop()
         server = null
+        backgroundJob = null
       })
-      // wait for the job to finish
-      jobScope.coroutineContext[Job]?.join()
+
+      initComponents(appComponent, app)
     }
 
     private suspend inline fun initComponents(
-      context: CoroutineContext,
       appComponent: AppComponent,
       app: App,
-    ): CoroutineScope {
-      val scope = CoroutineScope(context + Dispatchers.IO + SupervisorJob())
+    ) = supervisorScope {
+
       val appConfigRepository = appComponent.getAppConfigRepository()
       val downloadService = appComponent.getDownloadService()
       val uploadService = appComponent.getUploadService()
 
-      scope.apply {
-        // await for app config to be loaded
-        withContext(Dispatchers.IO) {
-          initAppConfig(appConfigRepository, app)
-        }
-        // launch a job to listen for app config changes
-        launch(Dispatchers.IO) {
-          appConfigRepository.streamAppConfig()
-            .collect {
-              app.updateConfig(it)
-              // TODO : find a way to update download semaphore dynamically
-            }
-        }
-        // start download
-        launch {
-          downloadService.run(scope)
-        }
+      backgroundJob = coroutineContext[Job]!!
 
-        // start upload service
-        launch {
-          uploadService.run()
-        }
+      // await for app config to be loaded
+      withContext(Dispatchers.IO) {
+        initAppConfig(appConfigRepository, app)
+      }
 
-        // start a job to listen for events
-        launch {
-          EventCenter.run()
-        }
-        // start the backend server
-        launch {
-          server = backendServer(
-            json = appComponent.getJson(),
-            appComponent.getUserRepo(),
-            appComponent.getAppConfigRepository(),
-            appComponent.getStreamerRepo(),
-            appComponent.getStreamDataRepo(),
-            appComponent.getStatsRepository(),
-            appComponent.getUploadRepo(),
-          ).apply {
-            start()
+      // launch a job to listen for app config changes
+      launch(Dispatchers.IO) {
+        appConfigRepository.streamAppConfig()
+          .collect {
+            app.updateConfig(it)
+            // TODO : find a way to update download semaphore dynamically
           }
+      }
+      // start download
+      launch {
+        downloadService.run(this@supervisorScope)
+      }
+
+      // start upload service
+      launch {
+        uploadService.run()
+      }
+
+      // start a job to listen for events
+      launch {
+        EventCenter.run()
+      }
+      // start the backend server
+      launch {
+        server = backendServer(
+          json = appComponent.getJson(),
+          appComponent.getUserRepo(),
+          appComponent.getAppConfigRepository(),
+          appComponent.getStreamerRepo(),
+          appComponent.getStreamDataRepo(),
+          appComponent.getStatsRepository(),
+          appComponent.getUploadRepo(),
+        ).apply {
+          start()
         }
       }
-      return scope
+
+      // wait for all jobs to finish
+      coroutineContext[Job]?.join()
     }
 
     private val LOG_LEVEL
