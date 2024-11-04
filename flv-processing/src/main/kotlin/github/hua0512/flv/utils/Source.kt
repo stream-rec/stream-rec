@@ -95,6 +95,6 @@ internal fun Source.readUI24(): UInt {
   // Read 3 bytes from the buffer and convert to int
   val b1 = readUByte().toUInt() shl 16
   val b2 = readUByte().toUInt() shl 8
-  val b3 = readUByte().toUInt() and 0xFFU
+  val b3 = readUByte().toUInt()
   return b1 or b2 or b3
 }
