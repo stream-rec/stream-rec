@@ -127,7 +127,7 @@ private fun buildDefaultOutputArgs(
         add("-to")
         add(segmentTime.toString())
       }
-      if (segmentPart >= 0L) { // segment the file, according to the maxPartSize
+      if (segmentPart > 0L) { // segment the file, according to the maxPartSize
         add("-fs")
         add(segmentPart.toString())
       }
