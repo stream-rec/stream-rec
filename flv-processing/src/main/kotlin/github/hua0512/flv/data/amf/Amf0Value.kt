@@ -28,6 +28,7 @@ package github.hua0512.flv.data.amf
 
 import kotlinx.io.Sink
 import kotlinx.io.writeDouble
+import kotlinx.io.writeUShort
 
 /**
  * AMF0 data types
@@ -40,12 +41,24 @@ enum class Amf0Type(val byte: Byte) {
   BOOLEAN(0x01),
   STRING(0x02),
   OBJECT(0x03),
+
+  /**
+   * MovieClip is not supported (reserved)
+   */
+  MOVIE_CLIP(0x04),
+
   NULL(0x05),
+  UNDEFINED(0x06),
+  REFERENCE(0x07),
   ECMA_ARRAY(0x08),
   OBJECT_END(0x09),
   STRICT_ARRAY(0x0A),
   DATE(0x0B),
   LONG_STRING(0x0C),
+
+  /**
+   * Below formats are not likely to be used in FLV
+   */
   XML_DOCUMENT(0x0F),
   TYPED_OBJECT(0x10),
   AMF3_OBJECT(0x11)
@@ -99,6 +112,22 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
       val bytes = value.toByteArray(Charsets.UTF_8)
       sink.writeShort(bytes.size.toShort())
       sink.write(bytes)
+    }
+  }
+
+  data object Undefined : Amf0Value(Amf0Type.UNDEFINED.byte) {
+
+    override val size: Int = 1
+  }
+
+
+  data class Reference(val value: kotlin.UShort) : Amf0Value(Amf0Type.REFERENCE.byte) {
+
+    override val size: Int = 3
+
+    override fun write(sink: Sink) {
+      super.write(sink)
+      sink.writeUShort(value)
     }
   }
 
@@ -214,7 +243,8 @@ sealed class Amf0Value(open val type: Byte) : AmfValue {
 
   }
 
-  data class TypedObject(val className: kotlin.String, val properties: Map<kotlin.String, Amf0Value>) : Amf0Value(Amf0Type.TYPED_OBJECT.byte) {
+  data class TypedObject(val className: kotlin.String, val properties: Map<kotlin.String, Amf0Value>) :
+    Amf0Value(Amf0Type.TYPED_OBJECT.byte) {
 
     override val size: Int
       get() {
