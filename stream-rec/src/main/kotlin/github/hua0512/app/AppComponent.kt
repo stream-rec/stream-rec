@@ -27,23 +27,32 @@
 package github.hua0512.app
 
 import dagger.Component
+import github.hua0512.Initializer
 import github.hua0512.dao.AppDatabase
+import github.hua0512.dao.ApplicationScope
+import github.hua0512.dao.CoroutineModule
+import github.hua0512.dao.CoroutinesDispatchersModule
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
+import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import javax.inject.Singleton
 
 @Singleton
-@Component(
-  modules = [AppModule::class, DatabaseModule::class, RepositoryModule::class]
-)
+@Component(modules = [CoroutineModule::class, CoroutinesDispatchersModule::class, AppModule::class, DatabaseModule::class, RepositoryModule::class])
 interface AppComponent {
+
+  @ApplicationScope
+  fun applicationScope(): CoroutineScope
+
+  fun initializer(): Initializer
 
   fun getDatabase(): AppDatabase
 
@@ -58,6 +67,8 @@ interface AppComponent {
   fun getUploadService(): UploadService
 
   fun getAppConfigRepository(): AppConfigRepo
+
+  fun getActionService(): ActionService
 
   fun getStatsRepository(): SummaryStatsRepo
 

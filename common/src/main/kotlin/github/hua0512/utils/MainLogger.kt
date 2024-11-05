@@ -38,7 +38,7 @@ val mainLogger: Logger = LoggerFactory.getLogger("Main")
  * @author hua0512
  * @date : 2024/9/8 21:34
  */
-inline fun logger(tag: String) = LoggerFactory.getLogger(tag)
+inline fun logger(tag: String): Logger = LoggerFactory.getLogger(tag)
 
 /**
  * Get logger by class
@@ -47,7 +47,7 @@ inline fun logger(tag: String) = LoggerFactory.getLogger(tag)
  * @author hua0512
  * @date : 2024/9/8 21:34
  */
-inline fun logger(clazz: Class<*>) = LoggerFactory.getLogger(clazz)
+inline fun logger(clazz: Class<*>): Logger = LoggerFactory.getLogger(clazz)
 
 inline fun Logger.debug(message: () -> String) {
   if (isDebugEnabled) {

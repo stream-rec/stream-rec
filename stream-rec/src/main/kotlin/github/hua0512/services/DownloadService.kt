@@ -28,6 +28,7 @@ package github.hua0512.services
 
 import androidx.sqlite.SQLiteException
 import github.hua0512.app.App
+import github.hua0512.dao.ApplicationScope
 import github.hua0512.data.StreamerId
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
@@ -43,7 +44,6 @@ import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
 import github.hua0512.utils.withRetry
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -52,12 +52,14 @@ import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
 import kotlin.io.path.Path
 import kotlin.io.path.fileSize
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-class DownloadService(
+class DownloadService @Inject constructor(
+  @ApplicationScope private val applicationScope: CoroutineScope,
   private val app: App,
   private val actionService: ActionService,
   private val repo: StreamerRepo,
@@ -79,20 +81,17 @@ class DownloadService(
 
   private var streamers = emptyList<Streamer>()
 
-  private lateinit var scope: CoroutineScope
-
   /**
    * Starts the download service.
    */
-  suspend fun run(downloadScope: CoroutineScope) {
+  fun run() {
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
-    this.scope = downloadScope
     callback = object : StreamerCallback {
 
       override suspend fun onStateChanged(
         id: Long,
         newState: StreamerState,
-        onSuccessful: () -> Unit
+        onSuccessful: () -> Unit,
       ) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.state == newState) {
@@ -136,10 +135,10 @@ class DownloadService(
         id: Long,
         stream: StreamData,
         shouldInjectMetaInfo: Boolean,
-        metaInfo: FlvMetadataInfo?
+        metaInfo: FlvMetadataInfo?,
       ) {
         var stream = stream
-        scope.launch {
+        applicationScope.launch {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
           if (shouldInjectMetaInfo) {
             if (metaInfo != null) {
@@ -176,7 +175,7 @@ class DownloadService(
       }
 
       override fun onStreamFinished(id: Long, streams: List<StreamData>) {
-        scope.launch {
+        applicationScope.launch {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
           if (streamer.state != StreamerState.NOT_LIVE && streamer.state != StreamerState.CANCELLED) {
             repo.update(streamer.copy(state = StreamerState.NOT_LIVE))
@@ -187,16 +186,19 @@ class DownloadService(
       }
     }
 
-    val streamers = withIOContext {
-      repo.getStreamersActive()
+
+    applicationScope.launch {
+      val streamers = withIOContext {
+        repo.getStreamersActive()
+      }
+      this@DownloadService.streamers = streamers
+      streamers.groupBy { it.platform }.forEach {
+        val service = getOrInitPlatformService(it.key)
+        it.value.forEach(service::addStreamer)
+      }
+      // listen to streamer changes
+      applicationScope.listenToStreamerChanges()
     }
-    this.streamers = streamers
-    streamers.groupBy { it.platform }.forEach {
-      val service = getOrInitPlatformService(it.key)
-      it.value.forEach(service::addStreamer)
-    }
-    // listen to streamer changes
-    scope.listenToStreamerChanges()
   }
 
 
@@ -206,7 +208,7 @@ class DownloadService(
       logger.info("{} initializing...", platform)
       DownloadPlatformService(
         app,
-        scope,
+        applicationScope,
         fetchDelay.inWholeMilliseconds,
         downloadSemaphore,
         callback,
@@ -338,9 +340,5 @@ class DownloadService(
         }
       }
     }
-  }
-
-  fun cancel() {
-    scope.cancel()
   }
 }

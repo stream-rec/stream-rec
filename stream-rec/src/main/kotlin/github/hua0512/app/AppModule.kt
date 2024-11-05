@@ -28,6 +28,8 @@ package github.hua0512.app
 
 import dagger.Module
 import dagger.Provides
+import github.hua0512.Initializer
+import github.hua0512.dao.ApplicationScope
 import github.hua0512.dao.config.AppConfigDao
 import github.hua0512.dao.user.UserDao
 import github.hua0512.repo.LocalDataSource
@@ -39,6 +41,7 @@ import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
 import io.ktor.client.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
 import javax.inject.Singleton
 
@@ -58,6 +61,12 @@ class AppModule {
 
   @Provides
   @Singleton
+  fun provideInitializer(
+    @ApplicationScope applicationScope: CoroutineScope
+  ): Initializer = Initializer(applicationScope)
+
+  @Provides
+  @Singleton
   fun provideHttpClient(json: Json, clientFactory: IHttpClientFactory): HttpClient = clientFactory.getClient(json)
 
   @Provides
@@ -71,18 +80,24 @@ class AppModule {
   @Provides
   @Singleton
   fun provideDownloadService(
+    @ApplicationScope applicationScope: CoroutineScope,
     app: App,
     actionService: ActionService,
     streamerRepository: StreamerRepo,
     streamDataRepository: StreamDataRepo,
   ): DownloadService =
-    DownloadService(app, actionService, streamerRepository, streamDataRepository)
+    DownloadService(applicationScope, app, actionService, streamerRepository, streamDataRepository)
 
   @Provides
   @Singleton
-  fun provideUploadService(app: App, uploadRepo: UploadRepo): UploadService = UploadService(app, uploadRepo)
+  fun provideUploadService(
+    @ApplicationScope applicationScope: CoroutineScope,
+    app: App,
+    uploadRepo: UploadRepo
+  ): UploadService = UploadService(applicationScope, app, uploadRepo)
 
   @Provides
-  fun provideLocalDataSource(appDao: AppConfigDao, userDao: UserDao): LocalDataSource = LocalDataSourceImpl(appDao, userDao)
+  fun provideLocalDataSource(appDao: AppConfigDao, userDao: UserDao): LocalDataSource =
+    LocalDataSourceImpl(appDao, userDao)
 
 }

@@ -36,125 +36,57 @@ import ch.qos.logback.core.rolling.RollingFileAppender
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy
 import ch.qos.logback.core.spi.FilterReply
 import ch.qos.logback.core.util.FileSize
-import github.hua0512.app.App
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
-import github.hua0512.backend.backendServer
-import github.hua0512.data.config.AppConfig
-import github.hua0512.plugins.event.EventCenter
-import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
+import github.hua0512.utils.executeProcess
 import github.hua0512.utils.mainLogger
 import github.hua0512.utils.nonEmptyOrNull
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.coroutines.CoroutineContext
 import kotlin.io.path.Path
 import kotlin.io.path.pathString
+import kotlin.system.exitProcess
 
 
 class Application {
   companion object {
 
+    private const val APP_NAME = "stream-rec"
+
     init {
       initLogger()
     }
 
-    /**
-     * Backend server instance
-     */
-    private var server: EmbeddedServer<ApplicationEngine, NettyApplicationEngine.Configuration>? = null
-
-    /**
-     * Background job instance
-     */
-    private var backgroundJob: Job? = null
-
     @JvmStatic
     fun main(args: Array<String>): Unit = runBlocking {
-      val appComponent: AppComponent = DaggerAppComponent.create()
-
-      val app = appComponent.getAppConfig()
-
       // start the app
+      val appComponent: AppComponent = DaggerAppComponent.create()
+      val applicationScope = appComponent.applicationScope()
+
+      val initializer = appComponent.initializer().apply {
+        load(appComponent)
+      }
+
       // add shutdown hook
       Runtime.getRuntime().addShutdownHook(Thread {
-        mainLogger.info("Stream-rec shutting down...")
-        server?.stop(1000, 1000)
-        Thread.sleep(1000)
-        if (backgroundJob?.isActive == true) {
-          mainLogger.info("Cancelling background job...")
-          backgroundJob?.cancel()
-        }
-        app.releaseAll()
-        appComponent.getDatabase().close()
-        EventCenter.stop()
-        server = null
-        backgroundJob = null
+        mainLogger.info("{} shutting down...", APP_NAME)
+        initializer.destroy()
+        applicationScope.cancel()
+        cancel()
       })
 
-      initComponents(appComponent, app)
+
+      // block until the app is stopped
+      try {
+        awaitCancellation()
+      } finally {
+        mainLogger.info("{} stopped", APP_NAME)
+        exitProcess(0)
+      }
     }
 
-    private suspend inline fun initComponents(
-      appComponent: AppComponent,
-      app: App,
-    ) = supervisorScope {
-
-      val appConfigRepository = appComponent.getAppConfigRepository()
-      val downloadService = appComponent.getDownloadService()
-      val uploadService = appComponent.getUploadService()
-
-      backgroundJob = coroutineContext[Job]!!
-
-      // await for app config to be loaded
-      withContext(Dispatchers.IO) {
-        initAppConfig(appConfigRepository, app)
-      }
-
-      // launch a job to listen for app config changes
-      launch(Dispatchers.IO) {
-        appConfigRepository.streamAppConfig()
-          .collect {
-            app.updateConfig(it)
-            // TODO : find a way to update download semaphore dynamically
-          }
-      }
-      // start download
-      launch {
-        downloadService.run(this@supervisorScope)
-      }
-
-      // start upload service
-      launch {
-        uploadService.run()
-      }
-
-      // start a job to listen for events
-      launch {
-        EventCenter.run()
-      }
-      // start the backend server
-      launch {
-        server = backendServer(
-          json = appComponent.getJson(),
-          appComponent.getUserRepo(),
-          appComponent.getAppConfigRepository(),
-          appComponent.getStreamerRepo(),
-          appComponent.getStreamDataRepo(),
-          appComponent.getStatsRepository(),
-          appComponent.getUploadRepo(),
-        ).apply {
-          start()
-        }
-      }
-
-      // wait for all jobs to finish
-      coroutineContext[Job]?.join()
-    }
 
     private val LOG_LEVEL
       get() = System.getenv("LOG_LEVEL")?.nonEmptyOrNull().let { Level.valueOf(it) } ?: Level.INFO
@@ -219,12 +151,6 @@ class Application {
       }
     }
 
-    private suspend fun initAppConfig(repo: AppConfigRepo, app: App): AppConfig {
-      return repo.getAppConfig().also {
-        app.updateConfig(it)
-        // TODO : find a way to update download semaphore dynamically
-      }
-    }
   }
 }
 

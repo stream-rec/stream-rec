@@ -28,6 +28,7 @@ package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
 import github.hua0512.utils.isWindows
+import github.hua0512.utils.logger
 import io.ktor.client.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
@@ -38,7 +39,7 @@ class App(val json: Json, val client: HttpClient) {
 
   companion object {
     @JvmStatic
-    val logger: org.slf4j.Logger = LoggerFactory.getLogger(App::class.java)
+    val logger: org.slf4j.Logger = logger(App::class.java)
   }
 
   val config: AppConfig

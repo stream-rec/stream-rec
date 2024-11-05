@@ -27,11 +27,15 @@
 package github.hua0512.plugins.event
 
 import github.hua0512.data.event.Event
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Simple broadcast event center using shared flow as event bus
@@ -44,6 +48,9 @@ object EventCenter {
 
   val events = _events.asSharedFlow()
 
+
+  private val isInitialized = AtomicBoolean(false)
+
   fun sendEvent(event: Event) = _events.tryEmit(event)
 
 
@@ -53,10 +60,14 @@ object EventCenter {
     }
   }
 
-  suspend fun run() {
+  fun run(scope: CoroutineScope) {
+    if (isInitialized.getAndSet(true)) {
+      return
+    }
     EventPluginsHolder.getPlugins().forEach {
       events.filter { event -> it.subscribeEvents.contains(event::class.java) }
-        .collect { event -> it.onEvent(event) }
+        .onEach { event -> it.onEvent(event) }
+        .launchIn(scope)
     }
   }
 
