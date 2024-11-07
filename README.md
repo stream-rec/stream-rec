@@ -47,7 +47,7 @@ It's powered by Kotlin, [Ktor](https://ktor.io/), and [ffmpeg](https://ffmpeg.or
 
 # Documentation
 
-Please refer to the [documentation](https://stream-rec.github.io/stream-rec-pages/) for more information.
+Please refer to the [documentation](https://stream-rec.github.io/docs/) for more information.
 
 # Contributing
 
@@ -70,10 +70,10 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Star History
 
-<a href="https://star-history.com/#hua0512/stream-rec&Date">
+<a href="https://star-history.com/#stream-rec/stream-rec&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=hua0512/stream-rec&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=hua0512/stream-rec&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=hua0512/stream-rec&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=stream-rec/stream-rec&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=stream-rec/stream-rec&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=stream-rec/stream-rec&type=Date" />
  </picture>
 </a>
