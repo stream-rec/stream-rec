@@ -149,10 +149,11 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
         logger.warn("${context.name} Invalid sound rate: $rate, using default 44kHz")
         return@run null
       }
+      this
     } ?: Amf0Value.Number(44100.0)
 
     // sound rate in kHz
-    val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
+    val soundRate = amfSoundRate.value / 1000
     soundSampleInterval = calculateSoundSampleInterval(soundRate)
 
     logger.debug("${context.name} fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
