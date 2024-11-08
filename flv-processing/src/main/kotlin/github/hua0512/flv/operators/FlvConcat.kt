@@ -31,18 +31,12 @@ import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvJoinPoint
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.data.tag.FlvScriptTagData
 import github.hua0512.flv.operators.FlvConcatAction.*
-import github.hua0512.flv.utils.ScriptData
-import github.hua0512.flv.utils.createMetadataTag
-import github.hua0512.flv.utils.isAudioSequenceHeader
-import github.hua0512.flv.utils.isHeader
-import github.hua0512.flv.utils.isSequenceHeader
-import github.hua0512.flv.utils.isTrueScripTag
-import github.hua0512.flv.utils.isVideoSequenceHeader
+import github.hua0512.flv.utils.*
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 
 
@@ -95,7 +89,7 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
   fun updateLastTags(tag: FlvData) {
     lastTags.add(tag)
     if (lastTags.size > NUM_LAST_TAGS) {
-      lastTags.removeAt(0)
+      lastTags.removeFirst()
     }
     if (tag is FlvTag) {
       if (tag.isAudioSequenceHeader()) {
@@ -112,7 +106,7 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
         logger.debug("${context.name} Cancel concat due to no last audio sequence header")
         action = CANCEL
       } else {
-        if (tag != lastAudioSequenceTag) {
+        if (tag.crc32 != lastAudioSequenceTag!!.crc32) {
           action = CANCEL
           logger.debug("${context.name} Cancel concat due to audio sequence header changed")
         }
@@ -123,7 +117,7 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
         logger.debug("${context.name} Cancel concat due to no last video sequence header")
         action = CANCEL
       } else {
-        if (tag != lastVideoSequenceTag) {
+        if (tag.crc32 != lastVideoSequenceTag!!.crc32) {
           action = CANCEL
           logger.debug("${context.name} Cancel concat due to video sequence header changed")
         }
@@ -155,11 +149,13 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
   }
 
   fun updateDeltaDuplicated(tag: FlvTag) {
-    delta = ((lastTags.last() as FlvTag).header.timestamp - tag.header.timestamp).toInt()
+    val lastTs = (lastTags.last() as FlvTag).header.timestamp
+    delta = lastTs - tag.header.timestamp
   }
 
   fun updateDeltaNonDuplicated(tag: FlvTag) {
-    delta = ((lastTags.last() as FlvTag).header.timestamp - tag.header.timestamp + 10).toInt()
+    val lastTs = (lastTags.last() as FlvTag).header.timestamp
+    delta = lastTs - tag.header.timestamp + 10
   }
 
   fun correctTs(tag: FlvTag): FlvTag {
@@ -172,8 +168,6 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
   fun makeJoinPointTag(nextTag: FlvTag, seamless: Boolean): FlvTag {
     val joinPoint = FlvJoinPoint(seamless, nextTag.header.timestamp, nextTag.crc32)
     logger.debug("Join point: {}", joinPoint)
-    val scriptData = createMetadataTag(nextTag.num - 1, nextTag.header.timestamp, nextTag.header.streamId)
-    val data = scriptData.data as ScriptData
 
     val amfJoinPoint = Amf0Value.Object(
       mapOf(
@@ -183,16 +177,20 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
       )
     )
 
-    return scriptData.copy(
-      data = data.copy(
-        values = listOf(Amf0Value.String("onJoinPoint"), amfJoinPoint)
+    val body = FlvScriptTagData(
+      listOf(
+        Amf0Value.String("onJoinPoint"),
+        amfJoinPoint
       )
     )
+
+    val scriptData = createMetadataTag(nextTag.num - 1, nextTag.header.timestamp, nextTag.header.streamId, body)
+    return scriptData
   }
 
-  suspend fun Flow<FlvData>.doConcat() {
+  suspend fun doConcat() {
     logger.debug("${context.name} Concatenating.. gathered {} tags", gatheredTags.size)
-    var tags = gatheredTags.filter { (it is FlvTag) && !it.isTrueScripTag() && !it.isSequenceHeader() }
+    var tags = gatheredTags.filter { !it.isTrueScripTag() && !it.isSequenceHeader() }
     logger.debug("${context.name} {} data tags", tags.size)
 
     if (tags.isEmpty()) return
@@ -222,7 +220,7 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
   }
 
 
-  fun doCancel() = flow {
+  suspend fun doCancel() {
     logger.debug("${context.name} Canceling.. gathered {} tags", gatheredTags.size)
     assert(lastHeader != null)
     emit(lastHeader!!)
@@ -279,7 +277,7 @@ internal fun Flow<FlvData>.concat(context: StreamerContext): Flow<FlvData> = flo
         GATHER -> {
           gatherTags(tag)
           if (action == CANCEL) {
-            emitAll(doCancel())
+            doCancel()
             action = NOOP
             return@collect
           }

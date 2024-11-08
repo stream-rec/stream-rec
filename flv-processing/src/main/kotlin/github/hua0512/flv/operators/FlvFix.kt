@@ -27,22 +27,14 @@
 package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
-import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.Amf0Value
 import github.hua0512.flv.exceptions.FlvDataErrorException
-import github.hua0512.flv.utils.ScriptData
-import github.hua0512.flv.utils.isAudioSequenceHeader
-import github.hua0512.flv.utils.isAudioTag
-import github.hua0512.flv.utils.isScriptTag
-import github.hua0512.flv.utils.isTrueScripTag
-import github.hua0512.flv.utils.isVideoSequenceHeader
-import github.hua0512.flv.utils.isVideoTag
+import github.hua0512.flv.utils.*
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlin.math.abs
 import kotlin.math.ceil
 
 
@@ -124,9 +116,11 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     val fps = properties["fps"] ?: properties["framerate"]
     fps ?: return
 
-    frameRate = if (fps is Amf0Value.Number) fps.value
-    else if (fps is Amf0Value.String) fps.value.toDouble()
-    else throw FlvDataErrorException("${context.name} Invalid fps type: $fps")
+    frameRate = when (fps) {
+      is Amf0Value.Number -> fps.value
+      is Amf0Value.String -> fps.value.toDouble()
+      else -> throw FlvDataErrorException("${context.name} Invalid fps type: $fps")
+    }
 
     if (frameRate <= 0) {
       logger.warn("${context.name} Invalid frame rate: $frameRate")
@@ -203,6 +197,7 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    */
   fun updateDelta(tag: FlvTag) {
     val current = tag.header.timestamp
+    val lastTs = lastTag!!.header.timestamp
 
     if (tag.isVideoTag() && lastVideoTag != null) {
       delta = (lastVideoTag!!.header.timestamp + videoFrameInterval) - current
@@ -210,10 +205,10 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
       delta = (lastAudioTag!!.header.timestamp + soundSampleInterval) - current
     }
 
+    val expected = current + delta
 
     // case when the timestamp is rebounded
-    if (lastTag != null && current <= lastTag!!.header.timestamp) {
-      val lastTs = lastTag!!.header.timestamp
+    if (lastTag != null && expected <= lastTs) {
       if (tag.isVideoTag()) {
         delta = (lastTs + videoFrameInterval) - current
       } else if (tag.isAudioTag()) {
@@ -239,26 +234,21 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    * @return Boolean True if the timestamp has rebounded, false otherwise.
    */
   fun FlvTag.isTsRebound(): Boolean {
-    when {
-      isAudioTag() -> {
-        if (lastAudioTag == null) return false
-        return if (lastAudioTag!!.isAudioSequenceHeader()) this.header.timestamp + delta < lastAudioTag!!.header.timestamp
-        else {
-          val current = this.header.timestamp
-          current <= lastAudioTag!!.header.timestamp
-        }
-      }
+    val current = this.header.timestamp
+    val expected = current + delta
 
-      isVideoTag() -> {
-        if (lastVideoTag == null) return false
-        return if (lastVideoTag!!.isVideoSequenceHeader()) this.header.timestamp + delta < lastVideoTag!!.header.timestamp
-        else {
-          val current = this.header.timestamp
-          current <= lastVideoTag!!.header.timestamp
-        }
-      }
+    return when {
+      isAudioTag() -> lastAudioTag?.let {
+        if (it.isAudioSequenceHeader()) expected < it.header.timestamp
+        else expected <= it.header.timestamp
+      } ?: false
 
-      else -> return false
+      isVideoTag() -> lastVideoTag?.let {
+        if (it.isVideoSequenceHeader()) expected < it.header.timestamp
+        else expected <= it.header.timestamp
+      } ?: false
+
+      else -> false
     }
   }
 
@@ -273,13 +263,13 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
     // expected timestamp, by applying smoothing
     val expected = header.timestamp + delta
-    val diff = abs(expected - lastTag!!.header.timestamp)
+    val diff = expected - lastTag!!.header.timestamp
     val threshold = maxOf(soundSampleInterval, videoFrameInterval) + TOLERANCE
-    return diff > threshold
+    return diff < 0 || diff > threshold
   }
 
   collect { data ->
-    if (data is FlvHeader) {
+    if (data.isHeader()) {
       reset()
       emit(data)
       return@collect
@@ -289,16 +279,10 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
     if (tag.isScriptTag()) {
       tag.data as ScriptData
-      var correctedTag = tag
       if (tag.isTrueScripTag()) {
-        // correct the timestamp of the subsequent script tags
-        if (tag.num != 1) {
-          correctedTag = tag.correctTs(delta)
-        }
         updateParameters(tag)
       }
-
-      emit(correctedTag)
+      emit(tag)
       return@collect
     }
 
@@ -309,7 +293,24 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
       updateDelta(tag)
       logger.warn("${context.name} Timestamp non continuous, updated delta: $delta\nlast tag: $lastTag\nlast video tag: $lastVideoTag\nlast audio tag: $lastAudioTag\ncurrent tag: $tag")
     }
-    val correctedTag = tag.correctTs(delta)
+    var correctedTag = tag.correctTs(delta)
+
+    // should never happen
+    if (correctedTag.header.timestamp < 0) {
+      if (lastTag == null) {
+        correctedTag = correctedTag.copy(header = correctedTag.header.copy(timestamp = 0))
+        logger.debug("${context.name} negative timestamp: ${correctedTag.header.timestamp}, but no last tag")
+      } else {
+        val lastTs = lastTag!!.header.timestamp
+        if (correctedTag.isVideoTag()) {
+          correctedTag = correctedTag.copy(header = correctedTag.header.copy(timestamp = lastTs + videoFrameInterval))
+        } else if (correctedTag.isAudioTag()) {
+          correctedTag = correctedTag.copy(header = correctedTag.header.copy(timestamp = lastTs + soundSampleInterval))
+        }
+        logger.debug("${context.name} negative timestamp: ${correctedTag.header.timestamp}, corrected to ${correctedTag.header.timestamp}")
+      }
+    }
+
     updateLastTags(correctedTag)
     emit(correctedTag)
   }

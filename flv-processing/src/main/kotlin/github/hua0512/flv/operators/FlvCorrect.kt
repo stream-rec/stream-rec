@@ -76,7 +76,7 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
     }
     val newTimestamp = tag.header.timestamp + offset
     if (newTimestamp < 0) {
-      logger.warn("${context.name} negative timestamp: {} - {} -> {} : {}", tag.header.timestamp, offset, newTimestamp, tag)
+      logger.trace("${context.name} negative timestamp: {} - {} -> {} : {}", tag.header.timestamp, offset, newTimestamp, tag)
     }
     return tag.copy(header = tag.header.copy(timestamp = newTimestamp))
   }
@@ -95,7 +95,7 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
         // first script tag must have timestamp 0
         item.header.timestamp != 0 && item.num == 1 -> correctTimestamp(item, -item.header.timestamp)
         item.header.timestamp != 0 -> {
-          logger.debug("${context.name} received extra script tag: {}", item)
+//          logger.debug("${context.name} received extra script tag: {}", item)
           correctTimestamp(item, delta ?: -item.header.timestamp)
         }
 

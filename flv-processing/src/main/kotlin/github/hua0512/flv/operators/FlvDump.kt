@@ -32,6 +32,7 @@ import github.hua0512.flv.FlvWriter
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.utils.isHeader
 import github.hua0512.utils.logger
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
@@ -112,8 +113,9 @@ fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDow
     reset()
   }.collect { value ->
 
-    if (value is FlvHeader) {
-      value.write()
+    if (value.isHeader()) {
+//      logger.debug("detected header...")
+      (value as FlvHeader).write()
     } else {
       value as FlvTag
       writer?.writeTag(value)

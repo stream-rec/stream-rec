@@ -75,29 +75,33 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
     lastPps = null
   }
 
-  suspend fun Flow<FlvData>.insertHeaderAndTags() {
+  suspend fun insertHeaderAndTags() {
     assert(lastHeader != null)
     emit(lastHeader!!)
 
+    logger.debug("${context.name} re-emit header : {}", lastHeader)
     lastMetadata?.let {
       if (it.num != 1) {
         emit(it.copy(num = 1))
         return@let
       }
+      logger.debug("${context.name} re-emit metadata : {}", it)
       emit(it)
     }
     lastVideoSequenceTag?.let {
       emit(it)
+      logger.debug("${context.name} re-emit video sequence tag : {}", it)
     }
     lastAudioSequenceTag?.let {
       emit(it)
+      logger.debug("${context.name} re-emit audio sequence tag : {}", it)
     }
   }
 
-  suspend fun Flow<FlvData>.splitStream() {
+  suspend fun splitStream() {
     logger.info("${context.name} Splitting stream...")
-    changed = false
     insertHeaderAndTags()
+    changed = false
     logger.info("${context.name} Stream split")
   }
 
