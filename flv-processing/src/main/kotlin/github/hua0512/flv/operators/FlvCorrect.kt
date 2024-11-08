@@ -76,7 +76,7 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
     }
     val newTimestamp = tag.header.timestamp + offset
     if (newTimestamp < 0) {
-      logger.warn("${context.name} negative timestamp: $newTimestamp, delta = $offset, tag = $tag")
+      logger.warn("${context.name} negative timestamp: {} - {} -> {} : {}", tag.header.timestamp, offset, newTimestamp, tag)
     }
     return tag.copy(header = tag.header.copy(timestamp = newTimestamp))
   }
@@ -91,15 +91,16 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
     item as FlvTag
 
     if (item.isScriptTag()) {
-      // SCRIPT tag timestamp must be 0
-      val scriptTag = if (item.header.timestamp != 0) {
-        if (item.num != 1) {
-//          logger.warn("{} Script tag timestamp is not 0: {}", context.name, item)
-          return@collect
+      val scriptTag = when {
+        // first script tag must have timestamp 0
+        item.header.timestamp != 0 && item.num == 1 -> correctTimestamp(item, -item.header.timestamp)
+        item.header.timestamp != 0 -> {
+          logger.debug("${context.name} received extra script tag: {}", item)
+          correctTimestamp(item, delta ?: -item.header.timestamp)
         }
-        // Correct the timestamp of the first script tag
-        item.copy(header = item.header.copy(timestamp = 0))
-      } else item
+
+        else -> correctTimestamp(item, delta ?: -item.header.timestamp)
+      }
       emit(scriptTag)
       return@collect
     }
@@ -108,11 +109,8 @@ internal fun Flow<FlvData>.correct(context: StreamerContext): Flow<FlvData> = fl
       if (item.isSequenceHeader()) {
         // Sequence timestamp must be 0
         if (item.header.timestamp != 0) {
-          logger.warn("${context.name} Sequence header ts != 0: $item")
-          val newDelta = -item.header.timestamp
-          logger.debug("${context.name} new ts delta: $newDelta")
-          val sequenceTag = correctTimestamp(item, newDelta)
-          logger.debug("{} Corrected sequence header: {}", context.name, sequenceTag)
+          val sequenceTag = correctTimestamp(item, -item.header.timestamp)
+          // SHOULD NEVER HAPPEN
           if (sequenceTag.header.timestamp < 0) {
             logger.debug("{} detected failed correction: {}", context.name, sequenceTag)
             emit(item.copy(header = item.header.copy(timestamp = 0)))

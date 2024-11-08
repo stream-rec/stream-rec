@@ -42,6 +42,7 @@ import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlin.math.abs
 import kotlin.math.ceil
 
 
@@ -50,6 +51,7 @@ private val logger = logger(TAG)
 
 /**
  * The tolerance for timestamp correction.
+ * This value is calculated due to the margin of error by converting from double to int.
  */
 private const val TOLERANCE = 1
 
@@ -67,13 +69,16 @@ private const val TOLERANCE = 1
  */
 internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
+  /**
+   * Delta, an offset to correct the timestamp.
+   */
   var delta: Int = 0
   var lastTag: FlvTag? = null
   var lastAudioTag: FlvTag? = null
   var lastVideoTag: FlvTag? = null
   var frameRate = 30.0
-  var videoFrameInterval: Int = ceil((1000 / frameRate).toDouble()).toInt()
-  var soundSampleInterval: Int = ceil((1000 / 44).toDouble()).toInt()
+  var videoFrameInterval = ceil(1000 / frameRate).toInt()
+  var soundSampleInterval = ceil(1000 / 44.1).toInt()
 
   /**
    * Resets the correction state.
@@ -86,8 +91,8 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     lastAudioTag = null
     lastVideoTag = null
     frameRate = 30.0
-    videoFrameInterval = ceil((1000 / frameRate).toDouble()).toInt()
-    soundSampleInterval = ceil((1000 / 44).toDouble()).toInt()
+    videoFrameInterval = ceil(1000 / frameRate).toInt()
+    soundSampleInterval = ceil(1000 / 44.1).toInt()
   }
 
   /**
@@ -97,6 +102,16 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    * @return Double The calculated video frame interval.
    */
   fun calculateVideoFrameInterval(fps: Double) = ceil(1000 / fps).toInt()
+
+
+  /**
+   * Calculates the sound sample interval based on the given rate.
+   *
+   * @param rate Double The sound rate.
+   * @return Int The calculated sound sample interval.
+   */
+  fun calculateSoundSampleInterval(rate: Double) = ceil(1000 / rate).toInt()
+
 
   /**
    * Updates the video parameters based on the given properties.
@@ -119,9 +134,26 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     }
     videoFrameInterval = calculateVideoFrameInterval(frameRate)
 
-//    val amfSoundRate = properties["audiosamplerate"] ?: Amf0Value.Number(44100.0)
-//    val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
-//    soundSampleInterval = ceil(1000 / soundRate).toInt()
+    val amfSoundRate = properties["audiosamplerate"]?.run {
+      if (this !is Amf0Value.Number) {
+        logger.warn("${context.name} Invalid sound rate: $this, using default 44kHz")
+        return@run null
+      }
+      val rate = this.value
+      if (rate == 0.0) {
+        logger.warn("${context.name} zero sound rate, using default 44kHz")
+        // use default sound rate
+        return@run null
+      }
+      if (rate !in arrayOf(5512.0, 11025.0, 22050.0, 44100.0)) {
+        logger.warn("${context.name} Invalid sound rate: $rate, using default 44kHz")
+        return@run null
+      }
+    } ?: Amf0Value.Number(44100.0)
+
+    // sound rate in kHz
+    val soundRate = (amfSoundRate as Amf0Value.Number).value / 1000
+    soundSampleInterval = calculateSoundSampleInterval(soundRate)
 
     logger.debug("${context.name} fps = $frameRate, videoFrameInterval = $videoFrameInterval, soundSampleInterval = $soundSampleInterval")
   }
@@ -169,17 +201,22 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    * @param tag FlvTag The FLV tag to update the delta with.
    */
   fun updateDelta(tag: FlvTag) {
+    val current = tag.header.timestamp
+
     if (tag.isVideoTag() && lastVideoTag != null) {
-      delta = lastVideoTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval
+      delta = (lastVideoTag!!.header.timestamp + videoFrameInterval) - current
     } else if (tag.isAudioTag() && lastAudioTag != null) {
-      delta = lastAudioTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval
+      delta = (lastAudioTag!!.header.timestamp + soundSampleInterval) - current
     }
 
-    if (lastTag != null && tag.header.timestamp + delta <= lastTag!!.header.timestamp) {
+
+    // case when the timestamp is rebounded
+    if (lastTag != null && current <= lastTag!!.header.timestamp) {
+      val lastTs = lastTag!!.header.timestamp
       if (tag.isVideoTag()) {
-        delta = lastTag!!.header.timestamp - tag.header.timestamp + videoFrameInterval
+        delta = (lastTs + videoFrameInterval) - current
       } else if (tag.isAudioTag()) {
-        delta = lastTag!!.header.timestamp - tag.header.timestamp + soundSampleInterval
+        delta = (lastTs + soundSampleInterval) - current
       }
     }
   }
@@ -205,13 +242,19 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
       isAudioTag() -> {
         if (lastAudioTag == null) return false
         return if (lastAudioTag!!.isAudioSequenceHeader()) this.header.timestamp + delta < lastAudioTag!!.header.timestamp
-        else this.header.timestamp + delta <= lastAudioTag!!.header.timestamp
+        else {
+          val current = this.header.timestamp
+          current <= lastAudioTag!!.header.timestamp
+        }
       }
 
       isVideoTag() -> {
         if (lastVideoTag == null) return false
         return if (lastVideoTag!!.isVideoSequenceHeader()) this.header.timestamp + delta < lastVideoTag!!.header.timestamp
-        else this.header.timestamp + delta <= lastVideoTag!!.header.timestamp
+        else {
+          val current = this.header.timestamp
+          current <= lastVideoTag!!.header.timestamp
+        }
       }
 
       else -> return false
@@ -226,7 +269,12 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
    */
   fun FlvTag.isNoncontinuous(): Boolean {
     if (lastTag == null) return false
-    return (header.timestamp + delta - lastTag!!.header.timestamp) > maxOf(soundSampleInterval, videoFrameInterval) + TOLERANCE
+
+    // expected timestamp, by applying smoothing
+    val expected = header.timestamp + delta
+    val diff = abs(expected - lastTag!!.header.timestamp)
+    val threshold = maxOf(soundSampleInterval, videoFrameInterval) + TOLERANCE
+    return diff > threshold
   }
 
   collect { data ->
@@ -240,10 +288,16 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
     if (tag.isScriptTag()) {
       tag.data as ScriptData
-      if (tag.isTrueScripTag())
+      var correctedTag = tag
+      if (tag.isTrueScripTag()) {
+        // correct the timestamp of the subsequent script tags
+        if (tag.num != 1) {
+          correctedTag = tag.correctTs(delta)
+        }
         updateParameters(tag)
+      }
 
-      emit(tag)
+      emit(correctedTag)
       return@collect
     }
 
