@@ -36,9 +36,8 @@ import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
 import github.hua0512.flv.utils.AudioData
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.VideoData
-import io.ktor.utils.io.core.size
+import io.ktor.utils.io.core.*
 import kotlinx.io.Sink
-import java.lang.AutoCloseable
 
 /**
  * FLV writer
@@ -65,7 +64,7 @@ internal class FlvDumper(val sink: Sink) : AutoCloseable {
 
   fun dumpTag(tag: FlvTag) {
     if (tag.header.timestamp < 0) {
-      throw FlvTagHeaderErrorException("Invalid timestamp: ${tag.header.timestamp}")
+      throw FlvTagHeaderErrorException("Invalid negative timestamp: $tag")
     }
     // write tag header
     dumpTagHeader(tag.header)

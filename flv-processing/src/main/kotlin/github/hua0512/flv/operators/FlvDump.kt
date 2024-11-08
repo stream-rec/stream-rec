@@ -32,7 +32,9 @@ import github.hua0512.flv.FlvWriter
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.utils.isHeader
 import github.hua0512.utils.logger
+import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
@@ -60,8 +62,8 @@ fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDow
   var streamIndex = -1
   var lastOpenTime = 0L
 
-  fun init(path: String) {
-    val file = Files.createFile(Path(path))
+  suspend fun init(path: String) {
+    val file = withIOContext { Files.createFile(Path(path)) }
     logger.info("Starting write to: {}", file)
     writer = FlvWriter(file.outputStream().asSink().buffered())
     lastPath = path
@@ -80,19 +82,24 @@ fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDow
   }
 
   fun closeAndInform() {
-    // close the previous writer
-    close()
-    // inform that previous stream is dumped
-    lastPath?.let {
-      onStreamDumped(streamIndex, it, lastOpenTime, Clock.System.now().toEpochMilliseconds())
+    if (streamIndex == -1) {
+      streamIndex = 0
+      return
     }
+
+    close()
+
+    if (streamIndex >= 0) {
+      lastPath?.let {
+        if (streamIndex > 0) logger.debug("Split flv file...")
+        onStreamDumped(streamIndex, it, lastOpenTime, Clock.System.now().toEpochMilliseconds())
+      }
+    }
+    streamIndex++
   }
 
 
-  fun FlvHeader.write() {
-    streamIndex++
-    if (streamIndex > 0)
-      logger.debug("Split flv file...")
+  suspend fun FlvHeader.write() {
     // close the previous writer and inform
     closeAndInform()
 
@@ -106,8 +113,9 @@ fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDow
     reset()
   }.collect { value ->
 
-    if (value is FlvHeader) {
-      value.write()
+    if (value.isHeader()) {
+//      logger.debug("detected header...")
+      (value as FlvHeader).write()
     } else {
       value as FlvTag
       writer?.writeTag(value)

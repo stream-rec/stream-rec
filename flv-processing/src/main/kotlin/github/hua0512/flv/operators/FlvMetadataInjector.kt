@@ -42,7 +42,6 @@ import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlin.collections.plus
 
 
 private const val TAG = "FlvMetadataInjectorRule"
@@ -65,8 +64,6 @@ internal fun Flow<FlvData>.injectMetadata(context: StreamerContext): Flow<FlvDat
   }
 
   fun FlvTag.injectMetadata(): FlvTag {
-
-
     var tagData = data as ScriptData
     val obj = tagData[1] // This is the second AMF value in the metadata
 
@@ -105,6 +102,7 @@ internal fun Flow<FlvData>.injectMetadata(context: StreamerContext): Flow<FlvDat
   collect { data ->
     if (data is FlvTag && data.num == 1) {
       if (data.isTrueScripTag()) {
+        logger.debug("${context.name} Script tag found : {}", pprint(data, defaultHeight = 50))
         val newTag = data.injectMetadata()
         emit(newTag)
         return@collect

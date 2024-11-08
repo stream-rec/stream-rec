@@ -80,15 +80,23 @@ fun Flow<FlvData>.analyze(infoProvider: FlvMetaInfoProvider, context: StreamerCo
 
   // Collects and processes each FlvData object in the flow
   onCompletion {
+    logger.debug("${context.name} completed analysis : {}", streamIndex, it)
     // Push the final metadata information and reset the analyzer
     pushMetadata()
     reset()
     streamIndex = -1
   }.collect { value ->
     if (value.isHeader()) {
+      if (streamIndex == -1) {
+        // do nothing
+        logger.debug("${context.name} first header initialized")
+      } else {
+        // Push the metadata information and reset the analyzer
+        pushMetadata()
+        reset()
+      }
+      // Increment the stream index
       streamIndex++
-      pushMetadata()
-      reset()
       // Analyze the header
       analyzer.analyzeHeader(value as FlvHeader)
     } else {

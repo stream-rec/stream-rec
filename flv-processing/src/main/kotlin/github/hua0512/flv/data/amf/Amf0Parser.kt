@@ -27,8 +27,6 @@
 package github.hua0512.flv.data.amf
 
 import kotlinx.io.Source
-import kotlinx.io.bytestring.decodeToString
-import kotlinx.io.readByteString
 import kotlinx.io.readDouble
 import kotlinx.io.readString
 import kotlinx.io.readUShort
@@ -39,20 +37,22 @@ import kotlinx.io.readUShort
  * @date : 2024/6/9 20:13
  */
 fun readAmf0Value(source: Source): Amf0Value {
-  val type = source.readByte()
-
-  return when (type) {
+  return when (val type = source.readByte()) {
     Amf0Type.NUMBER.byte -> Amf0Value.Number(source.readDouble())
+
     Amf0Type.BOOLEAN.byte -> Amf0Value.Boolean(source.readByte() != 0.toByte())
     Amf0Type.STRING.byte, Amf0Type.LONG_STRING.byte, Amf0Type.XML_DOCUMENT.byte -> {
       val length: Int = if (type == Amf0Type.STRING.byte) source.readUShort().toInt() else source.readInt()
-      val str = source.readByteString(length).decodeToString()
+      val str = source.readString(length.toLong())
       when (type) {
         Amf0Type.STRING.byte -> Amf0Value.String(str.trim(0.toChar()))
         Amf0Type.LONG_STRING.byte -> Amf0Value.LongString(str.trim(0.toChar()))
         else -> Amf0Value.XmlDocument(str.trim(0.toChar()))
       }
     }
+
+    Amf0Type.UNDEFINED.byte -> Amf0Value.Undefined
+    Amf0Type.REFERENCE.byte -> Amf0Value.Reference(source.readUShort())
 
     Amf0Type.OBJECT.byte -> readAmf0Object(source)
     Amf0Type.ECMA_ARRAY.byte -> readAmf0EcmaArray(source)
@@ -78,12 +78,11 @@ private fun readAmf0EcmaArray(source: Source): Amf0Value.EcmaArray {
 
 private fun readAmf0StrictArray(source: Source): Amf0Value.StrictArray {
   val arrayLength = source.readInt()
-  val values = mutableListOf<Amf0Value>()
-
-  repeat(arrayLength) {
-    values.add(readAmf0Value(source))
+  val values = buildList<Amf0Value> {
+    repeat(arrayLength) {
+      add(readAmf0Value(source))
+    }
   }
-
   return Amf0Value.StrictArray(values)
 }
 
@@ -96,11 +95,10 @@ private fun readAmf0TypedObject(source: Source): Amf0Value.TypedObject {
 
 private fun readAmf0Properties(source: Source): MutableMap<String, Amf0Value> {
   val properties = mutableMapOf<String, Amf0Value>()
-
   while (true) {
     val keyLength = source.readUShort().toLong()
     if (keyLength == 0L) {
-      source.readByte() // Read and discard the marker byte
+      source.skip(1) // Read and discard the marker byte
       break
     }
     val key = source.readString(keyLength)
