@@ -33,17 +33,9 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.AmfValue
 import github.hua0512.flv.data.amf.readAmf0Value
 import github.hua0512.flv.data.avc.AvcPacketType
-import github.hua0512.flv.data.sound.AACPacketType
-import github.hua0512.flv.data.sound.FlvSoundFormat
-import github.hua0512.flv.data.sound.FlvSoundRate
-import github.hua0512.flv.data.sound.FlvSoundSize
-import github.hua0512.flv.data.sound.FlvSoundType
-import github.hua0512.flv.data.tag.FlvAudioTagData
-import github.hua0512.flv.data.tag.FlvScriptTagData
-import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.data.tag.FlvTagHeaderType
+import github.hua0512.flv.data.sound.*
+import github.hua0512.flv.data.tag.*
 import github.hua0512.flv.data.tag.FlvTagHeaderType.*
-import github.hua0512.flv.data.tag.FlvVideoTagData
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.data.video.FlvVideoFrameType
 import github.hua0512.flv.exceptions.FlvDataErrorException
@@ -54,11 +46,7 @@ import github.hua0512.utils.crc32
 import github.hua0512.utils.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.io.Buffer
-import kotlinx.io.EOFException
-import kotlinx.io.Source
-import kotlinx.io.readByteArray
-import kotlinx.io.readUByte
+import kotlinx.io.*
 import java.nio.ByteBuffer
 import kotlin.experimental.and
 
@@ -87,7 +75,7 @@ internal class FlvParser(private val source: Source) {
     try {
       source.require(9)
     } catch (e: EOFException) {
-      throw FlvHeaderErrorException("FLV header not complete}")
+      throw FlvHeaderErrorException("FLV header not complete")
     }
 
     val buffer = source.readByteArray(9)

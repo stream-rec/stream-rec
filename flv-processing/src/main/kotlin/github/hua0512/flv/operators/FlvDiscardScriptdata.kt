@@ -26,43 +26,31 @@
 
 package github.hua0512.flv.operators
 
-import github.hua0512.download.DownloadLimitsProvider
 import github.hua0512.flv.data.FlvData
-import github.hua0512.flv.utils.isAvcEndSequence
+import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.plugins.StreamerContext
-import kotlinx.coroutines.Dispatchers
+import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.transform
 
+
+private const val TAG = "FlvDiscardScriptRule"
+
+private val logger by lazy { logger(TAG) }
 
 /**
- * Process the FLV data flow.
+ * Discards script tags after the first one.
  * @author hua0512
- * @date : 2024/9/10 11:55
+ * @date : 2024/11/8 16:35
  */
-fun Flow<FlvData>.process(
-  limitsProvider: DownloadLimitsProvider = { 0L to 0.0f },
-  context: StreamerContext,
-  duplicateTagFiltering: Boolean = true,
-): Flow<FlvData> {
-  val (fileSizeLimit, durationLimit) = limitsProvider()
-  // GOP count
-  val gopCount = MutableStateFlow(0)
-
-  return this.discardFragmented(context)
-    .checkHeader(context)
-    .split(context)
-    .sort(context, gopCount)
-    .filter { !it.isAvcEndSequence() }
-    .correct(context)
-    .fix(context)
-//    .concat(context)
-    .limit(fileSizeLimit, durationLimit, context)
-    .extractJoinPoints(context = context)
-    .injectMetadata(context)
-    .discardSubsequentScript(context)
-    .removeDuplicates(context, gopCount, duplicateTagFiltering)
-    .flowOn(Dispatchers.Default)
+fun Flow<FlvData>.discardSubsequentScript(context: StreamerContext): Flow<FlvData> = transform { data ->
+  if (data.isTrueScripTag()) {
+    data as FlvTag
+    if (data.num != 1) {
+      logger.debug("{} drop extra script tag: {}", context.name, data)
+      return@transform
+    }
+  }
+  emit(data)
 }

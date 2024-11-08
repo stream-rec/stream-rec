@@ -31,14 +31,11 @@ import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.Amf0Value
 import github.hua0512.flv.data.amf.Amf0Value.*
+import github.hua0512.flv.data.amf.Amf0Value.Number
+import github.hua0512.flv.data.amf.Amf0Value.String
 import github.hua0512.flv.data.avc.AvcPacketType
 import github.hua0512.flv.data.other.FlvKeyframe
-import github.hua0512.flv.data.tag.FlvAudioTagData
-import github.hua0512.flv.data.tag.FlvScriptTagData
-import github.hua0512.flv.data.tag.FlvTagData
-import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.data.tag.FlvTagHeaderType
-import github.hua0512.flv.data.tag.FlvVideoTagData
+import github.hua0512.flv.data.tag.*
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.data.video.FlvVideoFrameType
 import github.hua0512.utils.crc32
@@ -76,6 +73,12 @@ fun FlvTag.isKeyFrame(): Boolean = isVideoTag() && (this.data as VideoData).isKe
 
 
 fun FlvData.isHeader(): Boolean = this is FlvHeader
+
+fun FlvData.isScriptTag(): Boolean = this is FlvTag && isScriptTag()
+
+fun FlvData.isTrueScripTag(): Boolean = this is FlvTag && isTrueScripTag()
+
+fun FlvData.isSequenceHeader(): Boolean = this is FlvTag && isSequenceHeader()
 
 fun FlvData.isAvcEndSequence(): Boolean {
   if (this !is FlvTag) return false
@@ -120,8 +123,8 @@ internal fun createEndOfSequenceData(): FlvTagData = FlvVideoTagData(
 )
 
 
-internal fun createMetadataTag(tagNum: Int, timestamp: Int, streamId: Int): FlvTag {
-  val data = FlvScriptTagData(
+internal fun createMetadataTag(tagNum: Int, timestamp: Int, streamId: Int, data: ScriptData? = null): FlvTag {
+  val body = data ?: FlvScriptTagData(
     mutableListOf(
       String("onMetaData"),
       EcmaArray(mapOf("duration" to Number(0.0), "width" to Number(0.0), "height" to Number(0.0)))
@@ -131,11 +134,11 @@ internal fun createMetadataTag(tagNum: Int, timestamp: Int, streamId: Int): FlvT
     num = tagNum,
     header = FlvTagHeader(
       tagType = FlvTagHeaderType.ScriptData,
-      dataSize = data.bodySize,
+      dataSize = body.bodySize,
       timestamp = timestamp,
       streamId = streamId
     ),
-    data = data,
-    crc32 = data.binaryData.crc32()
+    data = body,
+    crc32 = body.binaryData.crc32()
   )
 }
