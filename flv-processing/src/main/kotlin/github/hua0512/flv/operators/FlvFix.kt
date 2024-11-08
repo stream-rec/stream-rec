@@ -139,7 +139,7 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
         // use default sound rate
         return@run null
       }
-      if (rate !in arrayOf(5512.0, 11025.0, 22050.0, 44100.0)) {
+      if (rate < 5512.0) {
         logger.warn("${context.name} Invalid sound rate: $rate, using default 44kHz")
         return@run null
       }
