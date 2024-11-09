@@ -42,9 +42,10 @@ import kotlinx.serialization.Serializable
 data class DouyinConfigGlobal(
   override val cookies: String? = null,
   override val quality: DouyinQuality = DouyinQuality.origin,
-  override val partedDownloadRetry: Int = 10,
+  override val partedDownloadRetry: Int? = 0,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
-  override val fetchDelay: Long = 0,
+  override val fetchDelay: Long? = 0,
+  override val downloadCheckInterval: Long? = null,
 ) : GlobalPlatformConfig, DouyinConfigDTO
 
 @Serializable
@@ -53,8 +54,9 @@ data class DouyuConfigGlobal(
   @Serializable(with = DouyuQualitySerializer::class)
   override val quality: DouyuQuality = DouyuQuality.ORIGIN,
   override val cookies: String? = null,
-  override val partedDownloadRetry: Int = 10,
-  override val fetchDelay: Long = 0,
+  override val partedDownloadRetry: Int? = 10,
+  override val fetchDelay: Long? = 0,
+  override val downloadCheckInterval: Long? = null,
 ) : GlobalPlatformConfig, DouyuConfigDTO
 
 
@@ -63,32 +65,35 @@ data class HuyaConfigGlobal(
   override val primaryCdn: String = "AL",
   override val maxBitRate: Int? = 10000,
   override val cookies: String? = null,
-  override val partedDownloadRetry: Int = 10,
+  override val partedDownloadRetry: Int? = 10,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
-  override val fetchDelay: Long = 0,
+  override val fetchDelay: Long? = 0,
   val forceOrigin: Boolean = false,
   val useMobileApi: Boolean = false,
+  override val downloadCheckInterval: Long? = null,
 ) : GlobalPlatformConfig, HuyaConfigDTO
 
 @Serializable
 data class TwitchConfigGlobal(
   override val authToken: String = "",
   override val quality: TwitchQuality = TwitchQuality.Source,
-  override val partedDownloadRetry: Int = 10,
+  override val partedDownloadRetry: Int? = 10,
   override val cookies: String? = null,
-  override val fetchDelay: Long = 30,
+  override val fetchDelay: Long? = 30,
   val skipAds: Boolean = false,
   val twitchProxyPlaylist: String? = null,
   val twitchProxyPlaylistExclude: String? = null,
   val twitchProxyPlaylistFallback: Boolean = true,
+  override val downloadCheckInterval: Long? = null,
 ) : GlobalPlatformConfig, TwitchConfigDTO
 
 @Serializable
 data class PandaTvConfigGlobal(
-  override val partedDownloadRetry: Int = 10,
+  override val partedDownloadRetry: Int? = 10,
   override val cookies: String? = null,
   override val quality: PandaTvQuality = PandaTvQuality.Source,
-  override val fetchDelay: Long = 30,
+  override val fetchDelay: Long? = 30,
+  override val downloadCheckInterval: Long? = null,
 ) : GlobalPlatformConfig, PandaTvConfigDTO
 
 
@@ -98,4 +103,5 @@ data class WeiboConfigGlobal(
   override val fetchDelay: Long? = 0,
   override val partedDownloadRetry: Int? = 0,
   override val sourceFormat: VideoFormat? = VideoFormat.flv,
+  override val downloadCheckInterval: Long? = null,
 ) : GlobalPlatformConfig, WeiboConfigDTO
