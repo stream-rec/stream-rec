@@ -110,7 +110,7 @@ class StreamerDownloadService(
 
   // delay between download checks
   private val downloadInterval
-    get() = app.config.downloadCheckInterval.toDuration(DurationUnit.SECONDS)
+    get() = (streamer.platform.globalConfig(app.config).downloadCheckInterval ?: app.config.downloadCheckInterval).toDuration(DurationUnit.SECONDS)
 
   // retry delay for parted downloads
   private val platformRetryDelay

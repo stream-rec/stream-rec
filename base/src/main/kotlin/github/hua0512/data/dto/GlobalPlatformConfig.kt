@@ -46,4 +46,9 @@ interface GlobalPlatformConfig {
    * Cookies for the platform
    */
   val cookies: String?
+
+  /**
+   * Download check interval in seconds
+   */
+  val downloadCheckInterval: Long?
 }
