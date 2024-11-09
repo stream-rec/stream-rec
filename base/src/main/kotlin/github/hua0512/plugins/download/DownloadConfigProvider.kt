@@ -30,11 +30,7 @@ import github.hua0512.data.config.Action
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.GlobalPlatformConfig
-import github.hua0512.data.dto.platform.DouyinConfigDTO
-import github.hua0512.data.dto.platform.DouyuConfigDTO
-import github.hua0512.data.dto.platform.HuyaConfigDTO
-import github.hua0512.data.dto.platform.PandaTvConfigDTO
-import github.hua0512.data.dto.platform.TwitchConfigDTO
+import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.data.stream.StreamingPlatform.*
@@ -92,11 +88,9 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
 
     PANDATV -> DownloadConfig.PandaTvDownloadConfig(
       quality = (streamerConfig as PandaTvConfigDTO).quality ?: appConfig.pandaTvConfig.quality,
-      cookies = newCookies,
     )
 
     WEIBO -> DownloadConfig.WeiboDownloadConfig(
-      cookies = newCookies,
       sourceFormat = (streamerConfig as DownloadConfig.WeiboDownloadConfig).sourceFormat ?: appConfig.weiboConfig.sourceFormat,
     )
 

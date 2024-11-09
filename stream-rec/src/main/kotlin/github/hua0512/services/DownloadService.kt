@@ -75,7 +75,7 @@ class DownloadService(
 
   private lateinit var callback: StreamerCallback
 
-  private var streamers = emptyList<Streamer>()
+  private lateinit var streamers: List<Streamer>
 
   private lateinit var scope: CoroutineScope
 
@@ -90,7 +90,7 @@ class DownloadService(
       override suspend fun onStateChanged(
         id: Long,
         newState: StreamerState,
-        onSuccessful: () -> Unit
+        onSuccessful: () -> Unit,
       ) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.state == newState) {
@@ -98,7 +98,7 @@ class DownloadService(
           return
         }
         val status = repo.update(streamer.copy(state = newState))
-        logger.debug("({}) updated state -> {} = {}", streamer.name, newState, status)
+        logger.debug("{} updated state -> {} = {}", streamer.name, newState, status)
         if (status)
           onSuccessful()
       }
@@ -106,7 +106,7 @@ class DownloadService(
       override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.lastLiveTime == newLiveTime) return
-        logger.debug("({}) updated last live time -> {}", streamer.name, newLiveTime)
+        logger.debug("{} updated last live time -> {}", streamer.name, newLiveTime)
         val status = repo.update(streamer.copy(lastLiveTime = newLiveTime))
         if (status)
           onSuccessful()
@@ -115,7 +115,7 @@ class DownloadService(
       override suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.streamTitle == description) return
-        logger.debug("({}) updated description -> {}", streamer.name, description)
+        logger.debug("{} updated description -> {}", streamer.name, description)
         val status = repo.update(streamer.copy(streamTitle = description))
         if (status)
           onSuccessful()
@@ -124,7 +124,7 @@ class DownloadService(
       override suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return
         if (streamer.avatar == avatar) return
-        logger.debug("({}) updated avatar url -> {}", streamer.name, avatar)
+        logger.debug("{} updated avatar url -> {}", streamer.name, avatar)
         val status = repo.update(streamer.copy(avatar = avatar))
         if (status)
           onSuccessful()
@@ -134,7 +134,7 @@ class DownloadService(
         id: Long,
         stream: StreamData,
         shouldInjectMetaInfo: Boolean,
-        metaInfo: FlvMetadataInfo?
+        metaInfo: FlvMetadataInfo?,
       ) {
         var stream = stream
         scope.launch {
@@ -174,7 +174,7 @@ class DownloadService(
           if (streamer.state != StreamerState.NOT_LIVE && streamer.state != StreamerState.CANCELLED) {
             repo.update(streamer.copy(state = StreamerState.NOT_LIVE))
           }
-          logger.debug("({}) stream finished", streamer.name)
+          logger.debug("{} stream finished", streamer.name)
           executeStreamFinishedActions(streamer, streams)
         }
       }
@@ -261,12 +261,6 @@ class DownloadService(
           // find the change reason
           if (old != new) {
             val reason = when {
-              old.state != new.state -> when {
-                new.state == StreamerState.CANCELLED && old.state != StreamerState.CANCELLED -> "cancelled"
-                new.state == StreamerState.NOT_LIVE && old.state == StreamerState.CANCELLED -> "enabled"
-                else -> return@forEach
-              }
-
               old.url != new.url -> "url"
               old.downloadConfig != new.downloadConfig -> "download config"
               old.platform != new.platform -> "platform"
@@ -276,10 +270,15 @@ class DownloadService(
               old.startTime != new.startTime -> "start time"
               old.endTime != new.endTime -> "end time"
               old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template stream download config"
+              old.state != new.state -> when {
+                new.state == StreamerState.CANCELLED && old.state != StreamerState.CANCELLED -> "cancelled"
+                new.state == StreamerState.NOT_LIVE && old.state == StreamerState.CANCELLED -> "enabled"
+                else -> return@forEach
+              }
               // other changes are ignored
               else -> return@forEach
             }
-            logger.debug("Detected entity change for {}, {}", new, old)
+            logger.debug("Detected entity change({}) for {}\n{}", reason, old, new)
             val platform = old.platform
             val service = taskJobs[platform] ?: getOrInitPlatformService(platform)
             service.cancelStreamer(old, reason, new)

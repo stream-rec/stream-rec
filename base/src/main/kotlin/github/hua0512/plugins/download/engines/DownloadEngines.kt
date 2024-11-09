@@ -44,15 +44,15 @@ sealed class DownloadEngines(val engine: String) {
 
   @Serializable
   @SerialName(KOTLIN_ENGINE)
-  public object KOTLIN : DownloadEngines(KOTLIN_ENGINE)
+  public data object KOTLIN : DownloadEngines(KOTLIN_ENGINE)
 
   @Serializable
   @SerialName(FFMPEG_ENGINE)
-  public object FFMPEG : DownloadEngines(FFMPEG_ENGINE)
+  public data object FFMPEG : DownloadEngines(FFMPEG_ENGINE)
 
   @Serializable
   @SerialName(STREAMLINK_ENGINE)
-  public object STREAMLINK : DownloadEngines(STREAMLINK_ENGINE)
+  public data object STREAMLINK : DownloadEngines(STREAMLINK_ENGINE)
 
 
   public companion object {
