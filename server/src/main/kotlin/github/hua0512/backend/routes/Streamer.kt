@@ -185,6 +185,12 @@ fun Route.streamerRoute(repo: StreamerRepo) {
           )
         }
 
+        // do not allow state updates if new state is not NOT_LIVE or CANCELLED
+        if (streamer.state != StreamerState.NOT_LIVE && streamer.state != StreamerState.CANCELLED) {
+          // restore old state
+          streamer.state = old.state
+        }
+
         try {
           repo.update(streamer)
           call.respond(streamer)

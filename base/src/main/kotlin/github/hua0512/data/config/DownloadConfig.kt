@@ -35,48 +35,81 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed interface DownloadConfig : DownloadConfigDTO {
+sealed class DownloadConfig : DownloadConfigDTO {
 
   //  abstract override val isInherited: Boolean
-  abstract override var engine: DownloadEngines?
-  abstract override var cookies: String?
-  abstract override var danmu: Boolean?
-  abstract override var maxBitRate: Int?
-  abstract override var outputFolder: String?
-  abstract override var outputFileName: String?
-  abstract override var outputFileFormat: VideoFormat?
-  abstract override var onPartedDownload: List<Action>?
-  abstract override var onStreamingFinished: List<Action>?
+  override var engine: DownloadEngines? = null
+  override var cookies: String? = null
+  override var danmu: Boolean? = null
+  override var maxBitRate: Int? = null
+  override var outputFolder: String? = null
+  override var outputFileName: String? = null
+  override var outputFileFormat: VideoFormat? = null
+  override var onPartedDownload: List<Action>? = null
+  override var onStreamingFinished: List<Action>? = null
+
+
+  private fun DownloadConfig.checkBasicOther(
+    other: DownloadConfig,
+  ): Boolean {
+    if (engine != other.engine) return false
+    if (cookies != other.cookies) return false
+    if (danmu != other.danmu) return false
+    if (maxBitRate != other.maxBitRate) return false
+    if (outputFolder != other.outputFolder) return false
+    if (outputFileName != other.outputFileName) return false
+    if (outputFileFormat != other.outputFileFormat) return false
+    if (onPartedDownload != other.onPartedDownload) return false
+    if (onStreamingFinished != other.onStreamingFinished) return false
+    return true
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as DownloadConfig
+
+    return this.checkBasicOther(other)
+  }
+
+  override fun hashCode(): Int {
+    var result = engine?.hashCode() ?: 0
+    result = 31 * result + (cookies?.hashCode() ?: 0)
+    result = 31 * result + (danmu?.hashCode() ?: 0)
+    result = 31 * result + (maxBitRate ?: 0)
+    result = 31 * result + (outputFolder?.hashCode() ?: 0)
+    result = 31 * result + (outputFileName?.hashCode() ?: 0)
+    result = 31 * result + (outputFileFormat?.hashCode() ?: 0)
+    result = 31 * result + (onPartedDownload?.hashCode() ?: 0)
+    result = 31 * result + (onStreamingFinished?.hashCode() ?: 0)
+    return result
+  }
 
   @Serializable
   @SerialName("template")
   data class DefaultDownloadConfig(
-    override var engine: DownloadEngines? = null,
-    override var cookies: String? = null,
-    override var danmu: Boolean? = null,
-    override var maxBitRate: Int? = null,
-    override var outputFolder: String? = null,
-    override var outputFileName: String? = null,
-    override var outputFileFormat: VideoFormat? = null,
-    override var onPartedDownload: List<Action>? = emptyList(),
-    override var onStreamingFinished: List<Action>? = emptyList(),
-  ) : DownloadConfig
+    val isInherited: Boolean? = true,
+  ) : DownloadConfig()
+
 
   @SerialName("douyin")
   @Serializable
   data class DouyinDownloadConfig(
     override val quality: DouyinQuality? = null,
     override val sourceFormat: VideoFormat? = null,
-  ) : DownloadConfig, DouyinConfigDTO {
-    override var engine: DownloadEngines? = null
-    override var cookies: String? = null
-    override var danmu: Boolean? = null
-    override var maxBitRate: Int? = null
-    override var outputFolder: String? = null
-    override var outputFileName: String? = null
-    override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action>? = emptyList()
-    override var onStreamingFinished: List<Action>? = emptyList()
+  ) : DownloadConfig(), DouyinConfigDTO {
+
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as DouyinDownloadConfig
+
+      if (quality != other.quality) return false
+      if (sourceFormat != other.sourceFormat) return false
+      return super.equals(other)
+    }
   }
 
 
@@ -85,16 +118,7 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   data class HuyaDownloadConfig(
     override val primaryCdn: String? = null,
     override val sourceFormat: VideoFormat? = null,
-  ) : DownloadConfig, HuyaConfigDTO {
-
-    override var engine: DownloadEngines? = null
-    override var danmu: Boolean? = null
-    override var maxBitRate: Int? = null
-    override var outputFolder: String? = null
-    override var outputFileName: String? = null
-    override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action>? = emptyList()
-    override var onStreamingFinished: List<Action>? = emptyList()
+  ) : DownloadConfig(), HuyaConfigDTO {
 
     companion object {
       val default = HuyaDownloadConfig(
@@ -109,7 +133,16 @@ sealed interface DownloadConfig : DownloadConfigDTO {
       }
     }
 
-    override var cookies: String? = null
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as HuyaDownloadConfig
+
+      if (primaryCdn != other.primaryCdn) return false
+      if (sourceFormat != other.sourceFormat) return false
+      return super.equals(other)
+    }
   }
 
 
@@ -119,17 +152,20 @@ sealed interface DownloadConfig : DownloadConfigDTO {
     override val cdn: String? = null,
     @Serializable(with = DouyuQualitySerializer::class)
     override val quality: DouyuQuality? = null,
-  ) : DownloadConfig, DouyuConfigDTO {
+  ) : DownloadConfig(), DouyuConfigDTO {
 
-    override var engine: DownloadEngines? = null
-    override var cookies: String? = null
-    override var danmu: Boolean? = null
-    override var maxBitRate: Int? = null
-    override var outputFolder: String? = null
-    override var outputFileName: String? = null
-    override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action>? = emptyList()
-    override var onStreamingFinished: List<Action>? = emptyList()
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as DouyuDownloadConfig
+
+      if (cdn != other.cdn) return false
+      if (quality != other.quality) return false
+
+      return super.equals(other)
+    }
+
   }
 
   @Serializable
@@ -137,51 +173,53 @@ sealed interface DownloadConfig : DownloadConfigDTO {
   data class TwitchDownloadConfig(
     override val authToken: String? = null,
     override val quality: TwitchQuality? = null,
-  ) : DownloadConfig, TwitchConfigDTO {
+  ) : DownloadConfig(), TwitchConfigDTO {
 
-    override var engine: DownloadEngines? = null
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
 
-    override var cookies: String? = null
-    override var danmu: Boolean? = null
-    override var maxBitRate: Int? = null
-    override var outputFolder: String? = null
-    override var outputFileName: String? = null
-    override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action>? = emptyList()
-    override var onStreamingFinished: List<Action>? = emptyList()
+      other as TwitchDownloadConfig
+
+      return super.equals(other)
+    }
+
   }
 
   @Serializable
   @SerialName("pandatv")
   data class PandaTvDownloadConfig(
     override val quality: PandaTvQuality? = null,
-    override var cookies: String? = null,
-  ) : DownloadConfig, PandaTvConfigDTO {
+  ) : DownloadConfig(), PandaTvConfigDTO {
 
-    override var engine: DownloadEngines? = null
-    override var danmu: Boolean? = null
-    override var maxBitRate: Int? = null
-    override var outputFolder: String? = null
-    override var outputFileName: String? = null
-    override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action>? = emptyList()
-    override var onStreamingFinished: List<Action>? = emptyList()
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as PandaTvDownloadConfig
+
+      if (quality != other.quality) return false
+
+      return super.equals(other)
+    }
   }
 
   @Serializable
   @SerialName("weibo")
   data class WeiboDownloadConfig(
-    override var cookies: String? = null,
     override val sourceFormat: VideoFormat? = null,
-  ) : DownloadConfig, WeiboConfigDTO {
+  ) : DownloadConfig(), WeiboConfigDTO {
 
-    override var engine: DownloadEngines? = null
-    override var danmu: Boolean? = null
-    override var maxBitRate: Int? = null
-    override var outputFolder: String? = null
-    override var outputFileName: String? = null
-    override var outputFileFormat: VideoFormat? = null
-    override var onPartedDownload: List<Action>? = emptyList()
-    override var onStreamingFinished: List<Action>? = emptyList()
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as WeiboDownloadConfig
+
+      if (sourceFormat != other.sourceFormat) return false
+
+      return super.equals(other)
+    }
+
   }
 }
