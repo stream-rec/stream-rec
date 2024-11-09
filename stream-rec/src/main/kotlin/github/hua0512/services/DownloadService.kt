@@ -79,7 +79,7 @@ class DownloadService @Inject constructor(
 
   private lateinit var callback: StreamerCallback
 
-  private var streamers = emptyList<Streamer>()
+  private lateinit var streamers: List<Streamer>
 
   /**
    * Starts the download service.
@@ -270,12 +270,6 @@ class DownloadService @Inject constructor(
           // find the change reason
           if (old != new) {
             val reason = when {
-              old.state != new.state -> when {
-                new.state == StreamerState.CANCELLED && old.state != StreamerState.CANCELLED -> "cancelled"
-                new.state == StreamerState.NOT_LIVE && old.state == StreamerState.CANCELLED -> "enabled"
-                else -> return@forEach
-              }
-
               old.url != new.url -> "url"
               old.downloadConfig != new.downloadConfig -> "download config"
               old.platform != new.platform -> "platform"
@@ -285,10 +279,15 @@ class DownloadService @Inject constructor(
               old.startTime != new.startTime -> "start time"
               old.endTime != new.endTime -> "end time"
               old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template stream download config"
+              old.state != new.state -> when {
+                new.state == StreamerState.CANCELLED && old.state != StreamerState.CANCELLED -> "cancelled"
+                new.state == StreamerState.NOT_LIVE && old.state == StreamerState.CANCELLED -> "enabled"
+                else -> return@forEach
+              }
               // other changes are ignored
               else -> return@forEach
             }
-            logger.debug("Detected entity change for {}, {}", new, old)
+            logger.debug("Detected entity change({}) for {}\n{}", reason, old, new)
             val platform = old.platform
             val service = taskJobs[platform] ?: getOrInitPlatformService(platform)
             service.cancelStreamer(old, reason, new)

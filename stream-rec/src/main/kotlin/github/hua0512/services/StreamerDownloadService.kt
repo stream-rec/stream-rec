@@ -339,7 +339,8 @@ class StreamerDownloadService(
         when (it) {
           Cancelled -> {
             logger.debug("{} download cancelled", streamer.name)
-            updateStreamerState(StreamerState.CANCELLED)
+            // this is not needed since the cancel state is handled by the api
+//            updateStreamerState(StreamerState.CANCELLED)
             clean()
             throw CancellationException("Download cancelled")
           }
