@@ -94,6 +94,24 @@ class StreamerDownloadService(
   companion object {
     @JvmStatic
     private val logger: Logger = logger(StreamerDownloadService::class.java)
+
+    /**
+     * Error threshold to check with the last error time, if the difference is less than this value
+     * then it means the error is recent, and the download failed consecutively. In this case, delay the download
+     * for a longer time.
+     */
+    private const val MIN_ERROR_THRESHOLD = 5000L
+
+    /**
+     * Maximum delay to wait before retrying the download if recent errors occurred
+     */
+    private const val MAX_ERROR_DELAY = 3600000L
+
+    /**
+     * Error threshold to check if the recent errors count is greater than this value
+     */
+    private const val ERROR_THRESHOLD = 3
+
   }
 
   /**
@@ -150,6 +168,22 @@ class StreamerDownloadService(
    * Callback to handle download events
    */
   private var callback: StreamerCallback? = null
+
+
+  /**
+   * Last error time
+   */
+  private var lastErrorTime: Long = 0
+
+  /**
+   * Recent errors count
+   */
+  private var recentErrors = 0
+
+  /**
+   * Recent error delay
+   */
+  private var currentErrorDelay = MIN_ERROR_THRESHOLD
 
 
   private val downloadState = MutableStateFlow<DownloadState>(Idle)
@@ -230,6 +264,17 @@ class StreamerDownloadService(
         logger.error("{} unable to get stream data ({}/{}) due to: ", streamer.name, nextRetry, maxRetry, it)
         exception = it
         shouldEnd = true
+        val now = Clock.System.now()
+
+        // check if the error occurred recently
+        if (lastErrorTime > 0 && now.epochSeconds - lastErrorTime < MIN_ERROR_THRESHOLD) {
+          recentErrors++
+        } else {
+          // reset recent errors variables
+          recentErrors = 0
+          currentErrorDelay = MIN_ERROR_THRESHOLD
+        }
+        lastErrorTime = now.epochSeconds
       }, onDownloadFinished = {
         shouldEnd = true
         retryCount = maxRetry
@@ -387,6 +432,14 @@ class StreamerDownloadService(
             val recordStartTime = streamer.startTime
 //            val recordEndTime = streamer.endTime
             val delay = calculateDelay(recordStartTime ?: "")
+
+            if (recentErrors >= ERROR_THRESHOLD) {
+              logger.error("{} too many errors, delaying download for {} ms", streamer.name, currentErrorDelay)
+              downloadState changeTo AwaitingDownload(currentErrorDelay)
+              currentErrorDelay = (currentErrorDelay * 2).coerceAtMost(MAX_ERROR_DELAY)
+              return@onEach
+            }
+
             downloadState changeTo AwaitingDownload(delay)
           }
 
@@ -568,5 +621,8 @@ class StreamerDownloadService(
     awaitTimerJob?.cancel()
     stopTimerJob?.cancel()
     callback = null
+    lastErrorTime = 0
+    recentErrors = 0
+    currentErrorDelay = MIN_ERROR_THRESHOLD
   }
 }
