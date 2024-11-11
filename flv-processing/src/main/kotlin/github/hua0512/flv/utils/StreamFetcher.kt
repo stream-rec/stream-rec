@@ -30,10 +30,9 @@ import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.plugins.StreamerContext
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.CancellationException
-import io.ktor.utils.io.jvm.javaio.toInputStream
-import io.ktor.utils.io.streams.asInput
+import io.ktor.utils.io.*
+import io.ktor.utils.io.jvm.javaio.*
+import io.ktor.utils.io.streams.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -56,7 +55,7 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
   with(flvReader) {
     try {
       readHeader(::emit)
-      readTags {
+      readTags(disableLogging = true) {
         tag = it
         emit(it)
       }

@@ -30,13 +30,12 @@ import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.exceptions.FlvErrorException
-import io.ktor.utils.io.CancellationException
+import io.ktor.utils.io.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.io.Source
 import kotlinx.io.readUByte
 import java.io.EOFException
-import kotlin.use
 
 
 /**
@@ -57,7 +56,7 @@ fun Source.asFlvFlow(): Flow<FlvData> = flow {
   try {
     flvReader.use {
       it.readHeader(::emit)
-      it.readTags {
+      it.readTags(disableLogging = true) {
         lastTag = it
         emit(it)
       }
