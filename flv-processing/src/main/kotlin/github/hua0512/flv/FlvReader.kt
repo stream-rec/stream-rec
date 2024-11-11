@@ -82,24 +82,24 @@ internal class FlvReader(val source: Source) : AutoCloseable {
   }
 
 
-  suspend inline fun readTags(onTagRead: onTagRead) {
+  suspend inline fun readTags(disableLogging: Boolean = false, onTagRead: onTagRead) {
     while (true) {
       try {
         onTagRead(readTag())
       } catch (e: Exception) {
-        logger.error("Read tag error: {}", e.message)
+        if (!disableLogging)
+          logger.error("Read tag error: {}", e.message)
         throw e
       }
     }
   }
 
-  suspend fun readAll(onTagRead: onTagRead) {
+  suspend fun readAll(disableLogging: Boolean = false, onTagRead: onTagRead) {
     if (!::header.isInitialized) {
       readHeader(onTagRead)
     }
-    readTags(onTagRead)
+    readTags(disableLogging, onTagRead)
   }
-
 
 
   override fun close() {
