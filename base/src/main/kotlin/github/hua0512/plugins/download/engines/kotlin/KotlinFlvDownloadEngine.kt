@@ -40,6 +40,7 @@ import github.hua0512.utils.debug
 import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.warn
 import github.hua0512.utils.writeToFile
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -56,6 +57,14 @@ import kotlin.io.path.*
  * @date : 2024/10/11 18:40
  */
 class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
+
+  companion object {
+    /**
+     * Default socket timeout
+     * 20 seconds
+     */
+    private const val DEFAULT_SOCKET_TIMEOUT = 20000L
+  }
 
 
   override val pathProvider: (Int) -> String = { _ ->
@@ -99,6 +108,12 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
       client.prepareGet(downloadUrl!!) {
         this@KotlinFlvDownloadEngine.headers.forEach { header(it.key, it.value) }
         cookies?.let { header(HttpHeaders.Cookie, it) }
+
+        timeout {
+          // 20 seconds
+          socketTimeoutMillis = DEFAULT_SOCKET_TIMEOUT
+        }
+
       }.execute { httpResponse ->
         if (!httpResponse.status.isSuccess()) {
           exception = DownloadErrorException("Failed to download flv, status: ${httpResponse.status}")
