@@ -147,6 +147,9 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     // if not live, return basic media info
     if (!isLive) return mediaInfo
 
+    val gid = livedata?.get("gid")?.jsonPrimitive?.int ?: 0
+    checkShouldSkipQuery(gid)
+
     // get stream info
     val streamJson = data["stream"]
 

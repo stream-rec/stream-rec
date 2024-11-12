@@ -72,6 +72,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     const val TOPSID_REGEX = "lChannelId\":\"?(\\d+)\"?"
     const val SUBID_REGEX = "lSubChannelId\":\"?(\\d+)\"?"
     const val PRESENTER_UID_REGEX = "lPresenterUid\":\"?(\\d+)\"?"
+    const val GID_REGEX = "gid\":\"?(\\d+)\"?"
 
     internal const val IPHONE_WX_UA =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003137) NetType/WIFI Language/zh_CN WeChat/8.0.49.33 CFNetwork/1474 Darwin/23.0.0"
@@ -94,7 +95,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   private val subidPattern = SUBID_REGEX.toRegex()
   private val presenterUidPattern = PRESENTER_UID_REGEX.toRegex()
 
-  private var shoudSkipQueryBuild = false
+  protected var shouldSkipQueryBuild = false
 
   //  internal var ayyuid: Long = 0
 //  internal var topsid: Long = 0
@@ -205,6 +206,10 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     // if not live, return basic media info
     if (!isLive) return mediaInfo
 
+    val gid = GID_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1)?.toInt() ?: 0
+
+    checkShouldSkipQuery(gid)
+
     val streamRegex = STREAM_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1) ?: "".also {
       throw InvalidExtractionParamsException("Unable to extract stream from $url")
     }
@@ -309,8 +314,12 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val urlSuffix =
       streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
 
-    // build anticode for game stream
-    val queryParams = if (!shoudSkipQueryBuild) buildQuery(antiCode, uid, streamName, time, bitrate) else antiCode
+    /**
+     * build anticode for game stream
+     * "xingxiu" streamers should skip query generation
+     * @see [checkShouldSkipQuery]
+     */
+    val queryParams = if (!shouldSkipQueryBuild) buildQuery(antiCode, uid, streamName, time, bitrate) else antiCode
 
     return "$url/$streamName.$urlSuffix?$queryParams"
   }
@@ -408,6 +417,13 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     }
     val returnCode = json["returnCode"]?.jsonPrimitive?.int ?: 0
     return returnCode == 0
+  }
+
+
+  protected fun checkShouldSkipQuery(gid: Int) {
+    // 2024-11-12 skip query param build for "xingxiu" areas
+    // use default query params instead of calculated
+    shouldSkipQueryBuild = gid == 1663
   }
 
 }
