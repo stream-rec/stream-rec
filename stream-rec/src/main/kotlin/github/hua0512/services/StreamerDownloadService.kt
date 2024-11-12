@@ -347,7 +347,7 @@ class StreamerDownloadService(
     if (dataList.isNotEmpty()) {
       logger.error("{} is offline ({}/{})", streamer.name, nextRetry, maxRetry)
     } else {
-      if (inTimerRange) logger.info("{} is offline", streamer.name)
+      if (inTimerRange) logger.debug("{} is offline", streamer.name)
     }
     downloadState changeTo DownloadRetry(nextRetry)
   }
