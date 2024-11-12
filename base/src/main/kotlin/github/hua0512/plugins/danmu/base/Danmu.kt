@@ -35,6 +35,7 @@ import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.media.DanmuDataWrapper.EndOfDanmu
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
+import github.hua0512.plugins.danmu.exceptions.EndDanmuException
 import github.hua0512.utils.withIORetry
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -244,7 +245,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         // trigger backoff strategy
         throw IOException("$websocketUrl connection finished")
       } else if (isActive && hasReceivedEnd) {
-        throw CancellationException("End of danmu received")
+        throw EndDanmuException()
       }
     }
 
@@ -280,7 +281,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         addToBuffer(it)
       }
       .catch {
-        if (hasReceivedEnd) throw CancellationException("End of danmu received")
+        if (hasReceivedEnd) throw EndDanmuException()
         else if (it is SocketException) return@catch
         else if (it is EOFException) return@catch
         else logger.error("$filePath danmu error", it)
@@ -288,8 +289,10 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       .onCompletion {
         it ?: return@onCompletion
         // write end section only when download is aborted or cancelled
-        if (it.cause !is DownloadProcessFinishedException) {
-          logger.error("$filePath danmu completed: $it")
+        if (it !is DownloadProcessFinishedException) {
+          if (it !is EndDanmuException) {
+            logger.error("$filePath danmu completed: $it")
+          }
           if (File(filePath).exists()) {
             writeFinalToFos()
           }

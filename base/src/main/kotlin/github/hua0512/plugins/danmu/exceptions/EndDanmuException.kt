@@ -29,8 +29,10 @@ package github.hua0512.plugins.danmu.exceptions
 import kotlinx.coroutines.CancellationException
 
 /**
- * Exception to indicate that the download process has finished.
+ * End of danmu received exception
  * @author hua0512
- * @date : 2024/2/29 0:02
+ * @date : 2024/11/12 21:31
  */
-class DownloadProcessFinishedException : CancellationException("Download process finished")
+class EndDanmuException : CancellationException("End of danmu received") {
+
+}
