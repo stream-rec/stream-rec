@@ -593,7 +593,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   private suspend fun stopDanmuJob(danmuJob: Job) {
     try {
-      danmuJob.cancel(CancellationException(Throwable("Cancel download", DownloadProcessFinishedException())))
+      danmuJob.cancel(DownloadProcessFinishedException())
       danmuJob.join()
     } catch (e: Exception) {
       if (e !is CancellationException)
