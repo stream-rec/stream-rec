@@ -31,7 +31,7 @@ import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import io.ktor.client.*
-import io.ktor.client.plugins.timeout
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -55,13 +55,6 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
   private lateinit var dataJson: JsonObject
 
-
-  init {
-    requestHeaders.forEach {
-      platformHeaders[it.first] = it.second
-    }
-  }
-
   override fun match(): Boolean {
     val result = super.match()
 
@@ -82,6 +75,9 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
       parameter("do", "profileRoom")
       parameter("m", "Live")
       parameter("roomid", roomId)
+      parameter("showSecret", "1")
+      url.parameters.remove(HttpHeaders.UserAgent)
+      userAgent(IPHONE_WX_UA)
     }
 
     if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $url")

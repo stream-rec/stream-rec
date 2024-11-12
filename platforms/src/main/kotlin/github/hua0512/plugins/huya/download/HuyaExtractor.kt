@@ -34,11 +34,11 @@ import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.utils.decodeBase64
+import github.hua0512.utils.md5
 import github.hua0512.utils.nonEmptyOrNull
-import github.hua0512.utils.toMD5Hex
 import io.ktor.client.*
-import io.ktor.client.plugins.timeout
-import io.ktor.client.request.setBody
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +46,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
+import kotlin.collections.set
 import kotlin.random.Random
 
 /**
@@ -72,6 +73,9 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     const val SUBID_REGEX = "lSubChannelId\":\"?(\\d+)\"?"
     const val PRESENTER_UID_REGEX = "lPresenterUid\":\"?(\\d+)\"?"
 
+    internal const val IPHONE_WX_UA =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003137) NetType/WIFI Language/zh_CN WeChat/8.0.49.33 CFNetwork/1474 Darwin/23.0.0"
+
 
     internal val requestHeaders = arrayOf(
       HttpHeaders.Origin to BASE_URL,
@@ -89,6 +93,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   private val topsidPattern = TOPSID_REGEX.toRegex()
   private val subidPattern = SUBID_REGEX.toRegex()
   private val presenterUidPattern = PRESENTER_UID_REGEX.toRegex()
+
+  private var shoudSkipQueryBuild = false
 
   //  internal var ayyuid: Long = 0
 //  internal var topsid: Long = 0
@@ -303,7 +309,10 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val urlSuffix =
       streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
 
-    return "$url/$streamName.$urlSuffix" + "?" + buildQuery(antiCode, uid, streamName, time, bitrate)
+    // build anticode for game stream
+    val queryParams = if (!shoudSkipQueryBuild) buildQuery(antiCode, uid, streamName, time, bitrate) else antiCode
+
+    return "$url/$streamName.$urlSuffix?$queryParams"
   }
 
   private fun buildQuery(
@@ -324,8 +333,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     @Suppress("SpellCheckingInspection")
     val ctype = query["ctype"]!!
-    val ss = "$seqId|${ctype}|$platformId".toByteArray().toMD5Hex()
-    val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".toByteArray().toMD5Hex()
+    val ss = "$seqId|${ctype}|$platformId".md5()
+    val wsSecret = "${fm}_${u}_${sStreamName}_${ss}_${wsTime}".md5()
 
     val parameters = ParametersBuilder().apply {
       append("wsSecret", wsSecret)
@@ -389,7 +398,6 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     }
     if (response.status != HttpStatusCode.OK) {
       throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $COOKIE_URL")
-      return false
     }
     val body = response.bodyAsText()
     val json = json.parseToJsonElement(body).run {
