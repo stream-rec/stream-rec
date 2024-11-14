@@ -202,6 +202,7 @@ class StreamerDownloadService(
   private suspend fun handleMaxRetry() {
     // reset retry count
     retryCount = 0
+    recentErrors = 0
     // update state only if the streamer is not cancelled and its state is not live
     if (streamer.state != StreamerState.NOT_LIVE && !isCancelled.value) {
       updateStreamerState(StreamerState.NOT_LIVE)
