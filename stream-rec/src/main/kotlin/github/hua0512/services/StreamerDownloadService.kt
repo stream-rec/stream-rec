@@ -35,6 +35,7 @@ import github.hua0512.data.stream.StreamerState
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.TimerEndedDownloadException
 import github.hua0512.download.exceptions.UserStoppedDownloadException
+import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.base.OnStreamDownloaded
@@ -56,6 +57,7 @@ import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
 import java.time.LocalDateTime
+import kotlin.math.abs
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -186,6 +188,9 @@ class StreamerDownloadService(
   private var currentErrorDelay = MIN_ERROR_THRESHOLD
 
 
+  /**
+   * Current download state
+   */
   private val downloadState = MutableStateFlow<DownloadState>(Idle)
 
 
@@ -199,10 +204,144 @@ class StreamerDownloadService(
     )
   }
 
+  suspend fun start(): Unit = supervisorScope {
+    // there might be a case of abnormal termination, so we reset the state to not live
+    // reset the streamer state to not live
+    updateStreamerState(StreamerState.NOT_LIVE)
+
+    // prepare download
+    downloadState to Preparing
+
+    // job to handle download cancellation
+    launch {
+      isCancelled.collect { cancelled ->
+        if (cancelled) {
+          val result = stop(UserStoppedDownloadException())
+          logger.info("{} download stopped -> {}", streamer.name, result)
+          if (result) {
+            // cancel the timer jobs if it's active
+            arrayOf(stopTimerJob, awaitTimerJob).forEach { job ->
+              job?.let {
+                if (it.isActive) it.cancel()
+              }
+            }
+            downloadState to Cancelled
+          }
+        }
+      }
+    }
+
+    downloadState.asStateFlow()
+      .onEach {
+        when (it) {
+          Cancelled -> {
+            logger.debug("{} download cancelled", streamer.name)
+            // this is not needed since the cancel state is handled by the api
+//            updateStreamerState(StreamerState.CANCELLED)
+            clean()
+            throw CancellationException("Download cancelled")
+          }
+
+          is DownloadRetry -> {
+            val count = it.count
+            // ignore errors at the moment
+//            val error = it.error
+            retryCount++ // increment retry count
+            if (count >= maxRetry) {
+              handleMaxRetry()
+            } else {
+              if (streamer.state == StreamerState.LIVE)
+                updateStreamerState(StreamerState.INSPECTING_LIVE)
+            }
+
+            if (isCancelled.value) {
+              downloadState to Cancelled
+              return@onEach
+            }
+            downloadState to Preparing
+          }
+
+          is Downloading -> {
+            val exception = handleLiveStreamer({ this }, it.duration)
+            if (isCancelled.value) {
+              retryCount = maxRetry
+              downloadState to DownloadRetry(retryCount)
+              return@onEach
+            }
+            // retry after the download is finished
+            downloadState to DownloadRetry(retryCount + 1, exception)
+          }
+
+          Finished -> {
+
+          }
+
+          Idle -> {
+
+          }
+
+          Preparing -> {
+            val recordStartTime = streamer.startTime
+//            val recordEndTime = streamer.endTime
+            val delay = calculateDelay(recordStartTime ?: "")
+
+            if (recentErrors >= ERROR_THRESHOLD) {
+              logger.error("{} too many errors, delaying download for {} ms", streamer.name, currentErrorDelay)
+              downloadState to AwaitingDownload(currentErrorDelay)
+              currentErrorDelay = (currentErrorDelay * 2).coerceAtMost(MAX_ERROR_DELAY)
+              return@onEach
+            }
+
+            downloadState to AwaitingDownload(delay)
+          }
+
+          is AwaitingDownload -> {
+            val delay = it.delay
+            // delay to wait before downloading
+            if (delay > 0) {
+              awaitTimerJob = launch {
+                delay(delay)
+                downloadState to CheckingDownload(Clock.System.now().epochSeconds)
+              }
+              // wait for the timer job to finish
+              awaitTimerJob!!.join()
+              awaitTimerJob = null
+            } else {
+              downloadState to CheckingDownload(Clock.System.now().epochSeconds)
+            }
+          }
+
+          is CheckingDownload -> {
+            if (isCancelled.value) return@onEach
+            inTimerRange = isInTimerRange(streamer.startTime ?: "", streamer.endTime ?: "").also { result ->
+              if (!result) updateStreamerState(StreamerState.OUT_OF_SCHEDULE)
+            }
+
+            if (!inTimerRange || !checkStreamerLiveStatus()) {
+              handleOfflineStatus()
+            } else {
+              val duration = calculateDuration(streamer.endTime ?: "")
+              downloadState to Downloading(duration)
+              return@onEach
+            }
+            awaitTimerJob = launch {
+              delay(getDelay())
+            }
+            awaitTimerJob!!.join()
+          }
+        }
+      }
+      .collect {
+        logger.trace("{} download state: {}", streamer.name, it)
+      }
+
+    clean()
+    throw CancellationException("Download cancelled")
+  }
+
   private suspend fun handleMaxRetry() {
     // reset retry count
     retryCount = 0
-    recentErrors = 0
     // update state only if the streamer is not cancelled and its state is not live
     if (streamer.state != StreamerState.NOT_LIVE && !isCancelled.value) {
       updateStreamerState(StreamerState.NOT_LIVE)
@@ -257,29 +396,15 @@ class StreamerDownloadService(
       downloadStream(onStarted = {
         updateStreamerState(StreamerState.LIVE)
         updateLastLiveTime()
-      }, onDownloaded = { stream, metaInfo ->
-        callback?.onStreamDownloaded(streamer.id, stream, metaInfo != null, metaInfo)
-        dataList.add(stream)
-      }, onStreamDownloadError = {
-        val nextRetry = retryCount + 1
-        logger.error("{} unable to get stream data ({}/{}) due to: ", streamer.name, nextRetry, maxRetry, it)
-        exception = it
-        shouldEnd = true
-        val now = Clock.System.now()
-
-        // check if the error occurred recently
-        if (lastErrorTime > 0 && now.epochSeconds - lastErrorTime < MIN_ERROR_THRESHOLD) {
-          recentErrors++
-        } else {
-          // reset recent errors variables
-          recentErrors = 0
-          currentErrorDelay = MIN_ERROR_THRESHOLD
-        }
-        lastErrorTime = now.epochSeconds
-      }, onDownloadFinished = {
-        shouldEnd = true
-        retryCount = maxRetry
-      })
+      }, onDownloaded = ::onSegmentDownloaded,
+        onStreamDownloadError = {
+          exception = it
+          shouldEnd = true
+          onSegmentFailed(it)
+        }, onDownloadFinished = {
+          shouldEnd = true
+          retryCount = maxRetry
+        })
 
       // break the loop if error occurred or download is cancelled
       if (shouldEnd || isCancelled.value) break
@@ -336,6 +461,18 @@ class StreamerDownloadService(
   }
 
 
+  private fun onSegmentDownloaded(data: StreamData, metaInfo: FlvMetadataInfo? = null) {
+    dataList.add(data)
+    callback?.onStreamDownloaded(streamer.id, data, metaInfo != null, metaInfo)
+  }
+
+  private fun onSegmentFailed(error: Throwable) {
+    val nextRetry = retryCount + 1
+    logger.error("{} unable to get stream data ({}/{}) due to: ", streamer.name, nextRetry, maxRetry, error)
+    checkRecentErrors()
+  }
+
+
   private suspend fun updateLastLiveTime() {
     val now = Clock.System.now()
     callback?.onLastLiveTimeChanged(streamer.id, now.epochSeconds) {
@@ -343,145 +480,17 @@ class StreamerDownloadService(
     }
   }
 
+
   private fun handleOfflineStatus() {
+    // we empty the recent errors since the stream is offline
+    resetRecentErrors()
     val nextRetry = retryCount + 1
     if (dataList.isNotEmpty()) {
       logger.error("{} is offline ({}/{})", streamer.name, nextRetry, maxRetry)
     } else {
       if (inTimerRange) logger.debug("{} is offline", streamer.name)
     }
-    downloadState changeTo DownloadRetry(nextRetry)
-  }
-
-  suspend fun start(): Unit = supervisorScope {
-    // there might be a case when the user exited the app while the stream is live
-    // reset the streamer state to not live
-    updateStreamerState(StreamerState.NOT_LIVE)
-
-    // prepare download
-    downloadState changeTo Preparing
-
-    // job to handle download cancellation
-    launch {
-      isCancelled.collect { cancelled ->
-        if (cancelled) {
-          val result = stop(UserStoppedDownloadException())
-          logger.info("{} download stopped -> {}", streamer.name, result)
-          if (result) {
-            // cancel the timer jobs if it's active
-            arrayOf(stopTimerJob, awaitTimerJob).forEach { job ->
-              job?.let {
-                if (it.isActive) it.cancel()
-              }
-            }
-            downloadState changeTo Cancelled
-          }
-        }
-      }
-    }
-
-    downloadState.asStateFlow()
-      .onEach {
-        when (it) {
-          Cancelled -> {
-            logger.debug("{} download cancelled", streamer.name)
-            // this is not needed since the cancel state is handled by the api
-//            updateStreamerState(StreamerState.CANCELLED)
-            clean()
-            throw CancellationException("Download cancelled")
-          }
-
-          is DownloadRetry -> {
-            val count = it.count
-            // ignore errors at the moment
-//            val error = it.error
-            retryCount++ // increment retry count
-            if (count >= maxRetry) {
-              handleMaxRetry()
-            } else {
-              if (streamer.state == StreamerState.LIVE)
-                updateStreamerState(StreamerState.INSPECTING_LIVE)
-            }
-
-            if (isCancelled.value) {
-              downloadState changeTo Cancelled
-              return@onEach
-            }
-            downloadState changeTo Preparing
-          }
-
-          is Downloading -> {
-            val exception = handleLiveStreamer({ this }, it.duration)
-            if (isCancelled.value) {
-              retryCount = maxRetry
-              downloadState changeTo DownloadRetry(retryCount)
-              return@onEach
-            }
-            // retry after the download is finished
-            downloadState changeTo DownloadRetry(retryCount + 1, exception)
-          }
-
-          Finished -> {
-
-          }
-
-          Idle -> {
-
-          }
-
-          Preparing -> {
-            val recordStartTime = streamer.startTime
-//            val recordEndTime = streamer.endTime
-            val delay = calculateDelay(recordStartTime ?: "")
-
-            if (recentErrors >= ERROR_THRESHOLD) {
-              logger.error("{} too many errors, delaying download for {} ms", streamer.name, currentErrorDelay)
-              downloadState changeTo AwaitingDownload(currentErrorDelay)
-              currentErrorDelay = (currentErrorDelay * 2).coerceAtMost(MAX_ERROR_DELAY)
-              return@onEach
-            }
-
-            downloadState changeTo AwaitingDownload(delay)
-          }
-
-          is AwaitingDownload -> {
-            val delay = it.delay
-            // delay to wait before downloading
-            awaitTimerJob = launch {
-              delay(delay)
-              downloadState changeTo CheckingDownload(Clock.System.now().epochSeconds)
-            }
-            // wait for the timer job to finish
-            awaitTimerJob!!.join()
-            awaitTimerJob = null
-          }
-
-          is CheckingDownload -> {
-            if (isCancelled.value) return@onEach
-            inTimerRange = isInTimerRange(streamer.startTime ?: "", streamer.endTime ?: "").also { result ->
-              if (!result) updateStreamerState(StreamerState.OUT_OF_SCHEDULE)
-            }
-
-            if (!inTimerRange || !checkStreamerLiveStatus()) {
-              handleOfflineStatus()
-            } else {
-              val duration = calculateDuration(streamer.endTime ?: "")
-              downloadState changeTo Downloading(duration)
-              return@onEach
-            }
-            awaitTimerJob = launch {
-              delay(getDelay())
-            }
-            awaitTimerJob!!.join()
-          }
-        }
-      }
-      .collect {
-        logger.trace("{} download state: {}", streamer.name, it)
-      }
-
-    clean()
-    throw CancellationException("Download cancelled")
+    downloadState to DownloadRetry(nextRetry)
   }
 
   /**
@@ -489,7 +498,7 @@ class StreamerDownloadService(
    * @param state [DownloadState] new state
    * @receiver [MutableStateFlow] download state
    */
-  private infix fun MutableStateFlow<DownloadState>.changeTo(state: DownloadState) {
+  private infix fun MutableStateFlow<DownloadState>.to(state: DownloadState) {
     value = state
   }
 
@@ -614,16 +623,34 @@ class StreamerDownloadService(
     }
   }
 
-  private fun clean() {
-    downloadState changeTo Idle
-    isDownloading = false
-    dataList.clear()
-    inTimerRange = false
-    awaitTimerJob?.cancel()
-    stopTimerJob?.cancel()
-    callback = null
+  private fun checkRecentErrors() {
+    val now = Clock.System.now()
+
+    // check if the error occurred recently
+    if (abs(now.epochSeconds - lastErrorTime) < MIN_ERROR_THRESHOLD) {
+      recentErrors++
+    } else {
+      // reset recent errors variables
+      resetRecentErrors()
+    }
+    lastErrorTime = now.epochSeconds
+  }
+
+  private fun resetRecentErrors() {
     lastErrorTime = 0
     recentErrors = 0
     currentErrorDelay = MIN_ERROR_THRESHOLD
+  }
+
+
+  private fun clean() {
+    awaitTimerJob?.cancel()
+    stopTimerJob?.cancel()
+    downloadState to Idle
+    isDownloading = false
+    dataList.clear()
+    inTimerRange = false
+    callback = null
+    resetRecentErrors()
   }
 }
