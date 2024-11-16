@@ -63,7 +63,7 @@ interface StreamerDao : BaseDao<StreamerEntity> {
   @Query("SELECT * FROM streamer WHERE state = 5 AND is_template = 0")
   suspend fun getInactivesNonTemplates(): List<StreamerEntity>
 
-  @Query("SELECT * FROM streamer WHERE state IN (1,3,4) AND is_template = 0")
+  @Query("SELECT * FROM streamer WHERE state IN (1,3,4,6) AND is_template = 0")
   suspend fun getLiveNonTemplatesStreamers(): List<StreamerEntity>
 
   @Query("SELECT * FROM streamer WHERE state IN (0,2) AND is_template = 0")

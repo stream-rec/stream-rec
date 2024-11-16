@@ -15,7 +15,8 @@ enum class StreamerState(val value: Int) {
   INSPECTING_LIVE(3),
   FATAL_ERROR(4),
   CANCELLED(5),
-  UNKNOWN(6);
+  NOT_FOUND(6),
+  UNKNOWN(99);
 
   companion object {
     fun valueOf(value: Int): StreamerState? = StreamerState.entries.find { it.value == value }

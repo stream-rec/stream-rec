@@ -37,6 +37,7 @@ import github.hua0512.download.exceptions.TimerEndedDownloadException
 import github.hua0512.download.exceptions.UserStoppedDownloadException
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.base.OnStreamDownloaded
 import github.hua0512.plugins.download.base.PlatformDownloader
@@ -366,6 +367,8 @@ class StreamerDownloadService(
     // call onStreamingFinished callback with the copy of the list
     callback?.onStreamFinished(streamer.id, dataList.toList())
     dataList.clear()
+    // reset recent errors
+    resetRecentErrors()
     // fast exit if the download is cancelled
     if (isCancelled.value) return
     delay(downloadInterval)
@@ -381,8 +384,10 @@ class StreamerDownloadService(
   private suspend fun checkStreamerLiveStatus(): Boolean = try {
     plugin.shouldDownload()
   } catch (e: Exception) {
-    // cancel streamer scope by throwing CancellationException
-    throw CancellationException(e.message)
+    val state = if (e is InvalidExtractionStreamerNotFoundException) StreamerState.NOT_FOUND else StreamerState.FATAL_ERROR
+    updateStreamerState(state)
+    cancelBlocking()
+    false
   }
 
   private suspend fun handleLiveStreamer(scopeProvider: () -> CoroutineScope, duration: Long): Throwable? {
@@ -393,10 +398,11 @@ class StreamerDownloadService(
     var exception: Throwable? = null
     // while loop for parted download
     while (!isCancelled.value) {
-      downloadStream(onStarted = {
-        updateStreamerState(StreamerState.LIVE)
-        updateLastLiveTime()
-      }, onDownloaded = ::onSegmentDownloaded,
+      downloadStream(
+        onStarted = {
+          updateStreamerState(StreamerState.LIVE)
+          updateLastLiveTime()
+        }, onDownloaded = ::onSegmentDownloaded,
         onStreamDownloadError = {
           exception = it
           shouldEnd = true

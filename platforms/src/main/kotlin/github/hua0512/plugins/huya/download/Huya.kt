@@ -89,7 +89,7 @@ class Huya(
           info("no streams found for {}, choosing the best available", preselectedCdn)
 
           // get the best available cdn
-          // obv, preselectedCdn is not in the exclude list because is not in the map,
+          // obv, preselectedCdn is not in the exclude list because is not present in the map
           // so we can safely pass an empty array
           val bestCdn = this.getBestStreamByPriority(emptyArray())
           info("best available cdn list: {}", bestCdn)
@@ -105,13 +105,27 @@ class Huya(
       ?: selectedCdnStreams.filter { it.format == VideoFormat.flv }.maxByOrNull { it.bitrate }
       ?: throw createNoStreamsFoundException()
   }
-}
 
-private fun Map<String, List<StreamInfo>>.getBestStreamByPriority(excludeCdns: Array<String>): List<StreamInfo> {
-  // sort list desc according to priority
-  // priority is the same for all streams of the same cdn
-  val sortedCdnStreams = this.toList().sortedByDescending { it.second.firstOrNull()?.priority }
-  // get the first cdn that is not in the exclude list
-  val bestCdn = sortedCdnStreams.firstOrNull { it.first !in excludeCdns }?.first
-  return this[bestCdn]!!
+  private fun Map<String, List<StreamInfo>>.getBestStreamByPriority(excludeCdns: Array<String>): List<StreamInfo> {
+
+    // if no streams found, throw exception
+    if (this.isEmpty()) {
+      throw createNoStreamsFoundException()
+    }
+
+    // sort list desc according to priority
+    // priority of same cdn streams should be the same
+    val sortedCdnStreams = this.toList().sortedByDescending { it.second.firstOrNull()?.priority }
+
+    // if exclude list is empty, return the first priority cdn
+    if (excludeCdns.isEmpty()) {
+      return sortedCdnStreams.first().second
+    }
+    // get the first cdn that is not in the exclude list
+    val bestCdn = sortedCdnStreams.first { it.first !in excludeCdns }.first
+    return this[bestCdn] ?: run {
+      // no alternative cdn found, return the first priority cdn
+      sortedCdnStreams.first().second
+    }
+  }
 }

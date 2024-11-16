@@ -32,6 +32,7 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.utils.decodeBase64
 import github.hua0512.utils.md5
@@ -139,7 +140,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         throw InvalidExtractionParamsException("Empty response body from $url")
       }
       if (contains("找不到这个主播")) {
-        throw InvalidExtractionParamsException("$url invalid url, no such streamer")
+        throw InvalidExtractionStreamerNotFoundException(url)
       }
       if (contains("该主播涉嫌违规，正在整改中")) {
         throw InvalidExtractionParamsException("$url invalid url, streamer is banned")

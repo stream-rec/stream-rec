@@ -29,6 +29,7 @@ package github.hua0512.plugins.huya.download
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -87,6 +88,9 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     val status = dataJson["status"]?.jsonPrimitive?.int
     val message = dataJson["message"]?.jsonPrimitive?.content
     if (status != 200) {
+      if (status == 422 && message == "该主播不存在！") {
+        throw InvalidExtractionStreamerNotFoundException(url)
+      }
       throw InvalidExtractionParamsException("Invalid status code $status from $url, message: $message")
     }
     val data = dataJson["data"]?.jsonObject ?: throw InvalidExtractionParamsException("data is null from $url")

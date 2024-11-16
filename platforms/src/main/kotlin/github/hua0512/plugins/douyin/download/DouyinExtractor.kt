@@ -32,12 +32,13 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.LIVE_DOUYIN_URL
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.WEBCAST_ENTER
 import github.hua0512.utils.nonEmptyOrNull
 import io.ktor.client.*
-import io.ktor.client.plugins.timeout
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.plugins.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
 
@@ -111,6 +112,17 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
     idStr = dataInfo["enter_room_id"]?.jsonPrimitive?.content ?: run {
       logger.debug("$url unable to get id_str")
       return false
+    }
+
+    val nickname = user["nickname"]?.jsonPrimitive?.content ?: ""
+
+    val avatars = user["avatar_thumb"]?.jsonObject?.get("url_list")?.jsonArray ?: emptyList()
+
+    val isDeleted = nickname == "账号已注销" && (avatars.firstOrNull { it.jsonPrimitive.content.contains("aweme_default_avatar.png") } != null)
+
+    if (isDeleted) {
+      logger.error("$url account has been deleted")
+      throw InvalidExtractionStreamerNotFoundException(url)
     }
 
     // check if data["data"] section is present
