@@ -27,8 +27,8 @@
 package github.hua0512.plugins.base.exceptions
 
 /**
- * Exception thrown when some parameters are not extracted correctly
+ * An exception thrown when the streamer is not found
  * @author hua0512
- * @date : 2024/7/5 14:11
+ * @date : 2024/11/16 1:26
  */
-open class InvalidExtractionParamsException(override val message: String) : IllegalStateException(message)
+class InvalidExtractionStreamerNotFoundException(val url: String) : InvalidExtractionParamsException("$url streamer not found")

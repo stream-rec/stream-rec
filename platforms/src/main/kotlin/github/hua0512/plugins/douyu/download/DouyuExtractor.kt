@@ -32,6 +32,7 @@ import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
 import io.exoquery.pprint
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -74,7 +75,8 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       """room_id\s*=\s*(\d+)""",
       """"room_id.?":(\d+)""",
       """data-onlineid=(\d+)""",
-      """(房间已被关闭)"""
+      """(房间已被关闭)""",
+      """(该房间目前没有开放)"""
     )
 
     private const val HS_CDN = "hs-h5"
@@ -111,6 +113,8 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     }
     logger.debug("$url mid: $rid")
     if (rid == "房间已被关闭") return false
+    else if (rid == "该房间目前没有开放") throw InvalidExtractionStreamerNotFoundException(url)
+
     // check if the stream is live
     val liveStatus = LIVE_STATUS_REGEX.toRegex().find(htmlText)?.groupValues?.get(1)?.toInt()
     // check if the stream is a video loop
@@ -174,7 +178,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
   private suspend fun getStreamInfo(
     selectedCdn: String = "",
     selectedRate: String = "0",
-    encMap: Map<String, Any?>
+    encMap: Map<String, Any?>,
   ): Pair<StreamInfo, JsonArray> {
     val liveDataResponse = postResponse("https://www.douyu.com/lapi/live/getH5Play/$rid") {
       //  ws-5（线路1） tctc-h5（备用线路4）, tct-h5（备用线路5）, ali-h5（备用线路6）, hw-h5（备用线路7）, hs-h5（备用线路13）

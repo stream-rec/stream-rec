@@ -45,6 +45,7 @@ import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.danmu.base.NoDanmu
@@ -223,7 +224,10 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       error("extraction failed:", throwable = e)
       state.value = DownloadState.Error(null, e)
 
-      if (e is InvalidExtractionInitializationException || e is InvalidExtractionUrlException) {
+      if (e is InvalidExtractionInitializationException ||
+        e is InvalidExtractionUrlException ||
+        e is InvalidExtractionStreamerNotFoundException
+      ) {
         throw e
       }
 
