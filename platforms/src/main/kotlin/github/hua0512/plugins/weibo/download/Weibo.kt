@@ -27,6 +27,7 @@
 package github.hua0512.plugins.weibo.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.WeiboDownloadConfig
 import github.hua0512.data.media.VideoFormat
@@ -45,6 +46,10 @@ class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) : Pl
   override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
   override fun getProgramArgs(): List<String> = emptyList()
+
+  override fun onConfigUpdated(config: AppConfig) {
+    super.onConfigUpdated(config)
+  }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     val selectedStreamFormat = downloadConfig.sourceFormat ?: VideoFormat.flv

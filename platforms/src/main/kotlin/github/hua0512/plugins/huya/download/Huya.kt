@@ -27,6 +27,7 @@
 package github.hua0512.plugins.huya.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
 import github.hua0512.data.media.VideoFormat
@@ -45,7 +46,7 @@ class Huya(
   PlatformDownloader<HuyaDownloadConfig>(app, danmu, extractor) {
 
   init {
-    extractor.forceOrigin = app.config.huyaConfig.forceOrigin
+    onConfigUpdated(app.config)
   }
 
 
@@ -60,6 +61,11 @@ class Huya(
   override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
   override fun getProgramArgs(): List<String> = emptyList()
+
+  override fun onConfigUpdated(config: AppConfig) {
+    super.onConfigUpdated(config)
+    extractor.forceOrigin = config.huyaConfig.forceOrigin
+  }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as HuyaDownloadConfig

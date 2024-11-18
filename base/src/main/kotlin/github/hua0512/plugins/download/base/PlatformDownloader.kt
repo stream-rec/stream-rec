@@ -28,6 +28,7 @@ package github.hua0512.plugins.download.base
 
 import github.hua0512.app.App
 import github.hua0512.app.COMMON_HEADERS
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
@@ -415,7 +416,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       val definedArgs = getProgramArgs()
       if (definedArgs.isNotEmpty()) programArgs.addAll(definedArgs)
       // configure engine
-      configureEngine(app)
+      configureEngine(app.config)
       // listen for end of danmu event
       danmu.setOnDanmuClosedCallback { hasEndOfDanmu = true }
     }
@@ -483,6 +484,12 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
   abstract fun getProgramArgs(): List<String>
 
+  open fun onConfigUpdated(config: AppConfig) {
+    if (this::engine.isInitialized) {
+      engine.configureEngine(config)
+    }
+  }
+
 
   private fun buildOutputFilePath(config: DownloadConfig, title: String, fileExtension: String): Path {
 
@@ -533,21 +540,21 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     onStreamDownloaded?.invoke(streamInfo, metaInfo)
   }
 
-  private fun BaseDownloadEngine.configureEngine(app: App) {
+  private fun BaseDownloadEngine.configureEngine(config: AppConfig) {
     when (this) {
       is FFmpegDownloadEngine -> {
         // determine if the built-in segmenter should be used
-        useSegmenter = app.config.useBuiltInSegmenter
-        detectErrors = app.config.exitDownloadOnError
+        useSegmenter = config.useBuiltInSegmenter
+        detectErrors = config.exitDownloadOnError
       }
 
       is KotlinFlvDownloadEngine -> {
-        enableFlvFix = app.config.enableFlvFix
-        enableFlvDuplicateTagFiltering = app.config.enableFlvDuplicateTagFiltering
+        enableFlvFix = config.enableFlvFix
+        enableFlvDuplicateTagFiltering = config.enableFlvDuplicateTagFiltering
       }
 
       is KotlinHlsDownloadEngine -> {
-        combineTsFiles = app.config.combineTsFiles
+        combineTsFiles = config.combineTsFiles
       }
     }
   }

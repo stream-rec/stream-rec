@@ -27,6 +27,7 @@
 package github.hua0512.plugins.douyin.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.media.VideoFormat
@@ -59,6 +60,10 @@ class Douyin(
   override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
   override fun getProgramArgs(): List<String> = emptyList()
+
+  override fun onConfigUpdated(config: AppConfig) {
+    super.onConfigUpdated(config)
+  }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyinDownloadConfig

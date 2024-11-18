@@ -27,6 +27,7 @@
 package github.hua0512.plugins.douyu.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.stream.StreamInfo
@@ -59,6 +60,11 @@ class Douyu(
   override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
   override fun getProgramArgs(): List<String> = emptyList()
+
+  override fun onConfigUpdated(config: AppConfig) {
+    super.onConfigUpdated(config)
+    extractor.selectedCdn = config.douyuConfig.cdn
+  }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as DouyuDownloadConfig
