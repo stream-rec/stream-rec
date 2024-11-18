@@ -27,15 +27,17 @@
 package douyin
 
 import BaseTest
+import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
-import github.hua0512.plugins.douyin.download.DouyinExtractor
 import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
+import github.hua0512.plugins.douyin.download.DouyinExtractor
 import io.exoquery.pprint
 import kotlinx.coroutines.test.runTest
 import kotlin.test.DefaultAsserter.assertEquals
 import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
+import kotlin.test.expect
 import kotlin.time.Duration
 
 /*
@@ -87,16 +89,28 @@ class DouyinTest : BaseTest() {
 
   @Test
   fun testDanmu(): Unit = runTest(timeout = Duration.INFINITE) {
+    val extractor = DouyinCombinedApiExtractor(app.client, app.json, testUrl).apply {
+      prepare()
+    }
+    val info = extractor.extract()
+
+    if (!info.live) {
+      assert(true)
+      return@runTest
+    }
+
     val danmu = DouyinDanmu(app).apply {
       enableWrite = false
       filePath = "douyin_danmu.txt"
-      idStr = ""
+      idStr = extractor.idStr
     }
-    val init = danmu.init(Streamer(0, "test", testUrl))
+    val init = danmu.init(Streamer(0, "test", testUrl, downloadConfig = DownloadConfig.DouyinDownloadConfig()))
     if (init) {
       danmu.fetchDanmu()
     }
-    assertNotNull("failed to get danmu", danmu)
+    expect(true) {
+      danmu.isInitialized.get()
+    }
     assert(init)
   }
 }

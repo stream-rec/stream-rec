@@ -57,6 +57,11 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
         fillSecUid(secRid)
         // no id str check preset
         parameter(DouyinParams.ROOM_ID_KEY, idStr.ifEmpty { "2" })
+        // find msToken from cookies
+        val msToken = parseCookies(cookies)["msToken"]
+        if (msToken != null) {
+          parameter("msToken", msToken)
+        }
       }
       if (!(mobileResponse.status.isSuccess())) {
         throw InvalidExtractionResponseException("$url mobile api failed, status code = ${mobileResponse.status}")

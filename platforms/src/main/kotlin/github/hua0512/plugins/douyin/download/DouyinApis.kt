@@ -40,6 +40,7 @@ class DouyinApis {
 
   companion object {
 
+    internal const val BASE_URL = "https://www.douyin.com"
     internal const val LIVE_DOUYIN_URL = "https://live.douyin.com"
 
 

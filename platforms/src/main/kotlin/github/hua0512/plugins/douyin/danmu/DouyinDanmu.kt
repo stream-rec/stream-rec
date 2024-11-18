@@ -39,16 +39,10 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.douyin.danmu.DouyinWebcastMessages.CHAT_MESSAGE
 import github.hua0512.plugins.douyin.danmu.DouyinWebcastMessages.CONTROL_MESSAGE
-import github.hua0512.plugins.douyin.download.DouyinApi
+import github.hua0512.plugins.douyin.download.*
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.ROOM_ID_KEY
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.SIGNATURE_KEY
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.USER_UNIQUE_KEY
-import github.hua0512.plugins.douyin.download.extractDouyinWebRid
-import github.hua0512.plugins.douyin.download.fillDouyinCommonParams
-import github.hua0512.plugins.douyin.download.getSignature
-import github.hua0512.plugins.douyin.download.getValidUserId
-import github.hua0512.plugins.douyin.download.loadWebmssdk
-import github.hua0512.plugins.douyin.download.populateDouyinCookieMissedParams
 import github.hua0512.utils.decompressGzip
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.withIOContext
@@ -100,18 +94,20 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     try {
       cookies = populateDouyinCookieMissedParams(cookies, app.client)
     } catch (e: Exception) {
-      logger.error("({}) Failed to populate douyin cookie missed params", webRid, e)
+      logger.error("{} Failed to populate douyin cookie missed params", webRid, e)
       return false
     }
 
     if (idStr.isEmpty()) {
-      logger.error("Failed to get douyin room id_str")
+      logger.error("{} Failed to get douyin room id_str", webRid)
       return false
     }
-    logger.info("(${streamer.name}) douyin room id_str: $idStr")
+    logger.info("${streamer.name} douyin room id_str: $idStr")
 
     with(requestParams) {
       fillDouyinCommonParams()
+      fillDouyinWsParams()
+
       this[ROOM_ID_KEY] = idStr
       updateSignature()
     }

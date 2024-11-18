@@ -71,21 +71,25 @@ internal class DouyinRequestParams {
      */
     internal val commonParams = mapOf(
       "app_name" to "douyin_web",
-      VERSION_CODE_KEY to VERSION_CODE_VALUE,
-      WEBCAST_SDK_VERSION_KEY to SDK_VERSION,
-      UPDATE_VERSION_CODE_KEY to SDK_VERSION,
       "compress" to "gzip",
       "device_platform" to "web",
       "browser_language" to "zh-CN",
       "browser_platform" to "Win32",
       "browser_name" to "Mozilla",
       "browser_version" to COMMON_USER_AGENT.removePrefix("Mozilla/").trim(),
-      "host" to "https://live.douyin.com",
       AID_KEY to AID_VALUE,
       "live_id" to "1",
+    )
+
+    internal val websocketParams = mapOf(
+      VERSION_CODE_KEY to VERSION_CODE_VALUE,
+      WEBCAST_SDK_VERSION_KEY to SDK_VERSION,
+      UPDATE_VERSION_CODE_KEY to SDK_VERSION,
+      "host" to DouyinApis.LIVE_DOUYIN_URL,
       "did_rule" to "3",
-      "endpoint" to "live_pc",
       "identity" to "audience",
+      "endpoint" to "live_pc",
+      "need_persist_msg_count" to "15",
       "heartbeatDuration" to "0",
     )
 
