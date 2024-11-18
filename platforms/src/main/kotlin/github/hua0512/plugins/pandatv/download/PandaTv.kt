@@ -27,6 +27,7 @@
 package github.hua0512.plugins.pandatv.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.PandaTvDownloadConfig
 import github.hua0512.data.platform.PandaTvQuality
@@ -59,6 +60,10 @@ class PandaTv(
   override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
   override fun getProgramArgs(): List<String> = emptyList()
+
+  override fun onConfigUpdated(config: AppConfig) {
+    super.onConfigUpdated(config)
+  }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
     this as PandaTvDownloadConfig

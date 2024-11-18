@@ -27,6 +27,7 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
@@ -522,6 +523,12 @@ class StreamerDownloadService(
       downloadInterval
     }
   }
+
+  /**
+   * Update the app config
+   * @param config [AppConfig] new config
+   */
+  fun updateConfig(config: AppConfig) = plugin.onConfigUpdated(config)
 
   private suspend fun stop(exception: Exception? = null): Boolean = plugin.stopDownload(exception)
 

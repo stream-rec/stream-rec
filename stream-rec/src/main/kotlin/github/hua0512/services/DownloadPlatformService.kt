@@ -30,7 +30,6 @@ import github.hua0512.app.App
 import github.hua0512.data.event.StreamerEvent.StreamerException
 import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
-import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.download.base.IPlatformDownloaderFactory
 import github.hua0512.plugins.download.base.StreamerCallback
@@ -40,11 +39,13 @@ import github.hua0512.utils.logger
 import io.ktor.util.collections.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.datetime.Clock
 import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -98,6 +99,14 @@ class DownloadPlatformService(
 
   init {
     handleIntents()
+    scope.launch {
+      app.appFlow.filterNotNull().collect { config ->
+        // update managers with new app config
+        managers.values.parallelStream().forEach {
+          it.updateConfig(config)
+        }
+      }
+    }
   }
 
   /**
@@ -205,7 +214,7 @@ class DownloadPlatformService(
 
     try {
       // download streamer job
-      downloadStreamerInternal(streamer)
+      startPluginDownload(streamer)
     } finally {
       streamers.remove(streamer)
       downloadingStreamers.remove(streamer.url)
@@ -213,7 +222,7 @@ class DownloadPlatformService(
     }
   }
 
-  private suspend fun downloadStreamerInternal(streamer: Streamer) {
+  private suspend fun startPluginDownload(streamer: Streamer) {
     val newDownloadConfig = streamer.downloadConfig?.fillDownloadConfig(
       streamer.platform,
       streamer.templateStreamer?.downloadConfig,

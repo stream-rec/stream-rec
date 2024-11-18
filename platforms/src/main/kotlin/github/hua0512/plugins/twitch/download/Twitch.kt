@@ -27,12 +27,14 @@
 package github.hua0512.plugins.twitch.download
 
 import github.hua0512.app.App
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
 import github.hua0512.data.platform.TwitchQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
 import github.hua0512.plugins.download.base.PlatformDownloader
+import github.hua0512.plugins.download.engines.DownloadEngines
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.warn
@@ -50,8 +52,7 @@ class Twitch(
 
 
   init {
-    extractor.skipStreamInfo =
-      app.config.twitchConfig.skipAds || app.config.twitchConfig.twitchProxyPlaylist?.nonEmptyOrNull() != null
+    updateParams(app.config)
   }
 
 
@@ -76,6 +77,21 @@ class Twitch(
     config.twitchProxyPlaylist?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist=$it") }
     config.twitchProxyPlaylistExclude?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist-exclude=$it") }
     if (config.twitchProxyPlaylistFallback) add("--twitch-proxy-playlist-fallback")
+  }
+
+  private fun updateParams(config: AppConfig) {
+    val engine = DownloadEngines.fromString(config.engine)
+    if (engine is DownloadEngines.FFMPEG || engine is DownloadEngines.STREAMLINK) {
+      extractor.skipStreamInfo =
+        app.config.twitchConfig.skipAds || app.config.twitchConfig.twitchProxyPlaylist?.nonEmptyOrNull() != null
+    } else {
+      extractor.skipStreamInfo = false
+    }
+  }
+
+  override fun onConfigUpdated(config: AppConfig) {
+    super.onConfigUpdated(config)
+    updateParams(config)
   }
 
   override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
