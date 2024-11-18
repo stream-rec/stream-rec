@@ -76,7 +76,7 @@ class HttpClientFactory : IHttpClientFactory {
       level = LogLevel.NONE
     }
 
-    install(UserAgent) {
+    install(github.hua0512.utils.UserAgent) {
       agent = COMMON_USER_AGENT
     }
 
