@@ -35,11 +35,17 @@ sealed class ExtractorError {
 
   data object InvalidExtractionUrl : ExtractorError()
 
+  data class InitializationError(val throwable: Throwable) : ExtractorError()
+
   data class ApiError(val throwable: Throwable) : ExtractorError()
 
   data class InvalidResponse(val message: String) : ExtractorError()
 
+  data class JsEngineError(val throwable: Throwable) : ExtractorError()
+
   data object StreamerNotFound : ExtractorError()
+
+  data object StreamerBanned : ExtractorError()
 
   data object NoStreamsFound : ExtractorError()
 

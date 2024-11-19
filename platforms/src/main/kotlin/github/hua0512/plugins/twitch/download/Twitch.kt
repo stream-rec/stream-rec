@@ -26,13 +26,15 @@
 
 package github.hua0512.plugins.twitch.download
 
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
 import github.hua0512.data.platform.TwitchQuality
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.download.engines.DownloadEngines
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
@@ -56,9 +58,10 @@ class Twitch(
   }
 
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
+  override suspend fun shouldDownload(onLive: () -> Unit): Result<Boolean, ExtractorError> {
     val authToken = downloadConfig.authToken.orEmpty().ifEmpty {
-      throw InvalidExtractionUrlException("Twitch requires an auth token to download")
+      ""
+//      throw InvalidExtractionUrlException("Twitch requires an auth token to download")
     }
     extractor.authToken = authToken
     return super.shouldDownload(onLive)
@@ -94,14 +97,14 @@ class Twitch(
     updateParams(config)
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
+  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
     this as TwitchDownloadConfig
     val userPreferredQuality = quality ?: app.config.twitchConfig.quality
     // if source quality is selected, return the first stream
     if (userPreferredQuality == TwitchQuality.Source) {
-      return streams.first()
+      return Ok(streams.first())
     } else if (userPreferredQuality == TwitchQuality.Audio) {
-      return streams.first { it.quality == TwitchQuality.Audio.value }
+      return Ok(streams.first { it.quality == TwitchQuality.Audio.value })
     }
     // resolution quality
     val preferredResolution = userPreferredQuality.value.removePrefix("p").toInt()
@@ -109,16 +112,19 @@ class Twitch(
     val selectedStream = streams.filter { it.quality.contains(userPreferredQuality.value) }
     if (selectedStream.isEmpty()) {
       // if no stream found, return the first lower quality than user defined quality
-      return streams.map { (it.extras["resolution"].toString().split("x").last().toIntOrNull() ?: 0) to it }.filter {
-        it.first < preferredResolution
-      }.maxByOrNull {
-        it.first
-      }?.second?.apply {
-        warn("No stream found with quality {}, using {} instead", userPreferredQuality, this.quality)
-      } ?: run {
-        warn("No stream found with quality {}, using the best available", userPreferredQuality)
-        streams.first()
-      }
+      val filtered =
+        streams.map { (it.extras["resolution"].toString().split("x").last().toIntOrNull() ?: 0) to it }.filter {
+          it.first < preferredResolution
+        }.maxByOrNull {
+          it.first
+        }?.second?.apply {
+          warn("No stream found with quality {}, using {} instead", userPreferredQuality, this.quality)
+        } ?: run {
+          warn("No stream found with quality {}, using the best available", userPreferredQuality)
+          streams.first()
+        }
+
+      return Ok(filtered)
     }
     val filteredStream = selectedStream.map {
       (it.extras["resolution"].toString().split("x").last().toIntOrNull() ?: 0) to it
@@ -130,6 +136,6 @@ class Twitch(
       warn("No stream found with quality {}, using the best available", userPreferredQuality)
       selectedStream.first()
     }
-    return filteredStream
+    return Ok(filteredStream)
   }
 }

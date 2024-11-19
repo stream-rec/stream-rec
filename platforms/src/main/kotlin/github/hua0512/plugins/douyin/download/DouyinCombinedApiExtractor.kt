@@ -51,6 +51,7 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
     // try first to fetch using pc live api
     var isLive = super.isLive()
 
+    // return error if not a fallback error
     if (isLive.isErr && isLive.error !is ExtractorError.FallbackError) {
       return isLive
     }

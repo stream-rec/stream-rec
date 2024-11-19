@@ -37,6 +37,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.DefaultAsserter.assertEquals
 import kotlin.test.DefaultAsserter.assertNotNull
 import kotlin.test.Test
+import kotlin.test.assertTrue
 import kotlin.test.expect
 import kotlin.time.Duration
 
@@ -66,9 +67,11 @@ import kotlin.time.Duration
  * SOFTWARE.
  */
 
-class DouyinTest : BaseTest() {
+class DouyinTest : BaseTest<DouyinCombinedApiExtractor>() {
 
   override val testUrl = "https://live.douyin.com/802975310822"
+
+  override fun getExtractor(url: String) = DouyinCombinedApiExtractor(app.client, app.json, testUrl)
 
   @Test
   override fun testRegex(): Unit = runTest {
@@ -79,9 +82,7 @@ class DouyinTest : BaseTest() {
 
   @Test
   override fun testLive(): Unit = runTest {
-    val extractor = DouyinCombinedApiExtractor(app.client, app.json, testUrl).apply {
-      prepare()
-    }
+    val extractor = getExtractor()
     val info = extractor.extract()
     println(pprint(info))
     assertNotNull("failed to extract", info)
@@ -89,15 +90,10 @@ class DouyinTest : BaseTest() {
 
   @Test
   fun testDanmu(): Unit = runTest(timeout = Duration.INFINITE) {
-    val extractor = DouyinCombinedApiExtractor(app.client, app.json, testUrl).apply {
-      prepare()
-    }
+    val extractor = getExtractor()
     val info = extractor.extract()
 
-    if (!info.live) {
-      assert(true)
-      return@runTest
-    }
+    assertTrue(info.isOk)
 
     val danmu = DouyinDanmu(app).apply {
       enableWrite = false

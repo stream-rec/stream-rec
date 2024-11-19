@@ -1,8 +1,10 @@
 import github.hua0512.app.App
 import github.hua0512.app.HttpClientFactory
 import github.hua0512.data.config.AppConfig
+import github.hua0512.plugins.base.Extractor
 import io.ktor.client.HttpClient
 import kotlinx.serialization.json.Json
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 /*
@@ -36,13 +38,21 @@ import kotlin.test.Test
  * @author hua0512
  * @date : 2024/4/27 22:06
  */
-abstract class BaseTest {
+abstract class BaseTest<T : Extractor> {
 
   protected val app = App(Json, HttpClientFactory().getClient(Json)).apply {
     updateConfig(AppConfig())
   }
 
   abstract val testUrl: String
+
+  abstract fun getExtractor(url : String = testUrl): T
+
+
+  @BeforeTest
+  fun setup() {
+    getExtractor().also { t -> t.prepare() }
+  }
 
   @Test
   abstract fun testLive()

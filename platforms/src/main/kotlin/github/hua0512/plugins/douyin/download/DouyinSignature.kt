@@ -26,8 +26,13 @@
 
 package github.hua0512.plugins.douyin.download
 
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.mapError
+import com.github.michaelbull.result.runCatching
 import github.hua0512.app.COMMON_USER_AGENT
-import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_VALUE
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.ROOM_ID_KEY
@@ -55,15 +60,17 @@ private var SDK_JS = atomic<String?>(null)
  * Load webmssdk JS file content
  * @return webmssdk JS file content
  */
-internal fun loadWebmssdk(): String = SDK_JS.value ?: run {
-  val sdkText = DouyinExtractor::class.java.getResourceAsStream("/douyin-webmssdk.js")?.bufferedReader()?.use {
-    it.readText()
-  } ?: throw InvalidExtractionInitializationException("Failed to load douyin webmssdk")
-  val status = SDK_JS.compareAndSet(null, sdkText)
-  if (!status) {
-    logger.error("failed to set douyin webmssdk")
+internal fun loadWebmssdk(): Result<String, ExtractorError> {
+  return SDK_JS.value?.let { Ok(it) } ?: run {
+    val sdkText = DouyinExtractor::class.java.getResourceAsStream("/douyin-webmssdk.js")?.bufferedReader()?.use {
+      it.readText()
+    } ?: return Err(ExtractorError.InitializationError(IllegalStateException("failed to load douyin-webmssdk.js")))
+    val status = SDK_JS.compareAndSet(null, sdkText)
+    if (!status) {
+      logger.error("failed to set douyin webmssdk")
+    }
+    Ok(SDK_JS.value ?: sdkText)
   }
-  SDK_JS.value ?: sdkText
 }
 
 private val signatureJS by lazy {
@@ -111,7 +118,7 @@ private val signatureJS by lazy {
  * @param userId user id
  * @return signature string
  */
-internal fun getSignature(roomId: String, userId: String): String {
+internal fun getSignature(roomId: String, userId: String): Result<String, ExtractorError> {
   assert(!(SDK_JS.value.isNullOrEmpty())) { "SDK_JS is empty" }
 
   // load JS
@@ -127,11 +134,11 @@ internal fun getSignature(roomId: String, userId: String): String {
   // build function caller
   val functionCaller = "get_sign('${md5SigParam}')"
   // call JS function
-  return try {
+  return runCatching {
     (jsEngine.eval(functionCaller) as String).also {
       logger.debug("Signature: {}", it)
     }
-  } catch (e: Exception) {
-    throw InvalidExtractionInitializationException("Failed to get signature, error: ${e.message}")
+  }.mapError {
+    ExtractorError.JsEngineError(it)
   }
 }

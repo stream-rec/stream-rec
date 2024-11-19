@@ -26,12 +26,15 @@
 
 package github.hua0512.plugins.weibo.download
 
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.WeiboDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.utils.warn
@@ -41,7 +44,8 @@ import github.hua0512.utils.warn
  * @author hua0512
  * @date : 2024/10/20 0:04
  */
-class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) : PlatformDownloader<WeiboDownloadConfig>(app, danmu, extractor) {
+class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) :
+  PlatformDownloader<WeiboDownloadConfig>(app, danmu, extractor) {
 
   override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
@@ -51,10 +55,11 @@ class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) : Pl
     super.onConfigUpdated(config)
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
+  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
     val selectedStreamFormat = downloadConfig.sourceFormat ?: VideoFormat.flv
-    return streams.firstOrNull { it.format == selectedStreamFormat } ?: streams.first().also {
+    val filtered = streams.firstOrNull { it.format == selectedStreamFormat } ?: streams.first().also {
       warn("No stream found for format {}, using {} instead", selectedStreamFormat, it.format)
     }
+    return Ok(filtered)
   }
 }

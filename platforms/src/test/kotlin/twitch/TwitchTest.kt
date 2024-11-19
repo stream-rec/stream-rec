@@ -40,9 +40,11 @@ import kotlin.time.Duration
  * @author hua0512
  * @date : 2024/4/27 22:05
  */
-class TwitchTest : BaseTest() {
+class TwitchTest : BaseTest<TwitchExtractor>() {
 
   override val testUrl: String = "https://www.twitch.tv/aspaszin"
+
+  override fun getExtractor(url: String) = TwitchExtractor(app.client, app.json, url)
 
   @Test
   override fun testLive() = runTest {

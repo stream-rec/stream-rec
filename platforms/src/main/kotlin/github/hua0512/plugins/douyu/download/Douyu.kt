@@ -26,11 +26,14 @@
 
 package github.hua0512.plugins.douyu.download
 
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.stream.StreamInfo
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.utils.warn
@@ -48,7 +51,7 @@ class Douyu(
   PlatformDownloader<DouyuDownloadConfig>(app, danmu = danmu, extractor) {
 
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
+  override suspend fun shouldDownload(onLive: () -> Unit): Result<Boolean, ExtractorError> {
     extractor.selectedCdn = (downloadConfig.cdn ?: app.config.douyuConfig.cdn)
     return super.shouldDownload {
       onLive()
@@ -66,17 +69,14 @@ class Douyu(
     extractor.selectedCdn = config.douyuConfig.cdn
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
+  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
     this as DouyuDownloadConfig
     val selectedCdn = cdn ?: app.config.douyuConfig.cdn
     val selectedQuality = quality ?: app.config.douyuConfig.quality
-    if (streams.isEmpty()) {
-      throw createNoStreamsFoundException()
-    }
     val group = streams.groupBy { it.extras["cdn"] }
     val cdnStreams = group[selectedCdn] ?: group.values.flatten().also { warn("CDN {} not found, using random", selectedCdn) }
     val qualityStreams = cdnStreams.firstOrNull { it.extras["rate"] == selectedQuality.rate.toString() } ?: cdnStreams.firstOrNull()
       .also { warn("{} quality not found, using first one available {}", selectedQuality, it) }
-    return (qualityStreams ?: streams.first())
+    return Ok(qualityStreams ?: streams.first())
   }
 }

@@ -37,9 +37,7 @@ import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.TimerEndedDownloadException
 import github.hua0512.download.exceptions.UserStoppedDownloadException
 import github.hua0512.flv.data.other.FlvMetadataInfo
-import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.download.base.OnStreamDownloaded
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.download.base.StreamerCallback
@@ -118,6 +116,8 @@ class StreamerDownloadService(
 
   }
 
+  private var isInitialized = false
+
   /**
    * List to store the downloaded stream data
    */
@@ -132,7 +132,8 @@ class StreamerDownloadService(
 
   // delay between download checks
   private val downloadInterval
-    get() = (streamer.platform.globalConfig(app.config).downloadCheckInterval ?: app.config.downloadCheckInterval).toDuration(DurationUnit.SECONDS)
+    get() = (streamer.platform.globalConfig(app.config).downloadCheckInterval
+      ?: app.config.downloadCheckInterval).toDuration(DurationUnit.SECONDS)
 
   // retry delay for parted downloads
   private val platformRetryDelay
@@ -198,15 +199,34 @@ class StreamerDownloadService(
 
   suspend fun init(callback: StreamerCallback) {
     setCallback(callback)
-    plugin.init(
+    val initializationResult = plugin.init(
       streamer,
       this@StreamerDownloadService.callback,
       app.config.maxPartSize,
       app.config.maxPartDuration ?: 0
     )
+    if (initializationResult.isErr) {
+      val error = initializationResult.error
+      logger.error("{} initialization error: {}", streamer.name, error)
+      EventCenter.sendEvent(
+        StreamerException(
+          streamer.name,
+          streamer.url,
+          streamer.platform,
+          Clock.System.now(),
+          IllegalStateException("Initialization error: $error")
+        )
+      )
+      isInitialized = false
+      updateStreamerState(StreamerState.FATAL_ERROR)
+      return
+    }
+    isInitialized = true
   }
 
   suspend fun start(): Unit = supervisorScope {
+    if (!isInitialized) return@supervisorScope
+
     // there might be a case of abnormal termination, so we reset the state to not live
     // reset the streamer state to not live
     updateStreamerState(StreamerState.NOT_LIVE)
@@ -288,7 +308,11 @@ class StreamerDownloadService(
             val delay = calculateDelay(recordStartTime ?: "")
 
             if (recentErrors >= ERROR_THRESHOLD) {
-              logger.error("{} too many errors, delaying download for {} ms", streamer.name, currentErrorDelay)
+              logger.error(
+                "{} too many errors, delaying download for {}",
+                streamer.name,
+                (currentErrorDelay).toDuration(DurationUnit.MILLISECONDS)
+              )
               downloadState to AwaitingDownload(currentErrorDelay)
               currentErrorDelay = (currentErrorDelay * 2).coerceAtMost(MAX_ERROR_DELAY)
               return@onEach
@@ -302,6 +326,7 @@ class StreamerDownloadService(
             // delay to wait before downloading
             if (delay > 0) {
               awaitTimerJob = launch {
+                logger.debug("{} waiting for {}", streamer.name, delay.toDuration(DurationUnit.MILLISECONDS))
                 delay(delay)
                 downloadState to CheckingDownload(Clock.System.now().epochSeconds)
               }
@@ -319,7 +344,7 @@ class StreamerDownloadService(
               if (!result) updateStreamerState(StreamerState.OUT_OF_SCHEDULE)
             }
 
-            if (!inTimerRange || !checkStreamerLiveStatus()) {
+            if (!inTimerRange || !isStreamerLive()) {
               handleOfflineStatus()
             } else {
               val duration = calculateDuration(streamer.endTime ?: "")
@@ -379,16 +404,22 @@ class StreamerDownloadService(
    * Check if streamer status is live
    * @return true if live stream is present, otherwise false
    * @throws CancellationException if downloader state mismatch
-   * @throws InvalidExtractionUrlException if the streamer url is not supported by this extractor
-   * @throws InvalidExtractionInitializationException if the initialization of the extractor failed
    */
-  private suspend fun checkStreamerLiveStatus(): Boolean = try {
-    plugin.shouldDownload()
-  } catch (e: Exception) {
-    val state = if (e is InvalidExtractionStreamerNotFoundException) StreamerState.NOT_FOUND else StreamerState.FATAL_ERROR
+  private suspend fun isStreamerLive(): Boolean {
+    val result = plugin.shouldDownload()
+    if (result.isOk) return result.value
+
+    // result is error
+    val state = when (result.error) {
+      is ExtractorError.StreamerBanned, is ExtractorError.StreamerNotFound -> StreamerState.NOT_FOUND
+      is ExtractorError.InitializationError, ExtractorError.InvalidExtractionUrl -> StreamerState.FATAL_ERROR
+      else -> StreamerState.NOT_LIVE
+    }
     updateStreamerState(state)
-    cancelBlocking()
-    false
+    if (state != StreamerState.NOT_LIVE) {
+      cancelBlocking()
+    }
+    return false
   }
 
   private suspend fun handleLiveStreamer(scopeProvider: () -> CoroutineScope, duration: Long): Throwable? {

@@ -27,6 +27,7 @@ dependencies {
   implementation(libs.io.ktor.serialization.kotlinx.json)
   implementation(libs.io.ktor.client.logging)
   implementation(libs.io.exoquery.pprint)
+  implementation(libs.io.lindstrom.m3u8.parser)
   implementation(project(":flv-processing"))
   implementation(project(":hls-processing"))
   implementation(project(":common"))

@@ -26,8 +26,11 @@
 
 package github.hua0512.plugins.douyin.download
 
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import github.hua0512.app.COMMON_HEADERS
-import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_VALUE
 import github.hua0512.utils.generateRandomString
@@ -52,6 +55,8 @@ import kotlin.random.Random
 // cookie parameters
 private var ttWid = atomic<String?>(null)
 private var userUniqueId = atomic<Long?>(null)
+
+private const val PROVIDED_TTWID = "1%7ChSa8ecMcm1LGdBAkSrZteUZq7JcVmPbdvaMPTmwFqeU%7C1732525885%7Cc224f863bd709bd733ab2384c98993564af45c9d28b71d7a404b82a99f6aaa91"
 
 /**
  * A semaphore to ensure that only one request is made to fetch the cookies at a time.
@@ -90,7 +95,15 @@ internal suspend fun populateDouyinCookieMissedParams(cookies: String, client: H
   }
 
   val map = parsedCookies.apply {
-    getOrPut(TT_WID_COOKIE) { getDouyinTTwid(client) }
+    getOrPut(TT_WID_COOKIE) {
+      val ttwidResult = getDouyinTTwid(client)
+      if (ttwidResult.isErr) {
+        logger.error("TTwid response error: ${ttwidResult.error}")
+        return PROVIDED_TTWID
+      } else {
+        ttwidResult.value
+      }
+    }
     getOrPut(ODIN_TT_COOKIE) { generateOdinTT() }
     getOrPut(AC_NONCE_COOKIE) { generateNonce() }
     getOrPut(MS_TOKEN_COOKIE) { generateMsToken() }
@@ -107,9 +120,12 @@ private fun generateOdinTT(): String = generateRandomString(160, noNumeric = fal
  * @param client The HTTP client to use for making requests
  * @return The `ttwid` parameter from the Douyin cookies
  */
-private suspend fun getDouyinTTwid(client: HttpClient): String = ttWid.value ?: run {
-  val ttwid = fetchCookiesSemaphore.withPermit {
-    ttWid.value?.let { return it }
+private suspend fun getDouyinTTwid(client: HttpClient): Result<String, ExtractorError> {
+  val currentTtwid = ttWid.value
+  if (currentTtwid != null) return Ok(currentTtwid)
+
+  val apiResult = fetchCookiesSemaphore.withPermit {
+    ttWid.value?.let { return Ok(it) }
 
     val response = client.post("https://ttwid.bytedance.com/ttwid/union/register/") {
       COMMON_HEADERS.forEach { (key, value) ->
@@ -133,15 +149,18 @@ private suspend fun getDouyinTTwid(client: HttpClient): String = ttWid.value ?: 
     val cookiesList = response.setCookie()
     logger.debug("cookies: {}", cookiesList)
 
-    cookiesList.firstOrNull { it.name == TT_WID_COOKIE }?.value
-      ?: throw InvalidExtractionParamsException("failed to get $TT_WID_COOKIE from web")
+    cookiesList.firstOrNull { it.name == TT_WID_COOKIE }?.value?.let { Ok(it) }
+      ?: Err(ExtractorError.InvalidResponse("Failed to get ttwid"))
   }
-  val successful = ttWid.compareAndSet(null, ttwid)
+
+  if (apiResult.isErr) return apiResult
+
+  val successful = ttWid.compareAndSet(null, apiResult.value)
   if (successful) {
-    logger.info("$TT_WID_COOKIE(web): $ttwid")
+    logger.info("$TT_WID_COOKIE(web): ${apiResult.value}")
   }
   // Return the current value of TT_WID, which may be set by another thread
-  ttWid.value ?: ttwid
+  return Ok(ttWid.value ?: apiResult.value)
 }
 
 private fun generateUserId() = Random.nextLong(720_000_000_000_000_0000L, 740_000_000_000_000_0000L)

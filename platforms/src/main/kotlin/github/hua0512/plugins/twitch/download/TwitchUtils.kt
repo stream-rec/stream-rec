@@ -26,8 +26,10 @@
 
 package github.hua0512.plugins.twitch.download
 
+import com.github.michaelbull.result.*
 import github.hua0512.app.COMMON_HEADERS
-import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
+import github.hua0512.plugins.base.ExtractorError
+import github.hua0512.utils.mapError
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -38,48 +40,68 @@ private const val POST_URL = "https://gql.twitch.tv/gql"
 internal const val CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 internal const val CLIENT_ID_HEADER = "Client-Id"
 
-internal suspend fun twitchPostQPL(client: HttpClient, json: Json, data: String, headers: Map<String, String>): JsonElement {
-  val request = client.post(POST_URL) {
-    headers.forEach { (key, value) ->
-      header(key, value)
-    }
+internal suspend fun twitchPostQPL(
+  client: HttpClient,
+  json: Json,
+  data: String,
+  headers: Map<String, String>
+): Result<JsonElement, ExtractorError> {
+  val apiResult = runCatching {
+    client.post(POST_URL) {
+      headers.forEach { (key, value) ->
+        header(key, value)
+      }
 
-    if (headers.containsKey(HttpHeaders.Authorization).not()) {
-      throw InvalidExtractionParamsException("Authorization header is required")
-    }
+//    if (headers.containsKey(HttpHeaders.Authorization).not()) {
+//      throw InvalidExtractionParamsException("Authorization header is required")
+//    }
 
-    COMMON_HEADERS.forEach { (key, value) ->
-      header(key, value)
+      COMMON_HEADERS.forEach { (key, value) ->
+        header(key, value)
+      }
+      contentType(ContentType.Application.Json)
+      setBody(data)
     }
-    contentType(ContentType.Application.Json)
-    setBody(data)
+  }.mapError()
+
+  if (apiResult.isErr) {
+    return apiResult.asErr()
   }
 
-  val body = request.bodyAsText()
+  val response = apiResult.value
+  val body = response.bodyAsText()
   // check if data is an array or object
-  val response = if (body.startsWith("[")) {
-    json.parseToJsonElement(body).jsonArray
-  } else {
-    json.parseToJsonElement(body).jsonObject
-  }
-  // check if response has error
-  if (response is JsonArray) {
-    // check if response has error
-    response.forEach {
-      if (it.jsonObject.containsKey("errors")) {
-        val error = it.jsonObject["errors"]!!.jsonArray.first().jsonObject
-        val message = error["message"]!!.jsonPrimitive.content
-        throw IllegalStateException("Error: $message")
+  val jsonResult = runCatching {
+    if (body.startsWith("[")) {
+      json.parseToJsonElement(body).jsonArray
+    } else {
+      json.parseToJsonElement(body).jsonObject
+    }
+  }.mapError {
+    ExtractorError.InvalidResponse("Invalid JSON response : ${it.message}")
+  }.andThen { jsonElement ->
+    val elements = jsonElement as? JsonArray ?: listOf(jsonElement)
+    elements.forEach {
+      val mapError = runCatching {
+        checkForErrors(it.jsonObject)
+      }.mapError {
+        ExtractorError.ApiError(it)
+      }
+      if (mapError.isErr) {
+        return@andThen mapError.asErr()
       }
     }
-  } else {
-    if (response.jsonObject.containsKey("errors")) {
-      val error = response.jsonObject["errors"]!!.jsonArray.first().jsonObject
-      val message = error["message"]!!.jsonPrimitive.content
-      throw IllegalStateException("Error: $message")
-    }
+    Ok(jsonElement)
   }
-  return response
+  return jsonResult
+}
+
+
+private fun checkForErrors(jsonObject: JsonObject) {
+  jsonObject["errors"]?.jsonArray?.firstOrNull()?.jsonObject?.let {
+    val message = it["message"]!!.jsonPrimitive.content
+    throw IllegalStateException("Error: $message")
+  }
 }
 
 internal fun buildPersistedQueryRequest(operationName: String, sha256Hash: String, variables: JsonObject): String {

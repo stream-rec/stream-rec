@@ -126,7 +126,12 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     userUniqueId = getValidUserId().toString()
     requestParams[USER_UNIQUE_KEY] = userUniqueId!!
     // update signature
-    requestParams[SIGNATURE_KEY] = getSignature(requestParams[ROOM_ID_KEY]!!, userUniqueId!!)
+    val signatureResult = getSignature(requestParams[ROOM_ID_KEY]!!, userUniqueId!!)
+    if (signatureResult.isErr) {
+      logger.error("{} Failed to get douyin signature: {}", idStr, signatureResult.error)
+      return
+    }
+    requestParams[SIGNATURE_KEY] = signatureResult.value
   }
 
   override fun oneHello(): ByteArray {

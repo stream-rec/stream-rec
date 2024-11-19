@@ -34,6 +34,7 @@ dependencies {
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)
   implementation(libs.org.jetbrains.kotlinx.datetime)
+  implementation(libs.com.michael.bull.kotlin.result)
   implementation(project(":base"))
   implementation(project(":common"))
   implementation(project(":platforms"))
