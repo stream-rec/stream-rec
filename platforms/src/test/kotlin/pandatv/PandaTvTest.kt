@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,15 +39,15 @@ import kotlin.time.Duration
  * @author hua0512
  * @date : 2024/5/8 21:56
  */
-class PandaTvTest : BaseTest() {
+class PandaTvTest : BaseTest<PandaTvExtractor>() {
 
   override val testUrl: String = "https://www.pandalive.co.kr/live/play/say0716"
 
+  override fun getExtractor(url: String): PandaTvExtractor = PandaTvExtractor(app.client, app.json, testUrl)
+
   @Test
   override fun testLive() = runTest {
-    val extractor = PandaTvExtractor(app.client, app.json, testUrl).apply {
-      prepare()
-    }
+    val extractor = getExtractor()
     val mediaInfo = extractor.extract()
     println(pprint(mediaInfo))
   }

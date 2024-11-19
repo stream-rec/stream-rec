@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -66,13 +66,16 @@ import kotlin.time.Duration
  * @author hua0512
  * @date : 2024/3/22 13:42
  */
-class DouyuTest : BaseTest() {
+class DouyuTest : BaseTest<DouyuExtractor>() {
 
-  override val testUrl = "https://www.douyu.com/topic/wwqymadrid?rid=8984762&dyshid=19bcae2-ced06e4edcaf43bb8f2bb9c500041601"
+  override val testUrl =
+    "https://www.douyu.com/topic/wwqymadrid?rid=8984762&dyshid=19bcae2-ced06e4edcaf43bb8f2bb9c500041601"
+
+  override fun getExtractor(url: String) = DouyuExtractor(app.client, app.json, testUrl)
 
   @Test
   override fun testRegex() {
-    val match = Regex("""^https:\/\/www\.douyu\.com.*""").matches(testUrl)
+    val match = Regex("""^https://www\.douyu\.com.*""").matches(testUrl)
     assert(match)
   }
 
@@ -84,9 +87,7 @@ class DouyuTest : BaseTest() {
 
   @Test
   override fun testLive(): Unit = runTest {
-    val extractor = DouyuExtractor(app.client, app.json, testUrl).apply {
-      prepare()
-    }
+    val extractor = getExtractor()
     val mediaInfo = extractor.extract()
     assert(mediaInfo != null)
     println(pprint(mediaInfo))

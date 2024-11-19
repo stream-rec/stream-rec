@@ -1,8 +1,35 @@
+/*
+ * MIT License
+ *
+ * Stream-rec  https://github.com/hua0512/stream-rec
+ *
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 import github.hua0512.app.App
 import github.hua0512.app.HttpClientFactory
 import github.hua0512.data.config.AppConfig
-import io.ktor.client.HttpClient
+import github.hua0512.plugins.base.Extractor
 import kotlinx.serialization.json.Json
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 /*
@@ -36,13 +63,21 @@ import kotlin.test.Test
  * @author hua0512
  * @date : 2024/4/27 22:06
  */
-abstract class BaseTest {
+abstract class BaseTest<T : Extractor> {
 
   protected val app = App(Json, HttpClientFactory().getClient(Json)).apply {
     updateConfig(AppConfig())
   }
 
   abstract val testUrl: String
+
+  abstract fun getExtractor(url: String = testUrl): T
+
+
+  @BeforeTest
+  fun setup() {
+    getExtractor().also { t -> t.prepare() }
+  }
 
   @Test
   abstract fun testLive()

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,14 +26,19 @@
 
 package github.hua0512.plugins.huya.download
 
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
+import github.hua0512.utils.debug
 import github.hua0512.utils.info
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -50,7 +55,7 @@ class Huya(
   }
 
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean = super.shouldDownload {
+  override suspend fun shouldDownload(onLive: () -> Unit): Result<Boolean, ExtractorError> = super.shouldDownload {
     onLive()
     // bind danmu properties
     with(danmu) {
@@ -67,7 +72,7 @@ class Huya(
     extractor.forceOrigin = config.huyaConfig.forceOrigin
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
+  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
     this as HuyaDownloadConfig
     // user defined source format
     val userPreferredFormat = (sourceFormat ?: app.config.huyaConfig.sourceFormat).apply {
@@ -92,46 +97,56 @@ class Huya(
         this as Map<String, List<StreamInfo>>
 
         if (preselectedCdn !in this) {
+          debug("streams : {}", streams)
+          debug("filtered streams : {}", this)
           info("no streams found for {}, choosing the best available", preselectedCdn)
 
           // get the best available cdn
           // obv, preselectedCdn is not in the exclude list because is not present in the map
           // so we can safely pass an empty array
-          val bestCdn = this.getBestStreamByPriority(emptyArray())
-          info("best available cdn list: {}", bestCdn)
-          bestCdn
+          val computeResult = this.getBestStreamByPriority(emptyArray())
+          if (computeResult.isErr) {
+            return@run emptyList()
+          }
+          val bestCdnStreams = computeResult.value
+          debug("best available cdn list: {}", bestCdnStreams)
+          bestCdnStreams
         } else {
-          this[preselectedCdn] ?: throw createNoStreamsFoundException()
+          this[preselectedCdn] ?: emptyList()
         }
       }.sortedByDescending { it.bitrate }
     }
 
+    if (selectedCdnStreams.isEmpty()) return Err(ExtractorError.NoStreamsFound)
+
+    val formatStreams = selectedCdnStreams.maxByOrNull { it.format == userPreferredFormat }
     // prioritize flv format if user defined source format is not available
-    return selectedCdnStreams.maxByOrNull { it.format == userPreferredFormat }
-      ?: selectedCdnStreams.filter { it.format == VideoFormat.flv }.maxByOrNull { it.bitrate }
-      ?: throw createNoStreamsFoundException()
+    val flvFormatStreams = selectedCdnStreams.filter { it.format == VideoFormat.flv }.maxByOrNull { it.bitrate }
+
+    return Ok(formatStreams ?: flvFormatStreams ?: selectedCdnStreams.first())
   }
 
-  private fun Map<String, List<StreamInfo>>.getBestStreamByPriority(excludeCdns: Array<String>): List<StreamInfo> {
+  private fun Map<String, List<StreamInfo>>.getBestStreamByPriority(excludeCdns: Array<String>): Result<List<StreamInfo>, ExtractorError> {
 
-    // if no streams found, throw exception
+    // if no streams found, return error
     if (this.isEmpty()) {
-      throw createNoStreamsFoundException()
+      return Err(ExtractorError.NoStreamsFound)
     }
 
     // sort list desc according to priority
     // priority of same cdn streams should be the same
     val sortedCdnStreams = this.toList().sortedByDescending { it.second.firstOrNull()?.priority }
 
-    // if exclude list is empty, return the first priority cdn
+    // if exclude list is empty, return the first priority cdn streams
     if (excludeCdns.isEmpty()) {
-      return sortedCdnStreams.first().second
+      return Ok(sortedCdnStreams.first().second)
     }
     // get the first cdn that is not in the exclude list
     val bestCdn = sortedCdnStreams.first { it.first !in excludeCdns }.first
-    return this[bestCdn] ?: run {
+    val bestCdnStreams = this[bestCdn] ?: run {
       // no alternative cdn found, return the first priority cdn
       sortedCdnStreams.first().second
     }
+    return Ok(bestCdnStreams)
   }
 }

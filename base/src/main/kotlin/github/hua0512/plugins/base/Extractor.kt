@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,14 +31,20 @@ import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+import github.hua0512.utils.mapError
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.lindstrom.m3u8.model.MasterPlaylist
+import io.lindstrom.m3u8.parser.MasterPlaylistParser
+import io.lindstrom.m3u8.parser.MediaPlaylistParser
+import io.lindstrom.m3u8.parser.ParsingMode
 import kotlinx.serialization.json.Json
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import kotlin.jvm.optionals.getOrElse
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * The base class for all the extractors.
@@ -67,11 +73,6 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
     protected fun parseCookies(cookies: String): Map<String, String> {
       return parseClientCookiesHeader(cookies)
     }
-
-    private val bandwidthPattern = Regex("BANDWIDTH=(\\d+)")
-    private val resolutionPattern = Regex("RESOLUTION=(\\d+x\\d+)")
-    private val videoPattern = Regex("VIDEO=\"([^\"]+)\"")
-    private val frameRatePattern = Regex("FRAME-RATE=(\\d+)")
 
   }
 
@@ -113,19 +114,27 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
 
   /**
    * Initialize the extractor
-   * @throws IllegalArgumentException if the url does not match the pattern
+   * @return a [Result] object with the value of the url, or an error
+   * @see Result
    */
-  open suspend fun prepare() {
-    if (!match()) {
-      throw InvalidExtractionUrlException("The url $url does not match the pattern")
+  open fun prepare(): Result<String, ExtractorError> {
+    val matchResult = match()
+
+    if (matchResult.isErr) {
+      return Err(ExtractorError.InvalidExtractionUrl)
     }
+    return Ok(matchResult.value)
   }
 
   /**
    * Function to match the url with the regex pattern
-   * @return a boolean value
+   * @return a [Result] object with the value of the url, or an error if the url does not match the pattern
    */
-  open fun match(): Boolean = regexPattern.matches(url)
+  open fun match(): Result<String, ExtractorError> = if (regexPattern.matches(url)) {
+    Ok(url)
+  } else {
+    Err(ExtractorError.InvalidExtractionUrl)
+  }
 
 
   /**
@@ -145,10 +154,6 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * Function to extract the media info from the stream
    * @return a [MediaInfo] object
    * @see MediaInfo
-   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
-   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
-   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
-   * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
    */
   abstract suspend fun extract(): Result<MediaInfo, ExtractorError>
 
@@ -167,24 +172,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
       populateCommons()
       request()
     }
-  }.checkStatus()
-
-  private fun Result<HttpResponse, Throwable>.checkStatus(): Result<HttpResponse, ExtractorError.ApiError> {
-    return this.mapError {
-      ExtractorError.ApiError(it)
-    }.andThen {
-      if (it.status.isSuccess()) {
-        // check if content length is 0
-        if (it.contentLength() == 0L) {
-          Err(ExtractorError.ApiError(Throwable("$url returned empty response")))
-        } else {
-          Ok(it)
-        }
-      } else {
-        Err(ExtractorError.ApiError(Throwable("$url returned ${it.status}")))
-      }
-    }
-  }
+  }.mapError()
 
   /**
    * post the response from the input url
@@ -199,7 +187,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
       populateCommons()
       request()
     }
-  }.checkStatus()
+  }.mapError()
 
 
   /**
@@ -220,24 +208,51 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
     }
   }
 
+  private fun isMasterPlaylist(content: String) = content.contains("#EXT-X-STREAM-INF")
+
+
   /**
    * Parses a hls playlist response and returns a list of [StreamInfo]
-   * @param response the input response
+   * @param playlistString the input m3u8 playlist string
    * @return a list of [StreamInfo]
    */
-  protected suspend fun parseHlsPlaylist(response: HttpResponse): List<StreamInfo> {
-    val body = response.bodyAsText()
+  protected fun parseHlsPlaylist(playlistString: String): Result<List<StreamInfo>, ExtractorError> {
     val streams = mutableListOf<StreamInfo>()
-    val lines = body.lines()
-    lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") }.forEach { index ->
-      val line = lines[index]
-      val bandwidth = bandwidthPattern.find(line)?.groupValues?.get(1)?.toLong() ?: 0
-      val resolution = resolutionPattern.find(line)?.groupValues?.get(1)?.let { mapOf("resolution" to it) } ?: emptyMap()
-      val video = videoPattern.find(line)?.groupValues?.get(1)!!
-      val frameRate = frameRatePattern.find(line)?.groupValues?.get(1)?.toDouble() ?: 0.0
-      val url = lines[index + 1]
-      streams.add(StreamInfo(url, VideoFormat.hls, video, bandwidth, frameRate = frameRate, extras = resolution))
+    val parsingMode = ParsingMode.LENIENT
+    val mediaParser = if (isMasterPlaylist(playlistString)) {
+      MasterPlaylistParser(parsingMode)
+    } else {
+      MediaPlaylistParser(parsingMode)
     }
-    return streams.toList()
+
+    val parseResult = runCatching {
+      mediaParser.readPlaylist(playlistString)
+    }.mapError {
+      ExtractorError.InvalidResponse("Failed to parse playlist")
+    }
+
+    if (parseResult.isErr) return parseResult.asErr()
+
+    val playlist = parseResult.unwrap()
+    if (playlist is MasterPlaylist) {
+      val variants = playlist.variants()
+      variants.map {
+        val extraMap = it.resolution().getOrNull()?.let { mapOf("resolution" to "${it.height()}x${it.width()}") } ?: emptyMap()
+
+        StreamInfo(
+          url,
+          format = VideoFormat.hls,
+          it.video().getOrElse { "" },
+          it.bandwidth(),
+          0,
+          it.frameRate().getOrElse { 0.0 },
+          extras = extraMap
+        )
+      }
+    } else {
+      return Err(ExtractorError.InvalidResponse("Media playlist returned instead of master playlist"))
+    }
+
+    return Ok(streams.toList())
   }
 }

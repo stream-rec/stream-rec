@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,13 +37,11 @@ import kotlin.test.expect
  * @author hua0512
  * @date : 2024/10/19 21:51
  */
-class WeiboTest : BaseTest() {
+class WeiboTest : BaseTest<WeiboExtractor>() {
 
   override val testUrl: String = "https://weibo.com/u/6034381748?is_hot=1#1573944545407"
 
-  private fun getExtractor(url: String = testUrl): WeiboExtractor {
-    return WeiboExtractor(app.client, app.json, url)
-  }
+  override fun getExtractor(url: String) = WeiboExtractor(app.client, app.json, url)
 
   @Test
   override fun testLive() {
@@ -71,7 +69,7 @@ class WeiboTest : BaseTest() {
   override fun testRegex() {
     val extractor = getExtractor()
     expect(true) {
-      extractor.match()
+      extractor.match().isOk
     }
   }
 
@@ -80,7 +78,7 @@ class WeiboTest : BaseTest() {
     val testUrl = "https://weibo.com/l/wblive/p/show/1022:2321325026370190442592"
     val extractor = getExtractor(testUrl)
     expect(true) {
-      extractor.match()
+      extractor.match().isOk
     }
   }
 }

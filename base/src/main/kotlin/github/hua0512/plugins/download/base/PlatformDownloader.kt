@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,10 @@
 
 package github.hua0512.plugins.download.base
 
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.asErr
 import github.hua0512.app.App
 import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.data.config.AppConfig
@@ -37,17 +41,13 @@ import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
-import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.download.exceptions.DownloadFilePresentException
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.plugins.base.Extractor
-import github.hua0512.plugins.base.exceptions.InvalidExtractionInitializationException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.danmu.base.NoDanmu
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
@@ -77,7 +77,7 @@ import kotlin.io.path.*
 typealias OnStreamDownloaded = (StreamData, FlvMetadataInfo?) -> Unit
 
 
-sealed class DownloadState {
+private sealed class DownloadState {
   data object Idle : DownloadState()
   data class Preparing(
     val downloadUrl: String,
@@ -164,23 +164,27 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * @param maxDownloadSize the maximum download size
    * @throws IllegalArgumentException if the streamer is not supported
    */
-  suspend fun init(
+  fun init(
     streamer: Streamer,
     streamerCallback: StreamerCallback? = null,
     maxDownloadSize: Long = 0,
     maxDownloadTime: Long = 0,
-  ) {
+  ): Result<Boolean, ExtractorError> {
     this.streamer = streamer
     this.context = StreamerContext(streamer.name, streamer.streamTitle.orEmpty())
     @Suppress("UNCHECKED_CAST")
     this.downloadConfig = streamer.downloadConfig as T
-    extractor.prepare()
+    val initialization = extractor.prepare()
+    if (initialization.isErr) {
+      return initialization.asErr()
+    }
     streamerCallback?.let {
       this.streamerCallback = it
     }
     this.maxSize = maxDownloadSize
     this.maxTime = maxDownloadTime
     isInitialized = true
+    return Ok(true)
   }
 
   fun oneShotInit(downloadUrl: String, downloadFormat: VideoFormat) {
@@ -194,52 +198,96 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * Check if download should be started
    * @param onLive the callback to be called if the stream is live
    * @return true if download should be started, false otherwise
-   * @throws FatalDownloadErrorException
-   * @throws InvalidExtractionInitializationException
-   * @throws InvalidExtractionUrlException
    */
-  open suspend fun shouldDownload(onLive: () -> Unit = {}): Boolean {
+  open suspend fun shouldDownload(onLive: () -> Unit = {}): Result<Boolean, ExtractorError> {
     if (!isInitialized) {
-      throw FatalDownloadErrorException("Downloader is not initialized")
+      return Err(ExtractorError.InitializationError(FatalDownloadErrorException("Downloader is not initialized")))
     }
 
     if (state.value == DownloadState.Downloading) {
-      throw FatalDownloadErrorException("Downloader is already downloading")
-
-    }
-
-    if (state.value == DownloadState.Finished) {
-      throw FatalDownloadErrorException("Downloader is already finished")
+      return Err(ExtractorError.InitializationError(FatalDownloadErrorException("Downloader is already downloading")))
+    } else if (state.value == DownloadState.Finished) {
+      return Err(ExtractorError.InitializationError(FatalDownloadErrorException("Downloader is already finished")))
     }
 
     if (isOneShot) {
-      return true
+      return Ok(true)
     }
 
     // set cookies
     extractor.cookies = streamer.downloadConfig?.cookies.orEmpty()
 
-    val mediaInfo = try {
+    val extractorResult = try {
       extractor.extract()
     } catch (e: Exception) {
-      error("extraction failed:", throwable = e)
-      state.value = DownloadState.Error(null, e)
-
-      if (e is InvalidExtractionInitializationException ||
-        e is InvalidExtractionUrlException ||
-        e is InvalidExtractionStreamerNotFoundException
-      ) {
-        throw e
-      }
-
-      return false
+      error("unexpected extraction error:", throwable = e)
+//      state.value = DownloadState.Error(null, e)
+      return Ok(false)
     }
 
+    if (extractorResult.isErr) {
+      val result = extractorResult.analyzeError()
+      if (result.isErr) return result
+    }
+
+    val mediaInfo = extractorResult.value
     if (mediaInfo.live) {
       onLive()
+    } else {
+      return Ok(false)
     }
 
+    var filterResult = getStreamInfo(mediaInfo, streamer, downloadConfig)
+
+    if (filterResult.isErr) {
+      filterResult = filterResult.analyzeError()
+      if (filterResult.isErr) return filterResult
+      if (!filterResult.value) {
+        return Ok(false)
+      }
+    }
+    // success
     return getStreamInfo(mediaInfo, streamer, downloadConfig)
+  }
+
+  private fun <T> Result<T, ExtractorError>.analyzeError(): Result<Boolean, ExtractorError> {
+    if (isOk) return Ok(true)
+
+    return when (error) {
+      ExtractorError.InvalidExtractionUrl -> {
+        error("Invalid extraction url")
+        return this.asErr()
+      }
+
+      is ExtractorError.InitializationError -> {
+        error("Initialization error: {}", (error as ExtractorError.InitializationError).throwable)
+        return this.asErr()
+      }
+
+      ExtractorError.StreamerBanned -> this.asErr()
+      ExtractorError.StreamerNotFound -> this.asErr()
+
+      is ExtractorError.ApiError -> {
+        error("Api error: {}", (error as ExtractorError.ApiError).throwable)
+        Ok(false)
+      }
+
+      is ExtractorError.FallbackError -> Ok(false)
+      is ExtractorError.InvalidResponse -> {
+        error("Invalid response: {}", (error as ExtractorError.InvalidResponse).message)
+        Ok(false)
+      }
+
+      is ExtractorError.JsEngineError -> {
+        error("Js engine error: {}", (error as ExtractorError.JsEngineError).throwable)
+        Ok(false)
+      }
+
+      ExtractorError.NoStreamsFound -> {
+        error("No matching streams found")
+        Ok(false)
+      }
+    }
   }
 
 
@@ -638,7 +686,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * @param streams the list of [StreamInfo] to be filtered
    * @return a [StreamInfo] instance
    */
-  abstract suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo
+  abstract suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError>
 
   /**
    * Get the preferred stream info by applying filters of the user config
@@ -651,19 +699,22 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     mediaInfo: MediaInfo,
     streamer: Streamer,
     userConfig: DownloadConfig,
-  ): Boolean {
+  ): Result<Boolean, ExtractorError> {
     updateStreamerInfo(mediaInfo, streamer)
-    if (!mediaInfo.live) return false
+    if (!mediaInfo.live) return Ok(false)
     if (mediaInfo.streams.isEmpty()) {
-      throw DownloadErrorException("${streamer.name} no streams found")
+      return Err(ExtractorError.NoStreamsFound)
     }
-    val finalStreamInfo = userConfig.applyFilters(mediaInfo.streams)
+    val filterResult = userConfig.applyFilters(mediaInfo.streams)
+
+    if (filterResult.isErr) return filterResult.asErr()
+
+    val streamInfo = filterResult.value
     state.value =
-      DownloadState.Preparing(finalStreamInfo.url, finalStreamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
-    return true
+      DownloadState.Preparing(streamInfo.url, streamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
+    return Ok(true)
   }
 
-  protected fun createNoStreamsFoundException() = InvalidExtractionParamsException("${context.name} no streams found")
 
   /**
    * Update streamer info

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,17 +26,13 @@
 
 package github.hua0512.plugins.douyin.download
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.asErr
+import com.github.michaelbull.result.*
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.base.ExtractorError.*
-import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.LIVE_DOUYIN_URL
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.WEBCAST_ENTER
 import github.hua0512.utils.nonEmptyOrNull
@@ -49,7 +45,7 @@ import kotlinx.serialization.json.*
 import kotlin.collections.set
 
 
-internal class FallbackToDouyinMobileException : InvalidExtractionResponseException("PC api failed!")
+internal class FallbackToDouyinMobileException : UnsupportedOperationException("Douyin pc api failed!")
 
 /**
  *
@@ -78,9 +74,9 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
 
   internal var idStr = ""
 
-  override fun match(): Boolean {
-    webRid = extractDouyinWebRid(url) ?: return false
-    return true
+  override fun match(): Result<String, ExtractorError> = extractDouyinWebRid(url).andThen {
+    webRid = it
+    Ok(webRid)
   }
 
   override suspend fun isLive(): Result<Boolean, ExtractorError> {
