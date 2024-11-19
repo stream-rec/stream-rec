@@ -26,15 +26,20 @@
 
 package github.hua0512.plugins.douyu.download
 
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.asErr
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
 import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
 import io.exoquery.pprint
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -97,11 +102,13 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
   override val regexPattern: Regex = Regex("""^https:\/\/www\.douyu\.com.*""")
 
-  override suspend fun isLive(): Boolean {
-    val response = getResponse(url)
-    if (response.status != HttpStatusCode.OK) {
-      throw InvalidExtractionResponseException("$url failed to get html : ${response.status}")
-    }
+  override suspend fun isLive(): Result<Boolean, ExtractorError> {
+    val result = getResponse(url)
+
+    if (result.isErr) return result.asErr()
+
+    val response = result.value
+
     htmlText = response.bodyAsText()
     logger.trace("{}", htmlText)
     for (pattern in midPatterns) {
@@ -112,48 +119,55 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       }
     }
     logger.debug("$url mid: $rid")
-    if (rid == "房间已被关闭") return false
-    else if (rid == "该房间目前没有开放") throw InvalidExtractionStreamerNotFoundException(url)
+    if (rid == "房间已被关闭") return Ok(false)
+    else if (rid == "该房间目前没有开放") return Err(ExtractorError.StreamerNotFound)
 
     // check if the stream is live
     val liveStatus = LIVE_STATUS_REGEX.toRegex().find(htmlText)?.groupValues?.get(1)?.toInt()
     // check if the stream is a video loop
     val videoLoop = VIDEO_LOOP_REGEX.toRegex().find(htmlText)?.groupValues?.get(1)?.toInt()
-    return liveStatus == 1 && videoLoop == 0
+    val isLive = liveStatus == 1 && videoLoop == 0
+
+    return Ok(isLive)
   }
 
-  override suspend fun extract(): MediaInfo {
+  override suspend fun extract(): Result<MediaInfo, ExtractorError> {
     val isLive = isLive()
+
+    if (isLive.isErr) return isLive.asErr()
 
     var title = Regex(TITLE_REGEX).find(htmlText)?.groupValues?.get(1) ?: ""
     var artist = Regex(ARTIST_REGEX).find(htmlText)?.groupValues?.get(1) ?: ""
     var avatar = ""
     var cover = ""
-    val mediaInfo = MediaInfo(DOUYU_URL, title, artist, cover, avatar, live = isLive)
 
-    if (!isLive) return mediaInfo
 
-    val dataResponse = getResponse("https://open.douyucdn.cn/api/RoomApi/room/$rid")
-    if (dataResponse.status != HttpStatusCode.OK) {
-      logger.error("$url failed to get room data")
-    } else {
-      val jsonText = json.parseToJsonElement(dataResponse.bodyAsText())
-      logger.debug("{}", jsonText)
-      val errorCode = jsonText.jsonObject["error"]?.jsonPrimitive?.intOrNull ?: -1
-      val data = run {
-        if (errorCode == 0) {
-          jsonText.jsonObject["data"]?.jsonObject
-        } else {
-          null
-        }
-      }
-      data?.let {
-        title = it["room_name"]?.jsonPrimitive?.content ?: title
-        artist = it["owner_name"]?.jsonPrimitive?.content ?: artist
-        avatar = it["avatar"]?.jsonPrimitive?.content ?: ""
-        cover = it["room_thumb"]?.jsonPrimitive?.content ?: ""
-      } ?: logger.error("$url failed to get room data")
+    val mediaInfo = MediaInfo(DOUYU_URL, title, artist, cover, avatar, live = isLive.value)
+
+    if (!isLive.value) return Ok(mediaInfo)
+
+    val roomApiResult = getResponse("https://open.douyucdn.cn/api/RoomApi/room/$rid") {
+      contentType(ContentType.Application.Json)
     }
+
+    if (roomApiResult.isErr) return roomApiResult.asErr()
+
+    val roomApiResponse = roomApiResult.value
+
+    val jsonText = roomApiResponse.body<JsonElement>()
+    logger.debug("{}", jsonText)
+    val errorCode = jsonText.jsonObject["error"]?.jsonPrimitive?.intOrNull ?: -1
+    val data = if (errorCode == 0) {
+      jsonText.jsonObject["data"]?.jsonObject
+    } else {
+      null
+    } ?: return Err(ExtractorError.InvalidResponse("Failed to get room data"))
+
+
+    title = data["room_name"]?.jsonPrimitive?.content ?: title
+    artist = data["owner_name"]?.jsonPrimitive?.content ?: artist
+    avatar = data["avatar"]?.jsonPrimitive?.content ?: ""
+    cover = data["room_thumb"]?.jsonPrimitive?.content ?: ""
 
 
     val jsEnc = http.getDouyuH5Enc(json, htmlText, rid)
@@ -195,6 +209,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
         if (value != null)
           parameter(key, value.toString())
       }
+      contentType(ContentType.Application.Json)
     }
     if (liveDataResponse.status != HttpStatusCode.OK) {
       throw InvalidExtractionResponseException("$url failed to get live data : ${liveDataResponse.status}")

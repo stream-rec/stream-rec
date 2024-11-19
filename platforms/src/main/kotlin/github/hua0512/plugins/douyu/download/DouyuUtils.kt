@@ -72,6 +72,7 @@ internal suspend fun HttpClient.getDouyuH5Enc(json: Json, body: String, rid: Str
     val data = get("https://www.douyu.com/swf_api/homeH5Enc") {
       parameter("rids", rid)
       header(HttpHeaders.Referrer, DouyuExtractor.DOUYU_URL)
+      contentType(ContentType.Application.Json)
     }
     if (data.status != HttpStatusCode.OK) {
       throw InvalidExtractionResponseException("Failed to get douyu h5 enc due to status code ${data.status}")

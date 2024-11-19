@@ -26,6 +26,7 @@
 
 package github.hua0512.plugins.base
 
+import com.github.michaelbull.result.*
 import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
@@ -138,7 +139,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * Function to check if the stream is live
    * @return a boolean value
    */
-  protected abstract suspend fun isLive(): Boolean
+  protected abstract suspend fun isLive(): Result<Boolean, ExtractorError>
 
   /**
    * Function to extract the media info from the stream
@@ -149,7 +150,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
    * @throws github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
    */
-  abstract suspend fun extract(): MediaInfo
+  abstract suspend fun extract(): Result<MediaInfo, ExtractorError>
 
   /**
    * get the response from the input url
@@ -159,13 +160,31 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    *
    * @param url the input url
    * @param request the request builder
-   * @return a [HttpResponse] object
+   * @return Result of the response
    */
-  suspend fun getResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = http.get(url) {
-    populateCommons()
-    request()
-  }
+  suspend fun getResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): Result<HttpResponse, ExtractorError.ApiError> = runCatching {
+    http.get(url) {
+      populateCommons()
+      request()
+    }
+  }.checkStatus()
 
+  private fun Result<HttpResponse, Throwable>.checkStatus(): Result<HttpResponse, ExtractorError.ApiError> {
+    return this.mapError {
+      ExtractorError.ApiError(it)
+    }.andThen {
+      if (it.status.isSuccess()) {
+        // check if content length is 0
+        if (it.contentLength() == 0L) {
+          Err(ExtractorError.ApiError(Throwable("$url returned empty response")))
+        } else {
+          Ok(it)
+        }
+      } else {
+        Err(ExtractorError.ApiError(Throwable("$url returned ${it.status}")))
+      }
+    }
+  }
 
   /**
    * post the response from the input url
@@ -173,12 +192,14 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * [COMMON_HEADERS], [platformHeaders], [platformParams]
    * @param url the input url
    * @param request the request builder
-   * @return a [HttpResponse] object
+   * @return Result of the response
    */
-  suspend fun postResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): HttpResponse = http.post(url) {
-    populateCommons()
-    request()
-  }
+  suspend fun postResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): Result<HttpResponse, ExtractorError.ApiError> = runCatching {
+    http.post(url) {
+      populateCommons()
+      request()
+    }
+  }.checkStatus()
 
 
   /**
