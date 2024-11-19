@@ -17,6 +17,7 @@ dependencies {
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.androidx.room.runtime)
   ksp(libs.androidx.room.compiler)
+  implementation(libs.com.michael.bull.kotlin.result)
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.me.tongfei.progressbar)
   implementation(libs.io.ktor.client.core)

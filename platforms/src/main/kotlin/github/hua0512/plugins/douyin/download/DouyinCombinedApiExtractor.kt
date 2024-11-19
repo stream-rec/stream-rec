@@ -26,7 +26,8 @@
 
 package github.hua0512.plugins.douyin.download
 
-import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
+import com.github.michaelbull.result.*
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.APP_ROOM_REFLOW
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -44,49 +45,55 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
 
   private var hasPcApiFailed = false
 
-  override suspend fun isLive(): Boolean {
-    var isLive = false
+  override suspend fun isLive(): Result<Boolean, ExtractorError> {
     hasPcApiFailed = false
-    try {
-      // try first to fetch using pc live api
-      isLive = super.isLive()
-    } catch (_: FallbackToDouyinMobileException) {
-      hasPcApiFailed = true
-      val mobileResponse = getResponse(APP_ROOM_REFLOW) {
-        fillDouyinAppCommonParams()
-        fillSecUid(secRid)
-        // no id str check preset
-        parameter(DouyinParams.ROOM_ID_KEY, idStr.ifEmpty { "2" })
-        // find msToken from cookies
-        val msToken = parseCookies(cookies)["msToken"]
-        if (msToken != null) {
-          parameter("msToken", msToken)
-        }
-      }
-      if (!(mobileResponse.status.isSuccess())) {
-        throw InvalidExtractionResponseException("$url mobile api failed, status code = ${mobileResponse.status}")
-      }
-      liveData = mobileResponse.body<JsonElement>()
 
+    // try first to fetch using pc live api
+    var isLive = super.isLive()
+
+    if (isLive.isErr && isLive.error !is ExtractorError.FallbackError) {
+      return isLive
+    }
+
+    // retry using mobile api
+    hasPcApiFailed = true
+    val result = getResponse(APP_ROOM_REFLOW) {
+      fillDouyinAppCommonParams()
+      fillSecUid(secRid)
+      // no id str check preset
+      parameter(DouyinParams.ROOM_ID_KEY, idStr.ifEmpty { "2" })
+      // find msToken from cookies
+      val msToken = parseCookies(cookies)["msToken"]
+      if (msToken != null) {
+        parameter("msToken", msToken)
+      }
+      contentType(ContentType.Application.Json)
+    }
+
+
+    if (result.isErr) return result.asErr()
+
+    val response = result.value
+
+    return result.andThen {
+      liveData = response.body<JsonElement>()
       val dataObj = liveData.jsonObject["data"]?.jsonObject
-        ?: throw InvalidExtractionResponseException("$url mobile api failed to get data")
+        ?: return@andThen Err(ExtractorError.InvalidResponse("No data object found in response"))
 
       val roomInfo = dataObj["room"]?.jsonObject
-        ?: throw InvalidExtractionResponseException("$url mobile api failed to get room info")
+        ?: return@andThen Err(ExtractorError.InvalidResponse("No room object found in response"))
+
 
       roomInfo["owner"]?.jsonObject?.get("web_rid")?.let { field ->
         webRid = field.jsonPrimitive.content
       }
 
       liveData = roomInfo
-
       val status = roomInfo["status"]?.jsonPrimitive?.int
-        ?: throw InvalidExtractionResponseException("$url mobile api failed to get status")
-      isLive = status == 2
-    } catch (e: Exception) {
-      // throw in rest of cases
-      throw e
+        ?: return@andThen Err(ExtractorError.InvalidResponse("No status found in response"))
+
+      isLive = Ok(status == 2)
+      isLive
     }
-    return isLive
   }
 }
