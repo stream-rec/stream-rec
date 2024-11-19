@@ -384,9 +384,17 @@ class StreamerDownloadService(
   private suspend fun checkStreamerLiveStatus(): Boolean = try {
     plugin.shouldDownload()
   } catch (e: Exception) {
-    val state = if (e is InvalidExtractionStreamerNotFoundException) StreamerState.NOT_FOUND else StreamerState.FATAL_ERROR
+    val state = when (e) {
+      is InvalidExtractionStreamerNotFoundException -> StreamerState.NOT_FOUND
+      is InvalidExtractionInitializationException, is InvalidExtractionUrlException -> StreamerState.FATAL_ERROR
+      // Likely produced by DownloadErrorException, which means no live stream is present
+      else -> StreamerState.NOT_LIVE
+    }
+
     updateStreamerState(state)
-    cancelBlocking()
+    if (state != StreamerState.NOT_LIVE) {
+      cancelBlocking()
+    }
     false
   }
 
