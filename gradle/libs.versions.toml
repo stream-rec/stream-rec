@@ -1,6 +1,6 @@
 [versions]
 ktor = "3.0.1"
-ktor-test = "2.3.12"
+ktor-test = "2.3.13"
 ksp = "2.0.21-1.0.28"
 kotlin = "2.0.21"
 kotlin-atomicfu = "0.26.0"
