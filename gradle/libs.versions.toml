@@ -68,7 +68,7 @@ com-michael-bull-kotlin-result = "com.michael-bull.kotlin-result:kotlin-result:2
 me-tongfei-progressbar = "me.tongfei:progressbar:0.10.1"
 
 org-jetbrains-kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlin-atomicfu" }
-org-jetbrains-kotlinx-io = "org.jetbrains.kotlinx:kotlinx-io-core:0.5.4"
+org-jetbrains-kotlinx-io = "org.jetbrains.kotlinx:kotlinx-io-core:0.6.0"
 org-jetbrains-kotlinx-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 org-jetbrains-kotlinx-datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.6.1"
 org-jetbrains-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
