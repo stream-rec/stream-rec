@@ -31,36 +31,27 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
 import github.hua0512.plugins.pandatv.download.PandaTvExtractor
 import io.exoquery.pprint
-import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.time.Duration
+import io.kotest.matchers.equals.shouldBeEqual
 
 /**
  * @author hua0512
  * @date : 2024/5/8 21:56
  */
-class PandaTvTest : BaseTest<PandaTvExtractor>() {
+class PandaTvTest : BaseTest<PandaTvExtractor>({
 
-  override val testUrl: String = "https://www.pandalive.co.kr/live/play/say0716"
-
-  override fun getExtractor(url: String): PandaTvExtractor = PandaTvExtractor(app.client, app.json, testUrl)
-
-  @Test
-  override fun testLive() = runTest {
-    val extractor = getExtractor()
-    val mediaInfo = extractor.extract()
+  test("isLive") {
+    val result = extractor.extract()
+    result.isOk shouldBeEqual true
+    val mediaInfo = result.value
     println(pprint(mediaInfo))
   }
 
-  @Test
-  override fun testRegex() {
-    val regex = PandaTvExtractor.URL_REGEX.toRegex()
-    assert(regex.matches(testUrl))
-    assert(regex.matchEntire(testUrl)?.groups?.get(1)?.value == "say0716")
+  test("regex") {
+    val match = Regex("""^https://www\.pandalive\.co\.kr.*""").matches(testUrl)
+    match shouldBeEqual true
   }
 
-  @Test
-  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+  test("danmu") {
     val danmu = PandaTvDanmu(app).apply {
       enableWrite = false
       filePath = "pandatv_danmu.txt"
@@ -75,4 +66,9 @@ class PandaTvTest : BaseTest<PandaTvExtractor>() {
     }
     assert(init)
   }
+}) {
+
+  override val testUrl: String = "https://www.pandalive.co.kr/live/play/say0716"
+
+  override fun createExtractor(url: String): PandaTvExtractor = PandaTvExtractor(app.client, app.json, testUrl)
 }

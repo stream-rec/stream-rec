@@ -12,7 +12,7 @@ version = versionName
 dependencies {
   implementation(project(":base"))
   implementation(project(":common"))
-  implementation("com.tencent.tars:tars-core:1.7.3")
+  implementation(libs.com.tencent.tars.core)
   implementation(libs.io.exoquery.pprint)
   implementation(libs.io.ktor.client.core)
   implementation(libs.io.ktor.serialization.kotlinx.json)
@@ -26,6 +26,16 @@ dependencies {
   testImplementation(libs.bundles.test.jvm)
 }
 
+tasks.test {
+  useJUnitPlatform()
+}
+
+configurations.all {
+  // com tencent tars causes a conflict with the logback-classic version, so we force the version
+  resolutionStrategy {
+    force(libs.ch.qos.logback.classic.get())
+  }
+}
 
 // disable protoc plugin because we have the generated files
 //protobuf {

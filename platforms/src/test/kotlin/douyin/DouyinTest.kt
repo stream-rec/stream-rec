@@ -33,13 +33,9 @@ import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor
 import io.exoquery.pprint
-import kotlinx.coroutines.test.runTest
-import kotlin.test.DefaultAsserter.assertEquals
+import io.kotest.matchers.equals.shouldBeEqual
+import io.kotest.matchers.nulls.shouldNotBeNull
 import kotlin.test.DefaultAsserter.assertNotNull
-import kotlin.test.Test
-import kotlin.test.assertTrue
-import kotlin.test.expect
-import kotlin.time.Duration
 
 /*
  * MIT License
@@ -67,33 +63,30 @@ import kotlin.time.Duration
  * SOFTWARE.
  */
 
-class DouyinTest : BaseTest<DouyinCombinedApiExtractor>() {
+class DouyinTest : BaseTest<DouyinCombinedApiExtractor>({
 
-  override val testUrl = "https://live.douyin.com/802975310822"
 
-  override fun getExtractor(url: String) = DouyinCombinedApiExtractor(app.client, app.json, testUrl)
-
-  @Test
-  override fun testRegex(): Unit = runTest {
+  test("regex") {
     val url = testUrl
-    val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url) ?: throw IllegalArgumentException("Invalid url")
-    assertEquals("failed to match id", matchResult.groupValues.last(), "802975310822")
+    val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url)
+    matchResult shouldNotBeNull {
+      "failed to match id"
+    }
+    matchResult!!.groupValues.last() shouldBeEqual "802975310822"
   }
 
-  @Test
-  override fun testLive(): Unit = runTest {
-    val extractor = getExtractor()
+  test("isLive") {
     val info = extractor.extract()
     println(pprint(info))
+    info.isOk shouldBeEqual true
     assertNotNull("failed to extract", info)
   }
 
-  @Test
-  fun testDanmu(): Unit = runTest(timeout = Duration.INFINITE) {
-    val extractor = getExtractor()
+  test("danmu") {
+    val extractor = createExtractor()
     val info = extractor.extract()
 
-    assertTrue(info.isOk)
+    info.isOk shouldBeEqual true
 
     val danmu = DouyinDanmu(app).apply {
       enableWrite = false
@@ -104,9 +97,13 @@ class DouyinTest : BaseTest<DouyinCombinedApiExtractor>() {
     if (init) {
       danmu.fetchDanmu()
     }
-    expect(true) {
-      danmu.isInitialized.get()
-    }
-    assert(init)
+
+    danmu.isInitialized.get() shouldBeEqual true
   }
+
+}) {
+
+  override val testUrl = "https://live.douyin.com/802975310822"
+
+  override fun createExtractor(url: String) = DouyinCombinedApiExtractor(app.client, app.json, testUrl)
 }

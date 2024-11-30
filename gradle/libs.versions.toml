@@ -22,6 +22,8 @@ androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framewor
 
 at-favre-lib-bcrypt = "at.favre.lib:bcrypt:0.10.2"
 
+com-tencent-tars-core = "com.tencent.tars:tars-core:1.7.4"
+
 io-exoquery-pprint = "io.exoquery:pprint-kotlin:2.0.2"
 
 io-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
@@ -47,6 +49,8 @@ io-ktor-serialization-kotlinx-json-jvm = { module = "io.ktor:ktor-serialization-
 io-ktor-server-websockets-jvm = { module = "io.ktor:ktor-server-websockets-jvm", version.ref = "ktor" }
 io-ktor-server-netty-jvm = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
 io-ktor-server-tests-jvm = { module = "io.ktor:ktor-server-tests-jvm", version.ref = "ktor-test" }
+
+io-kotest-kotest-runner-junit5 = "io.kotest:kotest-runner-junit5:6.0.0.M1"
 
 io-lindstrom-m3u8-parser = "io.lindstrom:m3u8-parser:0.28"
 
@@ -93,5 +97,6 @@ test-jvm = [
     "org-jetbrains-kotlinx-coroutines-debug",
     "org-jetbrains-kotlinx-coroutines-test",
     "org-mockito-mockito-core",
-    "org-junit-jupiter-junit-jupiter"
+    "org-junit-jupiter-junit-jupiter",
+    "io-kotest-kotest-runner-junit5",
 ]

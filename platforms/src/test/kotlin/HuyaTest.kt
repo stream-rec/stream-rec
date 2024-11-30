@@ -1,16 +1,3 @@
-import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.base.ExtractorError
-import github.hua0512.plugins.huya.danmu.HuyaDanmu
-import github.hua0512.plugins.huya.download.HuyaExtractor
-import github.hua0512.plugins.huya.download.HuyaExtractorV2
-import io.exoquery.pprint
-import junit.framework.TestCase.assertEquals
-import junit.framework.TestCase.assertNotNull
-import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.test.expect
-import kotlin.time.Duration
-
 /*
  * MIT License
  *
@@ -37,24 +24,25 @@ import kotlin.time.Duration
  * SOFTWARE.
  */
 
-class HuyaTest : BaseTest<HuyaExtractor>() {
+import github.hua0512.data.stream.Streamer
+import github.hua0512.plugins.base.ExtractorError
+import github.hua0512.plugins.huya.danmu.HuyaDanmu
+import github.hua0512.plugins.huya.download.HuyaExtractor
+import github.hua0512.plugins.huya.download.HuyaExtractorV2
+import io.exoquery.pprint
+import io.kotest.matchers.equals.shouldBeEqual
+import io.kotest.matchers.nulls.shouldNotBeNull
 
-  override val testUrl: String = "https://www.huya.com/660000"
 
-  private fun getPCExtractor(url: String = testUrl) = HuyaExtractor(app.client, app.json, url).apply {
-    prepare()
-  }
+class HuyaTest : BaseTest<HuyaExtractor>({
 
-  private fun getMobileExtractor(url: String = testUrl): HuyaExtractorV2 =
+  fun getMobileExtractor(url: String = testUrl): HuyaExtractorV2 =
     HuyaExtractorV2(app.client, app.json, url).apply {
       prepare()
     }
 
-  override fun getExtractor(url: String): HuyaExtractor = getPCExtractor(url)
 
-  @Test
-  fun testAvatarRegex() = runTest {
-
+  test("avatarRegex") {
     val content = """ var TT_META_DATA = {"time":1709163109};
         var TT_ROOM_DATA = {"type":"MATCH","state":"REPLAY","isOn":false,"isOff":false,"isReplay":true,"isPayRoom":0,"isSecret":0,"roomPayPassword":"","id":0,"sid":0,"channel":0,"liveChannel":0,"liveId":0,"shortChannel":0,"isBluRay":1,"gameFullName":"CS2","gameHostName":"862","screenType":1,"startTime":1709106603,"totalCount":4097722,"cameraOpen":0,"liveCompatibleFlag":0,"bussType":1,"isPlatinum":1,"isAutoBitrate":0,"screenshot":"http://live-cover.msstatic.com/huyalive/333393123-333393123-1431912559996305408-666909702-10057-A-0-1-imgplus/20240228164334.jpg","previewUrl":"","gameId":0,"liveSourceType":0,"privateHost":"dank1ng","profileRoom":610742,"recommendStatus":0,"popular":0,"gid":862,"introduction":"龙一样潜于水志于胸力于蓄不鸣则已一鸣惊人","isRedirectHuya":0,"isShowMmsProgramList":0};
         var TT_PROFILE_INFO = {"sex":1,"lp":333393123,"aid":0,"yyid":244905860,"nick":"DANK1NG","avatar":"https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310","fans":1250268,"freezeLevel":0,"host":"dank1ng","profileRoom":610742};
@@ -63,85 +51,47 @@ class HuyaTest : BaseTest<HuyaExtractor>() {
         var TT_PROFILE_P2P_OPT = "";
 """
     val matchResult =
-      HuyaExtractor.AVATAR_REGEX.toRegex().find(content) ?: throw IllegalArgumentException("Invalid content")
-    assertEquals(
-      matchResult.groupValues.last(),
-      "https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310"
-    )
+      HuyaExtractor.AVATAR_REGEX.toRegex().find(content)
+    matchResult.shouldNotBeNull()
+    matchResult.groupValues.last() shouldBeEqual "https://huyaimg.msstatic.com/avatar/1009/21/d479da7839241ade1e136d7324df4f_180_135.jpg?1671605310"
   }
 
-
-  @Test
-  override fun testRegex(): Unit {
-    val extractor = getPCExtractor()
-    val matchResult = extractor.match()
-    assertNotNull(matchResult)
-    expect(true) { matchResult.isOk }
-    expect("660000") { matchResult.value }
+  test("pcRegex") {
+    extractor.match().value shouldBeEqual "660000"
   }
 
-
-  @Test
-  override fun testLive() = runTest {
-    val extractor = getPCExtractor()
+  test("pcLive") {
     val result = extractor.extract()
-    assertNotNull(result)
-    expect(true) {
-      result.isOk
-    }
+    result.isOk shouldBeEqual true
     val mediaInfo = result.value
-    expect(true) {
-      mediaInfo.streams.isNotEmpty()
-    }
     println(pprint(mediaInfo))
   }
 
-  @Test
-  fun testLive2() = runTest {
-    val extractor = getMobileExtractor()
+  test("mobileLive") {
+    extractor = getMobileExtractor()
     val result = extractor.extract()
-    assertNotNull(result)
-    expect(true) {
-      result.isOk
-    }
+    result.isOk shouldBeEqual true
     val mediaInfo = result.value
-    expect(true) {
-      mediaInfo.streams.isNotEmpty()
-    }
     println(pprint(mediaInfo))
   }
 
-
-  @Test
-  fun testStreamerNotFoundPcApi() = runTest {
-    val extractor = getPCExtractor(testUrl + "123")
+  test("streamerNotFoundPcApi") {
+    val extractor = createExtractor(testUrl + "123").also {
+      it.prepare()
+    }
     val result = extractor.extract()
-    println(result)
-    assertNotNull(result)
-    expect(true) {
-      result.isErr
-    }
-    expect(ExtractorError.StreamerNotFound) {
-      result.error
-    }
+    result.isErr shouldBeEqual true
+    result.error shouldBeEqual ExtractorError.StreamerNotFound
   }
 
-  @Test
-  fun testStreamerNotFoundMbApi() = runTest {
-    val extractor = getMobileExtractor(testUrl + "123")
+  test("streamerNotFoundMbApi") {
+    val extractor = getMobileExtractor(testUrl + "123").also { v -> v.prepare() }
     val result = extractor.extract()
-    println(result)
-    assertNotNull(result)
-    expect(true) {
-      result.isErr
-    }
-    expect(result.error) {
-      ExtractorError.StreamerNotFound
-    }
+    result.isErr shouldBeEqual true
+    result.error shouldBeEqual ExtractorError.StreamerNotFound
   }
 
-  @Test
-  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+  test("danmu") {
     val danmu = HuyaDanmu(app).apply {
       enableWrite = false
       filePath = "huya_danmu.txt"
@@ -149,6 +99,16 @@ class HuyaTest : BaseTest<HuyaExtractor>() {
     }
     val init = danmu.init(Streamer(0, "test", testUrl))
     danmu.fetchDanmu()
-    assertNotNull(danmu)
+    danmu.isInitialized.get() shouldBeEqual true
   }
+
+}) {
+
+  override val testUrl: String = "https://www.huya.com/660000"
+
+  private fun getPCExtractor(url: String = testUrl) = HuyaExtractor(app.client, app.json, url).apply {
+    prepare()
+  }
+
+  override fun createExtractor(url: String): HuyaExtractor = getPCExtractor(url)
 }

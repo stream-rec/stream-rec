@@ -31,49 +31,47 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.plugins.twitch.download.TwitchExtractor
 import io.exoquery.pprint
-import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.time.Duration
+import io.kotest.matchers.equals.shouldBeEqual
+import io.kotest.matchers.nulls.shouldNotBeNull
 
 /**
  * Twitch platform test
  * @author hua0512
  * @date : 2024/4/27 22:05
  */
-class TwitchTest : BaseTest<TwitchExtractor>() {
+class TwitchTest : BaseTest<TwitchExtractor>({
 
-  override val testUrl: String = "https://www.twitch.tv/aspaszin"
-
-  override fun getExtractor(url: String) = TwitchExtractor(app.client, app.json, url)
-
-  @Test
-  override fun testLive() = runTest {
-    val extractor = TwitchExtractor(app.client, app.json, testUrl).apply {
-      prepare()
-    }
-    val mediaInfo = extractor.extract()
+  test("isLive") {
+    val result = extractor.extract()
+    result.isOk shouldBeEqual true
+    val mediaInfo = result.value
     println(pprint(mediaInfo))
   }
 
-  @Test
-  override fun testRegex() {
+  test("regex") {
     val regex = TwitchExtractor.URL_REGEX.toRegex()
     val matchResult = regex.find(testUrl)
-    assert(matchResult != null)
-    assert(matchResult!!.groupValues[1] == "aspaszin")
+    matchResult.shouldNotBeNull()
+    matchResult.groupValues[1] shouldBeEqual "aspaszin"
   }
 
-  @Test
-  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+  test("danmu") {
     val danmu = TwitchDanmu(app).apply {
       channel = "aspaszin"
       enableWrite = false
       filePath = "twitch_danmu.txt"
     }
     val init = danmu.init(Streamer(0, "aspaszin", testUrl))
+    init shouldBeEqual true
+    danmu.isInitialized.get() shouldBeEqual true
     if (init) {
       danmu.fetchDanmu()
     }
-    assert(init)
   }
+
+}) {
+
+  override val testUrl: String = "https://www.twitch.tv/aspaszin"
+
+  override fun createExtractor(url: String) = TwitchExtractor(app.client, app.json, url)
 }
