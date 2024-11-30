@@ -28,9 +28,9 @@ import github.hua0512.app.App
 import github.hua0512.app.HttpClientFactory
 import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.base.Extractor
+import io.kotest.core.spec.BeforeTest
+import io.kotest.core.spec.style.FunSpec
 import kotlinx.serialization.json.Json
-import kotlin.test.BeforeTest
-import kotlin.test.Test
 
 /*
  * MIT License
@@ -63,26 +63,34 @@ import kotlin.test.Test
  * @author hua0512
  * @date : 2024/4/27 22:06
  */
-abstract class BaseTest<T : Extractor> {
+abstract class BaseTest<T : Extractor>(body: BaseTest<T>.() -> Unit = {}) : FunSpec({
 
-  protected val app = App(Json, HttpClientFactory().getClient(Json)).apply {
+  afterTest {
+    println("Run after...")
+  }
+  beforeTest {
+    println("Run before...")
+  }
+}) {
+
+  val app = App(Json, HttpClientFactory().getClient(Json)).apply {
     updateConfig(AppConfig())
   }
 
-  abstract val testUrl: String
 
-  abstract fun getExtractor(url: String = testUrl): T
-
-
-  @BeforeTest
-  fun setup() {
-    getExtractor().also { t -> t.prepare() }
+  val prepare: BeforeTest = {
+    extractor = createExtractor().also { t -> t.prepare() }
   }
 
-  @Test
-  abstract fun testLive()
 
-  @Test
-  abstract fun testRegex()
+  init {
+    beforeTest(prepare)
+    body()
+  }
 
+  lateinit var extractor: T
+
+  abstract val testUrl: String
+
+  abstract fun createExtractor(url: String = testUrl): T
 }
