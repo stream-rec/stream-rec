@@ -68,7 +68,7 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
       }
       throw e
     } finally {
-      if (closeSource) {
+      if (closeSource && isClosedForRead.not()) {
         close()
       }
       (tag as? FlvTag)?.let {

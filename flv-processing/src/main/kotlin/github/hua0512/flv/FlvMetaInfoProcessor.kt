@@ -30,6 +30,7 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.Amf0Keyframes
 import github.hua0512.flv.data.amf.Amf0Value
 import github.hua0512.flv.data.amf.Amf0Value.*
+import github.hua0512.flv.data.amf.Amf0Value.Number
 import github.hua0512.flv.data.amf.AmfValue
 import github.hua0512.flv.data.other.FlvKeyframe
 import github.hua0512.flv.data.other.FlvMetadataInfo
@@ -41,11 +42,7 @@ import github.hua0512.utils.logger
 import io.exoquery.pprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.io.Source
-import kotlinx.io.asSink
-import kotlinx.io.asSource
-import kotlinx.io.buffered
-import kotlinx.io.readByteArray
+import kotlinx.io.*
 import java.io.File
 import java.io.RandomAccessFile
 import kotlin.time.measureTime
@@ -95,9 +92,9 @@ private const val HEADER_BYTES = 13L
  */
 object FlvMetaInfoProcessor {
 
-  private fun Source.parseScriptTag(): FlvTag {
+  private suspend fun Source.parseScriptTag(): FlvTag {
     val header: FlvTagHeader = parseTagHeader()
-    var scriptTagData: Pair<ScriptData, Long> = parseScriptTagData(header.dataSize.toInt())
+    val scriptTagData: Pair<ScriptData, Long> = parseScriptTagData(header.dataSize.toInt())
     return FlvTag(1, header, scriptTagData.first, scriptTagData.second)
   }
 
@@ -118,7 +115,7 @@ object FlvMetaInfoProcessor {
         var needRewrite = false
         var headerBytes: ByteArray? = null
 
-        var injected: FlvTag? = null
+        var injected: FlvTag
 
         if (file.length() < HEADER_BYTES) {
           logger.error("File size too small: $path")
@@ -215,7 +212,7 @@ object FlvMetaInfoProcessor {
         amf0Keyframes = this["keyframes"] as Amf0Keyframes
         // check if keyframes contains keyframes
         // this means that the keyframes and spacers are already injected, by ourselves
-        if (amf0Keyframes.properties.containsKey(Amf0Keyframes.KEY_SPACER)) {
+        if (amf0Keyframes!!.properties.containsKey(Amf0Keyframes.KEY_SPACER)) {
           isGeneratedByOurself = true
         }
       }
