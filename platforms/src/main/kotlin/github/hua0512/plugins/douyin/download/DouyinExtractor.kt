@@ -135,6 +135,7 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
     // if not, throw FallbackToDouyinMobileException
     if (!dataInfo.containsKey("data") || dataInfo["data"]!! !is JsonArray || dataInfo["data"]!!.jsonArray.isEmpty()) {
       liveData = JsonNull
+      logger.debug("$url pc api failed, response: {}", textBody)
       return Err(FallbackError(FallbackToDouyinMobileException()))
     }
 
