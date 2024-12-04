@@ -442,6 +442,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   protected fun checkShouldSkipQuery(gid: Int) {
     // 2024-11-12 skip query param build for "xingxiu" areas
     // use default query params instead of calculated
+    logger.debug("$url gid: $gid")
     shouldSkipQueryBuild = gid == 1663
   }
 
