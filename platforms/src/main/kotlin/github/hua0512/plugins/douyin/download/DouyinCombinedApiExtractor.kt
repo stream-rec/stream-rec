@@ -29,6 +29,7 @@ package github.hua0512.plugins.douyin.download
 import com.github.michaelbull.result.*
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.APP_ROOM_REFLOW
+import io.exoquery.pprint
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -54,14 +55,25 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
     // return error if not a fallback error
     if (isLive.isErr && isLive.error !is ExtractorError.FallbackError) {
       return isLive
+    } else if (isLive.isOk) {
+      return isLive
     }
 
+    val debugInfo = buildJsonObject {
+      put("url", url)
+      put("result", isLive.toString())
+      put("webRid", webRid)
+      put("idStr", idStr)
+      put("cookies", cookies)
+    }
+
+    logger.debug("{} pc api failed, falling back to mobile api: {}", url, pprint(debugInfo))
     // retry using mobile api
     hasPcApiFailed = true
     val result = getResponse(APP_ROOM_REFLOW) {
       fillDouyinAppCommonParams()
       fillSecUid(secRid)
-      // no id str check preset
+      // no id str checking yet
       parameter(DouyinParams.ROOM_ID_KEY, idStr.ifEmpty { "2" })
       // find msToken from cookies
       val msToken = parseCookies(cookies)["msToken"]
