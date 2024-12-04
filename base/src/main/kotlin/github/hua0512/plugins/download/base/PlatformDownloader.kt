@@ -26,10 +26,7 @@
 
 package github.hua0512.plugins.download.base
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.asErr
+import com.github.michaelbull.result.*
 import github.hua0512.app.App
 import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.data.config.AppConfig
@@ -227,10 +224,14 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     if (extractorResult.isErr) {
       val result = extractorResult.analyzeError()
-      if (result.isErr) return result
+      // propagate the error
+      if (result.isErr || !result.value) return result
+      // there is no possible `true` value if error occurred
+      return Ok(false)
     }
 
-    val mediaInfo = extractorResult.value
+    // result is ok and live
+    val mediaInfo = extractorResult.unwrap()
     if (mediaInfo.live) {
       onLive()
     } else {
@@ -251,7 +252,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   }
 
   private fun <T> Result<T, ExtractorError>.analyzeError(): Result<Boolean, ExtractorError> {
-    if (isOk) return Ok(true)
+    // ensure is error
+    val error = this.unwrapError()
 
     return when (error) {
       ExtractorError.InvalidExtractionUrl -> {
