@@ -60,8 +60,6 @@ class Douyin(
     danmu.idStr = extractor.idStr
   }
 
-  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
-
   override fun getProgramArgs(): List<String> = emptyList()
 
   override fun onConfigUpdated(config: AppConfig) {

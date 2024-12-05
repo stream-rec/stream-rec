@@ -53,6 +53,11 @@ class TwitchTest : BaseTest<TwitchExtractor>({
     val matchResult = regex.find(testUrl)
     matchResult.shouldNotBeNull()
     matchResult.groupValues[1] shouldBeEqual "aspaszin"
+
+    val extract = extractor.match()
+    extract.shouldNotBeNull()
+    extract.isOk shouldBeEqual true
+    extract.value shouldBeEqual "aspaszin"
   }
 
   test("danmu") {

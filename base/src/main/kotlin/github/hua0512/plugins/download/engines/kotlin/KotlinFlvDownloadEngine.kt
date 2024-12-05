@@ -172,8 +172,8 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
         if (lastStreamIndex == -1) {
           // clear meta info provider when completed
           metaInfoProvider.clear()
-          // when exception is null, it means download is completed without any segments(user canceled, triggered by cancellation)
-          // non-null exceptions is due to IO, parsing, etc. errors exceptions
+          // when exception is null, download is completed without any segments(user cancelled, triggered by cancellation)
+          // non-null exceptions are due to IO, parsing, etc. errors exceptions
           val realCause = cause ?: FatalDownloadErrorException("No segments downloaded")
           // remove PART prefix as onDownloaded is called before and the file is renamed
           onDownloadError(lastDownloadFilePath.replace(PART_PREFIX, ""), realCause as Exception)

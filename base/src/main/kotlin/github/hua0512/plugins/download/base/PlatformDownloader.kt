@@ -530,7 +530,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   }
 
 
-  abstract fun getPlatformHeaders(): Map<String, String>
+  open fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
   abstract fun getProgramArgs(): List<String>
 

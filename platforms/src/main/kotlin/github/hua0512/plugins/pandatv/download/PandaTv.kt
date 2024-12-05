@@ -26,18 +26,13 @@
 
 package github.hua0512.plugins.pandatv.download
 
-import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.PandaTvDownloadConfig
-import github.hua0512.data.platform.PandaTvQuality
-import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.ExtractorError
-import github.hua0512.plugins.download.base.PlatformDownloader
+import github.hua0512.plugins.download.base.HlsPlatformDownloader
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
-import github.hua0512.utils.warn
 
 /**
  * Pandalive live stream downloader.
@@ -49,7 +44,7 @@ class PandaTv(
   override val danmu: PandaTvDanmu,
   override val extractor: PandaTvExtractor,
 ) :
-  PlatformDownloader<PandaTvDownloadConfig>(app, danmu, extractor) {
+  HlsPlatformDownloader<PandaTvDownloadConfig>(app, danmu, extractor) {
 
   override suspend fun shouldDownload(onLive: () -> Unit): Result<Boolean, ExtractorError> = super.shouldDownload {
     onLive()
@@ -66,45 +61,5 @@ class PandaTv(
 
   override fun onConfigUpdated(config: AppConfig) {
     super.onConfigUpdated(config)
-  }
-
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
-    this as PandaTvDownloadConfig
-    val userPreferredQuality = quality ?: app.config.pandaTvConfig.quality
-    // source quality should be the first one
-    if (userPreferredQuality == PandaTvQuality.Source) {
-      return Ok(streams.first())
-    }
-    // resolution quality
-    val preferredResolution = userPreferredQuality.value.removeSuffix("p").toInt()
-    // otherwise, filter by user defined quality
-    val selectedStream = streams.filter { it.quality.contains(userPreferredQuality.value) }
-    if (selectedStream.isEmpty()) {
-      // if no stream found, return the first lower quality than user defined quality
-      val filteredStreams =
-        streams.map { (it.extras["resolution"].toString().split("x").last().toIntOrNull() ?: 0) to it }
-          .filter {
-            it.first < preferredResolution
-          }.maxByOrNull {
-            it.first
-          }?.second?.apply {
-            warn("No stream found with quality {}, using {} instead", userPreferredQuality, this.quality)
-          } ?: run {
-          warn("No stream found with quality {}, using the best available", userPreferredQuality)
-          streams.first()
-        }
-      return Ok(filteredStreams)
-    }
-    val filteredStream = selectedStream.map {
-      (it.extras["resolution"].toString().split("x").last().toIntOrNull() ?: 0) to it
-    }.filter {
-      it.first >= preferredResolution
-    }.minByOrNull {
-      it.first
-    }?.second ?: run {
-      warn("No stream found with quality {}, using the best available", userPreferredQuality)
-      selectedStream.first()
-    }
-    return Ok(filteredStream)
   }
 }

@@ -26,14 +26,12 @@
 
 package github.hua0512.data.dto.platform
 
-import github.hua0512.data.platform.TwitchQuality
-
 /**
+ * Twitch platform config dto
  * @author hua0512
  * @date : 2024/5/3 21:49
  */
-interface TwitchConfigDTO {
+interface TwitchConfigDTO : HlsPlatformConfigDTO {
   val authToken: String?
-  val quality: TwitchQuality?
   val cookies: String?
 }

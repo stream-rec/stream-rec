@@ -26,15 +26,13 @@
 
 package github.hua0512.data.dto.platform
 
-import github.hua0512.data.platform.PandaTvQuality
-
 /**
  * Panda alive config dto
  * @author hua0512
  * @date : 2024/5/10 13:22
  */
-interface PandaTvConfigDTO {
+interface PandaTvConfigDTO : HlsPlatformConfigDTO {
 
   val cookies: String?
-  val quality: PandaTvQuality?
+
 }

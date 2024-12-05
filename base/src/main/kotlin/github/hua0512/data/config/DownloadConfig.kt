@@ -29,7 +29,10 @@ package github.hua0512.data.config
 import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.platform.*
+import github.hua0512.data.platform.DouyinQuality
+import github.hua0512.data.platform.DouyuQuality
+import github.hua0512.data.platform.DouyuQualitySerializer
+import github.hua0512.data.platform.HlsQuality
 import github.hua0512.plugins.download.engines.DownloadEngines
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -143,6 +146,12 @@ sealed class DownloadConfig : DownloadConfigDTO {
       if (sourceFormat != other.sourceFormat) return false
       return super.equals(other)
     }
+
+    override fun hashCode(): Int {
+      var result = primaryCdn?.hashCode() ?: 0
+      result = 31 * result + (sourceFormat?.hashCode() ?: 0)
+      return result
+    }
   }
 
 
@@ -166,13 +175,19 @@ sealed class DownloadConfig : DownloadConfigDTO {
       return super.equals(other)
     }
 
+    override fun hashCode(): Int {
+      var result = cdn?.hashCode() ?: 0
+      result = 31 * result + (quality?.hashCode() ?: 0)
+      return result
+    }
+
   }
 
   @Serializable
   @SerialName("twitch")
   data class TwitchDownloadConfig(
     override val authToken: String? = null,
-    override val quality: TwitchQuality? = null,
+    override val quality: HlsQuality? = null,
   ) : DownloadConfig(), TwitchConfigDTO {
 
     override fun equals(other: Any?): Boolean {
@@ -181,7 +196,14 @@ sealed class DownloadConfig : DownloadConfigDTO {
 
       other as TwitchDownloadConfig
 
+      if (authToken != other.authToken) return false
       return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+      var result = authToken?.hashCode() ?: 0
+      result = 31 * result + (quality?.hashCode() ?: 0)
+      return result
     }
 
   }
@@ -189,7 +211,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
   @Serializable
   @SerialName("pandatv")
   data class PandaTvDownloadConfig(
-    override val quality: PandaTvQuality? = null,
+    override val quality: HlsQuality? = null,
   ) : DownloadConfig(), PandaTvConfigDTO {
 
     override fun equals(other: Any?): Boolean {
@@ -201,6 +223,10 @@ sealed class DownloadConfig : DownloadConfigDTO {
       if (quality != other.quality) return false
 
       return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+      return quality?.hashCode() ?: 0
     }
   }
 
@@ -219,6 +245,10 @@ sealed class DownloadConfig : DownloadConfigDTO {
       if (sourceFormat != other.sourceFormat) return false
 
       return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+      return sourceFormat?.hashCode() ?: 0
     }
 
   }

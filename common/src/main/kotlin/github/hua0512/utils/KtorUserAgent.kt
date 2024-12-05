@@ -81,7 +81,7 @@ suspend fun ByteReadChannel.writeToFile(
   }
 }
 
-suspend fun ByteReadChannel.writeToOutputStream(outputStream: OutputStream) = withContext(Dispatchers.IO) {
+inline suspend fun ByteReadChannel.writeToOutputStream(outputStream: OutputStream) = withContext(Dispatchers.IO) {
   outputStream.use { os ->
 
     while (!exhausted()) {

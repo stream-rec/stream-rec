@@ -33,8 +33,10 @@ import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.data.HlsSegment.DataSegment
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import kotlin.io.path.Path
@@ -155,4 +157,4 @@ internal fun Flow<HlsSegment>.dump(
 
   reset()
   logger.debug("${context.name} end")
-}
+}.flowOn(Dispatchers.IO)
