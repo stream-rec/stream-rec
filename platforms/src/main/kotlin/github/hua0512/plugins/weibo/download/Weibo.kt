@@ -47,8 +47,6 @@ import github.hua0512.utils.warn
 class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) :
   PlatformDownloader<WeiboDownloadConfig>(app, danmu, extractor) {
 
-  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
-
   override fun getProgramArgs(): List<String> = emptyList()
 
   override fun onConfigUpdated(config: AppConfig) {

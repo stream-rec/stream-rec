@@ -29,7 +29,7 @@ package github.hua0512.plugins.twitch.download
 import com.github.michaelbull.result.*
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.platform.TwitchQuality
+import github.hua0512.data.platform.HlsQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.ExtractorError
@@ -39,8 +39,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.auth.*
 import kotlinx.serialization.json.*
-import kotlin.collections.contentToString
-import kotlin.collections.listOf
 import kotlin.collections.set
 
 /**
@@ -72,7 +70,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
 
   override fun match(): Result<String, ExtractorError> = super.match().andThen {
     id = regexPattern.find(url)?.groupValues?.get(1) ?: ""
-    if (id.isEmpty()) {
+    if (id.isNotEmpty()) {
       Ok(id)
     } else {
       Err(ExtractorError.InvalidExtractionUrl)
@@ -147,7 +145,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
 
     // skip stream info extraction, only return basic info
     if (skipStreamInfo) {
-      val streamInfo = StreamInfo(url, VideoFormat.hls, TwitchQuality.Source.value, 0, 0)
+      val streamInfo = StreamInfo(url, VideoFormat.hls, HlsQuality.Source.value, 0, 0)
       mediaInfo =
         mediaInfo.copy(artistImageUrl = artistProfileUrl, title = title, live = true, streams = listOf(streamInfo))
       return Ok(mediaInfo)

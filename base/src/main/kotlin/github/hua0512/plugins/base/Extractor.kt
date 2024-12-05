@@ -157,6 +157,11 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    */
   abstract suspend fun extract(): Result<MediaInfo, ExtractorError>
 
+
+  suspend fun onRepeatedError(error: ExtractorError, retries: Int) {
+    logger.error("Error: $error, retries: $retries")
+  }
+
   /**
    * get the response from the input url
    *
@@ -227,30 +232,31 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
 
     val parseResult = runCatching {
       mediaParser.readPlaylist(playlistString)
+    }.map { playlist ->
+      if (playlist is MasterPlaylist) {
+        val variants = playlist.variants()
+        val variantStreams = variants.map { variant ->
+          val extraMap = variant.resolution().getOrNull()?.let { mapOf("resolution" to "${it.height()}x${it.width()}") } ?: emptyMap()
+          StreamInfo(
+            variant.uri(),
+            format = VideoFormat.hls,
+            variant.video().getOrElse { "" },
+            variant.bandwidth(),
+            0,
+            variant.frameRate().getOrElse { 0.0 },
+            extras = extraMap
+          )
+        }
+        streams.addAll(variantStreams)
+      } else {
+        return Err(ExtractorError.InvalidResponse("Media playlist returned instead of master playlist"))
+      }
     }.mapError {
       ExtractorError.InvalidResponse("Failed to parse playlist")
     }
 
-    if (parseResult.isErr) return parseResult.asErr()
-
-    val playlist = parseResult.unwrap()
-    if (playlist is MasterPlaylist) {
-      val variants = playlist.variants()
-      variants.map {
-        val extraMap = it.resolution().getOrNull()?.let { mapOf("resolution" to "${it.height()}x${it.width()}") } ?: emptyMap()
-
-        StreamInfo(
-          url,
-          format = VideoFormat.hls,
-          it.video().getOrElse { "" },
-          it.bandwidth(),
-          0,
-          it.frameRate().getOrElse { 0.0 },
-          extras = extraMap
-        )
-      }
-    } else {
-      return Err(ExtractorError.InvalidResponse("Media playlist returned instead of master playlist"))
+    if (parseResult.isErr) {
+      return parseResult.asErr()
     }
 
     return Ok(streams.toList())

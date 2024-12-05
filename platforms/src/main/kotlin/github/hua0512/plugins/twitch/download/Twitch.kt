@@ -26,20 +26,15 @@
 
 package github.hua0512.plugins.twitch.download
 
-import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
-import github.hua0512.data.platform.TwitchQuality
-import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.ExtractorError
-import github.hua0512.plugins.download.base.PlatformDownloader
+import github.hua0512.plugins.download.base.HlsPlatformDownloader
 import github.hua0512.plugins.download.engines.DownloadEngines
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
-import github.hua0512.utils.warn
 
 /**
  * Twitch downloader.
@@ -50,7 +45,7 @@ class Twitch(
   app: App,
   danmu: TwitchDanmu,
   override val extractor: TwitchExtractor,
-) : PlatformDownloader<TwitchDownloadConfig>(app, danmu, extractor) {
+) : HlsPlatformDownloader<TwitchDownloadConfig>(app, danmu, extractor) {
 
 
   init {
@@ -66,8 +61,6 @@ class Twitch(
     extractor.authToken = authToken
     return super.shouldDownload(onLive)
   }
-
-  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
 
   override fun getProgramArgs(): List<String> = buildList {
     val config = app.config.twitchConfig
@@ -97,45 +90,4 @@ class Twitch(
     updateParams(config)
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
-    this as TwitchDownloadConfig
-    val userPreferredQuality = quality ?: app.config.twitchConfig.quality
-    // if source quality is selected, return the first stream
-    if (userPreferredQuality == TwitchQuality.Source) {
-      return Ok(streams.first())
-    } else if (userPreferredQuality == TwitchQuality.Audio) {
-      return Ok(streams.first { it.quality == TwitchQuality.Audio.value })
-    }
-    // resolution quality
-    val preferredResolution = userPreferredQuality.value.removePrefix("p").toInt()
-    // otherwise, filter by user defined quality
-    val selectedStream = streams.filter { it.quality.contains(userPreferredQuality.value) }
-    if (selectedStream.isEmpty()) {
-      // if no stream found, return the first lower quality than user defined quality
-      val filtered =
-        streams.map { (it.extras["resolution"].toString().split("x").last().toIntOrNull() ?: 0) to it }.filter {
-          it.first < preferredResolution
-        }.maxByOrNull {
-          it.first
-        }?.second?.apply {
-          warn("No stream found with quality {}, using {} instead", userPreferredQuality, this.quality)
-        } ?: run {
-          warn("No stream found with quality {}, using the best available", userPreferredQuality)
-          streams.first()
-        }
-
-      return Ok(filtered)
-    }
-    val filteredStream = selectedStream.map {
-      (it.extras["resolution"].toString().split("x").last().toIntOrNull() ?: 0) to it
-    }.filter {
-      it.first >= preferredResolution
-    }.minByOrNull {
-      it.first
-    }?.second ?: run {
-      warn("No stream found with quality {}, using the best available", userPreferredQuality)
-      selectedStream.first()
-    }
-    return Ok(filteredStream)
-  }
 }

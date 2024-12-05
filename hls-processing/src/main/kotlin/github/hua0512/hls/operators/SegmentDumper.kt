@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,8 +33,10 @@ import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.data.HlsSegment.DataSegment
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import kotlin.io.path.Path
@@ -155,4 +157,4 @@ internal fun Flow<HlsSegment>.dump(
 
   reset()
   logger.debug("${context.name} end")
-}
+}.flowOn(Dispatchers.IO)

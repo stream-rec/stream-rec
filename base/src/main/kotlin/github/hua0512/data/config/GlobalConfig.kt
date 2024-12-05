@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,10 @@ package github.hua0512.data.config
 import github.hua0512.data.dto.GlobalPlatformConfig
 import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
-import github.hua0512.data.platform.*
+import github.hua0512.data.platform.DouyinQuality
+import github.hua0512.data.platform.DouyuQuality
+import github.hua0512.data.platform.DouyuQualitySerializer
+import github.hua0512.data.platform.HlsQuality
 import kotlinx.serialization.Serializable
 
 /**
@@ -76,7 +79,7 @@ data class HuyaConfigGlobal(
 @Serializable
 data class TwitchConfigGlobal(
   override val authToken: String = "",
-  override val quality: TwitchQuality = TwitchQuality.Source,
+  override val quality: HlsQuality = HlsQuality.Source,
   override val partedDownloadRetry: Int? = 10,
   override val cookies: String? = null,
   override val fetchDelay: Long? = 30,
@@ -91,7 +94,7 @@ data class TwitchConfigGlobal(
 data class PandaTvConfigGlobal(
   override val partedDownloadRetry: Int? = 10,
   override val cookies: String? = null,
-  override val quality: PandaTvQuality = PandaTvQuality.Source,
+  override val quality: HlsQuality = HlsQuality.Source,
   override val fetchDelay: Long? = 30,
   override val downloadCheckInterval: Long? = null,
 ) : GlobalPlatformConfig, PandaTvConfigDTO
