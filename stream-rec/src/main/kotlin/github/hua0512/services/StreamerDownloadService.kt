@@ -57,6 +57,7 @@ import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
 import java.time.LocalDateTime
+import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -224,8 +225,21 @@ class StreamerDownloadService(
     isInitialized = true
   }
 
-  suspend fun start(): Unit = supervisorScope {
-    if (!isInitialized) return@supervisorScope
+  @OptIn(InternalCoroutinesApi::class)
+  suspend fun start(): Unit {
+    // create a supervisorScope with named coroutine
+    // inherit parent coroutine
+    val newContext = coroutineContext.newCoroutineContext(
+      SupervisorJob() + CoroutineName("${streamer.name}MainScope")
+    )
+
+    val scope = CoroutineScope(newContext)
+
+    if (!isInitialized) {
+      clean()
+      scope.cancel()
+      return
+    }
 
     // there might be a case of abnormal termination, so we reset the state to not live
     // reset the streamer state to not live
@@ -235,7 +249,7 @@ class StreamerDownloadService(
     downloadState to Preparing
 
     // job to handle download cancellation
-    launch {
+    scope.launch {
       isCancelled.collect { cancelled ->
         if (cancelled) {
           val result = stop(UserStoppedDownloadException())
@@ -284,7 +298,7 @@ class StreamerDownloadService(
           }
 
           is Downloading -> {
-            val exception = handleLiveStreamer({ this }, it.duration)
+            val exception = handleLiveStreamer({ scope }, it.duration)
             if (isCancelled.value) {
               retryCount = maxRetry
               downloadState to DownloadRetry(retryCount)
@@ -325,8 +339,8 @@ class StreamerDownloadService(
             val delay = it.delay
             // delay to wait before downloading
             if (delay > 0) {
-              awaitTimerJob = launch {
-                logger.debug("{} waiting for {}", streamer.name, delay.toDuration(DurationUnit.MILLISECONDS))
+              awaitTimerJob = scope.launch {
+                logger.info("{} waiting for {}", streamer.name, delay.toDuration(DurationUnit.MILLISECONDS))
                 delay(delay)
                 downloadState to CheckingDownload(Clock.System.now().epochSeconds)
               }
@@ -351,7 +365,7 @@ class StreamerDownloadService(
               downloadState to Downloading(duration)
               return@onEach
             }
-            awaitTimerJob = launch {
+            awaitTimerJob = scope.launch {
               delay(getDelay())
             }
             awaitTimerJob!!.join()
@@ -361,7 +375,6 @@ class StreamerDownloadService(
       .collect {
         logger.trace("{} download state: {}", streamer.name, it)
       }
-
     clean()
     throw CancellationException("Download cancelled")
   }

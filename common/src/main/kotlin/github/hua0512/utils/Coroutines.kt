@@ -31,6 +31,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+import kotlin.coroutines.CoroutineContext
 
 /**
  * This function is a helper function to run a block of code in IO context.
@@ -38,8 +42,18 @@ import java.io.IOException
  * @param block The block of code to be executed in IO context.
  * @return The result of the block execution.
  */
-suspend fun <T> withIOContext(block: suspend CoroutineScope.() -> T): T = withContext(Dispatchers.IO) {
-  block()
+@OptIn(ExperimentalContracts::class)
+suspend fun <T> withIOContext(context: CoroutineContext? = null, block: suspend CoroutineScope.() -> T): T {
+
+  contract {
+    callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+  }
+
+  val context = if (context != null) Dispatchers.IO + context else Dispatchers.IO
+
+  return withContext(context) {
+    block()
+  }
 }
 
 /**

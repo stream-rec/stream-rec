@@ -52,7 +52,7 @@ interface BaseDao<T> {
    * @return row id
    */
   @Insert
-  suspend fun insert(entity: List<T>): List<Long>
+  suspend fun insert(vararg entity: T): List<Long>
 
   /**
    * Update data
