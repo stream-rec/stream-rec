@@ -38,8 +38,10 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.Json
+import kotlin.coroutines.CoroutineContext
 
 fun CoroutineScope.backendServer(
+  parentContext: CoroutineContext,
   json: Json,
   userRepo: UserRepo,
   appConfigRepo: AppConfigRepo,
@@ -52,6 +54,7 @@ fun CoroutineScope.backendServer(
     Netty,
     port = 12555,
     host = "0.0.0.0",
+    parentCoroutineContext = parentContext,
     module = { module(json, userRepo, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo) })
 }
 

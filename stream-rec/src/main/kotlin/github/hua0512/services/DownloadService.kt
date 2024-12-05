@@ -42,12 +42,10 @@ import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
 import github.hua0512.utils.withRetry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -93,11 +91,11 @@ class DownloadService(
         id: Long,
         newState: StreamerState,
         onSuccessful: () -> Unit,
-      ) {
-        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
+      ) = withIOContext(CoroutineName("${id}StateJob")) {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
         if (streamer.state == newState) {
           onSuccessful()
-          return
+          return@withIOContext
         }
         val status = repo.update(streamer.copy(state = newState))
         logger.debug("{} updated state -> {} = {}", streamer.name, newState, status)
@@ -105,32 +103,37 @@ class DownloadService(
           onSuccessful()
       }
 
-      override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit) {
-        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
-        if (streamer.lastLiveTime == newLiveTime) return
+      override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit) = withIOContext(
+        CoroutineName("${id}LastLiveTimeJob")
+      ) {
+        val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
+        if (streamer.lastLiveTime == newLiveTime) return@withIOContext
         logger.debug("{} updated last live time -> {}", streamer.name, newLiveTime)
         val status = repo.update(streamer.copy(lastLiveTime = newLiveTime))
         if (status)
           onSuccessful()
       }
 
-      override suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit) {
-        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
-        if (streamer.streamTitle == description) return
-        logger.debug("{} updated description -> {}", streamer.name, description)
-        val status = repo.update(streamer.copy(streamTitle = description))
-        if (status)
-          onSuccessful()
-      }
 
-      override suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit) {
-        val streamer = repo.getStreamerById(StreamerId(id)) ?: return
-        if (streamer.avatar == avatar) return
-        logger.debug("{} updated avatar url -> {}", streamer.name, avatar)
-        val status = repo.update(streamer.copy(avatar = avatar))
-        if (status)
-          onSuccessful()
-      }
+      override suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit) =
+        withIOContext(CoroutineName("${id}DescriptionChangedJob")) {
+          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
+          if (streamer.streamTitle == description) return@withIOContext
+          logger.debug("{} updated description -> {}", streamer.name, description)
+          val status = repo.update(streamer.copy(streamTitle = description))
+          if (status)
+            onSuccessful()
+        }
+
+      override suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit) =
+        withIOContext(CoroutineName("${id}AvatarChangedJob")) {
+          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
+          if (streamer.avatar == avatar) return@withIOContext
+          logger.debug("{} updated avatar url -> {}", streamer.name, avatar)
+          val status = repo.update(streamer.copy(avatar = avatar))
+          if (status)
+            onSuccessful()
+        }
 
       override fun onStreamDownloaded(
         id: Long,
@@ -139,7 +142,7 @@ class DownloadService(
         metaInfo: FlvMetadataInfo?,
       ) {
         var stream = stream
-        scope.launch {
+        scope.launch(CoroutineName("${id}StreamDownloadedJob") + Dispatchers.IO) {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
           if (shouldInjectMetaInfo) {
             if (metaInfo != null) {
@@ -176,7 +179,7 @@ class DownloadService(
       }
 
       override fun onStreamFinished(id: Long, streams: List<StreamData>) {
-        scope.launch {
+        scope.launch(Dispatchers.IO + CoroutineName("${id}StreamFinishedJob")) {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
           if (streamer.state != StreamerState.NOT_LIVE && streamer.state != StreamerState.CANCELLED) {
             repo.update(streamer.copy(state = StreamerState.NOT_LIVE))

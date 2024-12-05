@@ -35,6 +35,7 @@ import github.hua0512.plugins.download.base.IPlatformDownloaderFactory
 import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.fillDownloadConfig
 import github.hua0512.plugins.event.EventCenter
+import github.hua0512.services.DownloadPlatformService.Companion.MAX_STREAMERS
 import github.hua0512.utils.logger
 import io.ktor.util.collections.*
 import kotlinx.coroutines.*
@@ -195,17 +196,17 @@ class DownloadPlatformService(
 
 
   private fun startDownloadJob(streamer: Streamer) {
-    scope.launch {
-      logger.debug("({}), {} launching download coroutine", streamer.platform, streamer.url)
+    scope.launch(Dispatchers.Default + CoroutineName("${streamer.name}MainJob")) {
+      logger.debug("({}), {} launching download coroutine ({})", streamer.platform, streamer.url, this.coroutineContext)
       downloadStreamer(streamer)
     }
   }
 
-  private suspend fun downloadStreamer(streamer: Streamer) = coroutineScope {
+  private suspend fun downloadStreamer(streamer: Streamer) {
     // check if streamer is already being downloaded
     if (downloadingStreamers.contains(streamer.url)) {
       logger.debug("({}) streamer {} is already being downloaded", platform, streamer.url)
-      return@coroutineScope
+      return
     }
 
     logger.debug("({}) downloading streamer: {}, {}", platform, streamer.name, streamer.url)
