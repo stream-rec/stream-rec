@@ -248,7 +248,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
     }
     // success
-    return getStreamInfo(mediaInfo, streamer)
+    return filterResult
   }
 
   private fun <T> Result<T, ExtractorError>.analyzeError(): Result<Boolean, ExtractorError> {
@@ -321,7 +321,9 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     val genericOutputPath =
       buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 
-    val isSpaceAvailable = checkSpaceAvailable(Path(genericOutputPath.pathString.substringBeforePlaceholders() + File.separator))
+    val isSpaceAvailable = checkSpaceAvailable(Path(genericOutputPath.pathString.substringBeforePlaceholders().let {
+      if (it.endsWith(File.separator)) it else it + File.separator
+    }))
 
     if (!isSpaceAvailable) {
       error("not enough disk space")
@@ -673,11 +675,17 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   }
 
 
-  open fun checkSpaceAvailable(genericOutputPath: Path = Path(app.config.outputFolder.substringBeforePlaceholders() + File.separator)): Boolean {
+  open fun checkSpaceAvailable(
+    genericOutputPath: Path = Path(app.config.outputFolder.substringBeforePlaceholders().let {
+      if (it.endsWith(File.separator)) it else it + File.separator
+    }),
+  ): Boolean {
     if (maxSize == 0L) return true
     // use app config output path folder if the current output folder is child of the app config output folder
     var checkPath = genericOutputPath
-    val appOutputPath = Path(app.config.outputFolder)
+    val appOutputPath = Path(app.config.outputFolder.substringBeforePlaceholders().let {
+      if (it.endsWith(File.separator)) it else it + File.separator
+    })
     if (checkPath != appOutputPath && checkPath.startsWith(appOutputPath)) {
       checkPath = appOutputPath
     }
@@ -693,6 +701,11 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   private fun checkDiskSpace(path: Path, size: Long): Boolean {
     if (size == 0L) return true
+    // path should be a dir
+    var path = path
+    if (!Files.isDirectory(path)) {
+      path = path.parent
+    }
     val fileStore = Files.getFileStore(path)
     val usableSpace = fileStore.usableSpace
     logger.debug("checking available disk space of path {}, usable space: {} bytes", path, usableSpace)
