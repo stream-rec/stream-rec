@@ -688,11 +688,6 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   private fun checkDiskSpace(path: Path, size: Long) {
     if (size == 0L) return
-    if (path.notExists()) {
-      // create directories if they don't exist
-      path.createDirectories()
-      return
-    }
     val fileStore = Files.getFileStore(path)
     val usableSpace = fileStore.usableSpace
     logger.debug("checking available disk space of path {}, usable space: {} bytes", path, usableSpace)
