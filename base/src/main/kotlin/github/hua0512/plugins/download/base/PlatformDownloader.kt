@@ -321,7 +321,13 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     val genericOutputPath =
       buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 
-    checkSpaceAvailable(Path(genericOutputPath.pathString.substringBeforePlaceholders() + File.separator))
+    val isSpaceAvailable = checkSpaceAvailable(Path(genericOutputPath.pathString.substringBeforePlaceholders() + File.separator))
+
+    if (!isSpaceAvailable) {
+      error("not enough disk space")
+      state.value = DownloadState.Error("", InsufficientDownloadSizeException("Not enough disk space"))
+      throw InsufficientDownloadSizeException("Not enough disk space")
+    }
 
     val headers = getPlatformHeaders().plus(COMMON_HEADERS)
 
@@ -676,8 +682,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       checkPath = appOutputPath
     }
     // check disk space
-    checkDiskSpace(checkPath, maxSize)
-    return true
+    return checkDiskSpace(checkPath, maxSize)
   }
 
   /**
@@ -686,17 +691,17 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * @param size the minimum size required
    * @throws InsufficientDownloadSizeException if there is not enough disk space
    */
-  private fun checkDiskSpace(path: Path, size: Long) {
-    if (size == 0L) return
+  private fun checkDiskSpace(path: Path, size: Long): Boolean {
+    if (size == 0L) return true
     val fileStore = Files.getFileStore(path)
     val usableSpace = fileStore.usableSpace
     logger.debug("checking available disk space of path {}, usable space: {} bytes", path, usableSpace)
     if (usableSpace < size) {
       val errorMsg = "Not enough disk space: $usableSpace < $size"
       error(errorMsg)
-      state.value = DownloadState.Error(null, InsufficientDownloadSizeException(errorMsg))
-      throw InsufficientDownloadSizeException(errorMsg)
+      return false
     }
+    return true
   }
 
   /**
