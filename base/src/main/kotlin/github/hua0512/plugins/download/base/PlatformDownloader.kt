@@ -321,7 +321,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     val genericOutputPath =
       buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 
-    checkSpaceAvailable(Path(genericOutputPath.pathString.substringBeforePlaceholders()))
+    checkSpaceAvailable(Path(genericOutputPath.pathString.substringBeforePlaceholders() + File.separator))
 
     val headers = getPlatformHeaders().plus(COMMON_HEADERS)
 
@@ -667,7 +667,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   }
 
 
-  open fun checkSpaceAvailable(genericOutputPath: Path = Path(app.config.outputFolder.substringBeforePlaceholders())): Boolean {
+  open fun checkSpaceAvailable(genericOutputPath: Path = Path(app.config.outputFolder.substringBeforePlaceholders() + File.separator)): Boolean {
     if (maxSize == 0L) return true
     // use app config output path folder if the current output folder is child of the app config output folder
     var checkPath = genericOutputPath

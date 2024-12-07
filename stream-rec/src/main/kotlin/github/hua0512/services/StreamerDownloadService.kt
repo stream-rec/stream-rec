@@ -46,7 +46,6 @@ import github.hua0512.plugins.download.globalConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.services.DownloadState.*
 import github.hua0512.utils.logger
-import github.hua0512.utils.substringBeforePlaceholders
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +59,6 @@ import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
 import java.time.LocalDateTime
 import kotlin.coroutines.coroutineContext
-import kotlin.io.path.Path
 import kotlin.math.abs
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -496,6 +494,7 @@ class StreamerDownloadService(
         when (e) {
 
           is InsufficientDownloadSizeException -> {
+            onStreamDownloadError(e)
             // hang the download until space is freed
             logger.error("{} insufficient download size, hanging...", streamer.name)
             while (true) {
@@ -503,9 +502,11 @@ class StreamerDownloadService(
               if (isCancelled.value) {
                 break
               }
-              plugin.checkSpaceAvailable(Path(app.config.outputFolder.substringBeforePlaceholders()))
+              if (plugin.checkSpaceAvailable()) {
+                logger.info("{} space available, resuming download", streamer.name)
+                break
+              }
             }
-            onStreamDownloadError(e)
           }
           // in those cases, cancel the download and throw the exception
           is FatalDownloadErrorException, is CancellationException -> {
