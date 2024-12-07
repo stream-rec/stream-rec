@@ -26,11 +26,14 @@
 
 package github.hua0512.flv.data
 
+import kotlinx.serialization.Serializable
+
 /**
  * Flv join point
  * @author hua0512
  * @date : 2024/9/12 0:56
  */
+@Serializable
 data class FlvJoinPoint(
   val seamless: Boolean = false,
   val timestamp: Int = 0,

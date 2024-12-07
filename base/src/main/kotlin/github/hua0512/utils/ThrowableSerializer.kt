@@ -1,8 +1,3 @@
-import github.hua0512.utils.replacePlaceholders
-import kotlinx.datetime.Instant
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
 /*
  * MIT License
  *
@@ -29,20 +24,28 @@ import kotlin.test.assertEquals
  * SOFTWARE.
  */
 
-class StringTest {
+package github.hua0512.utils
 
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
-  @Test
-  fun testReplace() {
-    val streamer = "雪乃荔荔枝"
-    val title = "新人第一天开播"
-    val time = 1708461712L
-    val instant = Instant.fromEpochSeconds(time)
+/**
+ * ThrowableSerializer is a custom serializer for Throwable.
+ * @author hua0512
+ * @date : 2024/12/6 13:43
+ */
+object ThrowableSerializer : KSerializer<Throwable> {
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Throwable", PrimitiveKind.STRING)
 
-    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+  override fun serialize(encoder: Encoder, value: Throwable) {
+    encoder.encodeString(value.message ?: "")
+  }
 
-    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
-
-    assertEquals("雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52", formatted)
+  override fun deserialize(decoder: Decoder): Throwable {
+    return Throwable(decoder.decodeString())
   }
 }

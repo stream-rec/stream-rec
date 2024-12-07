@@ -32,7 +32,7 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
 import github.hua0512.plugins.douyin.download.DouyinExtractor
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 import kotlin.test.DefaultAsserter.assertNotNull
@@ -83,7 +83,7 @@ class DouyinTest : BaseTest<DouyinCombinedApiExtractor>({
   }
 
   test("danmu") {
-    val extractor = createExtractor()
+    val extractor = extractor
     val info = extractor.extract()
 
     info.isOk shouldBeEqual true
@@ -103,7 +103,7 @@ class DouyinTest : BaseTest<DouyinCombinedApiExtractor>({
 
 }) {
 
-  override val testUrl = "https://live.douyin.com/802975310822"
+  override val testUrl = "https://live.douyin.com/386003334438"
 
   override fun createExtractor(url: String) = DouyinCombinedApiExtractor(app.client, app.json, testUrl)
 }

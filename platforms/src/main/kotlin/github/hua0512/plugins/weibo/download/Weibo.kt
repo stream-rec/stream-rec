@@ -30,7 +30,6 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.WeiboDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
@@ -53,7 +52,7 @@ class Weibo(app: App, danmu: Danmu, override val extractor: WeiboExtractor) :
     super.onConfigUpdated(config)
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+  override suspend fun applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
     val selectedStreamFormat = downloadConfig.sourceFormat ?: VideoFormat.flv
     val filtered = streams.firstOrNull { it.format == selectedStreamFormat } ?: streams.first().also {
       warn("No stream found for format {}, using {} instead", selectedStreamFormat, it.format)

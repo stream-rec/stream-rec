@@ -27,6 +27,7 @@
 package github.hua0512.data.media
 
 import github.hua0512.data.stream.StreamInfo
+import kotlinx.serialization.Serializable
 
 /**
  * A data class representing the media information
@@ -41,6 +42,7 @@ import github.hua0512.data.stream.StreamInfo
  * @author hua0512
  * @date : 2024/3/15 20:29
  */
+@Serializable
 data class MediaInfo(
   val site: String,
   val title: String,

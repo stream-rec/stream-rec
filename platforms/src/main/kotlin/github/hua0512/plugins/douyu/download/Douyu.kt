@@ -30,7 +30,6 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.ExtractorError
@@ -67,10 +66,9 @@ class Douyu(
     extractor.selectedCdn = config.douyuConfig.cdn
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
-    this as DouyuDownloadConfig
-    val selectedCdn = cdn ?: app.config.douyuConfig.cdn
-    val selectedQuality = quality ?: app.config.douyuConfig.quality
+  override suspend fun applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+    val selectedCdn = downloadConfig.cdn ?: app.config.douyuConfig.cdn
+    val selectedQuality = downloadConfig.quality ?: app.config.douyuConfig.quality
     val group = streams.groupBy { it.extras["cdn"] }
     val cdnStreams = group[selectedCdn] ?: group.values.flatten().also { warn("CDN {} not found, using random", selectedCdn) }
     val qualityStreams = cdnStreams.firstOrNull { it.extras["rate"] == selectedQuality.rate.toString() } ?: cdnStreams.firstOrNull()

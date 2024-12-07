@@ -33,12 +33,14 @@ import github.hua0512.flv.data.sound.FlvSoundSize
 import github.hua0512.flv.data.sound.FlvSoundType
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.utils.Keyframe
+import kotlinx.serialization.Serializable
 
 /**
  * FLV metadata info
  * @author hua0512
  * @date : 2024/9/8 21:10
  */
+@Serializable
 data class FlvMetadataInfo(
   val hasAudio: Boolean = false,
   val hasVideo: Boolean = false,

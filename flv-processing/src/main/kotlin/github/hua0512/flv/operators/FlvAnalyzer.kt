@@ -34,7 +34,7 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion

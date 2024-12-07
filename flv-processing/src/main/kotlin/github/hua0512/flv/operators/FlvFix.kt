@@ -28,7 +28,7 @@ package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.utils.*
 import github.hua0512.plugins.StreamerContext

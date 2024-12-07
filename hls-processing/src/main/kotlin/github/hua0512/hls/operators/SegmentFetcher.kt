@@ -29,6 +29,7 @@ package github.hua0512.hls.operators
 import github.hua0512.hls.data.HlsSegment
 import github.hua0512.hls.data.HlsSegment.DataSegment
 import github.hua0512.plugins.StreamerContext
+import github.hua0512.utils.formatToFileNameFriendly
 import github.hua0512.utils.logger
 import github.hua0512.utils.mapConcurrently
 import github.hua0512.utils.writeToOutputStream
@@ -36,6 +37,7 @@ import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.lindstrom.m3u8.model.MediaSegment
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -43,6 +45,9 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
 import java.io.ByteArrayOutputStream
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 private const val TAG = "SegmentFetcher"
 
@@ -53,6 +58,7 @@ private const val MAX_MAP_SIZE = 100
 
 private val logger by lazy { logger(TAG) }
 
+@OptIn(ExperimentalUuidApi::class)
 internal fun Flow<List<MediaSegment>>.download(context: StreamerContext, downloadBaseUrl: String, client: HttpClient): Flow<HlsSegment> =
   flow {
     val downloadedSegments = Collections.synchronizedMap(object : LinkedHashMap<String, Boolean>(MAX_MAP_SIZE, 0.75f, true) {
@@ -94,8 +100,17 @@ internal fun Flow<List<MediaSegment>>.download(context: StreamerContext, downloa
       segment: MediaSegment,
       downloadBaseUrl: String,
     ): Pair<HlsSegment, MediaSegment>? {
-      val url = downloadBaseUrl + segment.uri()
-      val normalizedUri = segment.uri().substringBefore("?")
+      val url = if (segment.uri().startsWith("http")) segment.uri() else downloadBaseUrl + segment.uri()
+      val kUrl = Url(url)
+      val lastSegment = kUrl.segments.lastOrNull()
+      val urlMediaExtension = lastSegment?.substringAfterLast(".", "ts") ?: "ts"
+      val normalizedUri = segment.uri().substringBefore("?", "").ifEmpty {
+        val optionalDateTime = segment.programDateTime().getOrNull()
+        optionalDateTime?.toEpochSecond()?.let {
+          "$it.$urlMediaExtension"
+        } ?: lastSegment ?: Uuid.random().toString()
+      }.formatToFileNameFriendly()
+      logger.debug("{} Downloading segment: {}", context.name, segment)
       return if (downloadedSegments.contains(normalizedUri)) {
         logger.debug("${context.name} Segment already downloaded: $normalizedUri")
         null

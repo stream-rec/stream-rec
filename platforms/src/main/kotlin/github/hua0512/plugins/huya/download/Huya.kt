@@ -31,15 +31,16 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
+import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
 import github.hua0512.utils.debug
 import github.hua0512.utils.info
+import github.hua0512.utils.warn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -70,61 +71,67 @@ class Huya(
     extractor.forceOrigin = config.huyaConfig.forceOrigin
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
-    this as HuyaDownloadConfig
+  override fun onDownloadError(exception: Exception) {
+    if (exception is DownloadErrorException && exception.message.contains("403 Forbidden")) {
+      extractor.onRepeatedError(ExtractorError.ApiError(exception.cause!!), 0)
+    }
+  }
+
+
+  override suspend fun applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+    val config = downloadConfig
     // user defined source format
-    val userPreferredFormat = (sourceFormat ?: app.config.huyaConfig.sourceFormat).apply {
+    val userPreferredFormat = (config.sourceFormat ?: app.config.huyaConfig.sourceFormat).apply {
       if (this !in streams.map { it.format }) {
         info("defined source format {} is not available, choosing the best available", this)
       }
     }
     // user defined max bit rate
-    val maxUserBitRate = (maxBitRate ?: app.config.huyaConfig.maxBitRate) ?: 10000
+    val maxUserBitRate = (config.maxBitRate ?: app.config.huyaConfig.maxBitRate) ?: 10000
     // user selected cdn
-    var preselectedCdn = primaryCdn ?: app.config.huyaConfig.primaryCdn
-    preselectedCdn = preselectedCdn.uppercase()
+    val preselectedCdn = (config.primaryCdn ?: app.config.huyaConfig.primaryCdn).uppercase()
 
     // drop all streams with bit rate higher than user defined max bit rate
     val selectedCdnStreams = withContext(Dispatchers.Default) {
-      streams.filter {
+      streams.asSequence().filter {
         it.bitrate <= maxUserBitRate
       }.groupBy {
         it.extras["cdn"]
-      }.run {
-        @Suppress("UNCHECKED_CAST")
-        this as Map<String, List<StreamInfo>>
-
-        if (preselectedCdn !in this) {
+      }.let { cdnGroups ->
+        cdnGroups[preselectedCdn]?.takeIf { it.isNotEmpty() } ?: run {
           debug("streams : {}", streams)
           debug("filtered streams : {}", this)
-          info("no streams found for {}, choosing the best available", preselectedCdn)
-
+          info("cdn($preselectedCdn) has no streams, choosing the best available")
           // get the best available cdn
           // obv, preselectedCdn is not in the exclude list because is not present in the map
           // so we can safely pass an empty array
-          val computeResult = this.getBestStreamByPriority(emptyArray())
+          val computeResult = cdnGroups.getBestStreamByPriority(emptyArray())
           if (computeResult.isErr) {
             return@run emptyList()
           }
-          val bestCdnStreams = computeResult.value
-          debug("best available cdn list: {}", bestCdnStreams)
-          bestCdnStreams
-        } else {
-          this[preselectedCdn] ?: emptyList()
+          computeResult.value.also {
+            info("best available cdn stream list: {}", it)
+          }
         }
       }.sortedByDescending { it.bitrate }
     }
 
     if (selectedCdnStreams.isEmpty()) return Err(ExtractorError.NoStreamsFound)
 
-    val formatStreams = selectedCdnStreams.maxByOrNull { it.format == userPreferredFormat }
-    // prioritize flv format if user defined source format is not available
-    val flvFormatStreams = selectedCdnStreams.filter { it.format == VideoFormat.flv }.maxByOrNull { it.bitrate }
+    val preferredFormatStream = selectedCdnStreams.filter { it.format == userPreferredFormat }.maxByOrNull { it.bitrate }
 
-    return Ok(formatStreams ?: flvFormatStreams ?: selectedCdnStreams.first())
+    debug("user preferred format stream: {}", preferredFormatStream)
+    if (preferredFormatStream != null && preferredFormatStream.bitrate.toInt() != maxUserBitRate) {
+      warn("user preferred bitrate {} is not available, falling back to the best available: {}", maxUserBitRate, preferredFormatStream.bitrate)
+    }
+    // prioritize flv format if user defined source format is not available
+    val flvFormatStreams = { selectedCdnStreams.filter { it.format == VideoFormat.flv }.maxByOrNull { it.bitrate } }
+
+    return Ok(preferredFormatStream ?: flvFormatStreams() ?: selectedCdnStreams.first())
+
   }
 
-  private fun Map<String, List<StreamInfo>>.getBestStreamByPriority(excludeCdns: Array<String>): Result<List<StreamInfo>, ExtractorError> {
+  private fun Map<String?, List<StreamInfo>>.getBestStreamByPriority(excludeCdns: Array<String>): Result<List<StreamInfo>, ExtractorError> {
 
     // if no streams found, return error
     if (this.isEmpty()) {

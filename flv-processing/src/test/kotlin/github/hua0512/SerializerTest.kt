@@ -24,17 +24,32 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.other
+package github.hua0512
 
-import kotlinx.serialization.Serializable
+import github.hua0512.flv.data.amf.AmfValue
+import io.exoquery.kmp.pprint
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
- * FLV keyframe representation
+ * Serializers text
  * @author hua0512
- * @date : 2024/9/8 21:59
+ * @date : 2024/12/7 1:01
  */
-@Serializable
-data class FlvKeyframe(
-  val timestamp: Long,
-  val filePosition: Long,
-)
+class SerializerTest : FunSpec({
+
+
+  test("testSerializer") {
+    val keyframes = AmfValue.Amf0Value.Amf0Keyframes()
+    val json = Json {
+      prettyPrint = true
+    }
+    val jsonText = json.encodeToString(keyframes)
+    pprint(keyframes)
+
+    jsonText.isEmpty() shouldBe false
+  }
+
+})

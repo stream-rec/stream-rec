@@ -26,29 +26,41 @@
 
 package github.hua0512.plugins.base
 
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+
 /**
  * The error class for the extractors.
  * @author hua0512
  * @date : 2024/11/18 21:54
  */
+@Serializable
 sealed class ExtractorError {
-
+  @Serializable
   data object InvalidExtractionUrl : ExtractorError()
 
-  data class InitializationError(val throwable: Throwable) : ExtractorError()
+  @Serializable
+  data class InitializationError(@Contextual val throwable: Throwable) : ExtractorError()
 
-  data class ApiError(val throwable: Throwable) : ExtractorError()
+  @Serializable
+  data class ApiError(@Contextual val throwable: Throwable) : ExtractorError()
 
+  @Serializable
   data class InvalidResponse(val message: String) : ExtractorError()
 
-  data class JsEngineError(val throwable: Throwable) : ExtractorError()
+  @Serializable
+  data class JsEngineError(@Contextual val throwable: Throwable) : ExtractorError()
 
+  @Serializable
   data object StreamerNotFound : ExtractorError()
 
+  @Serializable
   data object StreamerBanned : ExtractorError()
 
+  @Serializable
   data object NoStreamsFound : ExtractorError()
 
-  data class FallbackError(val throwable: Throwable) : ExtractorError()
+  @Serializable
+  data class FallbackError(@Contextual val throwable: Throwable) : ExtractorError()
 
 }

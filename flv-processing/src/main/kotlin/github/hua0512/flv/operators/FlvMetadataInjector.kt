@@ -28,8 +28,7 @@ package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.amf.Amf0Keyframes
-import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.flv.data.sound.FlvSoundType
 import github.hua0512.flv.exceptions.FlvDataErrorException
@@ -39,7 +38,7 @@ import github.hua0512.flv.utils.createMetadataTag
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -139,12 +138,12 @@ internal fun Map<String, Amf0Value>.sortKeys(): Map<String, Amf0Value> {
 internal fun FlvMetadataInfo.toAmfMap(): Map<String, Amf0Value> {
   val streamRec = Amf0Value.String("Stream-rec")
   val frames = keyframes
-  val amf0Keyframes = Amf0Keyframes(ArrayList()).apply {
+  val amf0Keyframes = Amf0Value.Amf0Keyframes().apply {
     if (frames.isNotEmpty()) {
       try {
         addKeyframes(frames)
       } catch (_: IllegalArgumentException) {
-        logger.warn("Maximum keyframes size exceeded, truncating to ${Amf0Keyframes.MAX_KEYFRAMES_PERMITTED}")
+        logger.warn("Maximum keyframes size exceeded, truncating to ${Amf0Value.Amf0Keyframes.MAX_KEYFRAMES_PERMITTED}")
       }
       logger.debug("keyframes : {}", keyframesCount)
     }

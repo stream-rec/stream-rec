@@ -38,8 +38,10 @@ import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.UploadService
+import github.hua0512.utils.ThrowableSerializer
 import io.ktor.client.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
 import javax.inject.Singleton
 
 @Module
@@ -51,6 +53,10 @@ class AppModule {
     ignoreUnknownKeys = true
     isLenient = true
     encodeDefaults = false
+    allowSpecialFloatingPointValues = true
+    serializersModule = SerializersModule {
+      contextual(Throwable::class, ThrowableSerializer)
+    }
   }
 
   @Provides

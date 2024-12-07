@@ -238,7 +238,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       return Ok(false)
     }
 
-    var filterResult = getStreamInfo(mediaInfo, streamer, downloadConfig)
+    var filterResult = getStreamInfo(mediaInfo, streamer)
 
     if (filterResult.isErr) {
       filterResult = filterResult.analyzeError()
@@ -248,21 +248,19 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
     }
     // success
-    return getStreamInfo(mediaInfo, streamer, downloadConfig)
+    return getStreamInfo(mediaInfo, streamer)
   }
 
   private fun <T> Result<T, ExtractorError>.analyzeError(): Result<Boolean, ExtractorError> {
     // ensure is error
-    val error = this.unwrapError()
-
-    return when (error) {
+    return when (val error = this.unwrapError()) {
       ExtractorError.InvalidExtractionUrl -> {
         error("Invalid extraction url")
         return this.asErr()
       }
 
       is ExtractorError.InitializationError -> {
-        error("Initialization error: {}", (error as ExtractorError.InitializationError).throwable)
+        error("Initialization error: {}", error.throwable)
         return this.asErr()
       }
 
@@ -270,18 +268,18 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       ExtractorError.StreamerNotFound -> this.asErr()
 
       is ExtractorError.ApiError -> {
-        error("Api error: {}", (error as ExtractorError.ApiError).throwable)
+        error("Api error: {}", error.throwable)
         Ok(false)
       }
 
       is ExtractorError.FallbackError -> Ok(false)
       is ExtractorError.InvalidResponse -> {
-        error("Invalid response: {}", (error as ExtractorError.InvalidResponse).message)
+        error("Invalid response: {}", error.message)
         Ok(false)
       }
 
       is ExtractorError.JsEngineError -> {
-        error("Js engine error: {}", (error as ExtractorError.JsEngineError).throwable)
+        error("Js engine error: {}", error.throwable)
         Ok(false)
       }
 
@@ -323,9 +321,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     val genericOutputPath =
       buildOutputFilePath(downloadConfig, title, userSelectedFormat?.fileExtension ?: fileExtension)
 
-
-    // check disk space
-    checkDiskSpace(genericOutputPath.root, maxSize)
+    checkSpaceAvailable(Path(genericOutputPath.pathString.substringBeforePlaceholders()))
 
     val headers = getPlatformHeaders().plus(COMMON_HEADERS)
 
@@ -487,7 +483,10 @@ abstract class PlatformDownloader<T : DownloadConfig>(
           if (isDanmuEnabled && hasEndOfDanmu) {
             info("end of stream detected")
             onStreamFinished?.invoke()
-          } else error("{} finally download error: {}", filePath, error.message)
+          } else {
+            error("{} finally download error: {}", filePath, error.message)
+            onDownloadError(error)
+          }
 
           // clean up the outputs
           danmuJob?.let {
@@ -540,6 +539,9 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     }
   }
 
+  protected open fun onDownloadError(exception: Exception) {
+
+  }
 
   private fun buildOutputFilePath(config: DownloadConfig, title: String, fileExtension: String): Path {
 
@@ -664,6 +666,20 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     }
   }
 
+
+  open fun checkSpaceAvailable(genericOutputPath: Path = Path(app.config.outputFolder.substringBeforePlaceholders())): Boolean {
+    if (maxSize == 0L) return true
+    // use app config output path folder if the current output folder is child of the app config output folder
+    var checkPath = genericOutputPath
+    val appOutputPath = Path(app.config.outputFolder)
+    if (checkPath != appOutputPath && checkPath.startsWith(appOutputPath)) {
+      checkPath = appOutputPath
+    }
+    // check disk space
+    checkDiskSpace(checkPath, maxSize)
+    return true
+  }
+
   /**
    * Check if there is enough disk space
    * @param path the [Path] instance
@@ -672,9 +688,9 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   private fun checkDiskSpace(path: Path, size: Long) {
     if (size == 0L) return
-
     val fileStore = Files.getFileStore(path)
     val usableSpace = fileStore.usableSpace
+    logger.debug("checking available disk space of path {}, usable space: {} bytes", path, usableSpace)
     if (usableSpace < size) {
       val errorMsg = "Not enough disk space: $usableSpace < $size"
       error(errorMsg)
@@ -688,7 +704,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    * @param streams the list of [StreamInfo] to be filtered
    * @return a [StreamInfo] instance
    */
-  abstract suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError>
+  abstract suspend fun applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError>
 
   /**
    * Get the preferred stream info by applying filters of the user config
@@ -700,20 +716,19 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   protected suspend fun getStreamInfo(
     mediaInfo: MediaInfo,
     streamer: Streamer,
-    userConfig: DownloadConfig,
   ): Result<Boolean, ExtractorError> {
     updateStreamerInfo(mediaInfo, streamer)
     if (!mediaInfo.live) return Ok(false)
     if (mediaInfo.streams.isEmpty()) {
       return Err(ExtractorError.NoStreamsFound)
     }
-    val filterResult = userConfig.applyFilters(mediaInfo.streams)
+    val filterResult = applyFilters(mediaInfo.streams)
 
     if (filterResult.isErr) return filterResult.asErr()
 
     val streamInfo = filterResult.value
     state.value =
-      DownloadState.Preparing(streamInfo.url, streamInfo.format, userConfig.outputFileFormat, mediaInfo.title)
+      DownloadState.Preparing(streamInfo.url, streamInfo.format, downloadConfig.outputFileFormat, mediaInfo.title)
     return Ok(true)
   }
 

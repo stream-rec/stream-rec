@@ -26,9 +26,12 @@
 
 package github.hua0512.flv.data.video
 
+import kotlinx.serialization.Serializable
+
 /**
  * Represents the resolution of a video stream.
  * @author hua0512
  * @date : 2024/6/10 13:04
  */
+@Serializable
 data class VideoResolution(val width: Int, val height: Int)

@@ -30,7 +30,6 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
-import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.config.DownloadConfig.DouyinDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.platform.DouyinQuality
@@ -66,14 +65,13 @@ class Douyin(
     super.onConfigUpdated(config)
   }
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
-    this as DouyinDownloadConfig
-
-    val selectedQuality = (quality?.value ?: app.config.douyinConfig.quality.value).ifEmpty { DouyinQuality.origin.value }
+  override suspend fun applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+    val config = downloadConfig
+    val selectedQuality = (config.quality?.value ?: app.config.douyinConfig.quality.value).ifEmpty { DouyinQuality.origin.value }
 
     val selectedQualityStreams = streams.filter { it.extras["sdkKey"] == selectedQuality }.ifEmpty { streams }
 
-    val userSelectedSourceFormat = (sourceFormat ?: app.config.douyinConfig.sourceFormat) ?: VideoFormat.flv
+    val userSelectedSourceFormat = (config.sourceFormat ?: app.config.douyinConfig.sourceFormat) ?: VideoFormat.flv
 
     val selectedFormatStreams = selectedQualityStreams.filter { it.format == userSelectedSourceFormat }.run {
       ifEmpty { selectedQualityStreams }

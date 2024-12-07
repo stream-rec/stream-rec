@@ -30,6 +30,7 @@ import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
 import kotlinx.io.writeString
+import kotlinx.serialization.Serializable
 
 /**
  * FLV header data class
@@ -38,6 +39,7 @@ import kotlinx.io.writeString
  * @property flags FLV flags, always 1 byte
  * @property headerSize FLV header size, always 4 bytes
  */
+@Serializable
 data class FlvHeader(val signature: String, val version: Int, val flags: FlvHeaderFlags, val headerSize: Int, override val crc32: Long) : FlvData {
 
   init {

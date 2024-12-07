@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import kotlinx.io.Buffer
 import kotlinx.io.readByteArray
 import kotlin.test.Test

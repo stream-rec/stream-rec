@@ -26,19 +26,17 @@
 
 package github.hua0512.flv.data.tag
 
-import github.hua0512.flv.data.sound.AACPacketType
-import github.hua0512.flv.data.sound.FlvSoundFormat
-import github.hua0512.flv.data.sound.FlvSoundRate
-import github.hua0512.flv.data.sound.FlvSoundSize
-import github.hua0512.flv.data.sound.FlvSoundType
+import github.hua0512.flv.data.sound.*
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
+import kotlinx.serialization.Serializable
 
 /**
  * A flv audio tag data
  * @author hua0512
  * @date : 2024/6/9 9:30
  */
+@Serializable
 data class FlvAudioTagData(
   val format: FlvSoundFormat,
   val rate: FlvSoundRate,
@@ -46,7 +44,7 @@ data class FlvAudioTagData(
   val type: FlvSoundType,
   val packetType: AACPacketType?,
   override val binaryData: ByteArray,
-) : FlvTagData(binaryData) {
+) : FlvTagData {
 
   override fun toString(): String {
     return "FlvMusicTagData(format=$format, rate=$rate, size=$soundSize, type=$type, binaryData=${binaryData.size} bytes)"
@@ -66,6 +64,34 @@ data class FlvAudioTagData(
     }
     buffer.transferTo(sink)
     sink.flush()
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as FlvAudioTagData
+
+    if (headerSize != other.headerSize) return false
+    if (format != other.format) return false
+    if (rate != other.rate) return false
+    if (soundSize != other.soundSize) return false
+    if (type != other.type) return false
+    if (packetType != other.packetType) return false
+    if (!binaryData.contentEquals(other.binaryData)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = headerSize
+    result = 31 * result + format.hashCode()
+    result = 31 * result + rate.hashCode()
+    result = 31 * result + soundSize.hashCode()
+    result = 31 * result + type.hashCode()
+    result = 31 * result + (packetType?.hashCode() ?: 0)
+    result = 31 * result + binaryData.contentHashCode()
+    return result
   }
 
 }

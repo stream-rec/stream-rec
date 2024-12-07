@@ -27,12 +27,14 @@
 package github.hua0512.flv.data
 
 import github.hua0512.flv.exceptions.FlvHeaderErrorException
+import kotlinx.serialization.Serializable
 
 /**
  * Flv header flag wrapper
  * @author hua0512
  * @date : 2024/6/8 13:12
  */
+@Serializable
 @JvmInline
 value class FlvHeaderFlags(val value: Int) {
 

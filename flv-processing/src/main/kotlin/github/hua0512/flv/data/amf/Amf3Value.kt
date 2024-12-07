@@ -30,6 +30,7 @@ import github.hua0512.flv.utils.writeU29
 import github.hua0512.flv.utils.writeUtf8
 import kotlinx.io.Sink
 import kotlinx.io.writeDouble
+import kotlinx.serialization.Serializable
 
 
 /**
@@ -59,6 +60,7 @@ enum class Amf3Type(val byte: Byte) {
  * @author hua0512
  * @date : 2024/6/8 20:24
  */
+@Serializable
 sealed class Amf3Value(val type: Amf3Type) : AmfValue {
 
   override fun write(sink: Sink) {
@@ -66,6 +68,7 @@ sealed class Amf3Value(val type: Amf3Type) : AmfValue {
   }
 }
 
+@Serializable
 data object Amf3Undefined : Amf3Value(Amf3Type.UNDEFINED) {
 
   override val size: Int = 1
@@ -75,6 +78,7 @@ data object Amf3Undefined : Amf3Value(Amf3Type.UNDEFINED) {
   }
 }
 
+@Serializable
 data object Amf3Null : Amf3Value(Amf3Type.NULL) {
 
   override val size: Int = 1
@@ -84,6 +88,7 @@ data object Amf3Null : Amf3Value(Amf3Type.NULL) {
   }
 }
 
+@Serializable
 data object Amf3BooleanFalse : Amf3Value(Amf3Type.BOOLEAN_FALSE) {
 
   override val size: Int = 1
@@ -93,6 +98,7 @@ data object Amf3BooleanFalse : Amf3Value(Amf3Type.BOOLEAN_FALSE) {
   }
 }
 
+@Serializable
 data object Amf3BooleanTrue : Amf3Value(Amf3Type.BOOLEAN_TRUE) {
 
   override val size: Int = 1
@@ -103,6 +109,7 @@ data object Amf3BooleanTrue : Amf3Value(Amf3Type.BOOLEAN_TRUE) {
 
 }
 
+@Serializable
 data class Amf3Integer(val value: Int) : Amf3Value(Amf3Type.INTEGER) {
 
   override val size: Int = 1 + when (value) {
@@ -118,6 +125,7 @@ data class Amf3Integer(val value: Int) : Amf3Value(Amf3Type.INTEGER) {
   }
 }
 
+@Serializable
 data class Amf3Double(val value: Double) : Amf3Value(Amf3Type.DOUBLE) {
 
   override val size: Int = 9
@@ -128,6 +136,7 @@ data class Amf3Double(val value: Double) : Amf3Value(Amf3Type.DOUBLE) {
   }
 }
 
+@Serializable
 data class Amf3String(val value: String) : Amf3Value(Amf3Type.STRING) {
 
   override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
@@ -138,6 +147,7 @@ data class Amf3String(val value: String) : Amf3Value(Amf3Type.STRING) {
   }
 }
 
+@Serializable
 data class Amf3XmlDocument(val value: String) : Amf3Value(Amf3Type.XML_DOCUMENT) {
 
   override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
@@ -148,6 +158,7 @@ data class Amf3XmlDocument(val value: String) : Amf3Value(Amf3Type.XML_DOCUMENT)
   }
 }
 
+@Serializable
 data class Amf3Date(val value: Double) : Amf3Value(Amf3Type.DATE) {
 
   override val size: Int = 9
@@ -159,6 +170,7 @@ data class Amf3Date(val value: Double) : Amf3Value(Amf3Type.DATE) {
   }
 }
 
+@Serializable
 data class Amf3Array(val values: List<Amf3Value>) : Amf3Value(Amf3Type.ARRAY) {
 
   override val size: Int = 1 + 4 + values.sumOf { it.size }
@@ -171,6 +183,7 @@ data class Amf3Array(val values: List<Amf3Value>) : Amf3Value(Amf3Type.ARRAY) {
   }
 }
 
+@Serializable
 data class Amf3Object(val traits: List<String>, val properties: Map<String, Amf3Value>) : Amf3Value(Amf3Type.OBJECT) {
 
   override val size: Int
@@ -200,6 +213,7 @@ data class Amf3Object(val traits: List<String>, val properties: Map<String, Amf3
   }
 }
 
+@Serializable
 data class Amf3Xml(val value: String) : Amf3Value(Amf3Type.XML) {
 
   override val size: Int = 1 + value.toByteArray(Charsets.UTF_8).size
@@ -210,6 +224,7 @@ data class Amf3Xml(val value: String) : Amf3Value(Amf3Type.XML) {
   }
 }
 
+@Serializable
 data class Amf3ByteArray(val value: ByteArray) : Amf3Value(Amf3Type.BYTEARRAY) {
 
   override val size: Int = 1 + 4 + value.size
@@ -221,7 +236,7 @@ data class Amf3ByteArray(val value: ByteArray) : Amf3Value(Amf3Type.BYTEARRAY) {
   }
 }
 
-
+@Serializable
 data class Amf3Reference(val index: Int) : Amf3Value(Amf3Type.OBJECT) {
 
   override val size: Int = 1

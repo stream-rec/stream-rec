@@ -29,10 +29,10 @@ package github.hua0512.flv.utils
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.amf.Amf0Value
-import github.hua0512.flv.data.amf.Amf0Value.*
-import github.hua0512.flv.data.amf.Amf0Value.Number
-import github.hua0512.flv.data.amf.Amf0Value.String
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value.*
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value.Number
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value.String
 import github.hua0512.flv.data.avc.AvcPacketType
 import github.hua0512.flv.data.other.FlvKeyframe
 import github.hua0512.flv.data.tag.*

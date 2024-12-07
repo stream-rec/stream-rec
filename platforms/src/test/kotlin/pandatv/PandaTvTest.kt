@@ -30,7 +30,7 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
 import github.hua0512.plugins.pandatv.download.PandaTvExtractor
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import io.kotest.matchers.equals.shouldBeEqual
 
 /**

@@ -158,8 +158,8 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
   abstract suspend fun extract(): Result<MediaInfo, ExtractorError>
 
 
-  suspend fun onRepeatedError(error: ExtractorError, retries: Int) {
-    logger.error("Error: $error, retries: $retries")
+  open fun onRepeatedError(error: ExtractorError, retries: Int) {
+    logger.error("$url error: $error, retries: $retries")
   }
 
   /**

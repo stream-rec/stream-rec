@@ -29,7 +29,7 @@ package github.hua0512.flv.operators
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvJoinPoint
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isScriptTag

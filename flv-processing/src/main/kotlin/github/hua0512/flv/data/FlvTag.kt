@@ -30,12 +30,14 @@ import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.tag.FlvTagData
 import github.hua0512.flv.data.tag.FlvTagHeader
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
+import kotlinx.serialization.Serializable
 
 /**
  * FLV tag data class
  * @author hua0512
  * @date : 2024/6/9 10:38
  */
+@Serializable
 data class FlvTag(
   val num: Int = 0,
   val header: FlvTagHeader,

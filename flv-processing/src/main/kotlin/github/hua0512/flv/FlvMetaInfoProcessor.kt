@@ -27,10 +27,6 @@
 package github.hua0512.flv
 
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.amf.Amf0Keyframes
-import github.hua0512.flv.data.amf.Amf0Value
-import github.hua0512.flv.data.amf.Amf0Value.*
-import github.hua0512.flv.data.amf.Amf0Value.Number
 import github.hua0512.flv.data.amf.AmfValue
 import github.hua0512.flv.data.other.FlvKeyframe
 import github.hua0512.flv.data.other.FlvMetadataInfo
@@ -39,7 +35,7 @@ import github.hua0512.flv.operators.sortKeys
 import github.hua0512.flv.operators.toAmfMap
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.utils.logger
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.*
@@ -199,20 +195,20 @@ object FlvMetaInfoProcessor {
 //    logger.info("current metadata: {}", pprint(data, defaultHeight = 100))
 
     var isGeneratedByOurself = false
-    var amf0Keyframes: Amf0Keyframes? = null
+    var amf0Keyframes: AmfValue.Amf0Value.Amf0Keyframes? = null
 
     with(mutableMap) {
       metaInfo.toAmfMap().forEach { (k, v) ->
         // do not inject width and height if it is 0
-        if ((k == "width" || k == "height") && v is Amf0Value.Number && v.value == 0.0 && this[k] != null) return@forEach
+        if ((k == "width" || k == "height") && v is AmfValue.Amf0Value.Number && v.value == 0.0 && this[k] != null) return@forEach
         this[k] = v
       }
       if (metaInfo.hasKeyframes) {
         // Update keyframes to the metadata object
-        amf0Keyframes = this["keyframes"] as Amf0Keyframes
+        amf0Keyframes = this["keyframes"] as AmfValue.Amf0Value.Amf0Keyframes
         // check if keyframes contains keyframes
         // this means that the keyframes and spacers are already injected, by ourselves
-        if (amf0Keyframes!!.properties.containsKey(Amf0Keyframes.KEY_SPACER)) {
+        if (amf0Keyframes!!.properties.containsKey(AmfValue.Amf0Value.Amf0Keyframes.KEY_SPACER)) {
           isGeneratedByOurself = true
         }
       }
@@ -225,10 +221,10 @@ object FlvMetaInfoProcessor {
       mutableMap
     }
 
-    val secondData = if (data[1] is EcmaArray) {
-      (data[1] as EcmaArray).copy(properties = orderedMap)
+    val secondData = if (data[1] is AmfValue.Amf0Value.EcmaArray) {
+      (data[1] as AmfValue.Amf0Value.EcmaArray).copy(properties = orderedMap)
     } else {
-      Object(orderedMap)
+      AmfValue.Amf0Value.Object(orderedMap)
     }
 
     // new data
@@ -244,24 +240,24 @@ object FlvMetaInfoProcessor {
       logger.info("metadata size changed from $oldSize to $newDataSize")
       // recalculate keyframes
       val properties = newData[1].getProperties().toMutableMap()
-      properties["filesize"] = Number((properties["filesize"] as Amf0Value.Number).value + delta)
+      properties["filesize"] = AmfValue.Amf0Value.Number((properties["filesize"] as AmfValue.Amf0Value.Number).value + delta)
       // update lastkeyframelocation
       if (properties.containsKey("lastkeyframelocation")) {
-        val lastKeyframeLocation = (properties["lastkeyframelocation"] as Amf0Value.Number).value + delta
-        properties["lastkeyframelocation"] = Number(lastKeyframeLocation)
+        val lastKeyframeLocation = (properties["lastkeyframelocation"] as AmfValue.Amf0Value.Number).value + delta
+        properties["lastkeyframelocation"] = AmfValue.Amf0Value.Number(lastKeyframeLocation)
       }
       // update keyframes filepositions with delta
-      val keyframes = (properties["keyframes"] as Amf0Keyframes).run {
-        val oldKeyframes = this.getKeyframes()
+      val keyframes = (properties["keyframes"] as AmfValue.Amf0Value.Amf0Keyframes).run {
+        val oldKeyframes = this.keyframes
         val newKeyframes = oldKeyframes.map { FlvKeyframe(it.timestamp, it.filePosition + delta) }
-        copy(keyframes = ArrayList(newKeyframes))
+        copy(keyframes = newKeyframes.toMutableList())
       }
       properties["keyframes"] = keyframes
 
-      val secondData = if (data[1] is EcmaArray) {
-        (data[1] as EcmaArray).copy(properties = properties)
+      val secondData = if (data[1] is AmfValue.Amf0Value.EcmaArray) {
+        (data[1] as AmfValue.Amf0Value.EcmaArray).copy(properties = properties)
       } else {
-        Object(properties)
+        AmfValue.Amf0Value.Object(properties)
       }
 
       newData = newData.copy(
@@ -273,10 +269,10 @@ object FlvMetaInfoProcessor {
   }
 
 
-  private fun AmfValue.getProperties(): Map<String, Amf0Value> {
+  private fun AmfValue.getProperties(): Map<String, AmfValue.Amf0Value> {
     return when (this) {
-      is EcmaArray -> this.properties
-      is Object -> this.properties
+      is AmfValue.Amf0Value.EcmaArray -> this.properties
+      is AmfValue.Amf0Value.Object -> this.properties
       else -> {
         logger.warn("Unexpected AMF value type in metadata : ${this::class.qualifiedName}")
         throw IllegalArgumentException("Unexpected AMF value type in metadata : ${this::class.qualifiedName}")

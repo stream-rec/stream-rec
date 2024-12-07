@@ -30,7 +30,7 @@ import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.StreamerLoggerContext
 import github.hua0512.utils.debug
 import github.hua0512.utils.logger
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*

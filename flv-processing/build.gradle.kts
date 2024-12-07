@@ -1,5 +1,6 @@
 plugins {
   alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.kotlin.serialization)
 }
 
 // read the version from the gradle.properties file
@@ -14,6 +15,7 @@ dependencies {
   implementation(libs.ch.qos.logback.classic)
   implementation(libs.io.exoquery.pprint)
   implementation(libs.io.ktor.client.core)
+  implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.org.jetbrains.kotlinx.io)

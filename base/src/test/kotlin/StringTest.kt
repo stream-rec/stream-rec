@@ -1,4 +1,4 @@
-package github.hua0512/*
+/*
  * MIT License
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
@@ -24,17 +24,11 @@ package github.hua0512/*
  * SOFTWARE.
  */
 
-import github.hua0512.flv.FlvReader
-import github.hua0512.flv.data.FlvHeader
-import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.tag.FlvVideoTagData
-import github.hua0512.flv.data.video.VideoResolution
-import github.hua0512.flv.utils.isVideoSequenceHeader
-import kotlinx.coroutines.test.runTest
-import kotlinx.io.asSource
-import kotlinx.io.buffered
-import org.junit.Test
-import java.io.File
+import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.substringBeforePlaceholders
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.equals.shouldBeEqual
+import kotlinx.datetime.Instant
 
 /*
  * MIT License
@@ -62,47 +56,80 @@ import java.io.File
  * SOFTWARE.
  */
 
-/**
- * @author hua0512
- * @date : 2024/6/9 12:15
- */
+class StringTest : FunSpec({
 
-class FlvReaderTest {
+  test("testPlaceholderReplace") {
+    val streamer = "雪乃荔荔枝"
+    val title = "新人第一天开播"
+    val time = 1708461712L
+    val instant = Instant.fromEpochSeconds(time)
 
+    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
 
-  @Test
-  fun testReadTags() = runTest {
-    val file = File("E:/test/14_18_50-福州~ 主播恋爱脑！！！.flv")
-    val ins = file.inputStream().asSource().buffered().use {
-      val reader = FlvReader(it)
-      var header: FlvHeader? = null
-      reader.readHeader {
-        header = it as FlvHeader
-      }
-      var lastTag: FlvTag? = null
-      val resolutions = mutableListOf<VideoResolution>()
-      try {
-        reader.readTags {
-          it as FlvTag
-          lastTag = it
-          if (it.header.timestamp < 0) {
-            println("timestamp < 0 : ${it}")
-          }
-          if (it.isVideoSequenceHeader()) {
-            val resolution = (it.data as FlvVideoTagData).resolution
-            if (resolutions.contains(resolution)) {
-              return@readTags
-            }
-            resolutions.add(resolution)
-          }
-        }
-      } catch (e: Exception) {
-        e.printStackTrace()
-      }
-      println("lastTag: $lastTag")
-      resolutions.forEach(::println)
-      resolutions.clear()
-    }
+    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
+
+    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52"
   }
 
-}
+  test("testPlaceholderReplaceWithoutTime") {
+    val streamer = "雪乃荔荔枝"
+    val title = "新人第一天开播"
+
+    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+
+    val formatted = fileFormat.replacePlaceholders(streamer, title)
+
+    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - %Y-%m-%d %H-%M-%S"
+  }
+
+  test("testPlaceholderReplaceWithEmptyString") {
+    val streamer = ""
+    val title = ""
+    val time = 1708461712L
+    val instant = Instant.fromEpochSeconds(time)
+
+    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+
+    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
+
+    formatted shouldBeEqual " -  - 2024-02-20 21-41-52"
+  }
+
+  test("testSubstringBeforePlaceholder") {
+
+    val fileFormat = "/opt/records/{streamer}/%m/%d"
+
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual "/opt/records/"
+  }
+
+  test("testSubstringBeforePlaceholderWithoutPlaceholder") {
+
+    val fileFormat = "/opt/records/aaa/bbb"
+
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual "/opt/records/aaa/bbb"
+  }
+
+  test("testSubstringBeforePlaceholderWithEmptyString") {
+
+    val fileFormat = ""
+
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual ""
+  }
+
+  test("testSubstringBeforePlaceholderWithOnlyPlaceholder") {
+
+    val fileFormat = "{streamer}"
+
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual ""
+  }
+
+
+})

@@ -58,8 +58,18 @@ abstract class BaseTest<T : Extractor>(body: BaseTest<T>.() -> Unit = {}) : FunS
 
 
   init {
-    beforeTest(prepare)
+    setupBeforeTest()
     body()
+  }
+
+  protected fun setupBeforeTest() {
+    beforeTest {
+      before()
+    }
+  }
+
+  open fun before() {
+    extractor = createExtractor().also { t -> t.prepare() }
   }
 
   lateinit var extractor: T

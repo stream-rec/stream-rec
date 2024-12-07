@@ -30,6 +30,7 @@ import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
 import github.hua0512.flv.utils.writeI24
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
+import kotlinx.serialization.Serializable
 import kotlin.experimental.and
 
 /**
@@ -42,6 +43,7 @@ import kotlin.experimental.and
  * @author hua0512
  * @date : 2024/6/8 18:39
  */
+@Serializable
 data class FlvTagHeader(
   /**
    * FLV tag type, 1 byte

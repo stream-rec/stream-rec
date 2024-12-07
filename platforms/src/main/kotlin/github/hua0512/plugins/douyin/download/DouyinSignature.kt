@@ -26,11 +26,7 @@
 
 package github.hua0512.plugins.douyin.download
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.mapError
-import com.github.michaelbull.result.runCatching
+import com.github.michaelbull.result.*
 import github.hua0512.app.COMMON_USER_AGENT
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
@@ -108,8 +104,13 @@ private val signatureJS by lazy {
     document.cookie = '';
   """.trimIndent()
 
+  val loadResult = loadWebmssdk()
+  if (loadResult.isErr) {
+    return@lazy ""
+  }
+
   // final JS
-  jsDom + loadWebmssdk()
+  jsDom + loadResult.value
 }
 
 /**
@@ -120,6 +121,10 @@ private val signatureJS by lazy {
  */
 internal fun getSignature(roomId: String, userId: String): Result<String, ExtractorError> {
   assert(!(SDK_JS.value.isNullOrEmpty())) { "SDK_JS is empty" }
+
+  if (signatureJS.isEmpty()) {
+    return Err(ExtractorError.JsEngineError(IllegalStateException("failed to load douyin-webmssdk.js")))
+  }
 
   // load JS
   jsEngine.eval(signatureJS)

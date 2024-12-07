@@ -31,6 +31,7 @@ import kotlinx.io.RawSink
 
 /**
  * CRC32 SINK
+ * From: [kotlinx rawSinkSample](https://github.com/Kotlin/kotlinx-io/blob/master/core/common/test/samples/rawSinkSample.kt)
  * @author hua0512
  * @date : 2024/11/30 22:01
  */

@@ -30,16 +30,20 @@ import github.hua0512.flv.data.amf.AmfValue
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
 import kotlinx.io.readByteArray
+import kotlinx.serialization.Serializable
 
 /**
  * A script tag data, usually used for metadata
  * @author hua0512
  * @date : 2024/6/8 19:06
  */
-data class FlvScriptTagData(val values: List<AmfValue>) : FlvTagData(binaryData = byteArrayOf()) {
+@Serializable
+data class FlvScriptTagData(val values: List<AmfValue> = emptyList()) : FlvTagData {
 
   val valuesCount: Int
     get() = values.size
+
+  override val binaryData: ByteArray = byteArrayOf()
 
   override val headerSize: Int = 0
 

@@ -1,3 +1,8 @@
+import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.stream.Streamer
+import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.download.base.PlatformDownloader
+
 /*
  * MIT License
  *
@@ -24,17 +29,27 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.other
-
-import kotlinx.serialization.Serializable
-
 /**
- * FLV keyframe representation
  * @author hua0512
- * @date : 2024/9/8 21:59
+ * @date : 2024/12/6 14:18
  */
-@Serializable
-data class FlvKeyframe(
-  val timestamp: Long,
-  val filePosition: Long,
-)
+abstract class BaseDownloaderTest<T : Extractor, U : DownloadConfig>(body: BaseDownloaderTest<T, U>.() -> Unit = {}) : BaseTest<T>({ }) {
+
+  lateinit var downloader: PlatformDownloader<U>
+
+  init {
+    body()
+  }
+
+  override fun before() {
+    super.before()
+    downloader = createDownloader()
+  }
+
+
+  abstract var streamer: Streamer
+
+
+  abstract fun createDownloader(): PlatformDownloader<U>
+
+}

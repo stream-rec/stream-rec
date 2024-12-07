@@ -30,7 +30,7 @@ import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvJoinPoint
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import github.hua0512.flv.data.tag.FlvScriptTagData
 import github.hua0512.flv.operators.FlvConcatAction.*
 import github.hua0512.flv.utils.*

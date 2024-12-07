@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onCompletion
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import kotlin.io.path.Path
@@ -125,7 +126,10 @@ internal fun Flow<HlsSegment>.dump(
     writer = null
   }
 
-  collect {
+  onCompletion {
+    reset()
+    logger.debug("${context.name} end")
+  }.collect {
 
     if (it is HlsSegment.EndSegment) {
       reset()

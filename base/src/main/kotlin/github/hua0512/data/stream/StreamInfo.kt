@@ -27,6 +27,7 @@
 package github.hua0512.data.stream
 
 import github.hua0512.data.media.VideoFormat
+import kotlinx.serialization.Serializable
 
 /**
  * A data class representing the stream information
@@ -38,6 +39,7 @@ import github.hua0512.data.media.VideoFormat
  * @author hua0512
  * @date : 2024/3/15 20:37
  */
+@Serializable
 data class StreamInfo(
   val url: String,
   val format: VideoFormat,
@@ -45,5 +47,5 @@ data class StreamInfo(
   val bitrate: Long,
   val priority: Int = 0,
   val frameRate: Double = 0.0,
-  val extras: Map<String, Any> = emptyMap(),
+  val extras: Map<String, String> = emptyMap(),
 )

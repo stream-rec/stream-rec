@@ -26,6 +26,7 @@
 
 package github.hua0512.flv.data.amf
 
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import kotlinx.io.Source
 import kotlinx.io.readDouble
 import kotlinx.io.readString
@@ -64,7 +65,7 @@ fun readAmf0Value(source: Source): Amf0Value {
   }
 }
 
-private fun readAmf0Object(source: Source): Amf0Value.Object {
+private fun readAmf0Object(source: Source): AmfValue.Amf0Value.Object {
   val properties = readAmf0Properties(source)
   return Amf0Value.Object(properties)
 }

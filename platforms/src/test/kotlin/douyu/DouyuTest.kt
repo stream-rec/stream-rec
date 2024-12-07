@@ -31,7 +31,7 @@ import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.douyu.download.DouyuExtractor
 import github.hua0512.plugins.douyu.download.extractDouyunRidFromUrl
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 

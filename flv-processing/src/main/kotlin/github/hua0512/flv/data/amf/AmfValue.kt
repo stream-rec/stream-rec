@@ -26,16 +26,14 @@
 
 package github.hua0512.flv.data.amf
 
-import kotlinx.io.Sink
-
 /**
  * AMF value interface
  * @author hua0512
  * @date : 2024/6/9 23:07
  */
-interface AmfValue {
-
-  fun write(sink: Sink)
-
-  val size: Int
-}
+//sealed interface AmfValue {
+//
+//  fun write(sink: Sink)
+//
+//  val size: Int
+//}
