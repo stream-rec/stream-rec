@@ -29,7 +29,7 @@ package github.hua0512.plugins.douyin.download
 import com.github.michaelbull.result.*
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.APP_ROOM_REFLOW
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*

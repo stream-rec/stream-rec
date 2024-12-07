@@ -24,18 +24,11 @@
  * SOFTWARE.
  */
 
-package douyin
-
-import BaseTest
-import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.douyin.danmu.DouyinDanmu
-import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
-import github.hua0512.plugins.douyin.download.DouyinExtractor
-import io.exoquery.kmp.pprint
+import github.hua0512.utils.replacePlaceholders
+import github.hua0512.utils.substringBeforePlaceholders
+import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.equals.shouldBeEqual
-import io.kotest.matchers.nulls.shouldNotBeNull
-import kotlin.test.DefaultAsserter.assertNotNull
+import kotlinx.datetime.Instant
 
 /*
  * MIT License
@@ -63,47 +56,80 @@ import kotlin.test.DefaultAsserter.assertNotNull
  * SOFTWARE.
  */
 
-class DouyinTest : BaseTest<DouyinCombinedApiExtractor>({
+class StringTest : FunSpec({
 
+  test("testPlaceholderReplace") {
+    val streamer = "雪乃荔荔枝"
+    val title = "新人第一天开播"
+    val time = 1708461712L
+    val instant = Instant.fromEpochSeconds(time)
 
-  test("regex") {
-    val url = testUrl
-    val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url)
-    matchResult shouldNotBeNull {
-      "failed to match id"
-    }
-    matchResult!!.groupValues.last() shouldBeEqual "802975310822"
+    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+
+    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
+
+    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52"
   }
 
-  test("isLive") {
-    val info = extractor.extract()
-    println(pprint(info))
-    info.isOk shouldBeEqual true
-    assertNotNull("failed to extract", info)
+  test("testPlaceholderReplaceWithoutTime") {
+    val streamer = "雪乃荔荔枝"
+    val title = "新人第一天开播"
+
+    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+
+    val formatted = fileFormat.replacePlaceholders(streamer, title)
+
+    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - %Y-%m-%d %H-%M-%S"
   }
 
-  test("danmu") {
-    val extractor = extractor
-    val info = extractor.extract()
+  test("testPlaceholderReplaceWithEmptyString") {
+    val streamer = ""
+    val title = ""
+    val time = 1708461712L
+    val instant = Instant.fromEpochSeconds(time)
 
-    info.isOk shouldBeEqual true
+    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
 
-    val danmu = DouyinDanmu(app).apply {
-      enableWrite = false
-      filePath = "douyin_danmu.txt"
-      idStr = extractor.idStr
-    }
-    val init = danmu.init(Streamer(0, "test", testUrl, downloadConfig = DownloadConfig.DouyinDownloadConfig()))
-    if (init) {
-      danmu.fetchDanmu()
-    }
+    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
 
-    danmu.isInitialized.get() shouldBeEqual true
+    formatted shouldBeEqual " -  - 2024-02-20 21-41-52"
   }
 
-}) {
+  test("testSubstringBeforePlaceholder") {
 
-  override val testUrl = "https://live.douyin.com/386003334438"
+    val fileFormat = "/opt/records/{streamer}/%m/%d"
 
-  override fun createExtractor(url: String) = DouyinCombinedApiExtractor(app.client, app.json, testUrl)
-}
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual "/opt/records/"
+  }
+
+  test("testSubstringBeforePlaceholderWithoutPlaceholder") {
+
+    val fileFormat = "/opt/records/aaa/bbb"
+
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual "/opt/records/aaa/bbb"
+  }
+
+  test("testSubstringBeforePlaceholderWithEmptyString") {
+
+    val fileFormat = ""
+
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual ""
+  }
+
+  test("testSubstringBeforePlaceholderWithOnlyPlaceholder") {
+
+    val fileFormat = "{streamer}"
+
+    val formatted = fileFormat.substringBeforePlaceholders()
+
+    formatted shouldBeEqual ""
+  }
+
+
+})

@@ -50,13 +50,10 @@ abstract class HlsPlatformDownloader<T : DownloadConfig>(
   override val extractor: Extractor,
 ) : PlatformDownloader<T>(app, danmu, extractor) {
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+  override suspend fun applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+    val config = downloadConfig as? HlsPlatformConfigDTO ?: return Err(ExtractorError.InitializationError(Throwable("Invalid config type")))
 
-    if (this !is HlsPlatformConfigDTO) {
-      return Err(ExtractorError.InitializationError(Throwable("Invalid config type")))
-    }
-
-    val userPreferredQuality = this.quality ?: HlsQuality.Source
+    val userPreferredQuality = config.quality ?: HlsQuality.Source
     // source quality should be the first one
     if (userPreferredQuality == HlsQuality.Source) {
       return Ok(streams.first())
@@ -97,6 +94,7 @@ abstract class HlsPlatformDownloader<T : DownloadConfig>(
     }
     debug("selected stream: {}", filteredStream)
     return Ok(filteredStream)
+
   }
 
 }

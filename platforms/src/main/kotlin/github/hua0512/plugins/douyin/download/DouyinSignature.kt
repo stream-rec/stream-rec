@@ -104,8 +104,13 @@ private val signatureJS by lazy {
     document.cookie = '';
   """.trimIndent()
 
+  val loadResult = loadWebmssdk()
+  if (loadResult.isErr) {
+    return@lazy ""
+  }
+
   // final JS
-  jsDom + loadWebmssdk()
+  jsDom + loadResult.value
 }
 
 /**
@@ -116,6 +121,10 @@ private val signatureJS by lazy {
  */
 internal fun getSignature(roomId: String, userId: String): Result<String, ExtractorError> {
   assert(!(SDK_JS.value.isNullOrEmpty())) { "SDK_JS is empty" }
+
+  if (signatureJS.isEmpty()) {
+    return Err(ExtractorError.JsEngineError(IllegalStateException("failed to load douyin-webmssdk.js")))
+  }
 
   // load JS
   jsEngine.eval(signatureJS)

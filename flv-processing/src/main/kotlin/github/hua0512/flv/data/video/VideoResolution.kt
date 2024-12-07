@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,12 @@
 
 package github.hua0512.flv.data.video
 
+import kotlinx.serialization.Serializable
+
 /**
  * Represents the resolution of a video stream.
  * @author hua0512
  * @date : 2024/6/10 13:04
  */
+@Serializable
 data class VideoResolution(val width: Int, val height: Int)

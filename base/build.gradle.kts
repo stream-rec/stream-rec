@@ -39,6 +39,7 @@ version = versionName
 
 dependencies {
   implementation(libs.ch.qos.logback.classic)
+  implementation(libs.org.jetbrains.kotlinx.serialization.core)
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.androidx.room.runtime)
@@ -59,6 +60,11 @@ dependencies {
   implementation(project(":common"))
   testImplementation(libs.bundles.test.jvm)
 }
+
+tasks.test {
+  useJUnitPlatform()
+}
+
 
 room {
   schemaDirectory("$projectDir/schemas")

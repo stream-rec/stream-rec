@@ -25,7 +25,7 @@ at-favre-lib-bcrypt = "at.favre.lib:bcrypt:0.10.2"
 io-exoquery-pprint = "io.exoquery:pprint-kotlin:3.0.0"
 com-tencent-tars-core = "com.tencent.tars:tars-core:1.7.4"
 
-io-exoquery-pprint = "io.exoquery:pprint-kotlin:2.0.2"
+io-exoquery-pprint = "io.exoquery:pprint-kotlin-kmp:2.0.2"
 
 io-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
@@ -76,8 +76,9 @@ org-jetbrains-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlin
 org-jetbrains-kotlinx-coroutines-debug = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-debug", version.ref = "kotlin-coroutines" }
 org-jetbrains-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
 org-jetbrains-kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
+org-jetbrains-kotlinx-serialization-core = "org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0"
 org-jetbrains-kotlinx-serialization-protobuf = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.8.0"
-org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.6"
+org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.4"
 
 org-junit-jupiter-junit-jupiter = "org.junit.jupiter:junit-jupiter:5.11.4"
 

@@ -34,6 +34,7 @@ import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamerState
 import github.hua0512.download.exceptions.FatalDownloadErrorException
+import github.hua0512.download.exceptions.InsufficientDownloadSizeException
 import github.hua0512.download.exceptions.TimerEndedDownloadException
 import github.hua0512.download.exceptions.UserStoppedDownloadException
 import github.hua0512.flv.data.other.FlvMetadataInfo
@@ -45,6 +46,7 @@ import github.hua0512.plugins.download.globalConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.services.DownloadState.*
 import github.hua0512.utils.logger
+import github.hua0512.utils.substringBeforePlaceholders
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,6 +60,7 @@ import kotlinx.datetime.toLocalDateTime
 import org.slf4j.Logger
 import java.time.LocalDateTime
 import kotlin.coroutines.coroutineContext
+import kotlin.io.path.Path
 import kotlin.math.abs
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -491,6 +494,19 @@ class StreamerDownloadService(
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
 
         when (e) {
+
+          is InsufficientDownloadSizeException -> {
+            // hang the download until space is freed
+            logger.error("{} insufficient download size, hanging...", streamer.name)
+            while (true) {
+              delay(30.toDuration(DurationUnit.SECONDS))
+              if (isCancelled.value) {
+                break
+              }
+              plugin.checkSpaceAvailable(Path(app.config.outputFolder.substringBeforePlaceholders()))
+            }
+            onStreamDownloadError(e)
+          }
           // in those cases, cancel the download and throw the exception
           is FatalDownloadErrorException, is CancellationException -> {
             updateStreamerState(StreamerState.FATAL_ERROR)

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,12 +33,14 @@ import github.hua0512.flv.data.sound.FlvSoundSize
 import github.hua0512.flv.data.sound.FlvSoundType
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.utils.Keyframe
+import kotlinx.serialization.Serializable
 
 /**
  * FLV metadata info
  * @author hua0512
  * @date : 2024/9/8 21:10
  */
+@Serializable
 data class FlvMetadataInfo(
   val hasAudio: Boolean = false,
   val hasVideo: Boolean = false,

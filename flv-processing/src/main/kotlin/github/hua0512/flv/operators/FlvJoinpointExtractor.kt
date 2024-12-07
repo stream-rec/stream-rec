@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ package github.hua0512.flv.operators
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvJoinPoint
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.amf.Amf0Value
+import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import github.hua0512.flv.utils.ScriptData
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isScriptTag

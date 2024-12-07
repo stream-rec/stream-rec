@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
 import kotlinx.io.writeString
+import kotlinx.serialization.Serializable
 
 /**
  * FLV header data class
@@ -38,6 +39,7 @@ import kotlinx.io.writeString
  * @property flags FLV flags, always 1 byte
  * @property headerSize FLV header size, always 4 bytes
  */
+@Serializable
 data class FlvHeader(val signature: String, val version: Int, val flags: FlvHeaderFlags, val headerSize: Int, override val crc32: Long) : FlvData {
 
   init {

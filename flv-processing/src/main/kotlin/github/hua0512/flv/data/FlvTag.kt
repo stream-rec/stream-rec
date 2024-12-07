@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,12 +30,14 @@ import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.tag.FlvTagData
 import github.hua0512.flv.data.tag.FlvTagHeader
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
+import kotlinx.serialization.Serializable
 
 /**
  * FLV tag data class
  * @author hua0512
  * @date : 2024/6/9 10:38
  */
+@Serializable
 data class FlvTag(
   val num: Int = 0,
   val header: FlvTagHeader,

@@ -24,18 +24,28 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
+package github.hua0512.utils
 
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 /**
- * Flv join point
+ * ThrowableSerializer is a custom serializer for Throwable.
  * @author hua0512
- * @date : 2024/9/12 0:56
+ * @date : 2024/12/6 13:43
  */
-@Serializable
-data class FlvJoinPoint(
-  val seamless: Boolean = false,
-  val timestamp: Int = 0,
-  val crc32: Long = 0,
-)
+object ThrowableSerializer : KSerializer<Throwable> {
+  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Throwable", PrimitiveKind.STRING)
+
+  override fun serialize(encoder: Encoder, value: Throwable) {
+    encoder.encodeString(value.message ?: "")
+  }
+
+  override fun deserialize(decoder: Decoder): Throwable {
+    return Throwable(decoder.decodeString())
+  }
+}

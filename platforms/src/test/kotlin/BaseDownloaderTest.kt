@@ -24,18 +24,10 @@
  * SOFTWARE.
  */
 
-package douyin
-
-import BaseTest
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.stream.Streamer
-import github.hua0512.plugins.douyin.danmu.DouyinDanmu
-import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
-import github.hua0512.plugins.douyin.download.DouyinExtractor
-import io.exoquery.kmp.pprint
-import io.kotest.matchers.equals.shouldBeEqual
-import io.kotest.matchers.nulls.shouldNotBeNull
-import kotlin.test.DefaultAsserter.assertNotNull
+import github.hua0512.plugins.base.Extractor
+import github.hua0512.plugins.download.base.PlatformDownloader
 
 /*
  * MIT License
@@ -63,47 +55,27 @@ import kotlin.test.DefaultAsserter.assertNotNull
  * SOFTWARE.
  */
 
-class DouyinTest : BaseTest<DouyinCombinedApiExtractor>({
+/**
+ * @author hua0512
+ * @date : 2024/12/6 14:18
+ */
+abstract class BaseDownloaderTest<T : Extractor, U : DownloadConfig>(body: BaseDownloaderTest<T, U>.() -> Unit = {}) : BaseTest<T>({ }) {
 
+  lateinit var downloader: PlatformDownloader<U>
 
-  test("regex") {
-    val url = testUrl
-    val matchResult = DouyinExtractor.URL_REGEX.toRegex().find(url)
-    matchResult shouldNotBeNull {
-      "failed to match id"
-    }
-    matchResult!!.groupValues.last() shouldBeEqual "802975310822"
+  init {
+    body()
   }
 
-  test("isLive") {
-    val info = extractor.extract()
-    println(pprint(info))
-    info.isOk shouldBeEqual true
-    assertNotNull("failed to extract", info)
+  override fun before() {
+    super.before()
+    downloader = createDownloader()
   }
 
-  test("danmu") {
-    val extractor = extractor
-    val info = extractor.extract()
 
-    info.isOk shouldBeEqual true
+  abstract var streamer: Streamer
 
-    val danmu = DouyinDanmu(app).apply {
-      enableWrite = false
-      filePath = "douyin_danmu.txt"
-      idStr = extractor.idStr
-    }
-    val init = danmu.init(Streamer(0, "test", testUrl, downloadConfig = DownloadConfig.DouyinDownloadConfig()))
-    if (init) {
-      danmu.fetchDanmu()
-    }
 
-    danmu.isInitialized.get() shouldBeEqual true
-  }
+  abstract fun createDownloader(): PlatformDownloader<U>
 
-}) {
-
-  override val testUrl = "https://live.douyin.com/386003334438"
-
-  override fun createExtractor(url: String) = DouyinCombinedApiExtractor(app.client, app.json, testUrl)
 }

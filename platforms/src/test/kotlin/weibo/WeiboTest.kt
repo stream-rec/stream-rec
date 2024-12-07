@@ -28,7 +28,7 @@ package weibo
 
 import BaseTest
 import github.hua0512.plugins.weibo.download.WeiboExtractor
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import io.kotest.matchers.equals.shouldBeEqual
 
 /**

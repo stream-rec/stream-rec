@@ -1,14 +1,9 @@
-import github.hua0512.utils.replacePlaceholders
-import kotlinx.datetime.Instant
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
 /*
  * MIT License
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,20 +24,32 @@ import kotlin.test.assertEquals
  * SOFTWARE.
  */
 
-class StringTest {
+package github.hua0512
+
+import github.hua0512.flv.data.amf.AmfValue
+import io.exoquery.kmp.pprint
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+/**
+ * Serializers text
+ * @author hua0512
+ * @date : 2024/12/7 1:01
+ */
+class SerializerTest : FunSpec({
 
 
-  @Test
-  fun testReplace() {
-    val streamer = "雪乃荔荔枝"
-    val title = "新人第一天开播"
-    val time = 1708461712L
-    val instant = Instant.fromEpochSeconds(time)
+  test("testSerializer") {
+    val keyframes = AmfValue.Amf0Value.Amf0Keyframes()
+    val json = Json {
+      prettyPrint = true
+    }
+    val jsonText = json.encodeToString(keyframes)
+    pprint(keyframes)
 
-    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
-
-    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
-
-    assertEquals("雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52", formatted)
+    jsonText.isEmpty() shouldBe false
   }
-}
+
+})

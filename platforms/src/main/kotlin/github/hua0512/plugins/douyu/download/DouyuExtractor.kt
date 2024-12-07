@@ -32,7 +32,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.ExtractorError
-import io.exoquery.pprint
+import io.exoquery.kmp.pprint
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*

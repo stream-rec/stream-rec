@@ -26,6 +26,7 @@
 
 plugins {
   alias(libs.plugins.kotlin.jvm)
+//  alias(libs.plugins.kotlin.serialization)
   //  id("com.google.protobuf") version "0.9.4"
 }
 
@@ -48,6 +49,7 @@ dependencies {
   implementation(libs.com.michael.bull.kotlin.result)
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.org.jetbrains.kotlinx.atomicfu)
+//  implementation(libs.org.jetbrains.kotlinx.serialization.core)
   implementation(libs.org.openjdk.nashorn.nashorn.core)
   testImplementation(libs.bundles.test.jvm)
 }

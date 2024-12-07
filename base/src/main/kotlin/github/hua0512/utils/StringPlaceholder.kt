@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,22 @@
 
 package github.hua0512.utils
 
-import kotlinx.datetime.*
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
+
+private val placeholders = arrayOf(
+  "{streamer}",
+  "{title}",
+  "%Y",
+  "%m",
+  "%d",
+  "%H",
+  "%M",
+  "%S",
+)
 
 /**
  * Extension function for the String class to replace placeholders in the string with provided values.
@@ -70,3 +83,28 @@ fun String.replacePlaceholders(streamer: String, title: String, time: Instant? =
  * @return The formatted string.
  */
 private fun formatLeadingZero(value: Int): String = String.format("%02d", value)
+
+/**
+ * Extension function for the String class to extract the part of the string before any placeholders.
+ * @return The part of the string before any placeholders.
+ * If the string contains no placeholders, the entire string is returned.
+ * If the string contains placeholders, only the part of the string before the first placeholder is returned.
+ * If the string contains multiple placeholders, only the part of the string before the first placeholder is returned.
+ * If the string contains a placeholder, but the placeholder is not found in the string, the entire string is returned.
+ * If the string is empty, an empty string is returned.
+ *
+ */
+fun String.substringBeforePlaceholders(): String {
+  if (this.isEmpty()) {
+    return ""
+  }
+  val index = placeholders.fold(this.length) { acc, placeholder ->
+    val placeholderIndex = this.indexOf(placeholder)
+    if (placeholderIndex != -1 && placeholderIndex < acc) {
+      placeholderIndex
+    } else {
+      acc
+    }
+  }
+  return this.substring(0, index)
+}
