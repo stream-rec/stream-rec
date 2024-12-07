@@ -286,7 +286,12 @@ internal fun Source.parseScriptTagData(bodySize: Int): Pair<FlvScriptTagData, Lo
     throw FlvDataErrorException("FLV script tag data not complete")
   }
 
-  val crc32Sink = CRC32Sink(buffer)
+  val crc32Sink = CRC32Sink(discardingSink())
+  crc32Sink.buffered().use {
+    // copy buffer to crc32 sink without discarding
+    val body = buffer.peek().readByteArray()
+    it.write(body)
+  }
   val amfValues = mutableListOf<AmfValue>()
 
   // amf3 metadata is not supported/used in flv format, so we only read amf0 values
