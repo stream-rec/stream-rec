@@ -73,7 +73,8 @@ class Huya(
 
   override fun onDownloadError(exception: Exception) {
     if (exception is DownloadErrorException && exception.message.contains("403 Forbidden")) {
-      extractor.onRepeatedError(ExtractorError.ApiError(exception.cause!!), 0)
+      warn("403 Forbidden, changing decryption method in next attempt")
+      extractor.onRepeatedError(ExtractorError.ApiError(Throwable("403 Forbidden")), 0)
     }
   }
 

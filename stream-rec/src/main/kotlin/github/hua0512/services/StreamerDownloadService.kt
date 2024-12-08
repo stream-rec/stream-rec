@@ -33,10 +33,8 @@ import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamerState
-import github.hua0512.download.exceptions.FatalDownloadErrorException
-import github.hua0512.download.exceptions.InsufficientDownloadSizeException
-import github.hua0512.download.exceptions.TimerEndedDownloadException
-import github.hua0512.download.exceptions.UserStoppedDownloadException
+import github.hua0512.data.stream.StreamingPlatform
+import github.hua0512.download.exceptions.*
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.download.base.OnStreamDownloaded
@@ -516,6 +514,13 @@ class StreamerDownloadService(
           }
 
           else -> {
+            // HACK: THIS IS A HACK FOR HUYA 403 FORBIDDEN ERROR
+            // FUCK HUYA PLATFORM
+            if (streamer.platform == StreamingPlatform.HUYA && e is DownloadErrorException && e.message.contains("403 Forbidden")) {
+              // force end and do not retry download with the error url
+              isStreamEnd = true
+              onDownloadFinished()
+            }
             // do not log error if the stream has ended
             if (isStreamEnd) return
             onStreamDownloadError(e)
