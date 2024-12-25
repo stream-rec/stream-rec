@@ -100,6 +100,27 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
     // do nothing
   }
 
+  /***
+   * Convert douyu color int to color int
+   */
+  private fun Int.convertToColorInt(): Int {
+    return when (this) {
+      // 红
+      1 -> 0xff0000
+      // 浅蓝
+      2 -> 0x1e87f0
+      // 浅绿
+      3 -> 0x7ac84b
+      // 橙色
+      4 -> 0xff7f00
+      // 紫色
+      5 -> 0x9b39f4
+      // 洋红
+      6 -> 0xff69b4
+      else -> 0xffffff
+    }
+  }
+
   override suspend fun decodeDanmu(session: WebSocketSession, data: ByteArray): List<DanmuDataWrapper?> {
     val messages = DouyuPacket.decode(data)
     val danmus = mutableListOf<DanmuDataWrapper>()
@@ -150,7 +171,7 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
           DanmuDataWrapper.DanmuData(
             uid = (decoded["uid"] ?: decoded["hashid"]).toString().toLong(),
             sender = decoded["nn"] as String,
-            color = 0,
+            color = (decoded["col"] as? String)?.toInt()?.convertToColorInt() ?: -1,
             content = decoded["txt"] as String,
             fontSize = 0,
             serverTime = Clock.System.now().toEpochMilliseconds(),
@@ -161,7 +182,7 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
           DanmuDataWrapper.DanmuData(
             uid = decodedString.substringAfter("uid=").substringBefore(",").toLong(),
             sender = decodedString.substringAfter("nn=").substringBefore(","),
-            color = 0,
+            color = decodedString.substringAfter("col=").substringBefore(",").ifEmpty { "0" }.toInt().convertToColorInt(),
             content = decodedString.substringAfter("txt=").substringBefore(","),
             fontSize = 0,
             serverTime = Clock.System.now().toEpochMilliseconds(),
