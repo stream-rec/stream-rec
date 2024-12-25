@@ -30,7 +30,6 @@ import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.StreamerLoggerContext
 import github.hua0512.utils.debug
 import github.hua0512.utils.logger
-import io.exoquery.kmp.pprint
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -127,7 +126,7 @@ class PlayListFetcher(val client: HttpClient, override var context: StreamerCont
           return@flow
         }
 
-        debug("Parsed playlist: {}", pprint(playlist, defaultHeight = 30))
+        debug("Parsed playlist: {}", playlist)
         playlist as MediaPlaylist
         delay = playlist.targetDuration() * 1000L
         emit(playlist)
