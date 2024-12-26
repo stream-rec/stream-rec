@@ -71,7 +71,7 @@ org-jetbrains-kotlinx-coroutines-debug = { module = "org.jetbrains.kotlinx:kotli
 org-jetbrains-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
 org-jetbrains-kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
 org-jetbrains-kotlinx-serialization-protobuf = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.7.3"
-org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.4"
+org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.6"
 
 org-junit-jupiter-junit-jupiter = "org.junit.jupiter:junit-jupiter:5.11.4"
 
