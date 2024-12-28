@@ -91,7 +91,7 @@ class DouyuTest : BaseTest<DouyuExtractor>({
 }) {
 
   override val testUrl =
-    "https://www.douyu.com/topic/wwqymadrid?rid=8984762&dyshid=19bcae2-ced06e4edcaf43bb8f2bb9c500041601"
+    "https://www.douyu.com/288016"
 
   override fun createExtractor(url: String) = DouyuExtractor(app.client, app.json, testUrl)
 }

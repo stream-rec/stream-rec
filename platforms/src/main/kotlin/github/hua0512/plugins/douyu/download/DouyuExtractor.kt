@@ -43,7 +43,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.collections.set
 
 /**
  * Douyu live stream extractor.
@@ -165,12 +164,13 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     cover = data["room_thumb"]?.jsonPrimitive?.content ?: ""
 
 
-    val jsEnc = http.getDouyuH5Enc(json, htmlText, rid)
+    val jsEncResult = http.getDouyuH5Enc(json, htmlText, rid)
 
-    if (jsEnc.isErr) return jsEnc.asErr()
+    if (jsEncResult.isErr) return jsEncResult.asErr()
 
+    val jsEnc = jsEncResult.value
     logger.trace("jsEnc: $jsEnc")
-    val paramsResult = withContext(Dispatchers.Default) { ub98484234(jsEnc.value, rid) }
+    val paramsResult = withContext(Dispatchers.Default) { ub98484234(jsEnc, rid) }
 
     if (paramsResult.isErr) return paramsResult.asErr()
 
@@ -198,16 +198,28 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
         logger.error("cdn: $selectedCdn failed to get rate info of rate: ${rates[i]}: {}", rateInfoResult.error)
         continue
       }
-      val streamInfoRateResult = getStreamInfo(selectedCdn = selectedCdn, selectedRate = rateInfo["rate"]!!, encMap = paramsMap)
+      val streamInfoRateResult =
+        getStreamInfo(selectedCdn = selectedCdn, selectedRate = rateInfo["rate"]!!, encMap = paramsMap)
       if (streamInfoRateResult.isErr) {
-        logger.error("cdn: $selectedCdn failed to get stream info for rate: ${rateInfo["rate"]}: {}", streamInfoRateResult.error)
+        logger.error(
+          "cdn: $selectedCdn failed to get stream info for rate: ${rateInfo["rate"]}: {}",
+          streamInfoRateResult.error
+        )
         continue
       }
       val stream = streamInfoRateResult.value.first
       streams.add(stream)
     }
     logger.trace("$url streams: {}", pprint(streams))
-    return Ok(mediaInfo.copy(title = title, artist = artist, artistImageUrl = avatar, coverUrl = cover, streams = streams))
+    return Ok(
+      mediaInfo.copy(
+        title = title,
+        artist = artist,
+        artistImageUrl = avatar,
+        coverUrl = cover,
+        streams = streams
+      )
+    )
   }
 
   private suspend fun getStreamInfo(
@@ -230,7 +242,13 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
         if (value != null)
           parameter(key, value.toString())
       }
-      contentType(ContentType.Application.Json)
+      contentType(ContentType.Application.FormUrlEncoded)
+    }
+
+    logger.debug("result {}", result)
+
+    if (result.isErr) {
+      return result.asErr()
     }
 
     val liveDataResponse = result.value
@@ -273,7 +291,8 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     else
       liveData["rtmp_cdn"]!!.jsonPrimitive.content
 
-    val qualityRateInfo = getRateInfo(multiRates!!.find { it.jsonObject["rate"]!!.jsonPrimitive.int == rate }!!.jsonObject)
+    val qualityRateInfo =
+      getRateInfo(multiRates!!.find { it.jsonObject["rate"]!!.jsonPrimitive.int == rate }!!.jsonObject)
     if (qualityRateInfo.isErr) return qualityRateInfo.asErr()
 
     val qualityName = qualityRateInfo.value
