@@ -42,11 +42,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.*
-import kotlin.collections.Map
-import kotlin.collections.get
-import kotlin.collections.listOf
-import kotlin.collections.mapOf
-import kotlin.collections.mutableMapOf
 import kotlin.collections.set
 
 /**
@@ -203,6 +198,9 @@ private fun getRandomUuidHex(): String {
 
 
 internal fun extractDouyunRidFromUrl(url: String): String? {
-  // extract rid from url param
-  return parseQueryString(url.substringAfter("?"))["rid"]
+  val queryParams = parseQueryString(url.substringAfter("?", ""))
+  return if (queryParams == Parameters.Empty) // no query params, find rid from url
+    Regex("""douyu\.com/(\d+)""").find(url)?.groupValues?.get(1)
+  else // extract rid from url param
+    queryParams["rid"]
 }
