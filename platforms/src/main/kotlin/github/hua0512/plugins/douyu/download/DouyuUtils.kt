@@ -26,13 +26,7 @@
 
 package github.hua0512.plugins.douyu.download
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.andThen
-import com.github.michaelbull.result.asErr
-import com.github.michaelbull.result.mapError
-import com.github.michaelbull.result.runCatching
+import com.github.michaelbull.result.*
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyu.download.DouyuExtractor.Companion.logger
 import github.hua0512.plugins.jsEngine
@@ -48,6 +42,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.*
+import kotlin.collections.set
 
 /**
  * @author hua0512
@@ -203,6 +198,9 @@ private fun getRandomUuidHex(): String {
 
 
 internal fun extractDouyunRidFromUrl(url: String): String? {
-  // extract rid from url param
-  return parseQueryString(url.substringAfter("?"))["rid"]
+  val queryParams = parseQueryString(url.substringAfter("?", ""))
+  return if (queryParams == Parameters.Empty) // no query params, find rid from url
+    Regex("""douyu\.com/(\d+)""").find(url)?.groupValues?.get(1)
+  else // extract rid from url param
+    queryParams["rid"]
 }

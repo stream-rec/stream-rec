@@ -72,16 +72,20 @@ class DouyuTest : BaseTest<DouyuExtractor>({
   test("ridFromUrl") {
     val rid = extractDouyunRidFromUrl(testUrl)
     rid.shouldNotBeNull()
-    rid shouldBeEqual "8984762"
+    rid shouldBeEqual "288016"
   }
 
   test("danmu") {
+    val result = extractor.extract()
+    result.isOk shouldBeEqual true
+    val mediaInfo = result.value
+    mediaInfo.shouldNotBeNull()
     val danmu = DouyuDanmu(app).apply {
-      rid = "8984762"
+      rid = extractor.rid
       enableWrite = false
       filePath = "douyu_danmu.txt"
     }
-    val init = danmu.init(Streamer(0, "EQ118", testUrl))
+    val init = danmu.init(Streamer(0, "test", testUrl))
     if (init) {
       danmu.fetchDanmu()
     }
