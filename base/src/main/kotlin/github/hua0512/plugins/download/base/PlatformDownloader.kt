@@ -331,7 +331,10 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       throw InsufficientDownloadSizeException("Not enough disk space")
     }
 
-    val headers = getPlatformHeaders().plus(COMMON_HEADERS)
+    val headers = buildMap {
+      putAll(COMMON_HEADERS)
+      putAll(getPlatformHeaders())
+    }
 
     val kbMax = maxSize / 1024
 
@@ -744,7 +747,15 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     if (filterResult.isErr) return filterResult.asErr()
 
-    val streamInfo = filterResult.value
+    // get true URL
+    val streamInfoResult = extractor.getTrueUrl(filterResult.value)
+
+    if (streamInfoResult.isErr) {
+      return streamInfoResult.asErr()
+    }
+
+    val streamInfo = streamInfoResult.value
+
     state.value =
       DownloadState.Preparing(streamInfo.url, streamInfo.format, downloadConfig.outputFileFormat, mediaInfo.title)
     return Ok(true)
