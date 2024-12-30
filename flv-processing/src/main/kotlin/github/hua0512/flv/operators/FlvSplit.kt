@@ -170,7 +170,9 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
 
     when {
       tag.isTrueScripTag() -> {
-        logger.debug("${context.name} Metadata detected: {}", pprint(tag))
+        if (tag.num == 1) {
+          logger.debug("${context.name} Metadata detected: {}", pprint(tag))
+        }
         lastMetadata = tag
       }
 

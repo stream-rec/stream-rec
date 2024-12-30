@@ -144,9 +144,9 @@ internal class FlvParser(private val source: Source) {
       }
 
       ScriptData -> source.parseScriptTagData(bodySize).let { data ->
-        if (header.dataSize != data.first.size) {
-          logger.warn("Script tag size mismatch: header=${header.dataSize}, body=${data.first.size}")
-        }
+//        if (header.dataSize != data.first.size) {
+//          logger.warn("Script tag size mismatch: header=${header.dataSize}, body=${data.first.size}")
+//        }
         // update data size to actual body size
         // this is to avoid the case where the script tag size is larger than the actual body size
         // probable due to incorrect size calculation, or missing data in parsing, etc.
