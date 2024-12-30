@@ -34,7 +34,6 @@ import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
-import github.hua0512.download.exceptions.DownloadErrorException
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
@@ -72,10 +71,7 @@ class Huya(
   }
 
   override fun onDownloadError(exception: Exception) {
-    if (exception is DownloadErrorException && exception.message.contains("403 Forbidden")) {
-      warn("403 Forbidden, changing decryption method in next attempt")
-      extractor.onRepeatedError(ExtractorError.ApiError(Throwable("403 Forbidden")), 0)
-    }
+
   }
 
 
