@@ -100,15 +100,37 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
 
     val mediaInfo = result.value
     println(pprint(mediaInfo))
+
+    // select first stream
+    val stream = mediaInfo.streams.first()
+    // apply to get true url
+    val trueResult = extractor.getTrueUrl(stream)
+    trueResult.isOk shouldBeEqual true
+    println(trueResult)
+
+    trueResult.isOk shouldBeEqual true
+    val streamInfo = trueResult.value
+    println(pprint(streamInfo))
   }
 
   test("mobileLive") {
     extractor = getMobileExtractor()
     val result = extractor.extract()
-    println(pprint(result))
+    println(result)
     result.isOk shouldBeEqual true
     val mediaInfo = result.value
     println(pprint(mediaInfo))
+
+    // select first stream
+    val stream = mediaInfo.streams.first()
+    // apply to get true url
+    val trueResult = extractor.getTrueUrl(stream)
+    trueResult.isOk shouldBeEqual true
+    println(trueResult)
+
+    trueResult.isOk shouldBeEqual true
+    val streamInfo = trueResult.value
+    println(pprint(streamInfo))
   }
 
   test("streamerNotFoundPcApi") {
@@ -141,7 +163,7 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
 }) {
 
 
-  override val testUrl: String = "https://www.huya.com/loljiezou"
+  override val testUrl: String = "https://www.huya.com/24776175"
 
   private fun getPCExtractor(url: String = testUrl) = HuyaExtractor(app.client, app.json, url).apply {
     prepare()

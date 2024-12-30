@@ -157,6 +157,18 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    */
   abstract suspend fun extract(): Result<MediaInfo, ExtractorError>
 
+  /**
+   * Function to get the true URL of the stream
+   *
+   * Mainly used for the platforms that require additional requests to get the true URL after the initial extraction
+   * @param streamInfo the stream info
+   * @return a [StreamInfo] object if successful, or an error
+   * @see StreamInfo [Result]
+   */
+  open suspend fun getTrueUrl(streamInfo: StreamInfo): Result<StreamInfo, ExtractorError> {
+    return Ok(streamInfo)
+  }
+
 
   open fun onRepeatedError(error: ExtractorError, retries: Int) {
     logger.error("$url error: $error, retries: $retries")
