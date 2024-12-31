@@ -43,6 +43,7 @@ import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
 import github.hua0512.flv.utils.CRC32Sink
 import github.hua0512.flv.utils.readUI24
+import github.hua0512.utils.crc32
 import github.hua0512.utils.logger
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
@@ -175,12 +176,13 @@ internal class FlvParser(private val source: Source) {
     val soundType = FlvSoundType.from(flag and 0b0000_0001)
     // AAC packet type, 1 bit
     val aacPacketType = source.readUByte().toInt().let { AACPacketType.from(it) }
-    // read body
+
+    // Read body data
     val body = source.readByteArray(bodySize)
-    val crc32Sink = CRC32Sink(discardingSink())
-    crc32Sink.buffered().use {
-      it.write(body)
-    }
+
+    // Calculate CRC32
+    val crc32Value = calculateCrc32(body)
+
     return FlvAudioTagData(
       format = soundFormat,
       rate = soundRate,
@@ -188,7 +190,7 @@ internal class FlvParser(private val source: Source) {
       type = soundType,
       packetType = aacPacketType,
       binaryData = body
-    ) to crc32Sink.crc32().toLong()
+    ) to crc32Value
   }
 
   private fun parseVideoTagData(bodySize: Int): Pair<FlvVideoTagData, Long> {
@@ -197,26 +199,30 @@ internal class FlvParser(private val source: Source) {
     val frameType = FlvVideoFrameType.from(frameTypeValue)
       ?: throw FlvDataErrorException("Unsupported flv video frame type: $frameTypeValue")
     val codecId = flag and 0b0000_1111
-    // TODO : SUPPORT CHINESE HEVC
-    val codec =
-      FlvVideoCodecId.from(codecId).takeIf { it == FlvVideoCodecId.AVC } ?: throw FlvDataErrorException("Unsupported flv video codec id: $codecId")
+    val codec = FlvVideoCodecId.from(codecId).takeIf { it == FlvVideoCodecId.AVC }
+      ?: throw FlvDataErrorException("Unsupported flv video codec id: $codecId")
     val avcPacketType = source.readUByte().toInt().let { AvcPacketType.from(it) }
     val compositionTime = source.readUI24().toInt()
+
+    // Read body data
     val body = source.readByteArray(bodySize)
-    val crc32Sink = CRC32Sink(discardingSink())
-    crc32Sink.buffered().use {
-      it.write(body)
-    }
+
+    // Calculate CRC32
+    val crc32Value = calculateCrc32(body)
+
     return FlvVideoTagData(
       frameType = frameType,
       codecId = codec,
       compositionTime = compositionTime,
       avcPacketType = avcPacketType,
       binaryData = body
-    ) to crc32Sink.crc32().toLong()
+    ) to crc32Value
   }
-
 }
+
+// Helper function to calculate CRC32
+private fun calculateCrc32(data: ByteArray): Long = data.crc32()
+
 
 /**
  * Parse FLV tag header
@@ -286,18 +292,18 @@ internal fun Source.parseScriptTagData(bodySize: Int): Pair<FlvScriptTagData, Lo
     throw FlvDataErrorException("FLV script tag data not complete")
   }
 
-  val crc32Sink = CRC32Sink(discardingSink())
-  crc32Sink.buffered().use {
-    // copy buffer to crc32 sink without discarding
-    val body = buffer.peek().readByteArray()
-    it.write(body)
+  // Create a copy of the data for CRC calculation
+  val body = buffer.copy().use {
+    it.readByteArray()
   }
-  val amfValues = mutableListOf<AmfValue>()
 
-  // amf3 metadata is not supported/used in flv format, so we only read amf0 values
+  val amfValues = mutableListOf<AmfValue>()
+  // Read AMF values from the original buffer
   buffer.use {
-    while (!it.exhausted())
+    while (!it.exhausted()) {
       amfValues.add(readAmf0Value(it))
+    }
   }
-  return FlvScriptTagData(amfValues) to crc32Sink.crc32().toLong()
+
+  return FlvScriptTagData(amfValues) to calculateCrc32(body)
 }
