@@ -1,50 +1,75 @@
+# Build stage
 FROM gradle:8.8-jdk21-alpine AS builder
 WORKDIR /app
 COPY . .
-RUN gradle stream-rec:build -x test
+RUN gradle stream-rec:build -x test --no-daemon --parallel
 
+# Runtime stage
 FROM amazoncorretto:21-al2023-headless
 WORKDIR /app
+
+# Copy application jar
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
-# Install dependencies
-RUN yum update -y && \
-    yum install -y unzip tar python3 python3-pip which xz tzdata findutils && \
-    pip3 install streamlink && \
-    # install streamlink-ttvlol
-    INSTALL_DIR="/root/.local/share/streamlink/plugins"; mkdir -p "$INSTALL_DIR"; curl -L -o "$INSTALL_DIR/twitch.py" 'https://github.com/2bc4/streamlink-ttvlol/releases/latest/download/twitch.py' && \
-    yum clean all && \
-    rm -rf /var/cache/yum
-
-# Install ffmpeg with architecture check
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-      URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-      URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz"; \
-    fi && \
-    curl -L $URL | tar -xJ && \
-    mv ffmpeg-*-linux*/bin/{ffmpeg,ffprobe,ffplay} /usr/local/bin/ && \
-    chmod +x /usr/local/bin/{ffmpeg,ffprobe,ffplay} && \
-    rm -rf ffmpeg-*
-
-# Install rclone with architecture check
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-      URL="https://downloads.rclone.org/rclone-current-linux-amd64.zip"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-      URL="https://downloads.rclone.org/rclone-current-linux-arm64.zip"; \
-    fi && \
-    curl -L $URL -o rclone.zip && \
-    unzip rclone.zip && \
-    mv rclone-*-linux*/rclone /usr/bin/ && \
-    chown root:root /usr/bin/rclone && \
+# Install dependencies with layer optimization and cleanup in same layer
+RUN set -ex && \
+    # Create directories first
+    mkdir -p /root/.local/share/streamlink/plugins && \
+    # Install base packages
+    yum update -y && \
+    yum install -y \
+        python3 \
+        python3-pip \
+        unzip \
+        tar \
+        xz \
+        tzdata \
+        findutils && \
+    # Install streamlink and plugin
+    pip3 install --no-cache-dir streamlink && \
+    curl -L -o "/root/.local/share/streamlink/plugins/twitch.py" \
+        'https://github.com/2bc4/streamlink-ttvlol/releases/latest/download/twitch.py' && \
+    # Install ffmpeg based on architecture
+    ARCH=$(uname -m) && \
+    FFMPEG_URL=$(if [ "$ARCH" = "x86_64" ]; then \
+        echo "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"; \
+    else \
+        echo "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz"; \
+    fi) && \
+    curl -L $FFMPEG_URL | tar -xJ --strip-components=2 '*/bin/ffmpeg' '*/bin/ffprobe' && \
+    mv {ffmpeg,ffprobe} /usr/local/bin/ && \
+    chmod +x /usr/local/bin/{ffmpeg,ffprobe} && \
+    # Install rclone based on architecture
+    RCLONE_URL=$(if [ "$ARCH" = "x86_64" ]; then \
+        echo "https://downloads.rclone.org/rclone-current-linux-amd64.zip"; \
+    else \
+        echo "https://downloads.rclone.org/rclone-current-linux-arm64.zip"; \
+    fi) && \
+    curl -L $RCLONE_URL -o rclone.zip && \
+    unzip -j rclone.zip '*/rclone' -d /usr/bin && \
     chmod 755 /usr/bin/rclone && \
-    rm -rf rclone.zip rclone-*
+    # Fix permissions for non-root user
+    mkdir -p /home/nonroot/.local/share/streamlink/plugins && \
+    mv /root/.local/share/streamlink/plugins/twitch.py /home/nonroot/.local/share/streamlink/plugins/ && \
+    # Cleanup
+    yum clean all && \
+    rm -rf \
+        /var/cache/yum \
+        rclone.zip \
+        /root/.cache \
+        /tmp/* && \
+    # Set permissions
+    chown -R 1000:1000 /app /home/nonroot
 
-# Set timezone
-ENV TZ=\${TZ:-Europe/Paris}
+# Set timezone with ARG for build-time configuration
+ARG TZ=Europe/Paris
+ENV TZ=${TZ}
+ENV HOME=/home/nonroot
+
+# Switch to non-root user
+USER 1000
 
 EXPOSE 12555
 
-CMD ["java", "-jar", "app.jar"]
+# Use exec form and set memory limits
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

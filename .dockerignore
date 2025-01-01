@@ -1,10 +1,89 @@
+# Gradle files
 .gradle
-# any build directory
+build/
 */build/
-docs
-.idea
+.gradletasknamecache
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Build outputs
 *.jar
 *.war
+*.ear
+*.class
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Logs and databases
 *.log
+*.log.*
 *.db
-.env*.local
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Local configuration
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Version control
+#.git/
+#.gitignore
+#.gitattributes
+
+# Documentation and markdown
+docs/
+*.md
+LICENSE
+CHANGELOG*
+
+# Docker files
+.docker/
+docker-compose*.yml
+Dockerfile*
+
+# Test files
+**/test/
+**/tests/
+**/testdata/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*~
+
+# Project specific
+*.flv
+*.mp4
+*.ts
+*.m3u8
+/recordings/
+/downloads/
+/uploads/
+/cache/
+
+# Dependencies
+node_modules/
+vendor/
