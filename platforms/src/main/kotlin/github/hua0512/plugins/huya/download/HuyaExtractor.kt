@@ -310,7 +310,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
                 bitrate = bitrate.toLong(),
                 priority = priority,
                 frameRate = 0.0,
-                extras = mapOf("cdn" to cdn, "streamName" to streamInfo.getStreamName())
+                extras = mapOf("cdn" to cdn, "streamName" to streamInfo.getStreamName(), "maxBitrate" to maxBitRate.toString())
               )
             )
           }
@@ -449,9 +449,10 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     val antiCode = if (streamInfo.format == VideoFormat.flv) tokenResp.flvAntiCode else tokenResp.hlsAntiCode
 //    val antiCode = tokenResp.antiCode
+    val maxBitRate = streamInfo.extras["maxBitrate"]?.toIntOrNull() ?: 0
     val parameters = parseQueryString(antiCode) + ParametersBuilder().apply {
       addCodec()
-      if (streamInfo.bitrate > 0)
+      if (streamInfo.bitrate.toInt() != maxBitRate)
         append("ratio", streamInfo.bitrate.toString())
     }.build()
 
