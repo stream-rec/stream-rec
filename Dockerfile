@@ -8,14 +8,17 @@ RUN gradle stream-rec:build -x test --no-daemon --parallel
 FROM amazoncorretto:21-al2023-headless
 WORKDIR /app
 
+# Add environment variables for PUID/PGID
+ENV PUID=1000
+ENV PGID=1000
+ENV HOME=/home/abc
+
 # Copy application jar
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
 # Install dependencies with layer optimization and cleanup in same layer
 RUN set -ex && \
-    # Create directories first
-    mkdir -p /root/.local/share/streamlink/plugins && \
-    # Install base packages
+    # Install base packages first
     yum update -y && \
     yum install -y \
         python3 \
@@ -24,10 +27,16 @@ RUN set -ex && \
         tar \
         xz \
         tzdata \
-        findutils && \
+        findutils \
+        shadow-utils && \
+    # Create group and user
+    groupadd -g ${PGID} abc && \
+    useradd -u ${PUID} -g abc -d ${HOME} -s /bin/bash abc && \
+    # Create directories
+    mkdir -p ${HOME}/.local/share/streamlink/plugins && \
     # Install streamlink and plugin
     pip3 install --no-cache-dir streamlink && \
-    curl -L -o "/root/.local/share/streamlink/plugins/twitch.py" \
+    curl -L -o "${HOME}/.local/share/streamlink/plugins/twitch.py" \
         'https://github.com/2bc4/streamlink-ttvlol/releases/latest/download/twitch.py' && \
     # Install ffmpeg based on architecture
     ARCH=$(uname -m) && \
@@ -48,26 +57,27 @@ RUN set -ex && \
     curl -L $RCLONE_URL -o rclone.zip && \
     unzip -j rclone.zip '*/rclone' -d /usr/bin && \
     chmod 755 /usr/bin/rclone && \
-    # Fix permissions for non-root user
-    mkdir -p /home/nonroot/.local/share/streamlink/plugins && \
-    mv /root/.local/share/streamlink/plugins/twitch.py /home/nonroot/.local/share/streamlink/plugins/ && \
+    # Set permissions
+    chown -R ${PUID}:${PGID} \
+        /app \
+        ${HOME} \
+        /usr/local/bin/ffmpeg \
+        /usr/local/bin/ffprobe \
+        /usr/bin/rclone && \
     # Cleanup
     yum clean all && \
     rm -rf \
         /var/cache/yum \
         rclone.zip \
         /root/.cache \
-        /tmp/* && \
-    # Set permissions
-    chown -R 1000:1000 /app /home/nonroot
+        /tmp/*
 
 # Set timezone with ARG for build-time configuration
 ARG TZ=Europe/Paris
 ENV TZ=${TZ}
-ENV HOME=/home/nonroot
 
 # Switch to non-root user
-USER 1000
+USER abc
 
 EXPOSE 12555
 
