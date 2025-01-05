@@ -13,7 +13,7 @@ ENV PUID=\${PUID:-1000}
 ENV PGID=\${PGID:-1000}
 ENV HOME=/home/abc
 # Set timezone with ARG for build-time configuration
-ENV TZ=${TZ:-Europe/Paris}
+ENV TZ=\${TZ:-Europe/Paris}
 
 # Copy application jar
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
