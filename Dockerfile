@@ -9,8 +9,8 @@ FROM amazoncorretto:21-al2023-headless
 WORKDIR /app
 
 # Add environment variables for PUID/PGID
-ENV PUID=1000
-ENV PGID=1000
+ENV PUID=\${PUID:-1000}
+ENV PGID=\${PGID:-1000}
 ENV HOME=/home/abc
 
 # Copy application jar
@@ -73,8 +73,7 @@ RUN set -ex && \
         /tmp/*
 
 # Set timezone with ARG for build-time configuration
-ARG TZ=Europe/Paris
-ENV TZ=${TZ}
+ENV TZ=${TZ:-Europe/Paris}
 
 # Switch to non-root user
 USER abc
