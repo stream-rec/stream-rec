@@ -22,7 +22,7 @@ androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framewor
 
 at-favre-lib-bcrypt = "at.favre.lib:bcrypt:0.10.2"
 
-io-exoquery-pprint = "io.exoquery:pprint-kotlin:2.0.2"
+io-exoquery-pprint = "io.exoquery:pprint-kotlin:3.0.0"
 
 io-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
