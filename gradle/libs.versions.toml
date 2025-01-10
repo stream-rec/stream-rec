@@ -75,7 +75,7 @@ org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.6"
 
 org-junit-jupiter-junit-jupiter = "org.junit.jupiter:junit-jupiter:5.11.4"
 
-org-mockito-mockito-core = "org.mockito:mockito-core:5.14.2"
+org-mockito-mockito-core = "org.mockito:mockito-core:5.15.2"
 
 [plugins]
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
