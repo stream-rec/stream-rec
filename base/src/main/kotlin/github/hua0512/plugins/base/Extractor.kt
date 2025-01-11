@@ -184,7 +184,10 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * @param request the request builder
    * @return Result of the response
    */
-  suspend fun getResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): Result<HttpResponse, ExtractorError.ApiError> = runCatching {
+  suspend fun getResponse(
+    url: String,
+    request: HttpRequestBuilder.() -> Unit = {},
+  ): Result<HttpResponse, ExtractorError.ApiError> = runCatching {
     http.get(url) {
       populateCommons()
       request()
@@ -199,7 +202,10 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
    * @param request the request builder
    * @return Result of the response
    */
-  suspend fun postResponse(url: String, request: HttpRequestBuilder.() -> Unit = {}): Result<HttpResponse, ExtractorError.ApiError> = runCatching {
+  suspend fun postResponse(
+    url: String,
+    request: HttpRequestBuilder.() -> Unit = {},
+  ): Result<HttpResponse, ExtractorError.ApiError> = runCatching {
     http.post(url) {
       populateCommons()
       request()
@@ -248,7 +254,8 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
       if (playlist is MasterPlaylist) {
         val variants = playlist.variants()
         val variantStreams = variants.map { variant ->
-          val extraMap = variant.resolution().getOrNull()?.let { mapOf("resolution" to "${it.height()}x${it.width()}") } ?: emptyMap()
+          val extraMap = variant.resolution().getOrNull()?.let { mapOf("resolution" to "${it.height()}x${it.width()}") }
+            ?: emptyMap()
           StreamInfo(
             variant.uri(),
             format = VideoFormat.hls,
