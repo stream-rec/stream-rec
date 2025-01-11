@@ -149,6 +149,7 @@ class Application {
             appComponent.getStreamDataRepo(),
             appComponent.getStatsRepository(),
             appComponent.getUploadRepo(),
+            appComponent.getExtractorFactory(),
           ).apply {
             start()
           }

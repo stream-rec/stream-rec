@@ -24,9 +24,13 @@
  * SOFTWARE.
  */
 
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package github.hua0512.data.media
 
 import github.hua0512.data.stream.StreamInfo
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
 /**
@@ -49,6 +53,7 @@ data class MediaInfo(
   val artist: String,
   val coverUrl: String,
   val artistImageUrl: String,
+  @EncodeDefault(EncodeDefault.Mode.ALWAYS)
   val live: Boolean = false,
   val streams: List<StreamInfo> = emptyList(),
   val extras: Map<String, String> = emptyMap(),

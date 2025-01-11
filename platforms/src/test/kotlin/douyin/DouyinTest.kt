@@ -35,7 +35,6 @@ import github.hua0512.plugins.douyin.download.DouyinExtractor
 import io.exoquery.kmp.pprint
 import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
-import kotlin.test.DefaultAsserter.assertNotNull
 
 /*
  * MIT License
@@ -77,9 +76,11 @@ class DouyinTest : BaseTest<DouyinCombinedApiExtractor>({
 
   test("isLive") {
     val info = extractor.extract()
-    println(pprint(info))
+    println(info)
     info.isOk shouldBeEqual true
-    assertNotNull("failed to extract", info)
+    val mediaInfo = info.value
+    mediaInfo.shouldNotBeNull()
+    println(pprint(mediaInfo))
   }
 
   test("danmu") {
@@ -103,7 +104,7 @@ class DouyinTest : BaseTest<DouyinCombinedApiExtractor>({
 
 }) {
 
-  override val testUrl = "https://live.douyin.com/386003334438"
+  override val testUrl = "https://live.douyin.com/802975310822"
 
   override fun createExtractor(url: String) = DouyinCombinedApiExtractor(app.client, app.json, testUrl)
 }

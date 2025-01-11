@@ -27,6 +27,7 @@ dependencies {
   implementation(libs.io.ktor.server.call.id.jvm)
   implementation(libs.io.ktor.server.content.negotiation.jvm)
   implementation(libs.io.ktor.serialization.kotlinx.json.jvm)
+  implementation(libs.com.michael.bull.kotlin.result)
   implementation(libs.io.ktor.server.websockets.jvm)
   implementation(libs.ch.qos.logback.classic)
   testImplementation(libs.bundles.test.jvm)
