@@ -9,11 +9,16 @@ FROM amazoncorretto:21-al2023-headless
 WORKDIR /app
 
 # Add environment variables for PUID/PGID
-ENV PUID=\${PUID:-1000}
-ENV PGID=\${PGID:-1000}
-ENV HOME=/home/abc
-# Set timezone with ARG for build-time configuration
-ENV TZ=\${TZ:-Europe/Paris}
+ENV PUID=1000
+ENV PGID=1000
+
+
+# Set HOME directory based on PUID/PGID
+RUN if [ "${PUID}" -eq 0 ] && [ "${PGID}" -eq 0 ]; then \
+        export HOME=/root; \
+    else \
+        export HOME=/home/abc; \
+    fi
 
 # Copy application jar
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
@@ -31,9 +36,11 @@ RUN set -ex && \
         tzdata \
         findutils \
         shadow-utils && \
-    # Create group and user
-    groupadd -g ${PGID} abc && \
-    useradd -u ${PUID} -g abc -d ${HOME} -s /bin/bash abc && \
+    # Create group and user if PUID and PGID are not 0
+    if [ "${PUID}" -ne 0 ] && [ "${PGID}" -ne 0 ]; then \
+        groupadd -g ${PGID} abc && \
+        useradd -u ${PUID} -g abc -d ${HOME} -s /bin/bash abc; \
+    fi && \
     # Create directories
     mkdir -p ${HOME}/.local/share/streamlink/plugins && \
     # Install streamlink and plugin
@@ -74,8 +81,11 @@ RUN set -ex && \
         /root/.cache \
         /tmp/*
 
-# Switch to non-root user
-USER abc
+# Set timezone
+ENV TZ=\${TZ:-Europe/Paris}
+
+# Switch to non-root user if PUID and PGID are not 0
+USER ${PUID}:${PGID}
 
 EXPOSE 12555
 
