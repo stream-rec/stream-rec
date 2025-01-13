@@ -30,6 +30,7 @@ dependencies {
   implementation(libs.at.favre.lib.bcrypt)
   implementation(libs.ch.qos.logback.classic)
   implementation(libs.io.ktor.client.core)
+  implementation(libs.org.jetbrains.kotlinx.atomicfu)
   implementation(libs.org.jetbrains.kotlinx.coroutines.core)
   implementation(libs.org.jetbrains.kotlinx.serialization.json)
   implementation(libs.com.google.dagger.dagger)

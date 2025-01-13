@@ -196,7 +196,12 @@ class DownloadService(
     this.streamers = streamers
     streamers.groupBy { it.platform }.forEach {
       val service = getOrInitPlatformService(it.key)
-      it.value.forEach(service::addStreamer)
+      it.value.forEach { streamer ->
+        val result = service.addStreamer(streamer)
+        if (!result) {
+          logger.error("Failed to start download job for {}", streamer)
+        }
+      }
     }
     // listen to streamer changes
     scope.listenToStreamerChanges()

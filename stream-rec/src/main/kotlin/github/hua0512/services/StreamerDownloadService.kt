@@ -90,7 +90,7 @@ private sealed class DownloadState {
  */
 class StreamerDownloadService(
   private val app: App,
-  private var streamer: Streamer,
+  internal var streamer: Streamer,
   private val plugin: PlatformDownloader<out DownloadConfig>,
   private val downloadSemaphore: Semaphore,
 ) {
