@@ -111,7 +111,8 @@ class DownloadPlatformService(
         if (newDelay == fetchDelay) {
           return@collect
         }
-        rateLimiter.updateMinDelay(globalConfig.fetchDelay?.toDuration(DurationUnit.SECONDS)?.inWholeMilliseconds ?: fetchDelay)
+        rateLimiter.updateMinDelay(newDelay)
+        fetchDelay = newDelay
         logger.debug("({}) updated fetchDelay: {}", platform, newDelay)
       }
     }
