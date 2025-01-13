@@ -81,7 +81,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     internal const val IPHONE_WX_UA =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003137) NetType/WIFI Language/zh_CN WeChat/8.0.49.33 CFNetwork/1474 Darwin/23.0.0"
 
-    internal const val HYSDK_UA = "HYSDK(Windows, 20000308)"
+    internal const val HYSDK_UA = "HYSDK(Windows, 21000308)"
 
     internal val requestHeaders = arrayOf(
       HttpHeaders.Origin to BASE_URL,
