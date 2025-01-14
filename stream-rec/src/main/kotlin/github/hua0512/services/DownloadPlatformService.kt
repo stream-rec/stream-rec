@@ -91,7 +91,7 @@ class DownloadPlatformService(
 
   private val stateMutex = Mutex()
   private val streamerStates = ConcurrentHashMap<String, StreamerState>()
-  private val streamerChannel = Channel<Streamer>(Channel.CONFLATED)
+  private val streamerChannel = Channel<Streamer>(Channel.BUFFERED)
 
   private val rateLimiter = RateLimiter(1, fetchDelay)
 
@@ -187,7 +187,6 @@ class DownloadPlatformService(
   private fun handleIntents() {
     streamerChannel.receiveAsFlow()
       .buffer(Channel.BUFFERED)
-      .conflate()
       .onStart {
         logger.debug("({}) starting streamer flow", platform)
       }
