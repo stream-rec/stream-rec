@@ -143,14 +143,20 @@ class DownloadPlatformService(
    * @param newStreamer new streamer configuration if any
    */
   suspend fun cancelStreamer(streamer: Streamer, reason: String? = null, newStreamer: Streamer) = stateMutex.withLock {
-    logger.debug("({}) request to cancel: {} reason: {}", platform, streamer.url, reason)
+    logger.debug(
+      "({}) request to cancel: {} reason: {}, current state: {}",
+      platform,
+      streamer.url,
+      reason,
+      streamerStates[streamer.url]?.state
+    )
 
     // Remove from pending if exists
-    val pendingState = streamerStates[streamer.url]
-    if (pendingState != null) {
+    val currentState = streamerStates[streamer.url]
+    if (currentState?.state == PENDING) {
       logger.debug("({}) removed pending streamer: {}", platform, streamer.url)
-      sendCancellationEvent(pendingState.streamer, "Download cancelled while pending: $reason")
-      pendingState.state = CANCELLED
+      sendCancellationEvent(currentState.streamer, "Download cancelled while pending: $reason")
+      streamerStates.remove(streamer.url)
       return@withLock
     }
 
@@ -236,6 +242,7 @@ class DownloadPlatformService(
         return
       }
       currentState.state = RESERVED
+      logger.debug("({}) streamer {} reserved for download", platform, streamer.url)
       currentState
     }
 
@@ -263,8 +270,14 @@ class DownloadPlatformService(
       }
 
       stateMutex.withLock {
-        if (streamerStates[streamer.url]?.state == RESERVED) {
-          streamerStates[streamer.url]?.downloader = downloader
+        val streamerState = streamerStates[streamer.url]
+        if (streamerState?.state == RESERVED) {
+          streamerState.downloader = downloader
+          streamerState.state = DOWNLOADING
+          logger.debug("({}) streamer {} starting download", platform, streamer.url)
+        } else {
+          logger.debug("({}) streamer {} is no longer reserved", platform, streamer.url)
+          return
         }
       }
       downloader.start()
