@@ -81,7 +81,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     internal const val IPHONE_WX_UA =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003137) NetType/WIFI Language/zh_CN WeChat/8.0.49.33 CFNetwork/1474 Darwin/23.0.0"
 
-    internal const val HYSDK_UA = "HYSDK(Windows, 21000308)"
+    internal val HYSDK_UA: String
+      get() {
+        val currentTs = Clock.System.now().epochSeconds
+        return "HYSDK(Windows, $currentTs)"
+      }
 
     internal val requestHeaders = arrayOf(
       HttpHeaders.Origin to BASE_URL,
@@ -125,6 +129,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       ?.also { rid -> roomId = rid }
       ?.let { Ok(it) }
       ?: Err(ExtractorError.InvalidExtractionUrl)
+
+
+  private fun updateUserAgent() {
+    platformHeaders[HttpHeaders.UserAgent] = HYSDK_UA
+  }
 
   override suspend fun isLive(): Result<Boolean, ExtractorError> {
     val apiResult = getResponse("$BASE_URL/$roomId") {
@@ -310,7 +319,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
                 bitrate = bitrate.toLong(),
                 priority = priority,
                 frameRate = 0.0,
-                extras = mapOf("cdn" to cdn, "streamName" to streamInfo.getStreamName(), "maxBitrate" to maxBitRate.toString())
+                extras = mapOf(
+                  "cdn" to cdn,
+                  "streamName" to streamInfo.getStreamName(),
+                  "maxBitrate" to maxBitRate.toString()
+                )
               )
             )
           }
@@ -427,6 +440,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         )
       )
     }
+
+    updateUserAgent()
     val reqResult = postResponse(WUP_URL) {
       setBody(tokenInfoReq.encode())
     }
@@ -445,7 +460,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val tokenResp = respWup.uniAttribute.getByClass("tRsp", HuyaGetTokenResp())
 
     logger.debug("token info resp: {}", tokenResp)
-    val suffix = if (streamInfo.format == VideoFormat.flv) VideoFormat.flv.fileExtension else VideoFormat.hls.fileExtension
+    val suffix =
+      if (streamInfo.format == VideoFormat.flv) VideoFormat.flv.fileExtension else VideoFormat.hls.fileExtension
 
     val antiCode = if (streamInfo.format == VideoFormat.flv) tokenResp.flvAntiCode else tokenResp.hlsAntiCode
 //    val antiCode = tokenResp.antiCode
