@@ -131,7 +131,7 @@ class DownloadPlatformService(
     }
 
     streamerStates[streamer.url] = StreamerState(streamer, PENDING)
-    streamerChannel.trySend(streamer)
+    streamerChannel.send(streamer)
     logger.debug("({}) added to channel: {}", platform, streamer.url)
     true
   }
