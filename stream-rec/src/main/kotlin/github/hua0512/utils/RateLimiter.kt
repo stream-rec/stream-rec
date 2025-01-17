@@ -77,6 +77,12 @@ class RateLimiter(
    * @return the delay applied, if any
    */
   suspend fun acquire(): Duration = mutex.withLock {
+    // Fast path for 0 minDelayMs
+    if (_minDelayMs == 0L) {
+      availableTokens.value -= 1.0
+      return 0.milliseconds
+    }
+
     // Fast path for first request
     if (isFirstRequest.compareAndSet(expect = true, update = false)) {
       availableTokens.value -= 1.0
@@ -85,10 +91,10 @@ class RateLimiter(
 
     val now = System.nanoTime()
     val timeSinceLastRefill = (now - lastRefillTime.value).nanoseconds
-    
+
     // Always calculate the minimum required delay
     val minRequired = minDelayMs.milliseconds
-    
+
     // If minimum delay hasn't elapsed, wait
     if (timeSinceLastRefill < minRequired) {
       val waitTime = minRequired - timeSinceLastRefill
@@ -101,7 +107,7 @@ class RateLimiter(
       val newTokens = (timeSinceLastRefill / refillInterval).toDouble()
       val currentTokens = availableTokens.value
       val updatedTokens = (currentTokens + newTokens).coerceAtMost(bucketSize.toDouble())
-      
+
       availableTokens.value = updatedTokens
       lastRefillTime.value = now
     }
