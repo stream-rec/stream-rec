@@ -35,6 +35,7 @@ import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.data.stream.StreamingPlatform.*
 import github.hua0512.plugins.download.engines.DownloadEngines
+import github.hua0512.utils.nonEmptyOrNull
 
 /**
  * Streamer config provider
@@ -58,8 +59,8 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
     }
   val newDanmu = templateConfig?.danmu ?: streamerConfig.danmu ?: appConfig.danmu
   val newMaxBitRate = templateConfig?.maxBitRate ?: streamerConfig.maxBitRate
-  val newOutputFolder = templateConfig?.outputFolder ?: streamerConfig.outputFolder ?: appConfig.outputFolder
-  val newOutputFileName = templateConfig?.outputFileName ?: streamerConfig.outputFileName ?: appConfig.outputFileName
+  val newOutputFolder = templateConfig?.outputFolder?.nonEmptyOrNull() ?: streamerConfig.outputFolder?.nonEmptyOrNull() ?: appConfig.outputFolder
+  val newOutputFileName = templateConfig?.outputFileName?.nonEmptyOrNull() ?: streamerConfig.outputFileName?.nonEmptyOrNull() ?: appConfig.outputFileName
   val newOutputFileFormat =
     templateConfig?.outputFileFormat ?: streamerConfig.outputFileFormat ?: appConfig.outputFileFormat
   val onPartedDownload = templateConfig?.onPartedDownload ?: streamerConfig.onPartedDownload
