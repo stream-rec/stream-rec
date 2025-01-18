@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,13 +24,25 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.avc.nal
+package github.hua0512.flv.utils.video
 
-import github.hua0512.flv.data.avc.ExpGolombCodeBitsReader
-import java.util.BitSet
-import kotlin.ranges.until
+import github.hua0512.flv.data.video.avc.nal.SequenceParameterSetData
+import java.util.*
 
-internal object SequenceParameterSetRBSPParser {
+
+// Helper extension function to convert ByteArray to BitSet
+private fun ByteArray.toBitSet(): BitSet {
+  val bitSet = BitSet(this.size * 8)
+  for (i in this.indices) {
+    for (j in 0..7) {
+      bitSet.set(i * 8 + j, (this[i].toInt() shr (7 - j) and 1) == 1)
+    }
+  }
+  return bitSet
+}
+
+
+internal object AVCSequenceParameterSetRBSPParser {
 
   fun parse(rbsp: ByteArray): SequenceParameterSetData {
     val bits = rbsp.toBitSet()
@@ -184,15 +196,4 @@ internal object SequenceParameterSetRBSPParser {
       }
     }
   }
-}
-
-// Helper extension function to convert ByteArray to BitSet
-private fun ByteArray.toBitSet(): BitSet {
-  val bitSet = BitSet(this.size * 8)
-  for (i in this.indices) {
-    for (j in 0..7) {
-      bitSet.set(i * 8 + j, (this[i].toInt() shr (7 - j) and 1) == 1)
-    }
-  }
-  return bitSet
 }

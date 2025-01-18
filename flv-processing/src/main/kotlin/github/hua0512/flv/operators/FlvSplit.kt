@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,14 +29,21 @@ package github.hua0512.flv.operators
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.data.avc.AVCSequenceHeaderParser
-import github.hua0512.flv.data.avc.nal.NalUnit
-import github.hua0512.flv.data.avc.nal.NalUnitParser
-import github.hua0512.flv.data.avc.nal.NalUnitType
+import github.hua0512.flv.data.tag.FlvVideoTagData
+import github.hua0512.flv.data.video.DecoderConfigurationRecord
+import github.hua0512.flv.data.video.FlvVideoCodecId
+import github.hua0512.flv.data.video.VideoFourCC
+import github.hua0512.flv.data.video.avc.AVCDecoderConfigurationRecord
+import github.hua0512.flv.data.video.hevc.nal.HEVCDecoderConfigurationRecord
+import github.hua0512.flv.data.video.nal.NalUnit
 import github.hua0512.flv.utils.isAudioSequenceHeader
 import github.hua0512.flv.utils.isHeader
 import github.hua0512.flv.utils.isTrueScripTag
 import github.hua0512.flv.utils.isVideoSequenceHeader
+import github.hua0512.flv.utils.video.AVCNalUnitParser
+import github.hua0512.flv.utils.video.AVCSequenceHeaderParser
+import github.hua0512.flv.utils.video.HEVCNalParser
+import github.hua0512.flv.utils.video.HEVCSequenceHeaderParser
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import io.exoquery.kmp.pprint
@@ -106,6 +113,50 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
   }
 
 
+  fun checkAVCNalUnits(videoData: FlvVideoTagData) {
+    // Parse NAL units
+    val nalUnits = AVCNalUnitParser.parseNalUnits(videoData.binaryData)
+
+    // Check for SPS and PPS
+    val sps = nalUnits.find { it.nalUnitType.isSps() }
+    val pps = nalUnits.find { it.nalUnitType.isPps() }
+
+    if (sps != null && pps != null) {
+      if (lastSps != null && lastPps != null &&
+        (!sps.rbspBytes.contentEquals(lastSps!!.rbspBytes) ||
+                !pps.rbspBytes.contentEquals(lastPps!!.rbspBytes))
+      ) {
+        logger.info("${context.name} SPS/PPS content changed, marking for split")
+        changed = true
+      }
+      lastSps = sps
+      lastPps = pps
+    }
+  }
+
+  fun checkHEVCNalUnits(videoData: FlvVideoTagData) {
+    // Parse NAL units
+    val nalUnits = HEVCNalParser.parseNalUnits(videoData.binaryData)
+
+    // Check for VPS, SPS and PPS
+    val vps = nalUnits.find { it.nalUnitType.isVps() }
+    val sps = nalUnits.find { it.nalUnitType.isSps() }
+    val pps = nalUnits.find { it.nalUnitType.isPps() }
+
+    if (sps != null && pps != null) {
+      if (lastSps != null && lastPps != null &&
+        (!sps.rbspBytes.contentEquals(lastSps!!.rbspBytes) ||
+                !pps.rbspBytes.contentEquals(lastPps!!.rbspBytes))
+      ) {
+        logger.info("${context.name} HEVC SPS/PPS content changed, marking for split")
+        changed = true
+      }
+      lastSps = sps
+      lastPps = pps
+    }
+  }
+
+
   /**
    * Checks the NAL units within the FLV tag.
    *
@@ -117,45 +168,97 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
    * If any of these checks fail, it sets the `changed` flag to true.
    */
   suspend fun Flow<FlvData>.checkNalUnits(tag: FlvTag) {
-    val nalUnits = NalUnitParser.parseFromH264(tag.data.binaryData)
-    val idrNalUnit = nalUnits.withIndex().firstOrNull { it.value.nalUnitType == NalUnitType.CodedSliceIDR }
-    if (idrNalUnit != null) {
-      // TODO : Consider to add a flag option to enable/disable this check
-      // check if its H.264 Annex B stream format
-      if (idrNalUnit.value.isAnnexB) {
-        // H.264 Annex B stream format do not need to split if SPS, PPS, IDR are in the same tag
-        val sps = nalUnits.withIndex().find { it.value.nalUnitType == NalUnitType.SPS }
-        val pps = nalUnits.withIndex().find { it.value.nalUnitType == NalUnitType.PPS }
-        if (sps != null && pps != null) {
+    val videoData = tag.data as FlvVideoTagData
 
-          // Check if global SPS and PPS are available
-          // Should be the same as the global SPS and PPS
-          if (lastSps != null && lastPps != null) {
-            if (sps.value != lastSps || pps.value != lastPps) {
-              // Annex B format has the ability to decode independently even if SPS, PPS differ from global SPS, PPS
-              // do not need to split the stream
-              logger.debug("${context.name}  Nalu SPS or PPS differ from global...")
-            }
-          }
+    when {
+      videoData.codecId == FlvVideoCodecId.AVC ||
+              (videoData.codecId == FlvVideoCodecId.EX_HEADER && videoData.fourCC == VideoFourCC.AVC1) -> {
+        checkAVCNalUnits(videoData)
+      }
 
-          // check if SPS, PPS, IDR order
-          // normally SPS should be before PPS, and PPS should be before IDR
-          if (sps.index >= pps.index || pps.index >= idrNalUnit.index) {
-            logger.debug("${context.name}  Nalu SPS, PPS, IDR order is incorrect...")
-            splitStream()
-          }
-
-        } else {
-          logger.debug("${context.name} Nalu SPS and PPS not detected...")
-          // rare case, there is no SPS, PPS
-          // TODO : should we insert the global SPS, PPS here? or just split the stream?
-          splitStream()
-        }
+      videoData.codecId == FlvVideoCodecId.HEVC ||
+              (videoData.codecId == FlvVideoCodecId.EX_HEADER && videoData.fourCC == VideoFourCC.HVC1) -> {
+        checkHEVCNalUnits(videoData)
       }
     }
   }
 
 
+  fun checkDecoderConfigRecord(record: DecoderConfigurationRecord) {
+    when (record) {
+      is AVCDecoderConfigurationRecord -> {
+        // Get first SPS and PPS from AVC record
+        val sps = record.sequenceParameterSets.firstOrNull()?.nalUnits?.firstOrNull()
+        val pps = record.pictureParameterSets.firstOrNull()?.nalUnits?.firstOrNull()
+
+        if (sps != null && pps != null) {
+          val spsNalUnit = AVCNalUnitParser.parseNalUnit(sps)
+          val ppsNalUnit = AVCNalUnitParser.parseNalUnit(pps)
+
+          if (lastSps != null && lastPps != null &&
+            (!spsNalUnit.rbspBytes.contentEquals(lastSps!!.rbspBytes) ||
+                    !ppsNalUnit.rbspBytes.contentEquals(lastPps!!.rbspBytes))
+          ) {
+            logger.info("${context.name} AVC decoder config record changed, marking for split")
+            changed = true
+          }
+          lastSps = spsNalUnit
+          lastPps = ppsNalUnit
+        }
+      }
+
+      is HEVCDecoderConfigurationRecord -> {
+        // Find SPS (33) and PPS (34) from HEVC parameter sets
+        val sps = record.parameterSets.find { it.type == 33 }?.nalUnits?.firstOrNull()
+        val pps = record.parameterSets.find { it.type == 34 }?.nalUnits?.firstOrNull()
+
+        if (sps != null && pps != null) {
+          val spsNalUnit = HEVCNalParser.parseNalUnit(sps)
+          val ppsNalUnit = HEVCNalParser.parseNalUnit(pps)
+
+          if (lastSps != null && lastPps != null &&
+            (!spsNalUnit.rbspBytes.contentEquals(lastSps!!.rbspBytes) ||
+                    !ppsNalUnit.rbspBytes.contentEquals(lastPps!!.rbspBytes))
+          ) {
+            logger.info("${context.name} HEVC decoder config record changed, marking for split")
+            changed = true
+          }
+          lastSps = spsNalUnit
+          lastPps = ppsNalUnit
+        }
+      }
+
+      else -> throw IllegalArgumentException("Unsupported decoder configuration record type: ${record::class.simpleName}")
+    }
+  }
+
+  fun checkVideoSequenceHeader(tag: FlvTag) {
+    logger.debug("${context.name} Video sequence tag detected: {}", tag)
+    val videoData = tag.data as FlvVideoTagData
+
+    val configRecord = when {
+      videoData.codecId == FlvVideoCodecId.AVC ||
+              (videoData.codecId == FlvVideoCodecId.EX_HEADER && videoData.fourCC == VideoFourCC.AVC1) -> {
+        AVCSequenceHeaderParser.parse(videoData.binaryData)
+      }
+
+      videoData.codecId == FlvVideoCodecId.HEVC ||
+              (videoData.codecId == FlvVideoCodecId.EX_HEADER && videoData.fourCC == VideoFourCC.HVC1) -> {
+        HEVCSequenceHeaderParser.parse(videoData.binaryData)
+      }
+
+      else -> throw IllegalArgumentException("Unsupported codec ID: ${videoData.codecId}")
+    }
+
+    checkDecoderConfigRecord(configRecord)
+
+    val lastTag = lastVideoSequenceTag
+    if (lastTag != null && lastTag.crc32 != tag.crc32) {
+      logger.info("${context.name} Video sequence header changed (CRC: {} -> {}), marking for split", lastTag.crc32, tag.crc32)
+      changed = true
+    }
+    lastVideoSequenceTag = tag
+  }
 
   collect {
 
@@ -177,58 +280,14 @@ internal fun Flow<FlvData>.split(context: StreamerContext): Flow<FlvData> = flow
       }
 
       tag.isVideoSequenceHeader() -> {
-        logger.debug("${context.name} Video sequence tag detected: {}", tag)
-
-        val avcHeader = AVCSequenceHeaderParser.parse(tag.data.binaryData)
-        var sps: NalUnit? = null
-        var pps: NalUnit? = null
-
-        // should be 1 SPS and 1 PPS
-        if (avcHeader.numOfSequenceParameterSets > 0) {
-          // get the first SPS
-          sps = NalUnitParser.parseNalUnit(avcHeader.sequenceParameterSets.first().nalUnit)
-        }
-        if (avcHeader.numOfPictureParameterSets > 0) {
-          // get the first PPS
-          pps = NalUnitParser.parseNalUnit(avcHeader.pictureParameterSets.first().nalUnit)
-        }
-
-        val lastTag = lastVideoSequenceTag
-        // check if last video sequence tag is not null and not the same as the current tag
-        if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.info("${context.name} Video parameters changed: {} -> {}", lastTag.crc32, tag.crc32)
-          changed = true
-          // Flv streams does not typically use Annex B formatted NAL units
-//          if (lastSps != null && lastPps != null) {
-//            // check if SPS, PPS are available
-//            if (sps == null || pps == null) { // rare case, there is no SPS, PPS
-//              logger.debug("Global SPS or PPS not detected...")
-//              changed = true
-//            } else if (lastSps != sps || lastPps != pps) { // check if SPS, PPS changed
-//              logger.debug("Global SPS or PPS changed...")
-//              // Check later if the stream is in H.264 Annex B format
-//              if (!sps.isAnnexB)
-//                changed = true
-//            } else {
-//              logger.debug("Global SPS and PPS not changed...")
-//            }
-//          } else {
-//            logger.debug("Video parameters changed...")
-//            changed = true
-//          }
-        }
-        lastSps = sps
-        lastPps = pps
-        logger.debug("${context.name} SPS : {}", lastSps)
-        logger.debug("${context.name} PPS : {}", lastPps)
-        lastVideoSequenceTag = tag
+        checkVideoSequenceHeader(tag)
       }
 
       tag.isAudioSequenceHeader() -> {
         logger.debug("${context.name} Audio sequence tag detected: {}", tag)
         val lastTag = lastAudioSequenceTag
         if (lastTag != null && lastTag.crc32 != tag.crc32) {
-          logger.info("${context.name} Audio parameters changed : {} -> {}", lastTag.crc32, tag.crc32)
+          logger.info("${context.name} Audio parameters changed: {} -> {}", lastTag.crc32, tag.crc32)
           changed = true
         }
         lastAudioSequenceTag = tag

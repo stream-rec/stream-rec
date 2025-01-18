@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,28 +24,18 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.avc
+package github.hua0512.flv.data.video.avc.nal
 
-import kotlin.collections.find
+import github.hua0512.flv.data.video.ParameterSet
 
 /**
- * AVC packet type
- * @author hua0512
- * @date : 2024/6/9 9:52
+ * # ISO/IEC 14496-15:2010(E)
+ * # 5.2.4.1.1 Syntax
+ * # 5.2.4.1.2 Semantics
+ *
+ * AVCDecoderConfigurationRecord
  */
-enum class AvcPacketType(val value: Int) {
-  // AVC sequence header
-  AVC_SEQUENCE_HEADER(0),
-
-  // AVC NALU
-  AVC_NALU(1),
-
-  // AVC end of sequence
-  AVC_END_OF_SEQUENCE(2);
-
-  companion object {
-    fun from(value: Int): AvcPacketType? {
-      return AvcPacketType.entries.find { it.value == value }
-    }
-  }
-}
+data class AVCParameterSet(
+  override val type: Int,
+  override val nalUnits: List<ByteArray>,
+) : ParameterSet

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,8 @@
 
 package github.hua0512.flv.data.video
 
+import github.hua0512.flv.exceptions.FlvDataErrorException
+
 /**
  * Flv video codec id
  * @author hua0512
@@ -40,13 +42,15 @@ enum class FlvVideoCodecId(val value: Int) {
   ON2_VP6_ALPHA(5),
   SCREEN_VIDEO_V2(6),
   AVC(7),
+  EX_HEADER(9),
 
-  // Only available in Chinese FLV files
+  // LEGACY HEVC
   HEVC(12);
 
   companion object {
-    fun from(codecId: Int): FlvVideoCodecId? {
-      return FlvVideoCodecId.entries.find { it.value == codecId }
+    fun from(value: Int): FlvVideoCodecId {
+      return entries.find { it.value == value }
+        ?: throw FlvDataErrorException("Unknown video codec ID: $value")
     }
   }
 }

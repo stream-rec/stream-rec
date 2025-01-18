@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,16 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.avc.nal
+package github.hua0512.flv.data.video.nal
 
-data class PictureParameterSet(val length: Int, val nalUnit: ByteArray)
+
+/**
+ *  ISO/IEC 14496-10:2020(E)
+ *  7.3.1 NAL unit syntax
+ *  7.4.1 NAL unit semantics
+ *  Common interface for NAL units (Network Abstraction Layer)
+ */
+interface NalUnit {
+  val nalUnitType: NalUnitType
+  val rbspBytes: ByteArray
+}

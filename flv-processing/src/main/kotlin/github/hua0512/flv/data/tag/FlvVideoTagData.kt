@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,12 +26,10 @@
 
 package github.hua0512.flv.data.tag
 
-import github.hua0512.flv.data.avc.AvcPacketType
-import github.hua0512.flv.data.video.FlvVideoCodecId
-import github.hua0512.flv.data.video.FlvVideoFrameType
-import github.hua0512.flv.data.video.VideoResolution
+import github.hua0512.flv.data.video.*
 import github.hua0512.flv.utils.extractResolution
 import github.hua0512.flv.utils.isAvcHeader
+import github.hua0512.flv.utils.isHevcHeader
 import github.hua0512.flv.utils.writeI24
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
@@ -46,8 +44,10 @@ import kotlinx.serialization.Serializable
 data class FlvVideoTagData(
   val frameType: FlvVideoFrameType,
   val codecId: FlvVideoCodecId,
-  val compositionTime: Int,
-  val avcPacketType: AvcPacketType? = null,
+  val compositionTime: Int = 0,
+  val packetType: VideoPacketType? = null,
+  val fourCC: VideoFourCC? = null,
+  val isExHeader: Boolean = false,
   override val binaryData: ByteArray,
 ) : FlvTagData {
 
@@ -58,23 +58,35 @@ data class FlvVideoTagData(
    * @see isAvcHeader
    */
   val resolution: VideoResolution by lazy {
-    require(isAvcHeader())
+    require(isAvcHeader() || isHevcHeader())
     require(binaryData.size >= 5)
-    val (width, height) = extractResolution(binaryData)
+    val (width, height) = extractResolution(binaryData, codecId)
     VideoResolution(width, height)
   }
 
-  override val headerSize = if (codecId == FlvVideoCodecId.AVC || codecId == FlvVideoCodecId.HEVC) 5 else 1
+  override val headerSize = when (codecId) {
+    FlvVideoCodecId.EX_HEADER -> 9
+    FlvVideoCodecId.AVC, FlvVideoCodecId.HEVC -> 5
+    else -> 1
+  }
 
   override fun write(sink: Sink) {
     val buffer = Buffer()
     with(buffer) {
-      val info = (frameType.value shl 4) or codecId.value
-      writeByte(info.toByte())
-      if (codecId == FlvVideoCodecId.AVC || codecId == FlvVideoCodecId.HEVC) {
-        writeByte(avcPacketType!!.value.toByte())
+      if (isExHeader) {
+        val info = (frameType.value shl 4) or codecId.value
+        writeByte(info.toByte())
+        writeInt(fourCC!!.value)
+      } else {
+        val info = (frameType.value shl 4) or codecId.value
+        writeByte(info.toByte())
       }
-      writeI24(compositionTime)
+
+      if (packetType != null) {
+        writeByte(packetType.value.toByte())
+        writeI24(compositionTime)
+      }
+      
       write(binaryData)
     }
     buffer.transferTo(sink)
@@ -82,7 +94,7 @@ data class FlvVideoTagData(
   }
 
   override fun toString(): String {
-    return "FlvVideoTagData(frameType=$frameType, codecId=$codecId, compositionTime=$compositionTime, avcPacketType=$avcPacketType, data=${binaryData.size} bytes)"
+    return "FlvVideoTagData(frameType=$frameType, codecId=$codecId, compositionTime=$compositionTime, packetType=$packetType, data=${binaryData.size} bytes)"
   }
 
   override fun equals(other: Any?): Boolean {
@@ -95,7 +107,7 @@ data class FlvVideoTagData(
     if (headerSize != other.headerSize) return false
     if (frameType != other.frameType) return false
     if (codecId != other.codecId) return false
-    if (avcPacketType != other.avcPacketType) return false
+    if (packetType != other.packetType) return false
     if (!binaryData.contentEquals(other.binaryData)) return false
     if (resolution != other.resolution) return false
 
@@ -107,7 +119,7 @@ data class FlvVideoTagData(
     result = 31 * result + headerSize
     result = 31 * result + frameType.hashCode()
     result = 31 * result + codecId.hashCode()
-    result = 31 * result + (avcPacketType?.hashCode() ?: 0)
+    result = 31 * result + (packetType?.hashCode() ?: 0)
     result = 31 * result + binaryData.contentHashCode()
     result = 31 * result + resolution.hashCode()
     return result

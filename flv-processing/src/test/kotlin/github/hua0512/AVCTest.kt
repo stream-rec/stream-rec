@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 
 package github.hua0512
 
-import github.hua0512.flv.data.avc.nal.NAL_UNIT_TYPE_END_OF_SEQUENCE
+import github.hua0512.flv.data.video.avc.nal.NAL_UNIT_TYPE_END_OF_SEQUENCE
 import kotlin.test.Test
 import kotlin.test.expect
 

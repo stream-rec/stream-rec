@@ -24,51 +24,36 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
+package github.hua0512.flv.utils.video
 
-import github.hua0512.flv.FlvParser
-import github.hua0512.flv.data.tag.FlvTagData
-import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
-import kotlinx.serialization.Serializable
+import github.hua0512.flv.data.video.hevc.nal.HEVCNalUnit
+import github.hua0512.flv.data.video.hevc.nal.HEVCNalUnitType
 
 /**
- * FLV tag data class
- * @author hua0512
- * @date : 2024/6/9 10:38
+ * Parser for HEVC NAL units
  */
-@Serializable
-data class FlvTag(
-  val num: Int = 0,
-  val header: FlvTagHeader,
-  val data: FlvTagData,
-  override val crc32: Long,
-) : FlvData {
+object HEVCNalParser : BaseNalUnitParser<HEVCNalUnit>() {
+  override fun parseNalUnit(data: ByteArray): HEVCNalUnit {
+    val firstByte = data[0].toInt() and 0xFF
+    val secondByte = data[1].toInt() and 0xFF
 
-  override val size
-    get() = header.dataSize.toLong() + FlvParser.TAG_HEADER_SIZE
-
-  init {
-    if (header.dataSize != data.size) {
-      throw FlvTagHeaderErrorException("Data size mismatch: $this, header size=${header.dataSize}, data size=${data.size}")
+    val forbiddenZeroBit = (firstByte and 0x80) ushr 7
+    if (forbiddenZeroBit != 0) {
+      throw IllegalArgumentException("Forbidden zero bit must be 0")
     }
-  }
 
+    val nalUnitType = (firstByte and 0x7E) ushr 1
+    val nuhLayerId = ((firstByte and 0x01) shl 5) or ((secondByte and 0xF8) ushr 3)
+    val nuhTemporalIdPlus1 = secondByte and 0x07
 
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (other !is FlvTag) return false
-    if (header != other.header) return false
-    if (data != other.data) return false
-    if (crc32 != other.crc32) return false
+    // Extract RBSP bytes (skip NAL unit header)
+    val rbspBytes = data.sliceArray(2 until data.size)
 
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = header.hashCode()
-    result = 31 * result + data.hashCode()
-    result = 31 * result + crc32.hashCode()
-    return result
+    return HEVCNalUnit(
+      nalUnitType = HEVCNalUnitType.valueOf(nalUnitType),
+      nuhLayerId = nuhLayerId,
+      nuhTemporalIdPlus1 = nuhTemporalIdPlus1,
+      rbspBytes = rbspBytes
+    )
   }
 }

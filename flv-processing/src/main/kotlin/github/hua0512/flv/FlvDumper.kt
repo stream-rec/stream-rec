@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.sound.FlvSoundFormat
 import github.hua0512.flv.data.tag.FlvTagHeader
 import github.hua0512.flv.data.video.FlvVideoCodecId
+import github.hua0512.flv.data.video.VideoFourCC
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
 import github.hua0512.flv.utils.AudioData
@@ -88,12 +89,25 @@ internal class FlvDumper(val sink: Sink) : AutoCloseable {
   }
 
   private fun VideoData.dump() {
-    // ensure codec id is valid
-    // TODO : SUPPORT CHINESE HEVC
-    if (codecId != FlvVideoCodecId.AVC) {
-      throw FlvDataErrorException("Unsupported video codec id: $codecId")
+    // Validate codec ID and format
+    when {
+      codecId == FlvVideoCodecId.AVC -> {
+        write(sink)
+      }
+
+      codecId == FlvVideoCodecId.HEVC -> {
+        write(sink)
+      }
+
+      codecId == FlvVideoCodecId.EX_HEADER -> {
+        when (fourCC) {
+          VideoFourCC.AVC1, VideoFourCC.HVC1 -> write(sink)
+          else -> throw FlvDataErrorException("Unsupported video FourCC: $fourCC")
+        }
+      }
+
+      else -> throw FlvDataErrorException("Unsupported video codec: $codecId")
     }
-    write(sink)
   }
 
   private fun ScriptData.dump() {
