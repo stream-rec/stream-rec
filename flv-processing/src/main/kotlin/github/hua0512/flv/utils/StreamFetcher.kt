@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,8 @@ package github.hua0512.flv.utils
 import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.data.video.FlvVideoCodecId
+import github.hua0512.flv.data.video.VideoFourCC
 import github.hua0512.plugins.StreamerContext
 import io.ktor.utils.io.*
 import io.ktor.utils.io.jvm.javaio.*
@@ -52,11 +54,18 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
   val flvReader = FlvReader(ins.asInput())
   var tag: FlvData? = null
 
+  var codecId: FlvVideoCodecId? = null
+  var videoFourCC: VideoFourCC? = null
+
   with(flvReader) {
     try {
       readHeader(::emit)
       readTags(disableLogging = true) {
         tag = it
+        if ((it as FlvTag).isVideoTag()) {
+          codecId = (it.data as VideoData).codecId
+          videoFourCC = it.data.fourCC
+        }
         emit(it)
       }
       FlvReader.logger.debug("${context.name} End of stream")
@@ -72,16 +81,20 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
         close()
       }
       (tag as? FlvTag)?.let {
-        if (it.isAvcEndSequence()) return@let
+        if (it.isEndOfSequence()) return@let
         emit(
           createEndOfSequenceTag(
             it.num + 1,
             it.header.timestamp,
-            it.header.streamId
+            it.header.streamId,
+            codecId = codecId ?: FlvVideoCodecId.AVC,
+            fourCC = videoFourCC ?: VideoFourCC.AVC1
           )
         )
       }
       tag = null
+      codecId = null
+      videoFourCC = null
     }
   }
 }

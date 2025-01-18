@@ -42,7 +42,8 @@ data class FlvAudioTagData(
   val rate: FlvSoundRate,
   val soundSize: FlvSoundSize,
   val type: FlvSoundType,
-  val packetType: AACPacketType?,
+  val fourCC: AudioFourCC? = null,
+  val packetType: AACPacketType? = null,
   override val binaryData: ByteArray,
 ) : FlvTagData {
 

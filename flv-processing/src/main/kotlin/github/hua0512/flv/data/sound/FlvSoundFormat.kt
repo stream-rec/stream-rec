@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,8 @@
 
 package github.hua0512.flv.data.sound
 
+import github.hua0512.flv.exceptions.FlvDataErrorException
+
 /**
  * @author hua0512
  * @date : 2024/6/9 9:33
@@ -43,14 +45,15 @@ enum class FlvSoundFormat(val value: Int) {
   RESERVED(9),
   AAC(10),
   SPEEX(11),
-  MP3_8KHZ(14),
+  MP3_8K(14),
   DEVICE_SPECIFIC(15),
-  UNDEFINED(-1),
+  EX_HEADER(16),
   ;
 
   companion object {
-    fun from(format: Int): FlvSoundFormat {
-      return FlvSoundFormat.entries.find { it.value == format } ?: UNDEFINED
+    fun from(value: Int): FlvSoundFormat {
+      return entries.find { it.value == value }
+        ?: throw FlvDataErrorException("Unknown sound format: $value")
     }
   }
 }

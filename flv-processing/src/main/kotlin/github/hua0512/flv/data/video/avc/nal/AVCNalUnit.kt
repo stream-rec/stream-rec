@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,40 +24,40 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data.avc
+package github.hua0512.flv.data.video.avc.nal
 
-import java.util.BitSet;
+import github.hua0512.flv.data.video.nal.NalUnit
+import github.hua0512.flv.data.video.nal.NalUnitType
 
-internal class ExpGolombCodeBitsReader(private val bits: BitSet) {
+data class AVCNalUnit(
+  override val nalUnitType: NalUnitType,
+  val forbiddenZeroBit: Int,
+  val nalRefIdc: AVCNalIdcType,
+  override val rbspBytes: ByteArray,
+  val isAnnexB: Boolean,
+) : NalUnit {
 
-  private var position = 0
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
 
-  fun readBitsAsInt(numBits: Int): Int {
-    var result = 0
-    for (i in 0 until numBits) {
-      val bit = if (bits.get(position)) 1 else 0
-      result = result shl 1 or bit
-      position++
-    }
+    other as AVCNalUnit
+
+    if (forbiddenZeroBit != other.forbiddenZeroBit) return false
+    if (isAnnexB != other.isAnnexB) return false
+    if (nalUnitType != other.nalUnitType) return false
+    if (nalRefIdc != other.nalRefIdc) return false
+    if (!rbspBytes.contentEquals(other.rbspBytes)) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = forbiddenZeroBit
+    result = 31 * result + isAnnexB.hashCode()
+    result = 31 * result + nalUnitType.hashCode()
+    result = 31 * result + nalRefIdc.hashCode()
+    result = 31 * result + rbspBytes.contentHashCode()
     return result
-  }
-
-  fun readUE(): Int {
-    var leadingZeros = 0
-    while (position < bits.size() && !bits.get(position)) {
-      leadingZeros++
-      position++
-    }
-    position++ // Skip the leading one
-    var value = 0
-    for (i in 0 until leadingZeros) {
-      value = value shl 1 or readBitsAsInt(1)
-    }
-    return value + (1 shl leadingZeros) - 1
-  }
-
-  fun readSE(): Int {
-    val ue = readUE()
-    return if (ue % 2 == 0) ue / 2 else -(ue + 1) / 2
   }
 }

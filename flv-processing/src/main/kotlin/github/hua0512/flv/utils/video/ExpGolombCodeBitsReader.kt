@@ -24,51 +24,40 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
+package github.hua0512.flv.utils.video
 
-import github.hua0512.flv.FlvParser
-import github.hua0512.flv.data.tag.FlvTagData
-import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
-import kotlinx.serialization.Serializable
+import java.util.*
 
-/**
- * FLV tag data class
- * @author hua0512
- * @date : 2024/6/9 10:38
- */
-@Serializable
-data class FlvTag(
-  val num: Int = 0,
-  val header: FlvTagHeader,
-  val data: FlvTagData,
-  override val crc32: Long,
-) : FlvData {
+internal class ExpGolombCodeBitsReader(private val bits: BitSet) {
 
-  override val size
-    get() = header.dataSize.toLong() + FlvParser.TAG_HEADER_SIZE
+  private var position = 0
 
-  init {
-    if (header.dataSize != data.size) {
-      throw FlvTagHeaderErrorException("Data size mismatch: $this, header size=${header.dataSize}, data size=${data.size}")
+  fun readBitsAsInt(numBits: Int): Int {
+    var result = 0
+    for (i in 0 until numBits) {
+      val bit = if (bits.get(position)) 1 else 0
+      result = result shl 1 or bit
+      position++
     }
-  }
-
-
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (other !is FlvTag) return false
-    if (header != other.header) return false
-    if (data != other.data) return false
-    if (crc32 != other.crc32) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = header.hashCode()
-    result = 31 * result + data.hashCode()
-    result = 31 * result + crc32.hashCode()
     return result
+  }
+
+  fun readUE(): Int {
+    var leadingZeros = 0
+    while (position < bits.size() && !bits.get(position)) {
+      leadingZeros++
+      position++
+    }
+    position++ // Skip the leading one
+    var value = 0
+    for (i in 0 until leadingZeros) {
+      value = value shl 1 or readBitsAsInt(1)
+    }
+    return value + (1 shl leadingZeros) - 1
+  }
+
+  fun readSE(): Int {
+    val ue = readUE()
+    return if (ue % 2 == 0) ue / 2 else -(ue + 1) / 2
   }
 }

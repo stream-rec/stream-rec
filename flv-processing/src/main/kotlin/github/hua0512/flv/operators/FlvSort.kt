@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,14 +28,7 @@ package github.hua0512.flv.operators
 
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
-import github.hua0512.flv.utils.isAudioSequenceHeader
-import github.hua0512.flv.utils.isAudioTag
-import github.hua0512.flv.utils.isAvcEndSequence
-import github.hua0512.flv.utils.isHeader
-import github.hua0512.flv.utils.isNaluKeyFrame
-import github.hua0512.flv.utils.isScriptTag
-import github.hua0512.flv.utils.isVideoSequenceHeader
-import github.hua0512.flv.utils.isVideoTag
+import github.hua0512.flv.utils.*
 import github.hua0512.plugins.StreamerContext
 import github.hua0512.utils.logger
 import kotlinx.coroutines.flow.Flow
@@ -139,7 +132,7 @@ internal fun Flow<FlvData>.sort(context: StreamerContext, gopCount: MutableState
   }
 
   collect { data ->
-    if (data.isHeader() || data.isAvcEndSequence()) {
+    if (data.isHeader() || data.isEndOfSequence()) {
       pushTags()
       emit(data)
       logger.debug("${context.name} Reset gop tags...")

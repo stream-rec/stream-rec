@@ -24,51 +24,43 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
-
-import github.hua0512.flv.FlvParser
-import github.hua0512.flv.data.tag.FlvTagData
-import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
-import kotlinx.serialization.Serializable
+package github.hua0512.flv.data.video.nal
 
 /**
- * FLV tag data class
- * @author hua0512
- * @date : 2024/6/9 10:38
+ * Base interface for NAL unit types
  */
-@Serializable
-data class FlvTag(
-  val num: Int = 0,
-  val header: FlvTagHeader,
-  val data: FlvTagData,
-  override val crc32: Long,
-) : FlvData {
+interface NalUnitType {
+  val value: Int
+  val msg: String
 
-  override val size
-    get() = header.dataSize.toLong() + FlvParser.TAG_HEADER_SIZE
+  /**
+   * Returns true if this NAL unit type represents a VCL (Video Coding Layer) NAL unit
+   */
+  fun isVcl(): Boolean
 
-  init {
-    if (header.dataSize != data.size) {
-      throw FlvTagHeaderErrorException("Data size mismatch: $this, header size=${header.dataSize}, data size=${data.size}")
-    }
-  }
+  /**
+   * Returns true if this NAL unit type represents an IDR (Instantaneous Decoding Refresh) picture
+   */
+  fun isIdr(): Boolean
 
+  /**
+   * Returns true if this NAL unit type represents a Video Parameter Set (VPS)
+   * Note: Only applicable for HEVC, will always return false for AVC
+   */
+  fun isVps(): Boolean = false
 
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (other !is FlvTag) return false
-    if (header != other.header) return false
-    if (data != other.data) return false
-    if (crc32 != other.crc32) return false
+  /**
+   * Returns true if this NAL unit type represents a Sequence Parameter Set (SPS)
+   */
+  fun isSps(): Boolean = false
 
-    return true
-  }
+  /**
+   * Returns true if this NAL unit type represents a Picture Parameter Set (PPS)
+   */
+  fun isPps(): Boolean = false
 
-  override fun hashCode(): Int {
-    var result = header.hashCode()
-    result = 31 * result + data.hashCode()
-    result = 31 * result + crc32.hashCode()
-    return result
-  }
-}
+  /**
+   * Returns true if this NAL unit type represents a key frame (IDR or parameter sets)
+   */
+  fun isKeyFrame(): Boolean = isIdr() || isVps() || isSps() || isPps()
+} 
