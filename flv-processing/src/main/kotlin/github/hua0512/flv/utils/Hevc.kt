@@ -31,30 +31,26 @@ import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.data.video.VideoFourCC
 import github.hua0512.flv.data.video.VideoPacketType
 
-/**
- * Checks if the video tag data is an AVC header.
- * @return True if the video tag data is an AVC header, false otherwise.
- */
-/**
- * Extension function to check if a video tag data is an AVC header
- */
-fun FlvVideoTagData.isAvcHeader(): Boolean {
-  return when {
-    codecId == FlvVideoCodecId.AVC && packetType == VideoPacketType.SEQUENCE_HEADER -> true
-    codecId == FlvVideoCodecId.EX_HEADER && fourCC == VideoFourCC.AVC1 &&
-            packetType == VideoPacketType.SEQUENCE_HEADER -> true
 
+/**
+ * Extension function to check if a video tag data is a HEVC header
+ */
+fun FlvVideoTagData.isHevcHeader(): Boolean {
+  return when {
+    codecId == FlvVideoCodecId.HEVC && packetType == VideoPacketType.SEQUENCE_HEADER -> true
+    codecId == FlvVideoCodecId.EX_HEADER && fourCC == VideoFourCC.HVC1 &&
+            packetType == VideoPacketType.SEQUENCE_HEADER -> true
     else -> false
   }
 }
 
 /**
- * Extension function to check if a video tag data is an AVC NALU
+ * Extension function to check if a video tag data is a HEVC NALU
  */
-fun FlvVideoTagData.isAvcNalu(): Boolean {
+fun FlvVideoTagData.isHevcNalu(): Boolean {
   return when {
-    codecId == FlvVideoCodecId.AVC && packetType == VideoPacketType.NALU -> true
-    codecId == FlvVideoCodecId.EX_HEADER && fourCC == VideoFourCC.AVC1 &&
+    codecId == FlvVideoCodecId.HEVC && packetType == VideoPacketType.NALU -> true
+    codecId == FlvVideoCodecId.EX_HEADER && fourCC == VideoFourCC.HVC1 &&
             packetType == VideoPacketType.NALU -> true
 
     else -> false
@@ -62,16 +58,14 @@ fun FlvVideoTagData.isAvcNalu(): Boolean {
 }
 
 /**
- * Extension function to check if a video tag data is an AVC end of sequence
+ * Extension function to check if a video tag data is a HEVC end of sequence
  */
-fun FlvVideoTagData.isAvcEndOfSequence(): Boolean {
+fun FlvVideoTagData.isHevcEndOfSequence(): Boolean {
   return when {
-    codecId == FlvVideoCodecId.AVC && packetType == VideoPacketType.END_OF_SEQUENCE -> true
-    codecId == FlvVideoCodecId.EX_HEADER && fourCC == VideoFourCC.AVC1 &&
+    codecId == FlvVideoCodecId.HEVC && packetType == VideoPacketType.END_OF_SEQUENCE -> true
+    codecId == FlvVideoCodecId.EX_HEADER && fourCC == VideoFourCC.HVC1 &&
             packetType == VideoPacketType.END_OF_SEQUENCE -> true
 
     else -> false
   }
 }
-
-

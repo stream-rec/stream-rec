@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,8 +44,20 @@ enum class FlvVideoFrameType(val value: Int) {
   // Generated key frame, reserved for server use only
   GENERATED_KEY_FRAME(4),
 
+  // If videoFrameType is not ignored and is set to VideoFrameType.Command,         ¦
+  // the payload will not contain video data. Instead, (Ex)VideoTagHeader           ¦
+  // will be followed by a UI8, representing the following meanings:                ¦
+  //                                                                                ¦
+  //     0 = Start of client-side seeking video frame sequence                      ¦
+  //     1 = End of client-side seeking video frame sequence                        ¦
+  //                                                                                ¦
+  // frameType is ignored if videoPacketType is VideoPacketType.MetaData            ¦
   // Video info/command frame
-  VIDEO_INFO_FRAME(5);
+  VIDEO_INFO_FRAME(5),
+
+  RESERVED(6),
+  RESERVED2(7);
+
 
   companion object {
     fun from(value: Int): FlvVideoFrameType? {

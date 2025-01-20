@@ -24,51 +24,30 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
+package github.hua0512.flv.data.video
 
-import github.hua0512.flv.FlvParser
-import github.hua0512.flv.data.tag.FlvTagData
-import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
-import kotlinx.serialization.Serializable
+import github.hua0512.flv.exceptions.FlvDataErrorException
+
 
 /**
- * FLV tag data class
+ * Video packet type
  * @author hua0512
- * @date : 2024/6/9 10:38
+ * @date : 2025/1/9 9:52
  */
-@Serializable
-data class FlvTag(
-  val num: Int = 0,
-  val header: FlvTagHeader,
-  val data: FlvTagData,
-  override val crc32: Long,
-) : FlvData {
+enum class VideoPacketType(val value: Int) {
+  SEQUENCE_HEADER(0),     // AVC/HEVC sequence header
+  NALU(1),               // AVC/HEVC NALU
+  END_OF_SEQUENCE(2),    // AVC/HEVC end of sequence
+  METADATA(3),           // Codec-specific metadata
+  MPEG2TS_SEQUENCE_START(4), // MPEG2-TS sequence start
+  CODED_FRAMES(5),       // Coded frames
+  CODED_FRAMES_X(6),     // Coded frames with composition time = 0
+  ;
 
-  override val size
-    get() = header.dataSize.toLong() + FlvParser.TAG_HEADER_SIZE
-
-  init {
-    if (header.dataSize != data.size) {
-      throw FlvTagHeaderErrorException("Data size mismatch: $this, header size=${header.dataSize}, data size=${data.size}")
+  companion object {
+    fun from(value: Int): VideoPacketType {
+      return entries.find { it.value == value }
+        ?: throw FlvDataErrorException("Unknown video packet type: $value")
     }
   }
-
-
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (other !is FlvTag) return false
-    if (header != other.header) return false
-    if (data != other.data) return false
-    if (crc32 != other.crc32) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = header.hashCode()
-    result = 31 * result + data.hashCode()
-    result = 31 * result + crc32.hashCode()
-    return result
-  }
-}
+} 

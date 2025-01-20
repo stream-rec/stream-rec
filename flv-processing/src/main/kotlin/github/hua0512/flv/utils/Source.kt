@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,8 @@ package github.hua0512.flv.utils
 import github.hua0512.flv.FlvReader
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
+import github.hua0512.flv.data.video.FlvVideoCodecId
+import github.hua0512.flv.data.video.VideoFourCC
 import github.hua0512.flv.exceptions.FlvErrorException
 import io.ktor.utils.io.*
 import kotlinx.coroutines.flow.Flow
@@ -53,11 +55,17 @@ fun Source.asFlvFlow(): Flow<FlvData> = flow {
   val flvReader = FlvReader(this@asFlvFlow)
 
   var lastTag: FlvData? = null
+  var codecId: FlvVideoCodecId? = null
+  var videoFourCC: VideoFourCC? = null
   try {
-    flvReader.use {
-      it.readHeader(::emit)
-      it.readTags(disableLogging = true) {
+    flvReader.use { reader ->
+      reader.readHeader(::emit)
+      reader.readTags(disableLogging = true) {
         lastTag = it
+        if ((it as FlvTag).isVideoTag()) {
+          codecId = (it.data as VideoData).codecId
+          videoFourCC = it.data.fourCC
+        }
         emit(it)
       }
     }
@@ -70,14 +78,25 @@ fun Source.asFlvFlow(): Flow<FlvData> = flow {
       e.printStackTrace()
   } finally {
     lastTag?.let {
-      if (it is FlvTag && it.isAvcEndSequence()) return@let
-      if (it is FlvTag) emit(createEndOfSequenceTag(it.num + 1, it.header.timestamp, it.header.streamId))
+      if (it is FlvTag && it.isEndOfSequence()) return@let
+      if (it is FlvTag) emit(
+        createEndOfSequenceTag(
+          it.num + 1,
+          it.header.timestamp,
+          it.header.streamId,
+          codecId = codecId ?: FlvVideoCodecId.AVC,
+          fourCC = videoFourCC ?: VideoFourCC.AVC1
+        )
+      )
     }
     try {
       close()
     } catch (e: Exception) {
       e.printStackTrace()
     }
+    lastTag = null
+    codecId = null
+    videoFourCC = null
   }
 }
 

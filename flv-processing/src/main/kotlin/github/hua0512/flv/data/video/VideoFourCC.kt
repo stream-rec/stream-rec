@@ -24,51 +24,22 @@
  * SOFTWARE.
  */
 
-package github.hua0512.flv.data
+package github.hua0512.flv.data.video
 
-import github.hua0512.flv.FlvParser
-import github.hua0512.flv.data.tag.FlvTagData
-import github.hua0512.flv.data.tag.FlvTagHeader
-import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
-import kotlinx.serialization.Serializable
+import github.hua0512.flv.exceptions.FlvDataErrorException
 
-/**
- * FLV tag data class
- * @author hua0512
- * @date : 2024/6/9 10:38
- */
-@Serializable
-data class FlvTag(
-  val num: Int = 0,
-  val header: FlvTagHeader,
-  val data: FlvTagData,
-  override val crc32: Long,
-) : FlvData {
+enum class VideoFourCC(val value: Int) {
+  AVC1(0x61766331),  // "avc1"
+  HVC1(0x68766331),  // "hvc1"
+  VP08(0x76703038),  // "vp08"
+  VP09(0x76703039),  // "vp09"
+  AV01(0x61763031),  // "av01"
+  ;
 
-  override val size
-    get() = header.dataSize.toLong() + FlvParser.TAG_HEADER_SIZE
-
-  init {
-    if (header.dataSize != data.size) {
-      throw FlvTagHeaderErrorException("Data size mismatch: $this, header size=${header.dataSize}, data size=${data.size}")
+  companion object {
+    fun from(value: Int): VideoFourCC {
+      return entries.find { it.value == value }
+        ?: throw FlvDataErrorException("Unknown video FourCC: $value")
     }
   }
-
-
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (other !is FlvTag) return false
-    if (header != other.header) return false
-    if (data != other.data) return false
-    if (crc32 != other.crc32) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = header.hashCode()
-    result = 31 * result + data.hashCode()
-    result = 31 * result + crc32.hashCode()
-    return result
-  }
-}
+} 

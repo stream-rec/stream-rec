@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,12 +32,13 @@ import github.hua0512.flv.data.FlvHeaderFlags
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.amf.AmfValue
 import github.hua0512.flv.data.amf.readAmf0Value
-import github.hua0512.flv.data.avc.AvcPacketType
 import github.hua0512.flv.data.sound.*
 import github.hua0512.flv.data.tag.*
 import github.hua0512.flv.data.tag.FlvTagHeaderType.*
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.data.video.FlvVideoFrameType
+import github.hua0512.flv.data.video.VideoFourCC
+import github.hua0512.flv.data.video.VideoPacketType
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
@@ -45,13 +46,9 @@ import github.hua0512.flv.utils.CRC32Sink
 import github.hua0512.flv.utils.readUI24
 import github.hua0512.utils.crc32
 import github.hua0512.utils.logger
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.*
-import kotlinx.io.Buffer
 import java.nio.ByteBuffer
 import kotlin.experimental.and
 
@@ -117,22 +114,7 @@ internal class FlvParser(private val source: Source) {
       source.require(bodySize.toLong())
     } catch (e: EOFException) {
       // wait for more data
-      var hasData = false
-      withTimeoutOrNull(WAIT_FOR_DATA_TIMEOUT) {
-        while (true) {
-          if (source.exhausted() || source.remaining < bodySize) {
-            logger.debug("Waiting for more data, remaining=${source.remaining}, required=$bodySize")
-            delay(1000)
-            continue
-          } else {
-            hasData = true
-            break
-          }
-        }
-      }
-      if (!hasData) {
-        throw EOFException("Waited for more data, but no flv tag data available")
-      }
+      throw EOFException("No flv tag data available")
     }
 
     when (header.tagType) {
@@ -168,14 +150,64 @@ internal class FlvParser(private val source: Source) {
 
     val flag = source.readUByte().toInt()
     val soundFormat = FlvSoundFormat.from(flag ushr 4)
-    if (soundFormat != FlvSoundFormat.AAC) {
-      throw FlvDataErrorException("Unsupported flv sound format: $soundFormat")
+
+    val soundRate: FlvSoundRate
+    val soundSize: FlvSoundSize
+    val soundType: FlvSoundType
+    val audioFourCC: AudioFourCC?
+
+    if (soundFormat == FlvSoundFormat.EX_HEADER) {
+      // ExHeader format
+      // Format specific config byte
+      val formatConfig = source.readUByte().toInt()
+
+      // Get the audio format from the format config
+      val format = AudioFourCC.from(formatConfig)
+      audioFourCC = format
+
+      when (format) {
+        AudioFourCC.AAC -> {
+          soundRate = FlvSoundRate.from((formatConfig ushr 2) and 0x03)
+          soundSize = FlvSoundSize.from((formatConfig ushr 1) and 0x01)
+          soundType = FlvSoundType.from(formatConfig and 0x01)
+        }
+
+        AudioFourCC.OPUS -> {
+          // For Opus, we'll use the rate from the format config
+          // even though Opus internally operates at 48kHz
+          soundRate = FlvSoundRate.from((formatConfig ushr 2) and 0x03)
+          soundSize = FlvSoundSize.SOUND_16_BIT  // Opus uses fixed 16-bit samples
+          soundType = FlvSoundType.STEREO        // Opus uses fixed stereo
+        }
+
+        AudioFourCC.FLAC -> {
+          soundRate = FlvSoundRate.from((formatConfig ushr 2) and 0x03)
+          soundSize = FlvSoundSize.from((formatConfig ushr 1) and 0x01)
+          soundType = FlvSoundType.from(formatConfig and 0x01)
+        }
+
+        AudioFourCC.MP3 -> {
+          soundRate = FlvSoundRate.from((formatConfig ushr 2) and 0x03)
+          soundSize = FlvSoundSize.from((formatConfig ushr 1) and 0x01)
+          soundType = FlvSoundType.from(formatConfig and 0x01)
+        }
+      }
+    } else {
+      // legacy sound format
+      soundRate = FlvSoundRate.from((flag ushr 2) and 0b0000_0011)
+      soundSize = FlvSoundSize.from((flag ushr 1) and 0b0000_0001)
+      soundType = FlvSoundType.from(flag and 0b0000_0001)
+      audioFourCC = null
     }
-    val soundRate = FlvSoundRate.from((flag ushr 2) and 0b0000_0011)
-    val soundSize = FlvSoundSize.from((flag ushr 1) and 0b0000_0001)
-    val soundType = FlvSoundType.from(flag and 0b0000_0001)
+
     // AAC packet type, 1 bit
-    val aacPacketType = source.readUByte().toInt().let { AACPacketType.from(it) }
+    val aacPacketType = if (soundFormat == FlvSoundFormat.AAC ||
+      (soundFormat == FlvSoundFormat.EX_HEADER && audioFourCC == AudioFourCC.AAC)
+    ) {
+      source.readUByte().toInt().let { AACPacketType.from(it) }
+    } else {
+      null
+    }
 
     // Read body data
     val body = source.readByteArray(bodySize)
@@ -188,6 +220,7 @@ internal class FlvParser(private val source: Source) {
       rate = soundRate,
       soundSize = soundSize,
       type = soundType,
+      fourCC = audioFourCC,
       packetType = aacPacketType,
       binaryData = body
     ) to crc32Value
@@ -198,23 +231,58 @@ internal class FlvParser(private val source: Source) {
     val frameTypeValue = flag ushr 4
     val frameType = FlvVideoFrameType.from(frameTypeValue)
       ?: throw FlvDataErrorException("Unsupported flv video frame type: $frameTypeValue")
-    val codecId = flag and 0b0000_1111
-    val codec = FlvVideoCodecId.from(codecId).takeIf { it == FlvVideoCodecId.AVC }
-      ?: throw FlvDataErrorException("Unsupported flv video codec id: $codecId")
-    val avcPacketType = source.readUByte().toInt().let { AvcPacketType.from(it) }
-    val compositionTime = source.readUI24().toInt()
 
-    // Read body data
-    val body = source.readByteArray(bodySize)
+    val codecIdValue = flag and 0b0000_1111
+    val codecId = FlvVideoCodecId.from(codecIdValue)
+
+    val videoFourCC: VideoFourCC?
+    val compositionTime: Int
+    val packetType: VideoPacketType?
+    var isExHeader = false
+    var remainingBodySize = bodySize
+
+    when (codecId) {
+      FlvVideoCodecId.AVC -> {
+        packetType = source.readUByte().toInt().let { VideoPacketType.from(it) }
+        compositionTime = source.readUI24().toInt()
+        videoFourCC = VideoFourCC.AVC1
+      }
+
+      FlvVideoCodecId.HEVC -> {
+        packetType = source.readUByte().toInt().let { VideoPacketType.from(it) }
+        compositionTime = source.readUI24().toInt()
+        videoFourCC = VideoFourCC.HVC1
+      }
+
+      FlvVideoCodecId.EX_HEADER -> {
+        logger.debug("ExHeader video tag detected")
+        isExHeader = true
+        // Read FourCC (4 bytes)
+        val fourCCValue = source.readInt()
+        videoFourCC = VideoFourCC.from(fourCCValue)
+        remainingBodySize -= 4  // Subtract FourCC bytes
+
+        // Read packet type and composition time
+        packetType = source.readUByte().toInt().let { VideoPacketType.from(it) }
+        compositionTime = source.readUI24().toInt()
+      }
+
+      else -> throw FlvDataErrorException("Unsupported video codec: $codecId")
+    }
+
+    // Read remaining body data
+    val body = source.readByteArray(remainingBodySize)
 
     // Calculate CRC32
     val crc32Value = calculateCrc32(body)
 
     return FlvVideoTagData(
       frameType = frameType,
-      codecId = codec,
+      codecId = codecId,
       compositionTime = compositionTime,
-      avcPacketType = avcPacketType,
+      packetType = packetType,
+      fourCC = videoFourCC,
+      isExHeader = isExHeader,
       binaryData = body
     ) to crc32Value
   }
@@ -231,29 +299,12 @@ private fun calculateCrc32(data: ByteArray): Long = data.crc32()
  * @throws FlvTagHeaderErrorException If the FLV tag header is not complete.
  */
 
-internal suspend fun Source.parseTagHeader(): FlvTagHeader {
+internal fun Source.parseTagHeader(): FlvTagHeader {
   // require tag header size
   try {
     require(TAG_HEADER_SIZE.toLong())
   } catch (e: EOFException) {
-    // wait for more data
-    var hasData = false
-    withTimeoutOrNull(WAIT_FOR_DATA_TIMEOUT) {
-      while (true) {
-        if (this@parseTagHeader.exhausted() || this@parseTagHeader.remaining < TAG_HEADER_SIZE) {
-          FlvParser.logger.debug("Waiting for more data, remaining=${this@parseTagHeader.remaining}, required=$TAG_HEADER_SIZE")
-          delay(1000)
-          continue
-        } else {
-          hasData = true
-          break
-        }
-      }
-    }
-    // throw exception if tag header is not complete
-    if (!hasData) {
-      throw EOFException("Waited for more data, but no flv tag header available")
-    }
+    throw EOFException("Waited for more data, but no flv tag header available")
   }
 
   // flag is 1 byte

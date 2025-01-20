@@ -33,11 +33,13 @@ import github.hua0512.flv.data.amf.AmfValue.Amf0Value
 import github.hua0512.flv.data.amf.AmfValue.Amf0Value.*
 import github.hua0512.flv.data.amf.AmfValue.Amf0Value.Number
 import github.hua0512.flv.data.amf.AmfValue.Amf0Value.String
-import github.hua0512.flv.data.avc.AvcPacketType
 import github.hua0512.flv.data.other.FlvKeyframe
+import github.hua0512.flv.data.sound.AACPacketType
 import github.hua0512.flv.data.tag.*
 import github.hua0512.flv.data.video.FlvVideoCodecId
 import github.hua0512.flv.data.video.FlvVideoFrameType
+import github.hua0512.flv.data.video.VideoFourCC
+import github.hua0512.flv.data.video.VideoPacketType
 import github.hua0512.utils.crc32
 
 /**
@@ -65,12 +67,24 @@ fun FlvTag.isAudioTag(): Boolean = this.data is AudioData && this.header.tagType
 
 fun FlvTag.isSequenceHeader(): Boolean = isVideoSequenceHeader() || isAudioSequenceHeader()
 
-fun FlvTag.isVideoSequenceHeader(): Boolean = isVideoTag() && (this.data as VideoData).isAvcHeader()
+fun FlvTag.isVideoSequenceHeader(): Boolean = isVideoTag() && ((this.data as VideoData).isAvcHeader() || this.data.isHevcHeader())
 
 fun FlvTag.isAudioSequenceHeader(): Boolean = isAudioTag() && (this.data as AudioData).isAacHeader()
 
 fun FlvTag.isKeyFrame(): Boolean = isVideoTag() && (this.data as VideoData).isKeyFrame()
 
+fun FlvTag.isNaluKeyFrame(): Boolean {
+  if (!isVideoTag()) return false
+  val videoData = this.data as VideoData
+  if (!videoData.isKeyFrame()) return false
+  return videoData.isAvcNalu() || videoData.isHevcNalu()
+}
+
+fun FlvTag.isNalu(): Boolean {
+  if (!isVideoTag()) return false
+  val videoData = this.data as VideoData
+  return videoData.isAvcNalu() || videoData.isHevcNalu()
+}
 
 fun FlvData.isHeader(): Boolean = this is FlvHeader
 
@@ -87,21 +101,32 @@ fun FlvData.isAvcEndSequence(): Boolean {
   return videoData.isAvcEndOfSequence()
 }
 
-fun FlvTag.isNaluKeyFrame(): Boolean {
+fun FlvData.isHevcEndSequence(): Boolean {
+  if (this !is FlvTag) return false
   if (!isVideoTag()) return false
   val videoData = this.data as FlvVideoTagData
-  if (!videoData.isKeyFrame()) return false
-  return videoData.isAvcNalu()
+  return videoData.isHevcEndOfSequence()
 }
 
-fun FlvTag.isNalu(): Boolean {
-  if (!isVideoTag()) return false
-  val videoData = this.data as FlvVideoTagData
-  return videoData.isAvcNalu()
-}
+fun FlvData.isEndOfSequence(): Boolean = isAvcEndSequence() || isHevcEndSequence()
 
-fun createEndOfSequenceTag(tagNum: Int, timestamp: Int, streamId: Int): FlvTag {
-  val data = createEndOfSequenceData()
+/**
+ * Creates an end of sequence tag for the specified codec.
+ * @param tagNum The tag number
+ * @param timestamp The timestamp
+ * @param streamId The stream ID
+ * @param codecId The codec ID (AVC or HEVC)
+ * @param fourCC The FourCC code (optional, for extended header)
+ * @return A FlvTag representing the end of sequence
+ */
+fun createEndOfSequenceTag(
+  tagNum: Int,
+  timestamp: Int,
+  streamId: Int,
+  codecId: FlvVideoCodecId = FlvVideoCodecId.AVC,
+  fourCC: VideoFourCC? = null,
+): FlvTag {
+  val data = createEndOfSequenceData(codecId, fourCC)
   return FlvTag(
     num = tagNum,
     header = createEndOfSequenceHeader(timestamp, streamId),
@@ -113,15 +138,22 @@ fun createEndOfSequenceTag(tagNum: Int, timestamp: Int, streamId: Int): FlvTag {
 internal fun createEndOfSequenceHeader(timestamp: Int, streamId: Int): FlvTagHeader =
   FlvTagHeader(tagType = FlvTagHeaderType.Video, dataSize = 5, timestamp = timestamp, streamId = streamId)
 
-
-internal fun createEndOfSequenceData(): FlvTagData = FlvVideoTagData(
-  frameType = FlvVideoFrameType.KEY_FRAME,
-  codecId = FlvVideoCodecId.AVC,
-  compositionTime = 0,
-  avcPacketType = AvcPacketType.AVC_END_OF_SEQUENCE,
-  binaryData = byteArrayOf()
-)
-
+/**
+ * Creates end of sequence tag data for the specified codec.
+ * @param codecId The codec ID (AVC or HEVC)
+ * @param fourCC The FourCC code (optional, for extended header)
+ * @return FlvTagData for the end of sequence
+ */
+internal fun createEndOfSequenceData(codecId: FlvVideoCodecId = FlvVideoCodecId.AVC, fourCC: VideoFourCC? = null): FlvTagData {
+  return FlvVideoTagData(
+    frameType = FlvVideoFrameType.KEY_FRAME,
+    codecId = codecId,
+    compositionTime = 0,
+    packetType = VideoPacketType.END_OF_SEQUENCE,
+    binaryData = byteArrayOf(),
+    fourCC = fourCC
+  )
+}
 
 internal fun createMetadataTag(tagNum: Int, timestamp: Int, streamId: Int, data: ScriptData? = null): FlvTag {
   val body = data ?: FlvScriptTagData(
@@ -142,3 +174,16 @@ internal fun createMetadataTag(tagNum: Int, timestamp: Int, streamId: Int, data:
     crc32 = body.binaryData.crc32()
   )
 }
+
+/**
+ * Checks if the video tag data is a key frame.
+ * @return True if the video tag data is a key frame, false otherwise.
+ */
+fun FlvVideoTagData.isKeyFrame(): Boolean = frameType == FlvVideoFrameType.KEY_FRAME
+
+
+/**
+ * Checks if the audio tag data is an AAC header.
+ * @return True if the audio tag data is an AAC header, false otherwise.
+ */
+fun FlvAudioTagData.isAacHeader(): Boolean = packetType == AACPacketType.SequenceHeader
