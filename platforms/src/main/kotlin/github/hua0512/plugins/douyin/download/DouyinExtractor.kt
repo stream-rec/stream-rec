@@ -38,6 +38,7 @@ import github.hua0512.plugins.douyin.download.DouyinApis.Companion.WEBCAST_ENTER
 import github.hua0512.utils.nonEmptyOrNull
 import io.ktor.client.*
 import io.ktor.client.plugins.*
+import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
@@ -85,6 +86,11 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
         requestTimeoutMillis = 15000
       }
       fillWebRid(webRid)
+      // find msToken from cookies
+      val msToken = parseCookies(cookies)["msToken"]
+      if (msToken != null) {
+        parameter("msToken", msToken)
+      }
     }
     if (!(response.status.isSuccess())) throw InvalidExtractionResponseException("$url failed, status code = ${response.status}")
 
@@ -180,7 +186,7 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
     // check if pull_datas is available (double screen streams)
     val pullDatas = liveData["stream_url"]!!.jsonObject["pull_datas"]?.jsonObject
 
-    val pullData = if (pullDatas != null && pullDatas.isNotEmpty()) {
+    val pullData = if (!pullDatas.isNullOrEmpty()) {
       // use the first pull_data
       pullDatas.entries.first().value.jsonObject
     } else {

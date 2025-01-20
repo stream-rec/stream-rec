@@ -77,7 +77,6 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
       parameter("m", "Live")
       parameter("roomid", roomId)
       parameter("showSecret", "1")
-      url.parameters.remove(HttpHeaders.UserAgent)
       userAgent(IPHONE_WX_UA)
     }
 

@@ -28,18 +28,18 @@ package github.hua0512.plugins.douyin.download
 
 import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
-import github.hua0512.plugins.douyin.download.DouyinApis.Companion.LIVE_DOUYIN_URL
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
+import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_VALUE
 import github.hua0512.utils.generateRandomString
 import github.hua0512.utils.logger
-import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.http.HttpHeaders
-import io.ktor.http.parseClientCookiesHeader
-import io.ktor.http.setCookie
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlin.random.Random
 
 /**
@@ -50,9 +50,7 @@ import kotlin.random.Random
 
 
 // cookie parameters
-private var acNonce = atomic<String?>(null)
 private var ttWid = atomic<String?>(null)
-private var odinTT = atomic<String?>(null)
 private var userUniqueId = atomic<Long?>(null)
 
 /**
@@ -70,16 +68,12 @@ private val logger = logger("DouyinCookiesProvider")
  */
 
 private fun generateNonce(): String {
-  return acNonce.value ?: run {
-    val newNonce = generateRandomString(21, noUpperLetters = true, noNumeric = false)
-    val successful = acNonce.compareAndSet(null, newNonce)
-    if (successful) {
-      logger.info("$AC_NONCE_COOKIE(generated): $newNonce")
-    }
-    // Return the current value of NONCE, which may be set by another thread
-    acNonce.value ?: newNonce
-  }
+  return generateRandomString(21, noUpperLetters = true, noNumeric = false, lastChar = 'f')
 }
+
+private fun generateMsToken(): String =
+  generateRandomString(184, noUpperLetters = false, noNumeric = false, additionalLetters = arrayOf('_', '-'))
+
 
 /**
  * Populates the missing parameters (ttwid, __ac_nonce) in the specified Douyin cookies.
@@ -99,20 +93,13 @@ internal suspend fun populateDouyinCookieMissedParams(cookies: String, client: H
     getOrPut(TT_WID_COOKIE) { getDouyinTTwid(client) }
     getOrPut(ODIN_TT_COOKIE) { generateOdinTT() }
     getOrPut(AC_NONCE_COOKIE) { generateNonce() }
+    getOrPut(MS_TOKEN_COOKIE) { generateMsToken() }
   }
 
   return map.entries.joinToString("; ") { "${it.key}=${it.value}" } + ";"
 }
 
-private fun generateOdinTT(): String = odinTT.value ?: run {
-  val newOdinTT = generateRandomString(160, noNumeric = false, noUpperLetters = true)
-  val successful = odinTT.compareAndSet(null, newOdinTT)
-  if (successful) {
-    logger.info("$ODIN_TT_COOKIE(generated): $newOdinTT")
-  }
-  // Return the current value of ODIN_TT, which may be set by another thread
-  odinTT.value ?: newOdinTT
-}
+private fun generateOdinTT(): String = generateRandomString(160, noNumeric = false, noUpperLetters = true, 'f')
 
 /**
  * Makes a request to the Douyin API to get the `ttwid` parameter from the cookies.
@@ -124,13 +111,25 @@ private suspend fun getDouyinTTwid(client: HttpClient): String = ttWid.value ?: 
   val ttwid = fetchCookiesSemaphore.withPermit {
     ttWid.value?.let { return it }
 
-    val response = client.get("${LIVE_DOUYIN_URL}/") {
-      fillDouyinCommonParams()
+    val response = client.post("https://ttwid.bytedance.com/ttwid/union/register/") {
       COMMON_HEADERS.forEach { (key, value) ->
-        header(key, value)
+        // do not add User-Agent header as it is appended automatically
+        if (key != HttpHeaders.UserAgent) header(key, value)
       }
-      header(HttpHeaders.Referrer, LIVE_DOUYIN_URL)
+
+      contentType(ContentType.Application.Json)
+      setBody(
+        buildJsonObject {
+          put("region", "cn")
+          put(AID_KEY, AID_VALUE.toInt())
+          put("needFid", false)
+          put("service", DouyinApis.BASE_URL)
+          put("union", true)
+          put("fid", "")
+        }
+      )
     }
+
     val cookiesList = response.setCookie()
     logger.debug("cookies: {}", cookiesList)
 

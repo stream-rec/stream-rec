@@ -71,9 +71,34 @@ private val signatureJS by lazy {
   val jsDom = """
     document = {};
     window = {};
+    Request = {};
+    Headers = {};
     navigator = {
       userAgent: '$COMMON_USER_AGENT'
     };
+    window.innerHeight = 910;
+    window.innerWidth = 1920;
+    window.outerHeight = 28;
+    window.outerWidth = 160;
+    window.screenX = 0;
+    window.screenY = 9;
+    window.pageYOffset = 0;
+    window.pageXOffset = 0;
+    window.screen = {}
+    window.onwheelx = {"_Ax": "0X21"}
+    window.navigator = navigator
+    window.navigator.cookieEnabled = true;
+    window.navigator.platform = "Win32";
+    window.navigator.language = "zh-CN";
+    window.navigator.appCodeName = "${COMMON_USER_AGENT.substringBefore('/')}";
+    window.navigator.appVersion = "$COMMON_USER_AGENT";
+    window.navigator.onLine = true;
+    window.addEventListener = function() {};
+    window.sessionStorage = {}
+    window.localStorage = {}
+    document.hidden = true;
+    document.webkitHidden = true;
+    document.cookie = '';
   """.trimIndent()
 
   // final JS

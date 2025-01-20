@@ -27,7 +27,7 @@
 package github.hua0512.utils
 
 import java.security.MessageDigest
-import java.util.Base64
+import java.util.*
 
 /**
  * @author hua0512
@@ -70,11 +70,18 @@ fun String.nonEmptyOrNull(): String? = ifEmpty { null }
  * @param noUpperLetters A flag to indicate whether the string should not contain upper-case letters. Defaults to false.
  * @return A random string of the specified length.
  */
-fun generateRandomString(length: Int, noNumeric: Boolean = true, noUpperLetters: Boolean = false): String {
+fun generateRandomString(
+  length: Int,
+  noNumeric: Boolean = true,
+  noUpperLetters: Boolean = false,
+  lastChar: Char = 'z',
+  additionalLetters: Array<Char> = emptyArray(),
+): String {
   val allowedChars = buildList {
-    addAll('a'..'z')
+    addAll('a'..lastChar)
     if (!noNumeric) addAll('0'..'9')
     if (!noUpperLetters) addAll('A'..'Z')
+    if (additionalLetters.isNotEmpty()) addAll(additionalLetters)
   }
   return (1..length)
     .map { allowedChars.random() }

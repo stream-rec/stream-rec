@@ -36,3 +36,4 @@ package github.hua0512.plugins.douyin.download
 internal const val ODIN_TT_COOKIE = "odin_tt"
 internal const val TT_WID_COOKIE = "ttwid"
 internal const val AC_NONCE_COOKIE = "__ac_nonce"
+internal const val MS_TOKEN_COOKIE = "msToken"

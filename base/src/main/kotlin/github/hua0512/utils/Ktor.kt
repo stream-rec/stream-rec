@@ -24,34 +24,41 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.douyin.download
+package github.hua0512.utils
+
+import io.ktor.client.plugins.api.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.util.logging.*
+import io.ktor.utils.io.*
+
+
+private val LOGGER = KtorSimpleLogger("io.ktor.client.plugins.UserAgent")
 
 /**
- * Douyin live room url
+ * A plugin that adds a `User-Agent` header to all requests.
+ * Only adds the header if it is not already set.
  * @author hua0512
- * @date : 2024/10/6 16:41
+ * @date : 2024/11/17 5:00
  */
+@KtorDsl
+public class UserAgentConfig(public var agent: String = "Ktor http-client")
 
+/**
+ * A plugin that adds a `User-Agent` header to all requests.
+ *
+ * @property agent a `User-Agent` header value.
+ */
+public val UserAgent: ClientPlugin<UserAgentConfig> = createClientPlugin("UserAgent", ::UserAgentConfig) {
 
-internal typealias DouyinApi = DouyinApis.Companion
+  val agent = pluginConfig.agent
 
-
-class DouyinApis {
-
-  companion object {
-
-    internal const val BASE_URL = "https://www.douyin.com"
-    internal const val LIVE_DOUYIN_URL = "https://live.douyin.com"
-
-
-    internal const val WEBCAST_ENTER = "${LIVE_DOUYIN_URL}/webcast/room/web/enter/"
-    internal const val APP_ROOM_REFLOW = "https://webcast.amemv.com/webcast/room/reflow/info/"
-
-    internal val webSocketDomains = arrayOf(
-      "wss://webcast5-ws-web-lq.douyin.com",
-      "wss://webcast5-ws-web-hl.douyin.com",
-      "wss://webcast5-ws-web-lf.douyin.com"
-    )
-    internal val randomWebSocketUrl get() = "${webSocketDomains.random()}/webcast/im/push/v2/"
+  onRequest { request, _ ->
+    if (request.headers[HttpHeaders.UserAgent] != null) {
+//      LOGGER.trace("User-Agent header is already set for ${request.url}")
+      return@onRequest
+    }
+    LOGGER.trace("Adding User-Agent header: agent for ${request.url}")
+    request.header(HttpHeaders.UserAgent, agent)
   }
 }

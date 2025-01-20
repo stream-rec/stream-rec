@@ -278,6 +278,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       .flowOn(Dispatchers.Default)
       .buffer()
       .onEach {
+        logger.trace("{}", it)
         addToBuffer(it)
       }
       .catch {

@@ -457,8 +457,7 @@ class StreamerDownloadService(
           // in those cases, cancel the download and throw the exception
           is FatalDownloadErrorException, is CancellationException -> {
             updateStreamerState(StreamerState.FATAL_ERROR)
-            if (e !is CancellationException)
-              logger.error("{} fatal exception", streamer.name, e)
+            logger.error("{} fatal exception", streamer.name, e)
             throw e
           }
 
