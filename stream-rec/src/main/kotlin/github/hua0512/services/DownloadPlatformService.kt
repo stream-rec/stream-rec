@@ -264,12 +264,11 @@ class DownloadPlatformService(
       )
       val updatedStreamer = streamer.copy(downloadConfig = newDownloadConfig)
 
-      val plugin = downloadFactory.createDownloader(app, updatedStreamer.platform, updatedStreamer.url)
-      val downloader = StreamerDownloadService(app, updatedStreamer, plugin, semaphore).apply {
-        init(callback)
-      }
-
       stateMutex.withLock {
+          val plugin = downloadFactory.createDownloader(app, updatedStreamer.platform, updatedStreamer.url)
+          val downloader = StreamerDownloadService(app, updatedStreamer, plugin, semaphore).apply {
+              init(callback)
+          }
         val streamerState = streamerStates[streamer.url]
         if (streamerState?.state == RESERVED) {
           streamerState.downloader = downloader
