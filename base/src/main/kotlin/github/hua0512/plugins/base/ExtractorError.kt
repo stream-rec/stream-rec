@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,42 +24,43 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.platform
+package github.hua0512.plugins.base
 
-import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 
 /**
- * Twitch stream quality
+ * The error class for the extractors.
  * @author hua0512
- * @date : 2024/5/4 14:25
+ * @date : 2024/11/18 21:54
  */
-@Serializable(with = TwitchQualitySerializer::class)
-enum class TwitchQuality(val value: String) {
-  Source("best"),
-  P1080("1080p"),
-  P720("720p"),
-  P480("480p"),
-  P360("360p"),
-  P160("160p"),
-  Audio("audio_only");
-}
+@Serializable
+sealed class ExtractorError {
+  @Serializable
+  data object InvalidExtractionUrl : ExtractorError()
 
-object TwitchQualitySerializer : KSerializer<TwitchQuality> {
-  override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("TwitchQuality", PrimitiveKind.STRING)
+  @Serializable
+  data class InitializationError(@Contextual val throwable: Throwable) : ExtractorError()
 
-  override fun deserialize(decoder: Decoder): TwitchQuality {
-    val value = decoder.decodeString()
-    return TwitchQuality.entries.first { it.value == value }
-  }
+  @Serializable
+  data class ApiError(@Contextual val throwable: Throwable) : ExtractorError()
 
-  override fun serialize(encoder: Encoder, value: TwitchQuality) {
-    encoder.encodeString(value.value)
-  }
+  @Serializable
+  data class InvalidResponse(val message: String) : ExtractorError()
+
+  @Serializable
+  data class JsEngineError(@Contextual val throwable: Throwable) : ExtractorError()
+
+  @Serializable
+  data object StreamerNotFound : ExtractorError()
+
+  @Serializable
+  data object StreamerBanned : ExtractorError()
+
+  @Serializable
+  data object NoStreamsFound : ExtractorError()
+
+  @Serializable
+  data class FallbackError(@Contextual val throwable: Throwable) : ExtractorError()
 
 }

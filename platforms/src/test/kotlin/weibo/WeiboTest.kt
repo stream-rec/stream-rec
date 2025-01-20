@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,59 +28,46 @@ package weibo
 
 import BaseTest
 import github.hua0512.plugins.weibo.download.WeiboExtractor
-import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.expect
+import io.exoquery.kmp.pprint
+import io.kotest.matchers.equals.shouldBeEqual
 
 /**
+ * Weibo platform test
  * @author hua0512
  * @date : 2024/10/19 21:51
  */
-class WeiboTest : BaseTest() {
+class WeiboTest : BaseTest<WeiboExtractor>({
+
+  test("isLive") {
+    val result = extractor.extract()
+    result.isOk shouldBeEqual true
+    val mediaInfo = result.value
+    println(pprint(mediaInfo))
+  }
+
+  test("isLiveWithRid") {
+    extractor = createExtractor("https://weibo.com/l/wblive/p/show/1022:2321325091443718094881")
+    extractor.prepare()
+    val result = extractor.extract()
+    result.isOk shouldBeEqual true
+    val mediaInfo = result.value
+    println(pprint(mediaInfo))
+  }
+
+  test("regex") {
+    extractor.match().isOk shouldBeEqual true
+  }
+
+  test("ridRegex") {
+    val testUrl = "https://weibo.com/l/wblive/p/show/1022:2321325026370190442592"
+    extractor = createExtractor(testUrl)
+    extractor.prepare()
+    extractor.match().isOk shouldBeEqual true
+  }
+
+}) {
 
   override val testUrl: String = "https://weibo.com/u/6034381748?is_hot=1#1573944545407"
 
-  private fun getExtractor(url: String = testUrl): WeiboExtractor {
-    return WeiboExtractor(app.client, app.json, url)
-  }
-
-  @Test
-  override fun testLive() {
-    val extractor = getExtractor()
-    val stream = runTest {
-      extractor.prepare()
-      val mediaInfo = extractor.extract()
-      assertNotNull(mediaInfo)
-      println(mediaInfo)
-    }
-  }
-
-  @Test
-  fun testLive2() {
-    val extractor = getExtractor("https://weibo.com/l/wblive/p/show/1022:2321325091443718094881")
-    val stream = runTest {
-      extractor.prepare()
-      val mediaInfo = extractor.extract()
-      assertNotNull(mediaInfo)
-      println(mediaInfo)
-    }
-  }
-
-  @Test
-  override fun testRegex() {
-    val extractor = getExtractor()
-    expect(true) {
-      extractor.match()
-    }
-  }
-
-  @Test
-  fun testRegex2() {
-    val testUrl = "https://weibo.com/l/wblive/p/show/1022:2321325026370190442592"
-    val extractor = getExtractor(testUrl)
-    expect(true) {
-      extractor.match()
-    }
-  }
+  override fun createExtractor(url: String) = WeiboExtractor(app.client, app.json, url)
 }

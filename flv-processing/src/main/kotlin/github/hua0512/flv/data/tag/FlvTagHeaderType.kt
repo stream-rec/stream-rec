@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,15 +27,22 @@
 package github.hua0512.flv.data.tag
 
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
+import kotlinx.serialization.Serializable
 
 /**
  * Flv tag header type
  * @author hua0512
  * @date : 2024/6/8 13:37
  */
+@Serializable
 sealed class FlvTagHeaderType(val value: Byte) {
+  @Serializable
   data object Audio : FlvTagHeaderType(8)
+
+  @Serializable
   data object Video : FlvTagHeaderType(9)
+
+  @Serializable
   data object ScriptData : FlvTagHeaderType(18)
 
 

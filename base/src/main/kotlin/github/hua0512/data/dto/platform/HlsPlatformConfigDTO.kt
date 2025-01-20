@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,12 +24,15 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.base.exceptions
+package github.hua0512.data.dto.platform
+
+import github.hua0512.data.platform.HlsQuality
 
 /**
- * Exception thrown when the extraction url is invalid
+ * Hls platform config dto
  * @author hua0512
- * @date : 2024/7/5 14:13
+ * @date : 2024/12/4 22:06
  */
-class InvalidExtractionUrlException(override val message: String) : IllegalArgumentException(message) {
+interface HlsPlatformConfigDTO {
+  val quality: HlsQuality?
 }

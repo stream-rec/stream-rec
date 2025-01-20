@@ -27,9 +27,10 @@
 package github.hua0512.app
 
 import github.hua0512.data.config.AppConfig
-import github.hua0512.utils.isWindows
 import io.ktor.client.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
@@ -44,7 +45,9 @@ class App(val json: Json, val client: HttpClient) {
   val config: AppConfig
     get() = appFlow.value ?: throw IllegalStateException("App config not initialized")
 
-  private val appFlow = MutableStateFlow<AppConfig?>(null)
+  private val _appFlow = MutableStateFlow<AppConfig?>(null)
+
+  val appFlow: StateFlow<AppConfig?> = _appFlow.asStateFlow()
 
   fun updateConfig(config: AppConfig) {
     val previous = appFlow.value
@@ -52,7 +55,7 @@ class App(val json: Json, val client: HttpClient) {
     if (isChanged) {
       logger.info("App config changed : {}", config)
     }
-    this.appFlow.value = config
+    this._appFlow.value = config
   }
 
   /**

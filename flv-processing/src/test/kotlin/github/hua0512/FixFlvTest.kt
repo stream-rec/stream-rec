@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -103,7 +103,7 @@ class FixFlvTest {
 
   @Test
   fun testFix() = runTest(timeout = Duration.INFINITE) {
-    val file = File("D:/Downloads/AH师妹Lucky-2024-10-10_03-56-04-【粤】求保灯，油光群快进来.flv")
+    val file = File("E:/test/16_02_26-福州~ 主播恋爱脑！！！.flv")
 
     val source = file.inputStream().asSource().buffered()
 
@@ -115,7 +115,7 @@ class FixFlvTest {
 
     val streamerContext = StreamerContext("test", "")
     source.asFlvFlow()
-      .process(limitsProvider, streamerContext)
+      .process(limitsProvider, streamerContext, duplicateTagFiltering = false)
       .analyze(metaInfoProvider, streamerContext)
       .dump(pathProvider) { index, path, createdAt, updatedAt ->
         println("onStreamDumped: $path, $createdAt -> $updatedAt")

@@ -109,13 +109,13 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         }
       } catch (e: Exception) {
         logger.error("Error receiving stream", e)
-        call.respond(HttpStatusCode.BadRequest)
+        call.respond(HttpStatusCode.BadRequest, "Invalid stream: ${e.message}")
         return@post
       }
 
       val dbStreamer = repo.findStreamerByUrl(streamer.url)
       if (dbStreamer != null) {
-        call.respond(HttpStatusCode.BadRequest, "Streamer already exists")
+        call.respond(HttpStatusCode.Conflict, "Streamer already exists")
         return@post
       }
       try {
@@ -128,7 +128,7 @@ fun Route.streamerRoute(repo: StreamerRepo) {
         call.respond(saved)
       } catch (e: Exception) {
         logger.error("Error saving stream", e)
-        call.respond(HttpStatusCode.BadRequest)
+        call.respond(HttpStatusCode.InternalServerError, "Error saving stream: ${e.message}")
         return@post
       }
     }

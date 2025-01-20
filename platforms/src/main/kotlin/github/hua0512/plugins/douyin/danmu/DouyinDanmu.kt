@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -126,7 +126,12 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     userUniqueId = getValidUserId().toString()
     requestParams[USER_UNIQUE_KEY] = userUniqueId!!
     // update signature
-    requestParams[SIGNATURE_KEY] = getSignature(requestParams[ROOM_ID_KEY]!!, userUniqueId!!)
+    val signatureResult = getSignature(requestParams[ROOM_ID_KEY]!!, userUniqueId!!)
+    if (signatureResult.isErr) {
+      logger.error("{} Failed to get douyin signature: {}", idStr, signatureResult.error)
+      return
+    }
+    requestParams[SIGNATURE_KEY] = signatureResult.value
   }
 
   override fun oneHello(): ByteArray {

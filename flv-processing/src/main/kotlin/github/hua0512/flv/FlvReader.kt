@@ -72,7 +72,7 @@ internal class FlvReader(val source: Source) : AutoCloseable {
     val previousTagSize = parser.parsePreviousTagSize()
     if (previousTagSize != tag.size.toInt()) {
       if (tag.data is ScriptData) {
-        logger.warn("Ignored mismatched previous tag size for script tag, expect ${tag.size}, but got $previousTagSize")
+//        logger.warn("Ignored mismatched previous tag size for script tag, expect ${tag.size}, but got $previousTagSize")
         return tag
       }
       logger.error("Previous tag size not match, expect ${tag.size}, but got $previousTagSize")

@@ -41,14 +41,22 @@ import github.hua0512.flv.data.video.FlvVideoFrameType
 import github.hua0512.flv.exceptions.FlvDataErrorException
 import github.hua0512.flv.exceptions.FlvHeaderErrorException
 import github.hua0512.flv.exceptions.FlvTagHeaderErrorException
+import github.hua0512.flv.utils.CRC32Sink
 import github.hua0512.flv.utils.readUI24
 import github.hua0512.utils.crc32
 import github.hua0512.utils.logger
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.*
+import kotlinx.io.Buffer
 import java.nio.ByteBuffer
 import kotlin.experimental.and
+
+private const val WAIT_FOR_DATA_TIMEOUT = 30000L
+
 
 /***
  * FLV parser
@@ -65,6 +73,7 @@ internal class FlvParser(private val source: Source) {
     internal const val AUDIO_TAG_HEADER_SIZE = 2
     internal const val VIDEO_TAG_HEADER_SIZE = 5
 
+
     private const val TAG = "FlvParser"
     internal val logger = logger(TAG)
   }
@@ -79,11 +88,15 @@ internal class FlvParser(private val source: Source) {
     }
 
     val buffer = source.readByteArray(9)
+    val crc32Sink = CRC32Sink(discardingSink())
+    crc32Sink.buffered().use {
+      it.write(buffer)
+    }
     val signature = buffer.sliceArray(0 until 3).toString(Charsets.UTF_8)
     val version = buffer[3]
     val flags = FlvHeaderFlags(buffer[4].toInt())
     val headerSize = buffer.sliceArray(5 until 9).let { ByteBuffer.wrap(it).int }
-    FlvHeader(signature, version.toInt(), flags, headerSize, buffer.crc32())
+    FlvHeader(signature, version.toInt(), flags, headerSize, crc32Sink.crc32().toLong())
   }
 
   fun parsePreviousTagSize(): Int = source.readInt()
@@ -103,22 +116,38 @@ internal class FlvParser(private val source: Source) {
     try {
       source.require(bodySize.toLong())
     } catch (e: EOFException) {
-      throw FlvDataErrorException("FLV tag data not complete")
+      // wait for more data
+      var hasData = false
+      withTimeoutOrNull(WAIT_FOR_DATA_TIMEOUT) {
+        while (true) {
+          if (source.exhausted() || source.remaining < bodySize) {
+            logger.debug("Waiting for more data, remaining=${source.remaining}, required=$bodySize")
+            delay(1000)
+            continue
+          } else {
+            hasData = true
+            break
+          }
+        }
+      }
+      if (!hasData) {
+        throw EOFException("Waited for more data, but no flv tag data available")
+      }
     }
 
     when (header.tagType) {
       Audio -> parseAudioTagData(bodySize).let {
-        FlvTag(++tagNum, header, it, it.binaryData.crc32())
+        FlvTag(++tagNum, header, it.first, it.second)
       }
 
       Video -> parseVideoTagData(bodySize).let {
-        FlvTag(++tagNum, header, it, it.binaryData.crc32())
+        FlvTag(++tagNum, header, it.first, it.second)
       }
 
       ScriptData -> source.parseScriptTagData(bodySize).let { data ->
-        if (header.dataSize != data.first.size) {
-          logger.warn("Script tag size mismatch: header=${header.dataSize}, body=${data.first.size}")
-        }
+//        if (header.dataSize != data.first.size) {
+//          logger.warn("Script tag size mismatch: header=${header.dataSize}, body=${data.first.size}")
+//        }
         // update data size to actual body size
         // this is to avoid the case where the script tag size is larger than the actual body size
         // probable due to incorrect size calculation, or missing data in parsing, etc.
@@ -130,7 +159,7 @@ internal class FlvParser(private val source: Source) {
   }
 
 
-  private fun parseAudioTagData(bodySize: Int): FlvAudioTagData {
+  private fun parseAudioTagData(bodySize: Int): Pair<FlvAudioTagData, Long> {
     try {
       source.require(bodySize.toLong())
     } catch (e: EOFException) {
@@ -147,8 +176,13 @@ internal class FlvParser(private val source: Source) {
     val soundType = FlvSoundType.from(flag and 0b0000_0001)
     // AAC packet type, 1 bit
     val aacPacketType = source.readUByte().toInt().let { AACPacketType.from(it) }
-    // read body
+
+    // Read body data
     val body = source.readByteArray(bodySize)
+
+    // Calculate CRC32
+    val crc32Value = calculateCrc32(body)
+
     return FlvAudioTagData(
       format = soundFormat,
       rate = soundRate,
@@ -156,33 +190,39 @@ internal class FlvParser(private val source: Source) {
       type = soundType,
       packetType = aacPacketType,
       binaryData = body
-    )
+    ) to crc32Value
   }
 
-  private fun parseVideoTagData(bodySize: Int): FlvVideoTagData {
+  private fun parseVideoTagData(bodySize: Int): Pair<FlvVideoTagData, Long> {
     val flag = source.readUByte().toInt()
     val frameTypeValue = flag ushr 4
     val frameType = FlvVideoFrameType.from(frameTypeValue)
       ?: throw FlvDataErrorException("Unsupported flv video frame type: $frameTypeValue")
     val codecId = flag and 0b0000_1111
-    val codec = FlvVideoCodecId.from(codecId) ?: throw FlvDataErrorException("Unsupported flv video codec id: $codecId")
-    // TODO : SUPPORT CHINESE HEVC
-    if (codec != FlvVideoCodecId.AVC) {
-      throw FlvDataErrorException("Unsupported flv video codec: $codec")
-    }
+    val codec = FlvVideoCodecId.from(codecId).takeIf { it == FlvVideoCodecId.AVC }
+      ?: throw FlvDataErrorException("Unsupported flv video codec id: $codecId")
     val avcPacketType = source.readUByte().toInt().let { AvcPacketType.from(it) }
     val compositionTime = source.readUI24().toInt()
-    val data = source.readByteArray(bodySize)
+
+    // Read body data
+    val body = source.readByteArray(bodySize)
+
+    // Calculate CRC32
+    val crc32Value = calculateCrc32(body)
+
     return FlvVideoTagData(
       frameType = frameType,
       codecId = codec,
       compositionTime = compositionTime,
       avcPacketType = avcPacketType,
-      binaryData = data
-    )
+      binaryData = body
+    ) to crc32Value
   }
-
 }
+
+// Helper function to calculate CRC32
+private fun calculateCrc32(data: ByteArray): Long = data.crc32()
+
 
 /**
  * Parse FLV tag header
@@ -191,14 +231,29 @@ internal class FlvParser(private val source: Source) {
  * @throws FlvTagHeaderErrorException If the FLV tag header is not complete.
  */
 
-internal fun Source.parseTagHeader(): FlvTagHeader {
-
+internal suspend fun Source.parseTagHeader(): FlvTagHeader {
   // require tag header size
   try {
     require(TAG_HEADER_SIZE.toLong())
   } catch (e: EOFException) {
+    // wait for more data
+    var hasData = false
+    withTimeoutOrNull(WAIT_FOR_DATA_TIMEOUT) {
+      while (true) {
+        if (this@parseTagHeader.exhausted() || this@parseTagHeader.remaining < TAG_HEADER_SIZE) {
+          FlvParser.logger.debug("Waiting for more data, remaining=${this@parseTagHeader.remaining}, required=$TAG_HEADER_SIZE")
+          delay(1000)
+          continue
+        } else {
+          hasData = true
+          break
+        }
+      }
+    }
     // throw exception if tag header is not complete
-    throw FlvTagHeaderErrorException("FLV tag header not complete")
+    if (!hasData) {
+      throw EOFException("Waited for more data, but no flv tag header available")
+    }
   }
 
   // flag is 1 byte
@@ -237,16 +292,18 @@ internal fun Source.parseScriptTagData(bodySize: Int): Pair<FlvScriptTagData, Lo
     throw FlvDataErrorException("FLV script tag data not complete")
   }
 
-  // TODO : FIND A WAY TO OPTIMIZE THIS (AVOID COPYING)
-  val byteArray = buffer.copy().readByteArray()
-  val crc32 = byteArray.crc32()
+  // Create a copy of the data for CRC calculation
+  val body = buffer.copy().use {
+    it.readByteArray()
+  }
 
   val amfValues = mutableListOf<AmfValue>()
-
-  // amf3 metadata is not supported/used in flv format, so we only read amf0 values
+  // Read AMF values from the original buffer
   buffer.use {
-    while (!it.exhausted())
+    while (!it.exhausted()) {
       amfValues.add(readAmf0Value(it))
+    }
   }
-  return FlvScriptTagData(amfValues) to crc32
+
+  return FlvScriptTagData(amfValues) to calculateCrc32(body)
 }

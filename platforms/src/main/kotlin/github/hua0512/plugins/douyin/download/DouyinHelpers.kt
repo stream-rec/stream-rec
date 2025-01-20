@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,11 @@
 
 package github.hua0512.plugins.douyin.download
 
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.map
+import com.github.michaelbull.result.toErrorIfNull
+import com.github.michaelbull.result.toResultOr
+import github.hua0512.plugins.base.ExtractorError.InvalidExtractionUrl
 import github.hua0512.plugins.douyin.download.DouyinExtractor.Companion.URL_REGEX
 import io.ktor.client.request.*
 
@@ -40,13 +44,18 @@ import io.ktor.client.request.*
  * Extracts the Douyin webrid from the specified URL.
  *
  * @param url The URL from which to extract the Douyin webrid
- * @return The Douyin room ID, or `null` if the webrid could not be extracted
+ * @return the extracted Douyin webrid or an error if the URL is invalid
  */
-internal fun extractDouyinWebRid(url: String): String? {
-  if (url.isEmpty()) return null
+internal fun extractDouyinWebRid(url: String): Result<String, InvalidExtractionUrl> {
   val roomIdPattern = URL_REGEX.toRegex()
-  return roomIdPattern.find(url)?.groupValues?.get(1) ?: run {
-    throw InvalidExtractionUrlException("Failed to get douyin room id from url: $url")
+  return url.takeIf { it.isNotEmpty() }.toResultOr {
+    InvalidExtractionUrl
+  }.map {
+    roomIdPattern.find(url)?.groupValues?.get(1)
+  }.toErrorIfNull {
+    InvalidExtractionUrl
+  }.map {
+    it
   }
 }
 

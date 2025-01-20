@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,17 +26,19 @@
 
 package github.hua0512.plugins.huya.download
 
+import com.github.michaelbull.result.*
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
-import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+import github.hua0512.plugins.base.ExtractorError
+import github.hua0512.plugins.huya.danmu.msg.req.HuyaGetTokenReq
+import github.hua0512.plugins.huya.danmu.msg.req.HuyaGetTokenResp
+import github.hua0512.plugins.huya.danmu.msg.req.HuyaWup
 import github.hua0512.utils.decodeBase64
 import github.hua0512.utils.md5
 import github.hua0512.utils.nonEmptyOrNull
+import io.exoquery.kmp.pprint
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -47,7 +49,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.*
-import kotlin.collections.set
 import kotlin.random.Random
 
 /**
@@ -59,6 +60,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   Extractor(http, json) {
   companion object {
     const val BASE_URL = "https://www.huya.com"
+    const val WUP_URL = "https://wup.huya.com"
     const val COOKIE_URL = "https://udblgn.huya.com/web/cookie/verify"
     const val URL_REGEX = "(?:https?://)?(?:(?:www|m)\\.)?huya\\.com/([a-zA-Z0-9]+)"
     const val ROOM_DATA_REGEX = "var TT_ROOM_DATA = (.*?);"
@@ -73,15 +75,22 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     const val TOPSID_REGEX = "lChannelId\":\"?(\\d+)\"?"
     const val SUBID_REGEX = "lSubChannelId\":\"?(\\d+)\"?"
     const val PRESENTER_UID_REGEX = "lPresenterUid\":\"?(\\d+)\"?"
+    const val UID_REGEX = "uid\":\"?(\\d+)\"?"
     const val GID_REGEX = "gid\":\"?(\\d+)\"?"
 
     internal const val IPHONE_WX_UA =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003137) NetType/WIFI Language/zh_CN WeChat/8.0.49.33 CFNetwork/1474 Darwin/23.0.0"
 
+    internal val HYSDK_UA: String
+      get() {
+        val currentTs = Clock.System.now().epochSeconds
+        return "HYSDK(Windows, $currentTs)"
+      }
 
     internal val requestHeaders = arrayOf(
       HttpHeaders.Origin to BASE_URL,
-      HttpHeaders.Referrer to BASE_URL
+      HttpHeaders.Referrer to BASE_URL,
+      HttpHeaders.UserAgent to HYSDK_UA
     )
 
     private const val APP_ID = 5002
@@ -105,6 +114,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   internal var userId = 0L
   private var isCookieVerified = false
   var forceOrigin = false
+  var hasErrorOcurred = false
 
 
   init {
@@ -113,37 +123,35 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     }
   }
 
-  override fun match(): Boolean {
-    roomId = try {
-      val matchResult = regexPattern.find(url) ?: return false
-      matchResult.groupValues.last()
-    } catch (e: Exception) {
-      throw InvalidExtractionUrlException("Invalid url $url, ${e.message}")
-    }
-    if (roomId.isEmpty()) {
-      throw InvalidExtractionUrlException("Invalid empty roomId, $url")
-    }
+  override fun match() =
+    regexPattern.find(url)?.groupValues?.last()
+      ?.takeIf { it.isNotEmpty() }
+      ?.also { rid -> roomId = rid }
+      ?.let { Ok(it) }
+      ?: Err(ExtractorError.InvalidExtractionUrl)
 
-    return true
+
+  private fun updateUserAgent() {
+    platformHeaders[HttpHeaders.UserAgent] = HYSDK_UA
   }
 
-  override suspend fun isLive(): Boolean {
-    val response: HttpResponse = getResponse("$BASE_URL/$roomId") {
+  override suspend fun isLive(): Result<Boolean, ExtractorError> {
+    val apiResult = getResponse("$BASE_URL/$roomId") {
       timeout {
         requestTimeoutMillis = 15000
       }
     }
-    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $url")
+    if (apiResult.isErr) return apiResult.asOk()
+
+    val response = apiResult.value
 
     htmlResponseBody = response.bodyAsText().apply {
-      if (isEmpty()) {
-        throw InvalidExtractionParamsException("Empty response body from $url")
-      }
-      if (contains("找不到这个主播")) {
-        throw InvalidExtractionStreamerNotFoundException(url)
+      val uid = UID_REGEX.toRegex().find(this)?.groupValues?.get(1)?.toLongOrNull()
+      if (uid == 0L || contains("找不到这个主播")) {
+        return Err(ExtractorError.StreamerNotFound)
       }
       if (contains("该主播涉嫌违规，正在整改中")) {
-        throw InvalidExtractionParamsException("$url invalid url, streamer is banned")
+        return Err(ExtractorError.StreamerBanned)
       }
     }
 
@@ -152,31 +160,33 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 //    subid = subidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
     presenterUid = presenterUidPattern.find(htmlResponseBody)?.groupValues?.get(1)?.toLong() ?: 0
 
-    val matchResult = ROOM_DATA_REGEX.toRegex().find(htmlResponseBody)?.also {
-      if (it.value.isEmpty()) {
-        throw InvalidExtractionParamsException("Empty TT_ROOM_DATA from $url")
-      }
-    } ?: throw InvalidExtractionParamsException("Unable to extract TT_ROOM_DATA from $url")
 
-    val matchJson = matchResult.groupValues[1].apply {
-      if (isEmpty()) {
-        throw InvalidExtractionParamsException("Empty TT_ROOM_DATA content from $url")
-      }
+    val matchResult = ROOM_DATA_REGEX.toRegex().find(htmlResponseBody).toResultOr {
+      ExtractorError.InvalidResponse("TT_ROOM_DATA not found")
+    }.toErrorIf({ it.value.isEmpty() }) {
+      ExtractorError.InvalidResponse("TT_ROOM_DATA is empty")
     }
+
+    if (matchResult.isErr) return matchResult.asErr()
     val stateRegex = STATE_REGEX.toRegex()
-    val state = stateRegex.find(matchJson)?.groupValues?.get(1) ?: ""
-    if (state.isEmpty()) {
-      throw InvalidExtractionParamsException("Unable to extract state from $url")
+
+    return stateRegex.find(matchResult.value.groupValues[1])?.groupValues?.get(1).toResultOr {
+      ExtractorError.InvalidResponse("state not found")
+    }.andThen {
+      Ok(it == "ON")
     }
-    return state == "ON"
   }
 
-  override suspend fun extract(): MediaInfo {
+  override suspend fun extract(): Result<MediaInfo, ExtractorError> {
     // validate cookie
     validateCookie()
 
     // get live status
-    val isLive = isLive()
+    val liveResult = isLive()
+
+    if (liveResult.isErr) {
+      return liveResult.asErr()
+    }
 
     // get media info from htmlResponseBody
     val avatarUrl = AVATAR_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1) ?: "".also {
@@ -195,42 +205,63 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     val coverUrl = SCREENSHOT_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1) ?: "".also {
       logger.debug("failed to extract screenshot from $url")
     }
+
+    val live = liveResult.value
     val mediaInfo = MediaInfo(
       site = BASE_URL,
       title = streamTitle,
       artist = streamerName,
       coverUrl = coverUrl,
       artistImageUrl = avatarUrl,
-      live = isLive,
+      live = live,
     )
 
     // if not live, return basic media info
-    if (!isLive) return mediaInfo
+    if (!live) return Ok(mediaInfo)
 
     val gid = GID_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1)?.toInt() ?: 0
 
     checkShouldSkipQuery(gid)
 
-    val streamRegex = STREAM_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1) ?: "".also {
-      throw InvalidExtractionParamsException("Unable to extract stream from $url")
+
+    val parseStreamJsonResult = STREAM_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1).toResultOr {
+      ExtractorError.InvalidResponse("stream section not found")
+    }.map {
+      json.parseToJsonElement(it)
+    }.toErrorUnless({ it is JsonObject && it.isNotEmpty() }) {
+      ExtractorError.InvalidResponse("stream section failed to parse: $it")
+    }.map {
+      it.jsonObject
     }
 
-    val streamJson = json.parseToJsonElement(streamRegex).jsonObject
+    if (parseStreamJsonResult.isErr) {
+      return parseStreamJsonResult.asErr()
+    }
+
+    val streamJson = parseStreamJsonResult.value
 
     val vMultiStreamInfo =
-      streamJson["vMultiStreamInfo"] ?: throw InvalidExtractionParamsException("$url vMultiStreamInfo is null")
+      streamJson["vMultiStreamInfo"] ?: return Err(ExtractorError.InvalidResponse("vMultiStreamInfo is null"))
 
     val data =
-      streamJson["data"]?.jsonArray?.getOrNull(0)?.jsonObject ?: throw InvalidExtractionParamsException("$url data is null")
+      streamJson["data"]?.jsonArray?.getOrNull(0)?.jsonObject
+        ?: return Err(ExtractorError.InvalidResponse("data is null"))
+
+    val gameLiveInfo =
+      data["gameLiveInfo"]?.jsonObject ?: return Err(ExtractorError.InvalidResponse("gameLiveInfo is null"))
 
 
-    val gameLiveInfo = data["gameLiveInfo"]?.jsonObject ?: throw InvalidExtractionParamsException("$url gameLiveInfo is null")
+    val gameStreamInfoListResult = data["gameStreamInfoList"]?.jsonArray.toResultOr {
+      ExtractorError.InvalidResponse("gameStreamInfoList is null")
+    }.toErrorIf({ it.isEmpty() }) {
+      ExtractorError.InvalidResponse("gameStreamInfoList is empty")
+    }
 
+    if (gameStreamInfoListResult.isErr) {
+      return gameStreamInfoListResult.asErr()
+    }
 
-    val gameStreamInfoList = data["gameStreamInfoList"]?.jsonArray.run {
-      if (isNullOrEmpty()) null
-      else this
-    } ?: throw InvalidExtractionParamsException("$url gameStreamInfoList is null")
+    val gameStreamInfoList = gameStreamInfoListResult.value
 
     // default bitrate
     val defaultBitrate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0
@@ -245,7 +276,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     }
     val streams = extractLiveStreams(gameStreamInfoList, bitrateList, defaultBitrate)
 
-    return mediaInfo.copy(streams = streams)
+    return Ok(mediaInfo.copy(streams = streams))
   }
 
   protected suspend fun extractLiveStreams(
@@ -266,7 +297,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
           userId = cookies.nonEmptyOrNull()?.let {
             val cookie = parseClientCookiesHeader(cookies)
             cookie["yyuid"]?.toLongOrNull() ?: cookie["udb_uid"]?.toLongOrNull()
-          } ?: streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull() ?: (12340000L..12349999L).random()
+          } ?: streamInfo.jsonObject["lPresenterUid"]?.jsonPrimitive?.content?.toLongOrNull()
+                  ?: (12340000L..12349999L).random()
         }
         val cdn = streamInfo.jsonObject["sCdnType"]?.jsonPrimitive?.content ?: ""
 
@@ -274,9 +306,9 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
         arrayOf(true, false).forEach buildLoop@{ isFlv ->
           val streamUrl = buildUrl(streamInfo, userId, time, null, isFlv).nonEmptyOrNull() ?: return@buildLoop
-          bitrateList.forEach { (bitrate, displayName) ->
+          bitrateList.forEach bitrateLoop@{ (bitrate, displayName) ->
             // Skip HDR streams as they are not supported
-            if (displayName.contains("HDR")) return@forEach
+            if (displayName.contains("HDR")) return@bitrateLoop
 
             val url = if (bitrate == maxBitRate) streamUrl else "$streamUrl&ratio=$bitrate"
             streams.add(
@@ -287,7 +319,11 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
                 bitrate = bitrate.toLong(),
                 priority = priority,
                 frameRate = 0.0,
-                extras = mapOf("cdn" to cdn)
+                extras = mapOf(
+                  "cdn" to cdn,
+                  "streamName" to streamInfo.getStreamName(),
+                  "maxBitrate" to maxBitRate.toString()
+                )
               )
             )
           }
@@ -296,6 +332,12 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     }
     return streams
   }
+
+  private fun JsonElement.getStreamName(): String = this.jsonObject["sStreamName"]?.jsonPrimitive?.content?.run {
+    if (forceOrigin)
+      this.replace("-imgplus", "")
+    else this
+  } ?: ""
 
   protected fun buildUrl(
     streamInfo: JsonElement,
@@ -306,11 +348,8 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   ): String {
     val antiCode =
       streamInfo.jsonObject[if (isFlv) "sFlvAntiCode" else "sHlsAntiCode"]?.jsonPrimitive?.content ?: return ""
-    var streamName = streamInfo.jsonObject["sStreamName"]?.jsonPrimitive?.content ?: return ""
+    val streamName = streamInfo.getStreamName().nonEmptyOrNull() ?: return ""
 
-    if (forceOrigin) {
-      streamName = streamName.replace("-imgplus", "")
-    }
     val url = streamInfo.jsonObject[if (isFlv) "sFlvUrl" else "sHlsUrl"]?.jsonPrimitive?.content ?: return ""
     val urlSuffix =
       streamInfo.jsonObject[if (isFlv) "sFlvUrlSuffix" else "sHlsUrlSuffix"]?.jsonPrimitive?.content ?: return ""
@@ -320,7 +359,13 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
      * "xingxiu" streamers should skip query generation
      * @see [checkShouldSkipQuery]
      */
-    val queryParams = if (!shouldSkipQueryBuild) buildQuery(antiCode, uid, streamName, time, bitrate) else antiCode
+    val queryParams = if (!shouldSkipQueryBuild) buildQuery(antiCode, uid, streamName, time, bitrate) else {
+      buildString {
+        append(antiCode)
+        append("&codec=264")
+        bitrate?.let { append("&ratio=$it") }
+      }
+    }
 
     return "$url/$streamName.$urlSuffix?$queryParams"
   }
@@ -359,12 +404,85 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       // fixed 264 codec
       // huya 265 codec is fake 265
       append("sdk_sid", time.epochSeconds.toString())
-      append("codec", "264")
+      addCodec()
       bitrate?.let { append("ratio", it.toString()) }
     }
 
     return parameters.build().formUrlEncode()
   }
+
+  private fun ParametersBuilder.addCodec() {
+    // force 264 codec
+    append("codec", "264")
+  }
+
+  override suspend fun getTrueUrl(streamInfo: StreamInfo): Result<StreamInfo, ExtractorError> {
+    /*
+    * Retrieve anticode by using WUP method to ensure correctness
+    * as 2024-12-30, generated anticode method @see [buildQuery] isn't working for some `xingxiu` area streams.
+    * Other areas may be affected too.
+    *
+    * Important: WUP method requires [HYSDK_UA] header to download streams
+    */
+
+    val cdn = streamInfo.extras["cdn"] ?: ""
+    val streamName = streamInfo.extras["streamName"] ?: ""
+
+    logger.debug("Getting true url for: {}", pprint(streamInfo))
+    val tokenInfoReq = HuyaWup().also {
+      it.tarsServantRequest.servantName = "liveui"
+      it.tarsServantRequest.functionName = "getCdnTokenInfo"
+      it.uniAttribute.put(
+        "tReq", HuyaGetTokenReq(
+          cdnType = cdn,
+          streamName = streamName,
+          presenterUid = presenterUid.toInt(),
+        )
+      )
+    }
+
+    updateUserAgent()
+    val reqResult = postResponse(WUP_URL) {
+      setBody(tokenInfoReq.encode())
+    }
+
+    if (reqResult.isErr) {
+      logger.error("failed to get token info for: {}", pprint(streamInfo))
+      return reqResult.asErr()
+    }
+
+    val req = reqResult.value
+    val wupBody = req.bodyAsBytes()
+    // parse response to HuyaGetTokenResp
+    val respWup = HuyaWup().apply {
+      decode(wupBody)
+    }
+    val tokenResp = respWup.uniAttribute.getByClass("tRsp", HuyaGetTokenResp())
+
+    logger.debug("token info resp: {}", tokenResp)
+    val suffix =
+      if (streamInfo.format == VideoFormat.flv) VideoFormat.flv.fileExtension else VideoFormat.hls.fileExtension
+
+    val antiCode = if (streamInfo.format == VideoFormat.flv) tokenResp.flvAntiCode else tokenResp.hlsAntiCode
+//    val antiCode = tokenResp.antiCode
+    val maxBitRate = streamInfo.extras["maxBitrate"]?.toIntOrNull() ?: 0
+    val parameters = parseQueryString(antiCode) + ParametersBuilder().apply {
+      addCodec()
+      if (streamInfo.bitrate.toInt() != maxBitRate)
+        append("ratio", streamInfo.bitrate.toString())
+    }.build()
+
+    val host = streamInfo.url.substringBeforeLast("/")
+
+    return Ok(
+      streamInfo.copy(
+        url = "${host}/${tokenResp.streamName}.${suffix}?${parameters.formUrlEncode()}",
+      ).also {
+        logger.debug("true url: {}", pprint(it))
+      }
+    )
+  }
+
 
   /**
    * Validate cookie if present
@@ -374,27 +492,22 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     // check if cookie is present
     if (cookies.isNotEmpty()) {
       // verify cookie
-      return try {
-        verifyCookie().also {
-          isCookieVerified = it
-          if (!it) {
-            logger.warn("$url failed to verify cookie")
-          }
-        }
-      } catch (e: Exception) {
-        logger.error("Error verifying cookie", e)
-        false
+      isCookieVerified = verifyCookie().getOr(false)
+      if (!isCookieVerified) {
+        logger.warn("$url invalid cookies")
       }
+    } else {
+      isCookieVerified = true
     }
-    return true
+    return isCookieVerified
   }
 
 
-  private suspend fun verifyCookie(): Boolean {
-    if (isCookieVerified) return true
+  private suspend fun verifyCookie(): Result<Boolean, ExtractorError> {
+    if (isCookieVerified) return Ok(true)
 
     // make verify cookie request
-    val response = postResponse(COOKIE_URL) {
+    val result = postResponse(COOKIE_URL) {
       timeout {
         requestTimeoutMillis = 15000
       }
@@ -406,25 +519,34 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         }
       )
     }
-    if (response.status != HttpStatusCode.OK) {
-      throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $COOKIE_URL")
+    if (result.isErr) {
+      return result.asErr()
     }
+    val response = result.value
+
     val body = response.bodyAsText()
-    val json = json.parseToJsonElement(body).run {
-      if (this is JsonPrimitive) {
-        throw InvalidExtractionParamsException("Invalid response body from $COOKIE_URL")
-      }
-      jsonObject
+    val jsonResult = runCatching {
+      json.parseToJsonElement(body).takeIf { it is JsonObject }?.jsonObject
+        ?: throw IllegalStateException("Invalid json")
+    }.mapError {
+      ExtractorError.InvalidResponse("Invalid cookies json response")
     }
+
+    if (jsonResult.isErr) {
+      return jsonResult.asErr()
+    }
+    val json = jsonResult.value
+
     val returnCode = json["returnCode"]?.jsonPrimitive?.int ?: 0
-    return returnCode == 0
+    return Ok(returnCode == 0)
   }
 
 
   protected fun checkShouldSkipQuery(gid: Int) {
     // 2024-11-12 skip query param build for "xingxiu" areas
     // use default query params instead of calculated
+    logger.debug("$url gid: $gid")
+    if (hasErrorOcurred) return
     shouldSkipQueryBuild = gid == 1663
   }
-
 }

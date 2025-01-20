@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,11 @@
 
 package github.hua0512.utils
 
+import com.github.michaelbull.result.*
+import github.hua0512.plugins.base.ExtractorError
 import io.ktor.client.plugins.api.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.util.logging.*
 import io.ktor.utils.io.*
@@ -60,5 +63,29 @@ public val UserAgent: ClientPlugin<UserAgentConfig> = createClientPlugin("UserAg
     }
     LOGGER.trace("Adding User-Agent header: agent for ${request.url}")
     request.header(HttpHeaders.UserAgent, agent)
+  }
+}
+
+
+/**
+ * Maps the error of a `Result` containing an `HttpResponse` and `Throwable` to a `Result` containing an `HttpResponse` and `ExtractorError.ApiError`.
+ *
+ * @receiver The `Result` to map the error for.
+ * @return A `Result` containing an `HttpResponse` and `ExtractorError.ApiError`.
+ */
+fun Result<HttpResponse, Throwable>.mapError(): Result<HttpResponse, ExtractorError.ApiError> {
+  return this.mapError {
+    ExtractorError.ApiError(it)
+  }.andThen {
+    if (it.status.isSuccess()) {
+      // check if content length is 0
+      if (it.contentLength() == 0L) {
+        Err(ExtractorError.ApiError(Throwable("${it.call.request.url} returned empty response")))
+      } else {
+        Ok(it)
+      }
+    } else {
+      Err(ExtractorError.ApiError(Throwable("${it.call.request.url} returned ${it.status}")))
+    }
   }
 }

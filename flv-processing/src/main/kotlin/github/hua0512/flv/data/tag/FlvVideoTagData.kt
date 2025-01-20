@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,19 +35,21 @@ import github.hua0512.flv.utils.isAvcHeader
 import github.hua0512.flv.utils.writeI24
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
+import kotlinx.serialization.Serializable
 
 /**
  * Flv video tag data
  * @author hua0512
  * @date : 2024/6/9 9:48
  */
+@Serializable
 data class FlvVideoTagData(
   val frameType: FlvVideoFrameType,
   val codecId: FlvVideoCodecId,
   val compositionTime: Int,
   val avcPacketType: AvcPacketType? = null,
   override val binaryData: ByteArray,
-) : FlvTagData(binaryData) {
+) : FlvTagData {
 
   /**
    * Resolution of a video stream from an AVC sequence header.
@@ -81,5 +83,33 @@ data class FlvVideoTagData(
 
   override fun toString(): String {
     return "FlvVideoTagData(frameType=$frameType, codecId=$codecId, compositionTime=$compositionTime, avcPacketType=$avcPacketType, data=${binaryData.size} bytes)"
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as FlvVideoTagData
+
+    if (compositionTime != other.compositionTime) return false
+    if (headerSize != other.headerSize) return false
+    if (frameType != other.frameType) return false
+    if (codecId != other.codecId) return false
+    if (avcPacketType != other.avcPacketType) return false
+    if (!binaryData.contentEquals(other.binaryData)) return false
+    if (resolution != other.resolution) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = compositionTime
+    result = 31 * result + headerSize
+    result = 31 * result + frameType.hashCode()
+    result = 31 * result + codecId.hashCode()
+    result = 31 * result + (avcPacketType?.hashCode() ?: 0)
+    result = 31 * result + binaryData.contentHashCode()
+    result = 31 * result + resolution.hashCode()
+    return result
   }
 }

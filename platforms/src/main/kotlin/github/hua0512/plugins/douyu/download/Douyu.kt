@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,13 @@
 
 package github.hua0512.plugins.douyu.download
 
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import github.hua0512.app.App
-import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig.DouyuDownloadConfig
 import github.hua0512.data.stream.StreamInfo
+import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.download.base.PlatformDownloader
 import github.hua0512.utils.warn
@@ -47,7 +50,7 @@ class Douyu(
   PlatformDownloader<DouyuDownloadConfig>(app, danmu = danmu, extractor) {
 
 
-  override suspend fun shouldDownload(onLive: () -> Unit): Boolean {
+  override suspend fun shouldDownload(onLive: () -> Unit): Result<Boolean, ExtractorError> {
     extractor.selectedCdn = (downloadConfig.cdn ?: app.config.douyuConfig.cdn)
     return super.shouldDownload {
       onLive()
@@ -56,21 +59,20 @@ class Douyu(
     }
   }
 
-  override fun getPlatformHeaders(): Map<String, String> = extractor.getRequestHeaders()
-
   override fun getProgramArgs(): List<String> = emptyList()
 
-  override suspend fun <T : DownloadConfig> T.applyFilters(streams: List<StreamInfo>): StreamInfo {
-    this as DouyuDownloadConfig
-    val selectedCdn = cdn ?: app.config.douyuConfig.cdn
-    val selectedQuality = quality ?: app.config.douyuConfig.quality
-    if (streams.isEmpty()) {
-      throw createNoStreamsFoundException()
-    }
+  override fun onConfigUpdated(config: AppConfig) {
+    super.onConfigUpdated(config)
+    extractor.selectedCdn = config.douyuConfig.cdn
+  }
+
+  override suspend fun applyFilters(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+    val selectedCdn = downloadConfig.cdn ?: app.config.douyuConfig.cdn
+    val selectedQuality = downloadConfig.quality ?: app.config.douyuConfig.quality
     val group = streams.groupBy { it.extras["cdn"] }
     val cdnStreams = group[selectedCdn] ?: group.values.flatten().also { warn("CDN {} not found, using random", selectedCdn) }
     val qualityStreams = cdnStreams.firstOrNull { it.extras["rate"] == selectedQuality.rate.toString() } ?: cdnStreams.firstOrNull()
       .also { warn("{} quality not found, using first one available {}", selectedQuality, it) }
-    return (qualityStreams ?: streams.first())
+    return Ok(qualityStreams ?: streams.first())
   }
 }

@@ -1,0 +1,410 @@
+{
+  "site": "https://www.huya.com",
+  "title": "EDGvsXLG 解说下比赛",
+  "artist": "【节奏】",
+  "coverUrl": "//live-cover.msstatic.com/huyalive/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus/20241206211553.jpg",
+  "artistImageUrl": "https://huyaimg.msstatic.com/avatar/1086/84/52ff29d6a8b01e42804c86610e54c8_180_135.jpg?1651740989",
+  "live": true,
+  "streams": [
+    {
+      "url": "http://al.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264",
+      "format": "flv",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "flv",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "flv",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "flv",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "flv",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264",
+      "format": "hls",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "hls",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "hls",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "hls",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://al.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "hls",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": 20,
+      "extras": {
+        "cdn": "AL"
+      }
+    },
+    {
+      "url": "http://tx.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264",
+      "format": "flv",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "flv",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "flv",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "flv",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "flv",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=121&sdk_sid=1733490988&codec=264",
+      "format": "hls",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=121&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "hls",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=121&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "hls",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=121&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "hls",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://tx.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=121&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "hls",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": 75,
+      "extras": {
+        "cdn": "TX"
+      }
+    },
+    {
+      "url": "http://hw.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264",
+      "format": "flv",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "flv",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "flv",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "flv",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "flv",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=124&sdk_sid=1733490988&codec=264",
+      "format": "hls",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=124&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "hls",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=124&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "hls",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=124&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "hls",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hw.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=124&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "hls",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": 5,
+      "extras": {
+        "cdn": "HW"
+      }
+    },
+    {
+      "url": "http://hs.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264",
+      "format": "flv",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "flv",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "flv",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "flv",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.flv.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.flv?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "flv",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264",
+      "format": "hls",
+      "quality": "蓝光20M",
+      "bitrate": 20000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=8000",
+      "format": "hls",
+      "quality": "蓝光8M",
+      "bitrate": 8000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=4000",
+      "format": "hls",
+      "quality": "蓝光4M",
+      "bitrate": 4000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=2000",
+      "format": "hls",
+      "quality": "超清",
+      "bitrate": 2000,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    },
+    {
+      "url": "http://hs.hls.huya.com/src/1014447803-1014447803-4357020137384050688-2029019062-10057-A-0-1-imgplus.m3u8?wsSecret=03a7ce26e3b036e12c8040f8f06d4523&wsTime=6752fa58&seqid=3161931450&ctype=huya_live&fs=bgct&u=259698637628&t=100&ver=1&uuid=2147483647&sdk_sid=1733490988&codec=264&ratio=500",
+      "format": "hls",
+      "quality": "流畅",
+      "bitrate": 500,
+      "priority": -1,
+      "extras": {
+        "cdn": "HS"
+      }
+    }
+  ]
+}

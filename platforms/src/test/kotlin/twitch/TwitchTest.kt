@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,48 +30,53 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.plugins.twitch.download.TwitchExtractor
-import io.exoquery.pprint
-import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.time.Duration
+import io.exoquery.kmp.pprint
+import io.kotest.matchers.equals.shouldBeEqual
+import io.kotest.matchers.nulls.shouldNotBeNull
 
 /**
  * Twitch platform test
  * @author hua0512
  * @date : 2024/4/27 22:05
  */
-class TwitchTest : BaseTest() {
+class TwitchTest : BaseTest<TwitchExtractor>({
 
-  override val testUrl: String = "https://www.twitch.tv/aspaszin"
-
-  @Test
-  override fun testLive() = runTest {
-    val extractor = TwitchExtractor(app.client, app.json, testUrl).apply {
-      prepare()
-    }
-    val mediaInfo = extractor.extract()
+  test("isLive") {
+    val result = extractor.extract()
+    result.isOk shouldBeEqual true
+    val mediaInfo = result.value
     println(pprint(mediaInfo))
   }
 
-  @Test
-  override fun testRegex() {
+  test("regex") {
     val regex = TwitchExtractor.URL_REGEX.toRegex()
     val matchResult = regex.find(testUrl)
-    assert(matchResult != null)
-    assert(matchResult!!.groupValues[1] == "aspaszin")
+    matchResult.shouldNotBeNull()
+    matchResult.groupValues[1] shouldBeEqual "aspaszin"
+
+    val extract = extractor.match()
+    extract.shouldNotBeNull()
+    extract.isOk shouldBeEqual true
+    extract.value shouldBeEqual "aspaszin"
   }
 
-  @Test
-  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+  test("danmu") {
     val danmu = TwitchDanmu(app).apply {
       channel = "aspaszin"
       enableWrite = false
       filePath = "twitch_danmu.txt"
     }
     val init = danmu.init(Streamer(0, "aspaszin", testUrl))
+    init shouldBeEqual true
+    danmu.isInitialized.get() shouldBeEqual true
     if (init) {
       danmu.fetchDanmu()
     }
-    assert(init)
   }
+
+}) {
+
+  override val testUrl: String = "https://www.twitch.tv/aspaszin"
+
+  override fun createExtractor(url: String) = TwitchExtractor(app.client, app.json, url)
 }

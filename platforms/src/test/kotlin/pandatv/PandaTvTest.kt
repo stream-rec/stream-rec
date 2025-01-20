@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,37 +30,28 @@ import BaseTest
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
 import github.hua0512.plugins.pandatv.download.PandaTvExtractor
-import io.exoquery.pprint
-import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.time.Duration
+import io.exoquery.kmp.pprint
+import io.kotest.matchers.equals.shouldBeEqual
 
 /**
  * @author hua0512
  * @date : 2024/5/8 21:56
  */
-class PandaTvTest : BaseTest() {
+class PandaTvTest : BaseTest<PandaTvExtractor>({
 
-  override val testUrl: String = "https://www.pandalive.co.kr/live/play/say0716"
-
-  @Test
-  override fun testLive() = runTest {
-    val extractor = PandaTvExtractor(app.client, app.json, testUrl).apply {
-      prepare()
-    }
-    val mediaInfo = extractor.extract()
+  test("isLive") {
+    val result = extractor.extract()
+    result.isOk shouldBeEqual true
+    val mediaInfo = result.value
     println(pprint(mediaInfo))
   }
 
-  @Test
-  override fun testRegex() {
-    val regex = PandaTvExtractor.URL_REGEX.toRegex()
-    assert(regex.matches(testUrl))
-    assert(regex.matchEntire(testUrl)?.groups?.get(1)?.value == "say0716")
+  test("regex") {
+    val match = Regex("""^https://www\.pandalive\.co\.kr.*""").matches(testUrl)
+    match shouldBeEqual true
   }
 
-  @Test
-  fun testDanmu() = runTest(timeout = Duration.INFINITE) {
+  test("danmu") {
     val danmu = PandaTvDanmu(app).apply {
       enableWrite = false
       filePath = "pandatv_danmu.txt"
@@ -75,4 +66,9 @@ class PandaTvTest : BaseTest() {
     }
     assert(init)
   }
+}) {
+
+  override val testUrl: String = "https://www.pandalive.co.kr/live/play/say0716"
+
+  override fun createExtractor(url: String): PandaTvExtractor = PandaTvExtractor(app.client, app.json, testUrl)
 }

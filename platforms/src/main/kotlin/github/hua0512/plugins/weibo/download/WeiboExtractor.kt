@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,25 +26,21 @@
 
 package github.hua0512.plugins.weibo.download
 
+import com.github.michaelbull.result.*
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
-import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.parameter
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import github.hua0512.plugins.base.ExtractorError
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import kotlinx.serialization.json.*
+import kotlin.collections.first
+import kotlin.collections.firstOrNull
+import kotlin.collections.mutableListOf
+import kotlin.collections.set
 
 /**
  * Weibo live stream extractor
@@ -98,31 +94,39 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
    */
   override val regexPattern: Regex = URL_REGEX_PATTERN.toRegex()
 
-  override suspend fun isLive(): Boolean {
-    cookies = cookies.ifEmpty { DEFAULT_COOKIE }
-    if (url.contains("show/")) {
-      rid = url.split("?").first().split("show/")[1]
+  override fun match(): Result<String, ExtractorError> = super.match().andThen {
+    rid = if (it.contains("show/")) {
+      it.split("?").first().split("show/")[1]
     } else {
       // uid is the user id (u/7676267963)
       // extract the uid from the url
-      rid = ""
+      ""
+    }
+    Ok(rid)
+  }
+
+  override suspend fun isLive(): Result<Boolean, ExtractorError> {
+    cookies = cookies.ifEmpty { DEFAULT_COOKIE }
+    if (rid.isEmpty()) {
       val uidRegex = UID_REGEX_PATTERN.toRegex()
       val uid = uidRegex.find(url)?.groupValues?.get(1) ?: ""
-      if (uid.isEmpty()) return false
+      if (uid.isEmpty()) return Err(ExtractorError.InvalidResponse("uid not found"))
 
-      val response = getResponse(STATUS_API) {
+      val result = getResponse(STATUS_API) {
         parameter("uid", uid)
         parameter("page", "1")
         parameter("feature", "0")
       }
-      if (response.status != HttpStatusCode.OK) {
-        throw InvalidExtractionResponseException("$url invalid response status: ${response.status}")
-      }
+
+      if (result.isErr) return result.asErr()
+
+      val response = result.unwrap()
+
       val json = response.body<JsonElement>()
-      val data = json.jsonObject["data"]?.jsonObject ?: throw InvalidExtractionParamsException("$url data not found")
+      val data = json.jsonObject["data"]?.jsonObject ?: return Err(ExtractorError.InvalidResponse("data not found"))
       dataJson = data
-      val list = data["list"]?.jsonArray ?: throw InvalidExtractionParamsException("$url list not found")
-      if (list.isEmpty()) return false
+      val list = data["list"]?.jsonArray ?: return Err(ExtractorError.InvalidResponse("list not found"))
+      if (list.isEmpty()) return Ok(false)
 
       for (i in 0 until list.size) {
         val item = list[i].jsonObject
@@ -132,7 +136,7 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
         val objectType = pageInfo["object_type"]?.jsonPrimitive?.content ?: continue
         if (objectType == "live") {
           rid = pageInfo["object_id"]?.jsonPrimitive?.content
-            ?: throw InvalidExtractionParamsException("$url rid not found")
+            ?: return Err(ExtractorError.InvalidResponse("rid not found"))
           break
         }
       }
@@ -140,39 +144,43 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
 
     if (rid.isEmpty()) {
       // extract title
-      val list =
-        dataJson.jsonObject["list"]?.jsonArray ?: throw InvalidExtractionParamsException("$url list info not found")
+      val list = dataJson.jsonObject["list"]?.jsonArray ?: return Err(ExtractorError.InvalidResponse("list not found"))
       dataJson = JsonNull
-      if (list.isEmpty()) return false
+      if (list.isEmpty()) return Err(ExtractorError.InvalidResponse("list is empty"))
       val user = list.firstOrNull()?.jsonObject["user"]?.jsonObject
-        ?: throw InvalidExtractionParamsException("$url user info not found")
+        ?: return Err(ExtractorError.InvalidResponse("user not found"))
       artist = user["screen_name"]?.jsonPrimitive?.content ?: ""
 //      avatarUrl = user["profile_image_url"]?.jsonPrimitive?.content ?: ""
-      return false
+      return Ok(false)
     }
 
-    val response = getResponse(APP_LIVE_API) {
+    val result = getResponse(APP_LIVE_API) {
       parameter("live_id", rid)
     }
 
-    if (response.status != HttpStatusCode.OK) {
-      throw InvalidExtractionResponseException("$url invalid response status: ${response.status}")
-    }
+    if (result.isErr) return result.asErr()
+    val response = result.value
+
+
     val json = response.body<JsonElement>()
-    val data = json.jsonObject["data"]?.jsonObject ?: throw InvalidExtractionParamsException("$url data not found")
+    val data = json.jsonObject["data"]?.jsonObject ?: return Err(ExtractorError.InvalidResponse("data not found"))
     dataJson = data
-    val item = data["item"]?.jsonObject ?: throw InvalidExtractionParamsException("$url item not found")
+    val item = data["item"]?.jsonObject ?: return Err(ExtractorError.InvalidResponse("item not found"))
     val liveStatus = item["status"]?.jsonPrimitive?.intOrNull ?: 0
-    return liveStatus == 1
+    return Ok(liveStatus == 1)
   }
 
-  override suspend fun extract(): MediaInfo {
-    val isLive = isLive()
+  override suspend fun extract(): Result<MediaInfo, ExtractorError> {
+    val liveResult = isLive()
+    if (liveResult.isErr) return liveResult.asErr()
+
+    val isLive = liveResult.value
+
     var mediaInfo = MediaInfo(url, title, artist, coverUrl, avatarUrl, live = isLive)
 
     if (dataJson !is JsonNull) {
       val item =
-        (dataJson as JsonObject)["item"]?.jsonObject ?: throw InvalidExtractionParamsException("$url item not found")
+        (dataJson as JsonObject)["item"]?.jsonObject ?: return Err(ExtractorError.InvalidResponse("item not found"))
       title = item["desc"]?.jsonPrimitive?.content ?: ""
       coverUrl = item["cover"]?.jsonPrimitive?.content ?: ""
       val userInfo = (dataJson as JsonObject)["user_info"]?.jsonObject
@@ -184,7 +192,7 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
 
         val streamInfo = streamData.jsonObject
         val pull = streamInfo["pull"]?.jsonObject
-          ?: throw InvalidExtractionParamsException("$url stream data pull section not found")
+          ?: return Err(ExtractorError.InvalidResponse("stream data pull section not found"))
 
         val streamList = mutableListOf<StreamInfo>()
         val flvUrl = pull["live_origin_flv_url"]?.jsonPrimitive?.content ?: ""
@@ -197,16 +205,18 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
           val originHlsUrl = hlsUrl.substringBefore("_") + ".m3u8"
           streamList.add(StreamInfo(originHlsUrl, VideoFormat.hls, "origin", 0))
         }
-        return mediaInfo.copy(
-          streams = streamList,
-          title = title,
-          artist = artist,
-          coverUrl = coverUrl,
-          artistImageUrl = avatarUrl
+        return Ok(
+          mediaInfo.copy(
+            streams = streamList,
+            title = title,
+            artist = artist,
+            coverUrl = coverUrl,
+            artistImageUrl = avatarUrl
+          )
         )
       }
       mediaInfo = mediaInfo.copy(title = title, artist = artist, coverUrl = coverUrl, artistImageUrl = avatarUrl)
     }
-    return mediaInfo
+    return Ok(mediaInfo)
   }
 }

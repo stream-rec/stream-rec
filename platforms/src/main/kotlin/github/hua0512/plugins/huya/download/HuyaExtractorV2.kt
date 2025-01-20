@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,11 +26,9 @@
 
 package github.hua0512.plugins.huya.download
 
+import com.github.michaelbull.result.*
 import github.hua0512.data.media.MediaInfo
-import github.hua0512.plugins.base.exceptions.InvalidExtractionParamsException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionResponseException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionStreamerNotFoundException
-import github.hua0512.plugins.base.exceptions.InvalidExtractionUrlException
+import github.hua0512.plugins.base.ExtractorError
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -50,25 +48,27 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
   companion object {
     private const val MP_BASE_URL = "https://mp.huya.com/cache.php"
+
+    private const val STREAMER_NOT_FOUND = "该主播不存在！"
   }
 
   override val regexPattern = URL_REGEX.toRegex()
 
   private lateinit var dataJson: JsonObject
 
-  override fun match(): Boolean {
+  override fun match(): Result<String, ExtractorError.InvalidExtractionUrl> {
     val result = super.match()
 
     // check if the room id is numeric
     if (!roomId.matches(Regex("\\d+"))) {
-      throw InvalidExtractionUrlException("This extractor only supports numeric room ids")
+      return Err(ExtractorError.InvalidExtractionUrl)
     }
 
     return result
   }
 
-  override suspend fun isLive(): Boolean {
-    val response = getResponse(MP_BASE_URL) {
+  override suspend fun isLive(): Result<Boolean, ExtractorError> {
+    val result = getResponse(MP_BASE_URL) {
       timeout {
         requestTimeoutMillis = 15000
       }
@@ -80,32 +80,48 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
       userAgent(IPHONE_WX_UA)
     }
 
-    if (response.status != HttpStatusCode.OK) throw InvalidExtractionResponseException("Invalid response status ${response.status.value} from $url")
+    if (result.isErr) {
+      return result.asErr()
+    }
 
-    dataJson = json.parseToJsonElement(response.bodyAsText()).jsonObject
+    val response = result.value
+
+    runCatching { json.parseToJsonElement(response.bodyAsText()).jsonObject }
+      .mapError { ExtractorError.InvalidResponse(it.message ?: "") }
+      .andThen {
+        dataJson = it
+        Ok(it)
+      }
+      .onFailure {
+        return Err(ExtractorError.InvalidResponse(it.message))
+      }
 
     val status = dataJson["status"]?.jsonPrimitive?.int
     val message = dataJson["message"]?.jsonPrimitive?.content
     if (status != 200) {
-      if (status == 422 && message == "该主播不存在！") {
-        throw InvalidExtractionStreamerNotFoundException(url)
+      if (status == 422 && message == STREAMER_NOT_FOUND) {
+        return Err(ExtractorError.StreamerNotFound)
       }
-      throw InvalidExtractionParamsException("Invalid status code $status from $url, message: $message")
+      return Err(ExtractorError.InvalidResponse("status: $status, message: $message"))
     }
-    val data = dataJson["data"]?.jsonObject ?: throw InvalidExtractionParamsException("data is null from $url")
+    val data = dataJson["data"]?.jsonObject ?: return Err(ExtractorError.InvalidResponse("data is null from $url"))
     val realRoomStatus = data["realLiveStatus"]?.jsonPrimitive?.content ?: "OFF"
     val liveStatus = data["liveStatus"]?.jsonPrimitive?.content ?: "OFF"
 
-    return realRoomStatus == "ON" && liveStatus == "ON"
+    val isLive = realRoomStatus == "ON" && liveStatus == "ON"
+    return Ok(isLive)
   }
 
-  override suspend fun extract(): MediaInfo {
+  override suspend fun extract(): Result<MediaInfo, ExtractorError> {
     // validate cookies
     validateCookie()
 
-    val isLive = isLive()
+    val liveResult = isLive()
 
-    val data = dataJson["data"]?.jsonObject ?: throw InvalidExtractionParamsException("data is null from $url")
+    if (liveResult.isErr) return liveResult.asErr()
+    val isLive = liveResult.value
+
+    val data = dataJson["data"]?.jsonObject!!
     val profileInfo = data.jsonObject["profileInfo"]?.jsonObject
 
     // get danmu properties
@@ -131,7 +147,7 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
     // there is not livedata if not live or livestatus is FREEZE
     if (livedata is JsonNull) {
-      return mediaInfo
+      return Ok(mediaInfo)
     }
 
     livedata = livedata?.jsonObject
@@ -148,7 +164,7 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     )
 
     // if not live, return basic media info
-    if (!isLive) return mediaInfo
+    if (!isLive) return Ok(mediaInfo)
 
     val gid = livedata?.get("gid")?.jsonPrimitive?.int ?: 0
     checkShouldSkipQuery(gid)
@@ -157,29 +173,24 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     val streamJson = data["stream"]
 
     if (streamJson == null || streamJson is JsonNull) {
-      throw InvalidExtractionParamsException("stream is null from $url")
-    }
-
-    if (streamJson is JsonArray && streamJson.isEmpty()) {
-      throw InvalidExtractionParamsException("$url stream is empty")
+      return Err(ExtractorError.InvalidResponse("stream is null from $url"))
+    } else if (streamJson is JsonArray && streamJson.isEmpty()) {
+      return Err(ExtractorError.InvalidResponse("stream is empty from $url"))
     }
 
     if (streamJson !is JsonObject) {
-      throw InvalidExtractionParamsException("stream is not a json object from $url : $streamJson")
+      return Err(ExtractorError.InvalidResponse("stream is not a JsonObject from $url"))
     }
 
     val baseStreamInfoList =
-      streamJson["baseSteamInfoList"]?.jsonArray
-        ?: throw InvalidExtractionParamsException("baseStreamInfoList is null from $url")
-    if (baseStreamInfoList.isEmpty()) {
-      throw InvalidExtractionParamsException("baseStreamInfoList is empty from $url")
-    }
+      streamJson["baseSteamInfoList"]?.jsonArray?.ifEmpty { return Err(ExtractorError.InvalidResponse("baseSteamInfoList is empty from $url")) }
+        ?: return Err(ExtractorError.InvalidResponse("baseSteamInfoList is null from $url"))
 
     // get bitrate list
     val bitrateInfo = livedata?.get("bitRateInfo")?.jsonPrimitive?.content?.run {
       json.parseToJsonElement(this).jsonArray
     } ?: streamJson["flv"]?.jsonObject?.get("rateArray")?.jsonArray
-    ?: throw InvalidExtractionParamsException("bitRateInfo is null from $url")
+    ?: return Err(ExtractorError.InvalidResponse("bitRateInfo is null from $url"))
 
     val maxBitRate = livedata?.get("bitRate")?.jsonPrimitive?.int ?: 0
 
@@ -207,7 +218,8 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
 
     // build stream info
     val streams = extractLiveStreams(baseStreamInfoList, additionalQualities + bitrateList, maxBitRate)
-    return mediaInfo.copy(streams = streams)
+    mediaInfo = mediaInfo.copy(streams = streams)
+    return Ok(mediaInfo)
   }
 
 }

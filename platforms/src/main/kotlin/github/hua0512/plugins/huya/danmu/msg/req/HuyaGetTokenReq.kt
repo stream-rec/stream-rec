@@ -24,12 +24,35 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.base.exceptions
+package github.hua0512.plugins.huya.danmu.msg.req
 
-/**
- * Exception thrown when the extraction response is invalid
- * @author hua0512
- * @date : 2024/7/5 14:15
- */
-open class InvalidExtractionResponseException(override val message: String) : IllegalArgumentException(message) {
+import com.qq.tars.protocol.tars.TarsInputStream
+import com.qq.tars.protocol.tars.TarsOutputStream
+import com.qq.tars.protocol.tars.TarsStructBase
+
+data class HuyaGetTokenReq(
+  var url: String = "",
+  var cdnType: String,
+  var streamName: String,
+  var presenterUid: Int = 0,
+) : TarsStructBase() {
+
+  override fun writeTo(os: TarsOutputStream) {
+    with(os) {
+      write(url, 0)
+      write(cdnType, 1)
+      write(streamName, 2)
+      write(presenterUid, 3)
+    }
+  }
+
+  override fun readFrom(`is`: TarsInputStream) {
+    with(`is`) {
+      this@HuyaGetTokenReq.url = read(url, 0, false)
+      this@HuyaGetTokenReq.cdnType = read(cdnType, 1, false)
+      this@HuyaGetTokenReq.streamName = read(streamName, 2, false)
+      this@HuyaGetTokenReq.presenterUid = read(presenterUid, 3, false)
+    }
+  }
+
 }
