@@ -1,6 +1,7 @@
 package github.hua0512.backend.plugins
 
 import github.hua0512.backend.routes.*
+import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
@@ -23,6 +24,7 @@ fun Application.configureRouting(
   streamDataRepo: StreamDataRepo,
   statsRepo: SummaryStatsRepo,
   uploadRepo: UploadRepo,
+  extractorFactory: IExtractorFactory,
 ) {
   install(StatusPages) {
     exception<Throwable> { call, cause ->
@@ -42,6 +44,7 @@ fun Application.configureRouting(
         streamerRoute(streamerRepo)
         streamsRoute(json, streamDataRepo)
         uploadRoute(json, uploadRepo)
+        extractorRoutes(extractorFactory, json)
       }
     }
 

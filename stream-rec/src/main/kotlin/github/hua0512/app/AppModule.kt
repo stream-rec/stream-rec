@@ -30,6 +30,7 @@ import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.config.AppConfigDao
 import github.hua0512.dao.user.UserDao
+import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.repo.LocalDataSourceImpl
 import github.hua0512.repo.stream.StreamDataRepo
@@ -37,6 +38,7 @@ import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
+import github.hua0512.services.ExtractorFactory
 import github.hua0512.services.UploadService
 import github.hua0512.utils.ThrowableSerializer
 import io.ktor.client.*
@@ -89,6 +91,10 @@ class AppModule {
   fun provideUploadService(app: App, uploadRepo: UploadRepo): UploadService = UploadService(app, uploadRepo)
 
   @Provides
-  fun provideLocalDataSource(appDao: AppConfigDao, userDao: UserDao): LocalDataSource = LocalDataSourceImpl(appDao, userDao)
+  fun provideLocalDataSource(appDao: AppConfigDao, userDao: UserDao): LocalDataSource =
+    LocalDataSourceImpl(appDao, userDao)
 
+  @Provides
+  @Singleton
+  fun provideExtractorFactory(client: HttpClient, json: Json): IExtractorFactory = ExtractorFactory(client, json)
 }

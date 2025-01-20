@@ -24,37 +24,17 @@
  * SOFTWARE.
  */
 
-@file:OptIn(ExperimentalSerializationApi::class)
+package github.hua0512.plugins.base
 
-package github.hua0512.data.media
+interface IExtractorFactory {
 
-import github.hua0512.data.stream.StreamInfo
-import kotlinx.serialization.EncodeDefault
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Serializable
 
-/**
- * A data class representing the media information
- * @property site the site where the media is from
- * @property title the title of the media
- * @property artist the artist of the media
- * @property coverUrl the cover image url of the media
- * @property artistImageUrl the artist image url of the media
- * @property live whether the media is live
- * @property streams the list of stream information
- * @property extras the extra information
- * @author hua0512
- * @date : 2024/3/15 20:29
- */
-@Serializable
-data class MediaInfo(
-  val site: String,
-  val title: String,
-  val artist: String,
-  val coverUrl: String,
-  val artistImageUrl: String,
-  @EncodeDefault(EncodeDefault.Mode.ALWAYS)
-  val live: Boolean = false,
-  val streams: List<StreamInfo> = emptyList(),
-  val extras: Map<String, String> = emptyMap(),
-)
+  /**
+   * Get a matching extractor for the given url
+   *
+   * @param url The url to get extractor from
+   * @return Extractor instance or null if not found
+   */
+  fun getExtractorFromUrl(url: String, params: Map<String, List<String>>? = null): Extractor?
+
+}

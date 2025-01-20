@@ -28,6 +28,7 @@ package github.hua0512.app
 
 import dagger.Component
 import github.hua0512.dao.AppDatabase
+import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
@@ -66,4 +67,6 @@ interface AppComponent {
   fun getStreamDataRepo(): StreamDataRepo
 
   fun getUploadRepo(): UploadRepo
+
+  fun getExtractorFactory(): IExtractorFactory
 }

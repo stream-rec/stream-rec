@@ -36,6 +36,9 @@ import kotlinx.serialization.Serializable
  * @param quality the stream quality
  * @param bitrate the stream bitrate
  * @param priority the stream priority
+ * @param frameRate the stream frame rate
+ * @param extras the stream extras
+ * @param isHeadersNeeded whether custom headers are needed
  * @author hua0512
  * @date : 2024/3/15 20:37
  */
@@ -48,4 +51,5 @@ data class StreamInfo(
   val priority: Int = 0,
   val frameRate: Double = 0.0,
   val extras: Map<String, String> = emptyMap(),
+  val isHeadersNeeded: Boolean = false,
 )
