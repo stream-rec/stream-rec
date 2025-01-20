@@ -170,17 +170,17 @@ class DownloadPlatformService(
       // Remove from active streamers if not downloading
       streamerStates.remove(streamer.url)
     } else {
-      // Cancel active download
+      // Cancel active download and mark state as cancelled
       logger.debug("({}), {} received cancellation signal : {}", platform, streamer.url, reason)
+      streamerStates[streamer.url]?.state = CANCELLED
       downloader.cancelBlocking()
 
       // Wait for cleanup with timeout
       withTimeoutOrNull(10_000) {
-        while (streamerStates.containsKey(streamer.url) || streamerStates[streamer.url]?.downloader != null) {
-          stateMutex.unlock()  // Release lock while waiting
+        while (downloader.isDownloading) {
           delay(100)
-          stateMutex.lock()    // Reacquire lock to check state
         }
+        streamerStates.remove(streamer.url)
       }
     }
 

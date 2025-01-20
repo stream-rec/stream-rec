@@ -153,7 +153,7 @@ class StreamerDownloadService(
   /**
    * Flag to check if the download is in progress
    */
-  private var isDownloading = false
+  var isDownloading = false
 
   /**
    * Flag to check if the download is in the timer range
