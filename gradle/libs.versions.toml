@@ -22,7 +22,6 @@ androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framewor
 
 at-favre-lib-bcrypt = "at.favre.lib:bcrypt:0.10.2"
 
-io-exoquery-pprint = "io.exoquery:pprint-kotlin:3.0.0"
 com-tencent-tars-core = "com.tencent.tars:tars-core:1.7.4"
 
 io-exoquery-pprint = "io.exoquery:pprint-kotlin-kmp:2.0.2"
@@ -78,7 +77,7 @@ org-jetbrains-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlin
 org-jetbrains-kotlinx-serialization-json = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
 org-jetbrains-kotlinx-serialization-core = "org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.0"
 org-jetbrains-kotlinx-serialization-protobuf = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.8.0"
-org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.4"
+org-openjdk-nashorn-nashorn-core = "org.openjdk.nashorn:nashorn-core:15.6"
 
 org-junit-jupiter-junit-jupiter = "org.junit.jupiter:junit-jupiter:5.11.4"
 
