@@ -24,7 +24,7 @@ at-favre-lib-bcrypt = "at.favre.lib:bcrypt:0.10.2"
 
 com-tencent-tars-core = "com.tencent.tars:tars-core:1.7.4"
 
-io-exoquery-pprint = "io.exoquery:pprint-kotlin-kmp:2.0.2"
+io-exoquery-pprint = "io.exoquery:pprint-kotlin-kmp:3.0.0"
 
 io-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
