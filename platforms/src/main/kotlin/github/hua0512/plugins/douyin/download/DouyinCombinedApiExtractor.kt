@@ -29,7 +29,6 @@ package github.hua0512.plugins.douyin.download
 import com.github.michaelbull.result.*
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinApis.Companion.APP_ROOM_REFLOW
-import io.exoquery.kmp.pprint
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -67,7 +66,7 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
       put("cookies", cookies)
     }
 
-    logger.debug("{} pc api failed, falling back to mobile api: {}", url, pprint(debugInfo))
+    logger.debug("{} pc api failed, falling back to mobile api: {}", url, debugInfo)
     // retry using mobile api
     hasPcApiFailed = true
     val result = getResponse(APP_ROOM_REFLOW) {
