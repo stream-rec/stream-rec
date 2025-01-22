@@ -26,7 +26,7 @@
 
 package github.hua0512.flv.utils
 
-import github.hua0512.flv.FlvReader
+import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.video.FlvVideoCodecId
@@ -52,7 +52,7 @@ import java.io.EOFException
  * @date : 2024/9/9 12:13
  */
 fun Source.asFlvFlow(): Flow<FlvData> = flow {
-  val flvReader = FlvReader(this@asFlvFlow)
+  val flvReader = FlvParser(this@asFlvFlow)
 
   var lastTag: FlvData? = null
   var codecId: FlvVideoCodecId? = null

@@ -50,7 +50,7 @@ package github.hua0512/*
  * SOFTWARE.
  */
 
-import github.hua0512.flv.FlvReader
+import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.FlvHeader
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.tag.FlvVideoTagData
@@ -100,7 +100,7 @@ class FlvReaderTest {
   fun testReadTags() = runTest {
     val file = File("E:/test/14_18_50-福州~ 主播恋爱脑！！！.flv")
     val ins = file.inputStream().asSource().buffered().use {
-      val reader = FlvReader(it)
+      val reader = FlvParser(it)
       var header: FlvHeader? = null
       reader.readHeader {
         header = it as FlvHeader

@@ -61,6 +61,10 @@ data class FlvTagHeader(
    * FLV tag stream id, 1 byte
    */
   val streamId: Int,
+  /**
+   * Filtered tag info
+   */
+  val filteredInfo: FlvFilteredTagInfo? = null,
 ) {
 
   init {

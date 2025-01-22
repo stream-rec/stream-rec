@@ -282,8 +282,12 @@ class DownloadPlatformService(
       }
       downloader.start()
     } catch (e: Exception) {
-      logger.error("Failed to start download for ${streamer.name}: $e")
-      EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
+      if (e is CancellationException) {
+        logger.debug("({}) download cancelled for {}", platform, streamer.url)
+      } else {
+        logger.error("Failed to start download for ${streamer.name}: $e")
+        EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
+      }
     }
   }
 

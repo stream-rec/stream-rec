@@ -287,14 +287,12 @@ sealed interface AmfValue {
 
       override val size: Int
         get() {
-          // 1 byte type + 4 byte type marker
-          var totalSize = 1
+          var totalSize = 1  // type byte
           properties.forEach { (key, value) ->
             val keyBytes = key.toByteArray(Charsets.UTF_8)
-            totalSize += 2 + keyBytes.size + value.size
+            totalSize += 2 + keyBytes.size + value.size // key length (2) + key + value
           }
-          // + 3 byte end marker
-          totalSize += 3
+          totalSize += 3  // end marker (2 bytes empty string + 1 byte object end)
           return totalSize
         }
 
@@ -327,14 +325,12 @@ sealed interface AmfValue {
 
       override val size: Int
         get() {
-          // 1 byte type + 4 byte type marker
-          var totalSize = 5
+          var totalSize = 1 + 4  // type byte + array length
           properties.forEach { (key, value) ->
             val keyBytes = key.toByteArray(Charsets.UTF_8)
             totalSize += 2 + keyBytes.size + value.size
           }
-          // + 3 byte end marker
-          totalSize += 3
+          totalSize += 3  // end marker
           return totalSize
         }
 
@@ -351,7 +347,7 @@ sealed interface AmfValue {
 
 
       override val size: Int
-        get() = 5 + values.sumOf { it.size }
+        get() = 1 + 4 + values.sumOf { it.size }  // type + array length + values
 
       override fun write(sink: Sink) {
         super.write(sink)
@@ -375,8 +371,8 @@ sealed interface AmfValue {
     @Serializable
     data class LongString(val value: kotlin.String) : Amf0Value(Amf0Type.LONG_STRING.byte) {
 
-      // 1 byte type + 4 byte length + string bytes
-      override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
+      override val size: Int
+        get() = 1 + 4 + value.toByteArray(Charsets.UTF_8).size  // type + length + string
 
       override fun write(sink: Sink) {
         super.write(sink)
@@ -389,7 +385,8 @@ sealed interface AmfValue {
     @Serializable
     data class XmlDocument(val value: kotlin.String) : Amf0Value(Amf0Type.XML_DOCUMENT.byte) {
 
-      override val size: Int = 5 + value.toByteArray(Charsets.UTF_8).size
+      override val size: Int
+        get() = 1 + 4 + value.toByteArray(Charsets.UTF_8).size  // type + length + xml
 
       override fun write(sink: Sink) {
         super.write(sink)
@@ -406,14 +403,14 @@ sealed interface AmfValue {
 
       override val size: Int
         get() {
+          var totalSize = 1  // type byte
           val classNameBytes = className.toByteArray(Charsets.UTF_8)
-          var totalSize = 1 + 2 + classNameBytes.size
+          totalSize += 2 + classNameBytes.size  // class name length + class name
           properties.forEach { (key, value) ->
             val keyBytes = key.toByteArray(Charsets.UTF_8)
             totalSize += 2 + keyBytes.size + value.size
           }
-          // + 3 byte end marker
-          totalSize += 3
+          totalSize += 3  // end marker
           return totalSize
         }
 

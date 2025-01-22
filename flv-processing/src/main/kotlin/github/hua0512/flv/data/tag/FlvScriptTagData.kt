@@ -43,30 +43,44 @@ data class FlvScriptTagData(val values: List<AmfValue> = emptyList()) : FlvTagDa
   val valuesCount: Int
     get() = values.size
 
-  override val binaryData: ByteArray = byteArrayOf()
+  override val binaryData: ByteArray
+    get() = toByteArray()
 
   override val headerSize: Int = 0
 
   val bodySize: Int
     get() = values.sumOf { it.size }
 
-  override val size: Int get() = bodySize
+  override val size: Int
+    get() = bodySize
 
   operator fun get(index: Int): AmfValue = values[index]
-
 
   override fun write(sink: Sink) {
     values.forEach { it.write(sink) }
   }
 
   fun toByteArray(): ByteArray {
-    val buffer = Buffer()
-    write(buffer)
-    return buffer.readByteArray()
+    return Buffer().apply {
+      write(this)
+    }.readByteArray()
+  }
+
+  fun validateSize() {
+    val serialized = toByteArray()
+    val actualSize = serialized.size
+    if (actualSize != size) {
+      throw IllegalStateException(
+        "FlvScriptTagData size mismatch: calculated=$size, actual=$actualSize\n" +
+                "Values: ${values.joinToString { "${it::class.simpleName}(size=${it.size})" }}"
+      )
+    }
   }
 
   override fun toString(): String {
-    return "FlvScriptTagDataData(values=$values, amfDataSize=$valuesCount, bodySize=$bodySize)"
+    return "FlvScriptTagData(values=${
+      values.joinToString { "${it::class.simpleName}(size=${it.size})" }
+    }, count=$valuesCount, size=$size)"
   }
 
 }

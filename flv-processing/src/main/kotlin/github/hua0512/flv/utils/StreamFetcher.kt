@@ -26,7 +26,7 @@
 
 package github.hua0512.flv.utils
 
-import github.hua0512.flv.FlvReader
+import github.hua0512.flv.FlvParser
 import github.hua0512.flv.data.FlvData
 import github.hua0512.flv.data.FlvTag
 import github.hua0512.flv.data.video.FlvVideoCodecId
@@ -51,7 +51,7 @@ import kotlinx.coroutines.flow.flow
 fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerContext): Flow<FlvData> = flow {
   val ins = this@asStreamFlow.toInputStream()
 
-  val flvReader = FlvReader(ins.asInput())
+  val flvReader = FlvParser(ins.asInput())
   var tag: FlvData? = null
 
   var codecId: FlvVideoCodecId? = null
@@ -68,12 +68,12 @@ fun ByteReadChannel.asStreamFlow(closeSource: Boolean = true, context: StreamerC
         }
         emit(it)
       }
-      FlvReader.logger.debug("${context.name} End of stream")
+      FlvParser.logger.debug("${context.name} End of stream")
     } catch (e: Exception) {
       // log other exceptions
       if (e !is CancellationException) {
         e.printStackTrace()
-        FlvReader.logger.error("${context.name} Exception: ${e.message}")
+        FlvParser.logger.error("${context.name} Exception: ${e.message}")
       }
       throw e
     } finally {
