@@ -545,6 +545,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   abstract fun getProgramArgs(): List<String>
 
   open fun onConfigUpdated(config: AppConfig) {
+    this@PlatformDownloader.maxSize = config.maxPartSize
+    this@PlatformDownloader.maxTime = config.maxPartDuration ?: 0
     if (this::engine.isInitialized) {
       engine.configureEngine(config)
     }
