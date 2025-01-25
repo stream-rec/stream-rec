@@ -32,7 +32,6 @@ import github.hua0512.flv.utils.isEndOfSequence
 import github.hua0512.plugins.StreamerContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 
@@ -48,13 +47,11 @@ fun Flow<FlvData>.process(
   duplicateTagFiltering: Boolean = true,
 ): Flow<FlvData> {
   val (fileSizeLimit, durationLimit) = limitsProvider()
-  // GOP count
-  val gopCount = MutableStateFlow(0)
 
   return this.discardFragmented(context)
     .checkHeader(context)
     .split(context)
-    .sort(context, gopCount)
+    .sort(context)
     .filter { !it.isEndOfSequence() }
     .correct(context)
     .fix(context)
@@ -63,6 +60,6 @@ fun Flow<FlvData>.process(
     .extractJoinPoints(context = context)
     .injectMetadata(context)
     .discardSubsequentScript(context)
-    .removeDuplicates(context, gopCount, duplicateTagFiltering)
+    .removeDuplicates(context, enable = duplicateTagFiltering)
     .flowOn(Dispatchers.Default)
 }
