@@ -170,6 +170,12 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     if (matchResult.isErr) return matchResult.asErr()
     val stateRegex = STATE_REGEX.toRegex()
 
+    // check if the stream is a replay
+    val intro = INTRODUCTION_REGEX.toRegex().find(htmlResponseBody)?.groupValues?.get(1).orEmpty()
+    if (intro.startsWith("【回放】")) {
+      return Ok(false)
+    }
+
     return stateRegex.find(matchResult.value.groupValues[1])?.groupValues?.get(1).toResultOr {
       ExtractorError.InvalidResponse("state not found")
     }.andThen {

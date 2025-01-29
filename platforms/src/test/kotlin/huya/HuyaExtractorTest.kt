@@ -101,6 +101,8 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
     val mediaInfo = result.value
     println(pprint(mediaInfo))
 
+    if (!mediaInfo.live) return@test
+
     // select first stream
     val stream = mediaInfo.streams.first()
     // apply to get true url
@@ -120,6 +122,8 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
     result.isOk shouldBeEqual true
     val mediaInfo = result.value
     println(pprint(mediaInfo))
+
+    if (!mediaInfo.live) return@test
 
     // select first stream
     val stream = mediaInfo.streams.first()
@@ -163,7 +167,7 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
 }) {
 
 
-  override val testUrl: String = "https://www.huya.com/24776175"
+  override val testUrl: String = "https://www.huya.com/660000"
 
   private fun getPCExtractor(url: String = testUrl) = HuyaExtractor(app.client, app.json, url).apply {
     prepare()
