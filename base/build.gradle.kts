@@ -68,4 +68,5 @@ tasks.test {
 
 room {
   schemaDirectory("$projectDir/schemas")
+  generateKotlin = true
 }
