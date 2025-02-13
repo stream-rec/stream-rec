@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,6 @@ import androidx.room.RenameColumn
 import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
-import androidx.sqlite.use
 import github.hua0512.data.stream.StreamerState
 import github.hua0512.utils.md5
 
