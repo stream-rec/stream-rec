@@ -169,13 +169,14 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
           val textColor = chatMessage.rtfContent.defaultFormat.color.run {
             if (this.isNullOrEmpty()) -1 else this.toInt(16)
           }
+          val time = if (chatMessage.eventTime == 0L) System.currentTimeMillis() else chatMessage.eventTime * 1000
           DanmuData(
             chatMessage.user.id,
             chatMessage.user.nickNameBytes.toStringUtf8(),
             textColor,
             chatMessage.contentBytes.toStringUtf8(),
             chatMessage.rtfContent.defaultFormat.fontSize,
-            chatMessage.eventTime * 1000,
+            time,
           )
         }
 
