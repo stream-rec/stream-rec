@@ -67,6 +67,7 @@ dependencies {
   implementation(project(":platforms"))
   implementation(project(":server"))
   implementation(project(":flv-processing"))
+  implementation(libs.androidx.sqlite)
   implementation(libs.androidx.sqlite.bundled)
   implementation(libs.androidx.room.runtime)
   implementation(libs.androidx.room.compiler)
