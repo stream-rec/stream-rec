@@ -70,7 +70,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
   override val pathProvider: (Int) -> String = { _ ->
     val time = Clock.System.now()
     lastDownloadedTime = time.epochSeconds
-    downloadFilePath.replacePlaceholders(context.name, context.title, time).let {
+    downloadFilePath.replacePlaceholders(context.name, context.title, context.platform, time).let {
       val path = Path(it).apply {
         createParentDirectories()
         onDownloadStarted(it, time.epochSeconds)

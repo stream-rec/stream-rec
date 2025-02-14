@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,8 +56,9 @@ class RcloneUploader(app: App, override val config: RcloneConfig) : Upload<Rclon
     val startInstant = Instant.fromEpochSeconds(uploadData.streamStartTime)
     val streamer = uploadData.streamer
     val streamTitle = uploadData.streamTitle
+    val platform = uploadData.platform
 
-    val replacedRemote = remotePath.replacePlaceholders(streamer, streamTitle, startInstant)
+    val replacedRemote = remotePath.replacePlaceholders(streamer, streamTitle, platform, startInstant)
 
     val rcloneCommand = arrayOf(
       "rclone",

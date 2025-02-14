@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -80,7 +80,7 @@ open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) 
     if (!useSegmenter) {
       lastOpeningFileTime = startInstant.epochSeconds
       // replace time placeholders if not using segmenter
-      outputFileName = outputFileName.replacePlaceholders(context.name, context.title, startInstant)
+      outputFileName = outputFileName.replacePlaceholders(context.name, context.title, context.platform, startInstant)
       // update downloadFilePath
       downloadFilePath = outputFolder.resolve(outputFileName).pathString
       lastOpeningFile = outputFileName
@@ -88,7 +88,7 @@ open class FFmpegDownloadEngine(override val logger: Logger = Companion.logger) 
   }
 
   private fun updateOutputFolder(startInstant: Instant) {
-    outputFolder = Path(downloadFilePath.replacePlaceholders(context.name, context.title, startInstant)).parent
+    outputFolder = Path(downloadFilePath.replacePlaceholders(context.name, context.title, context.platform, startInstant)).parent
     outputFolder.createDirectories()
   }
 

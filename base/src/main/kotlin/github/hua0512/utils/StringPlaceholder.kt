@@ -31,9 +31,15 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
+
+private const val STREAMER_PLACEHOLDER = "{streamer}"
+private const val TITLE_PLACEHOLDER = "{title}"
+private const val PLATFORM_PLACEHOLDER = "{platform}"
+
 private val placeholders = arrayOf(
-  "{streamer}",
-  "{title}",
+  STREAMER_PLACEHOLDER,
+  TITLE_PLACEHOLDER,
+  PLATFORM_PLACEHOLDER,
   "%Y",
   "%m",
   "%d",
@@ -42,14 +48,15 @@ private val placeholders = arrayOf(
   "%S",
 )
 
-fun String.replacePlaceholders(streamer: String, title: String, time: Instant? = null): String {
+fun String.replacePlaceholders(streamer: String, title: String, platform: String? = null, time: Instant? = null): String {
   val localDateTime: LocalDateTime? = time?.toLocalDateTime(TimeZone.currentSystemDefault())
   val result = StringBuilder(this)
 
   for (placeholder in placeholders) {
     val value = when (placeholder) {
-      "{streamer}" -> streamer
-      "{title}" -> title
+      STREAMER_PLACEHOLDER -> streamer
+      TITLE_PLACEHOLDER -> title
+      PLATFORM_PLACEHOLDER -> platform
       "%Y" -> localDateTime?.year?.toString()
       "%m" -> localDateTime?.monthNumber?.let { formatLeadingZero(it) }
       "%d" -> localDateTime?.dayOfMonth?.let { formatLeadingZero(it) }
