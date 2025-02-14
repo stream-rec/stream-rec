@@ -28,7 +28,6 @@ package github.hua0512.utils
 
 import github.hua0512.download.DownloadProgressUpdater
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
