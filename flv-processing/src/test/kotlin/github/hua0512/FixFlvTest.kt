@@ -113,7 +113,7 @@ class FixFlvTest {
     val pathProvider = { index: Int -> "E:/test/${file.nameWithoutExtension}_fix_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
     val limitsProvider = { 0L to 3600.0f }
 
-    val streamerContext = StreamerContext("test", "")
+    val streamerContext = StreamerContext("test", "", platform = "test")
     source.asFlvFlow()
       .process(limitsProvider, streamerContext, duplicateTagFiltering = false)
       .analyze(metaInfoProvider, streamerContext)

@@ -32,9 +32,14 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
 
+private const val STREAMER_PLACEHOLDER = "{streamer}"
+private const val TITLE_PLACEHOLDER = "{title}"
+private const val PLATFORM_PLACEHOLDER = "{platform}"
+
 private val placeholders = arrayOf(
-  "{streamer}",
-  "{title}",
+  STREAMER_PLACEHOLDER,
+  TITLE_PLACEHOLDER,
+  PLATFORM_PLACEHOLDER,
   "%Y",
   "%m",
   "%d",
@@ -43,57 +48,35 @@ private val placeholders = arrayOf(
   "%S",
 )
 
-/**
- * Extension function for the String class to replace placeholders in the string with provided values.
- *
- * @param streamer The name of the streamer. This value will replace the "{streamer}" placeholder in the string.
- * @param title The title of the stream. This value will replace the "{title}" placeholder in the string.
- * @param time The time of the stream as an Instant object. The date and time parts of this value will replace the corresponding placeholders in the string.
- * @return The string with all placeholders replaced with their corresponding values.
- */
-fun String.replacePlaceholders(streamer: String, title: String, time: Instant? = null): String {
-  // Define a map of placeholders to their replacement values
-  val toReplace: Map<String, String> = mapOf(
-    "{streamer}" to streamer,
-    "{title}" to title,
-  ) + if (time != null) {
-    // Convert the Instant time to a LocalDateTime object in the system's default time zone
-    val localDateTime: LocalDateTime = time.toLocalDateTime(TimeZone.currentSystemDefault())
-    mapOf(
-      "%Y" to localDateTime.year.toString(),
-      "%m" to formatLeadingZero(localDateTime.monthNumber),
-      "%d" to formatLeadingZero(localDateTime.dayOfMonth),
-      "%H" to formatLeadingZero(localDateTime.hour),
-      "%M" to formatLeadingZero(localDateTime.minute),
-      "%S" to formatLeadingZero(localDateTime.second),
-    )
-  } else {
-    emptyMap()
-  }
+fun String.replacePlaceholders(streamer: String, title: String, platform: String? = null, time: Instant? = null): String {
+  val localDateTime: LocalDateTime? = time?.toLocalDateTime(TimeZone.currentSystemDefault())
+  val result = StringBuilder(this)
 
-  // Replace each placeholder in the string with its corresponding value from the map and return the result
-  return toReplace.entries.fold(this) { acc, entry ->
-    acc.replace(entry.key, entry.value)
+  for (placeholder in placeholders) {
+    val value = when (placeholder) {
+      STREAMER_PLACEHOLDER -> streamer
+      TITLE_PLACEHOLDER -> title
+      PLATFORM_PLACEHOLDER -> platform
+      "%Y" -> localDateTime?.year?.toString()
+      "%m" -> localDateTime?.monthNumber?.let { formatLeadingZero(it) }
+      "%d" -> localDateTime?.dayOfMonth?.let { formatLeadingZero(it) }
+      "%H" -> localDateTime?.hour?.let { formatLeadingZero(it) }
+      "%M" -> localDateTime?.minute?.let { formatLeadingZero(it) }
+      "%S" -> localDateTime?.second?.let { formatLeadingZero(it) }
+      else -> null
+    } ?: continue
+
+    var index = result.indexOf(placeholder)
+    while (index != -1) {
+      result.replace(index, index + placeholder.length, value)
+      index = result.indexOf(placeholder, index + value.length)
+    }
   }
+  return result.toString()
 }
 
-/**
- * Formats an integer value to a string with a leading zero if the value is less than 10.
- * @param value The integer value to format.
- * @return The formatted string.
- */
 private fun formatLeadingZero(value: Int): String = String.format("%02d", value)
 
-/**
- * Extension function for the String class to extract the part of the string before any placeholders.
- * @return The part of the string before any placeholders.
- * If the string contains no placeholders, the entire string is returned.
- * If the string contains placeholders, only the part of the string before the first placeholder is returned.
- * If the string contains multiple placeholders, only the part of the string before the first placeholder is returned.
- * If the string contains a placeholder, but the placeholder is not found in the string, the entire string is returned.
- * If the string is empty, an empty string is returned.
- *
- */
 fun String.substringBeforePlaceholders(): String {
   if (this.isEmpty()) {
     return ""

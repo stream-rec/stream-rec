@@ -168,7 +168,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     maxDownloadTime: Long = 0,
   ): Result<Boolean, ExtractorError> {
     this.streamer = streamer
-    this.context = StreamerContext(streamer.name, streamer.streamTitle.orEmpty())
+    this.context = StreamerContext(streamer.name, streamer.streamTitle.orEmpty(), streamer.platform.name)
     @Suppress("UNCHECKED_CAST")
     this.downloadConfig = streamer.downloadConfig as T
     val initialization = extractor.prepare()

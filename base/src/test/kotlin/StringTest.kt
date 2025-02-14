@@ -61,38 +61,52 @@ class StringTest : FunSpec({
   test("testPlaceholderReplace") {
     val streamer = "雪乃荔荔枝"
     val title = "新人第一天开播"
+    val platform = "bilibili"
     val time = 1708461712L
     val instant = Instant.fromEpochSeconds(time)
 
-    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+    val fileFormat = "{streamer} - {title} - {platform} - %Y-%m-%d %H-%M-%S"
 
-    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
+    val formatted = fileFormat.replacePlaceholders(streamer, title, platform, instant)
 
-    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - 2024-02-20 21-41-52"
+    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - huya - 2024-02-20 21-41-52"
   }
 
   test("testPlaceholderReplaceWithoutTime") {
     val streamer = "雪乃荔荔枝"
     val title = "新人第一天开播"
+    val platform = "bilibili"
 
-    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+    val fileFormat = "{streamer} - {title} - {platform}"
 
-    val formatted = fileFormat.replacePlaceholders(streamer, title)
+    val formatted = fileFormat.replacePlaceholders(streamer, title, platform)
 
-    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - %Y-%m-%d %H-%M-%S"
+    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - huya"
   }
 
   test("testPlaceholderReplaceWithEmptyString") {
     val streamer = ""
     val title = ""
+    val platform = ""
     val time = 1708461712L
     val instant = Instant.fromEpochSeconds(time)
 
-    val fileFormat = "{streamer} - {title} - %Y-%m-%d %H-%M-%S"
+    val fileFormat = "{streamer} - {title} - {platform} - %Y-%m-%d %H-%M-%S"
 
-    val formatted = fileFormat.replacePlaceholders(streamer, title, instant)
+    val formatted = fileFormat.replacePlaceholders(streamer, title, platform, instant)
 
-    formatted shouldBeEqual " -  - 2024-02-20 21-41-52"
+    formatted shouldBeEqual " -  -  - 2024-02-20 21-41-52"
+  }
+
+  test("testPlaceholderReplaceWithoutPlatform") {
+    val streamer = "雪乃荔荔枝"
+    val title = "新人第一天开播"
+
+    val fileFormat = "{streamer} - {title} - {platform}"
+
+    val formatted = fileFormat.replacePlaceholders(streamer, title)
+
+    formatted shouldBeEqual "雪乃荔荔枝 - 新人第一天开播 - {platform}"
   }
 
   test("testSubstringBeforePlaceholder") {

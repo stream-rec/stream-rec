@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,7 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
   override val pathProvider: (Int) -> String = { index: Int ->
     val time = Clock.System.now()
     lastDownloadedTime = time.epochSeconds
-    downloadFilePath.replacePlaceholders(context.name, context.title, time).run {
+    downloadFilePath.replacePlaceholders(context.name, context.title, context.platform, time).run {
       // use parent folder for m3u8 with combining files disabled
       lastDownloadFilePath = Path(this).let {
         it.createParentDirectories()
