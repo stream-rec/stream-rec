@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.dao
+package github.hua0512.dao.migrations
 
 import androidx.room.DeleteColumn
 import androidx.room.RenameColumn

@@ -29,7 +29,7 @@ package github.hua0512.plugins.download
 import github.hua0512.data.config.Action
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.dto.GlobalPlatformConfig
+import github.hua0512.data.config.GlobalPlatformConfig
 import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamingPlatform

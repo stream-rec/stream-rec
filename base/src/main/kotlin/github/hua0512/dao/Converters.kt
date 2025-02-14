@@ -69,67 +69,6 @@ class Converters {
   }
 
   @TypeConverter
-  fun fromHuyaGlobalConfig(value: String?): HuyaConfigGlobal? {
-    return value?.let { json.decodeFromString(it) }
-  }
-
-  @TypeConverter
-  fun toHuyaGlobalConfig(value: HuyaConfigGlobal?): String? {
-    return value?.let { json.encodeToString(it) }
-  }
-
-
-  @TypeConverter
-  fun fromDouyinGlobalConfig(value: String?): DouyinConfigGlobal? {
-    return value?.let { json.decodeFromString(it) }
-  }
-
-  @TypeConverter
-  fun toDouyinGlobalConfig(value: DouyinConfigGlobal?): String? {
-    return value?.let { json.encodeToString(it) }
-  }
-
-  @TypeConverter
-  fun fromDouyuGlobalConfig(value: String?): DouyuConfigGlobal? {
-    return value?.let { json.decodeFromString(it) }
-  }
-
-  @TypeConverter
-  fun toDouyuGlobalConfig(value: DouyuConfigGlobal?): String? {
-    return value?.let { json.encodeToString(it) }
-  }
-
-  @TypeConverter
-  fun fromTwitchGlobalConfig(value: String?): TwitchConfigGlobal? {
-    return value?.let { json.decodeFromString(it) }
-  }
-
-  @TypeConverter
-  fun toTwitchGlobalConfig(value: TwitchConfigGlobal?): String? {
-    return value?.let { json.encodeToString(it) }
-  }
-
-  @TypeConverter
-  fun fromPandaTvGlobalConfig(value: String?): PandaTvConfigGlobal? {
-    return value?.let { json.decodeFromString(it) }
-  }
-
-  @TypeConverter
-  fun toPandaTvGlobalConfig(value: PandaTvConfigGlobal?): String? {
-    return value?.let { json.encodeToString(it) }
-  }
-
-  @TypeConverter
-  fun fromWeiboGlobalConfig(value: String?): WeiboConfigGlobal? {
-    return value?.let { json.decodeFromString(it) }
-  }
-
-  @TypeConverter
-  fun toWeiboGlobalConfig(value: WeiboConfigGlobal?): String? {
-    return value?.let { json.encodeToString(it) }
-  }
-
-  @TypeConverter
   fun fromDownloadConfig(value: String?): DownloadConfig? {
     return value?.let { json.decodeFromString(it) }
   }

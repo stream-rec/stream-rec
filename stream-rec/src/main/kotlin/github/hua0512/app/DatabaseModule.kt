@@ -31,9 +31,10 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.AppDatabase
-import github.hua0512.dao.Migrate11To12
-import github.hua0512.dao.Migrate3To4
+import github.hua0512.dao.migrations.Migrate11To12
+import github.hua0512.dao.migrations.Migrate3To4
 import github.hua0512.dao.config.AppConfigDao
+import github.hua0512.dao.migrations.Migration12To13
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao

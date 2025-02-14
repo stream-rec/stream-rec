@@ -27,6 +27,7 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
+import github.hua0512.data.config.GlobalPlatformConfig
 import github.hua0512.data.event.StreamerEvent.StreamerException
 import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
@@ -61,10 +62,10 @@ import kotlin.time.toDuration
  * @param semaphore Semaphore to limit the number of concurrent downloads
  * @param fetchDelay Delay between adding streamers
  */
-class DownloadPlatformService(
+class DownloadPlatformService<T : GlobalPlatformConfig>(
   val app: App,
   private val scope: CoroutineScope,
-  private var fetchDelay: Long = 0,
+  var config: StateFlow<T>,
   private val semaphore: Semaphore,
   private val callback: StreamerCallback,
   private val platform: StreamingPlatform,
@@ -93,26 +94,25 @@ class DownloadPlatformService(
   private val streamerStates = ConcurrentHashMap<String, StreamerState>()
   private val streamerChannel = Channel<Streamer>(Channel.BUFFERED)
 
-  private val rateLimiter = RateLimiter(1, fetchDelay)
+  private val rateLimiter = RateLimiter(1, config.fetchDelay ?: 0)
 
   init {
-    logger.debug("({}) fetchDelay: {}", platform, fetchDelay)
+    logger.debug("({}) fetchDelay: {}", platform, config.fetchDelay)
     handleIntents()
     // Monitor app config changes
     scope.launch {
-      app.appFlow.filterNotNull().collect { config ->
+      app.appFlow.filterNotNull().collect { appConfig ->
         // Update streamers config
-        streamerStates.values.parallelStream().forEach { it.downloader?.updateConfig(config) }
+        streamerStates.values.parallelStream().forEach { it.downloader?.updateConfig(appConfig) }
 
-        val globalConfig = platform.globalConfig(config)
+        val globalConfig = platform.globalConfig(appConfig)
         // Update rate limiter delay
         val newDelay = globalConfig.fetchDelay?.toDuration(DurationUnit.SECONDS)?.inWholeMilliseconds ?: 0L
         // do not update if the delay is the same
-        if (newDelay == fetchDelay) {
+        if (newDelay == config.fetchDelay) {
           return@collect
         }
         rateLimiter.updateMinDelay(newDelay)
-        fetchDelay = newDelay
         logger.debug("({}) updated fetchDelay: {}", platform, newDelay)
       }
     }

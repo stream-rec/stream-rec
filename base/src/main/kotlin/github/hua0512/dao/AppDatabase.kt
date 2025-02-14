@@ -32,6 +32,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import github.hua0512.dao.AppDatabase.Companion.DATABASE_VERSION
 import github.hua0512.dao.config.AppConfigDao
+import github.hua0512.dao.config.GlobalPlatformConfigDao
+import github.hua0512.dao.migrations.Migrate1To2
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao
@@ -40,6 +42,7 @@ import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.dao.user.UserDao
 import github.hua0512.data.config.AppConfigEntity
+import github.hua0512.data.platform.GlobalPlatformConfigEntity
 import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stream.entity.StreamDataEntity
 import github.hua0512.data.stream.entity.StreamerEntity
@@ -56,6 +59,7 @@ import github.hua0512.data.user.UserEntity
 @Database(
   entities = [
     AppConfigEntity::class,
+    GlobalPlatformConfigEntity::class,
     UserEntity::class,
     StatsEntity::class,
     StreamerEntity::class,
@@ -80,7 +84,7 @@ import github.hua0512.data.user.UserEntity
 abstract class AppDatabase : RoomDatabase() {
 
   companion object {
-    const val DATABASE_VERSION = 12
+    const val DATABASE_VERSION = 13
   }
 
   abstract fun getConfigDao(): AppConfigDao
@@ -98,4 +102,7 @@ abstract class AppDatabase : RoomDatabase() {
   abstract fun getUploadDataDao(): UploadDataDao
 
   abstract fun getUploadResultDao(): UploadResultDao
+
+  abstract fun getGlobalConfigDao(): GlobalPlatformConfigDao
+
 }

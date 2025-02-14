@@ -57,12 +57,6 @@ data class AppConfig(
   val enableFlvFix: Boolean = false,
   val enableFlvDuplicateTagFiltering: Boolean = false,
   val combineTsFiles: Boolean = false,
-  val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
-  val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
-  val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
-  val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
-  val pandaTvConfig: PandaTvConfigGlobal = PandaTvConfigGlobal(),
-  val weiboConfig: WeiboConfigGlobal = WeiboConfigGlobal(),
 ) {
 
   constructor(entity: AppConfigEntity) : this(
@@ -85,13 +79,7 @@ data class AppConfig(
     entity.exitDownloadOnError,
     entity.enableFlvFix,
     entity.enableFlvDuplicateTagFiltering,
-    entity.combineTsFiles,
-    entity.huyaConfig,
-    entity.douyinConfig,
-    entity.douyuConfig,
-    entity.twitchConfig,
-    entity.pandaTvConfig,
-    entity.weiboConfig,
+    entity.combineTsFiles
   )
 
 
@@ -115,12 +103,6 @@ data class AppConfig(
     exitDownloadOnError,
     enableFlvFix,
     enableFlvDuplicateTagFiltering,
-    combineTsFiles,
-    huyaConfig,
-    douyinConfig,
-    douyuConfig,
-    twitchConfig,
-    pandaTvConfig,
-    weiboConfig,
+    combineTsFiles
   )
 }

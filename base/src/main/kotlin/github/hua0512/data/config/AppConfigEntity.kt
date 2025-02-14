@@ -28,6 +28,7 @@ package github.hua0512.data.config
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import github.hua0512.data.media.VideoFormat
 
@@ -78,16 +79,4 @@ data class AppConfigEntity(
   val enableFlvDuplicateTagFiltering: Boolean = false,
   @ColumnInfo(name = "combineTsFiles", defaultValue = "false")
   val combineTsFiles: Boolean = false,
-  @ColumnInfo(name = "huyaConfig")
-  val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
-  @ColumnInfo(name = "douyinConfig")
-  val douyinConfig: DouyinConfigGlobal = DouyinConfigGlobal(),
-  @ColumnInfo(name = "douyuConfig")
-  val douyuConfig: DouyuConfigGlobal = DouyuConfigGlobal(),
-  @ColumnInfo(name = "twitchConfig")
-  val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
-  @ColumnInfo(name = "pandaTvConfig")
-  val pandaTvConfig: PandaTvConfigGlobal = PandaTvConfigGlobal(),
-  @ColumnInfo(name = "weiboConfig", defaultValue = "{}")
-  val weiboConfig: WeiboConfigGlobal = WeiboConfigGlobal(),
 )
