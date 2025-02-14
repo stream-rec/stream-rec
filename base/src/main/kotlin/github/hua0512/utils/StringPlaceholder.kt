@@ -31,11 +31,12 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-
+// Constants for placeholders
 private const val STREAMER_PLACEHOLDER = "{streamer}"
 private const val TITLE_PLACEHOLDER = "{title}"
 private const val PLATFORM_PLACEHOLDER = "{platform}"
 
+// Array of placeholders used in the string replacement
 private val placeholders = arrayOf(
   STREAMER_PLACEHOLDER,
   TITLE_PLACEHOLDER,
@@ -47,6 +48,17 @@ private val placeholders = arrayOf(
   "%M",
   "%S",
 )
+
+/**
+ * Replaces placeholders in the string with the provided values.
+ *
+ * @receiver The string containing placeholders to be replaced.
+ * @param streamer The value to replace the {streamer} placeholder.
+ * @param title The value to replace the {title} placeholder.
+ * @param platform The value to replace the {platform} placeholder. Default is null.
+ * @param time The Instant object representing the time to replace date and time placeholders. Default is null.
+ * @return The string with placeholders replaced by the provided values.
+ */
 
 fun String.replacePlaceholders(streamer: String, title: String, platform: String? = null, time: Instant? = null): String {
   val localDateTime: LocalDateTime? = time?.toLocalDateTime(TimeZone.currentSystemDefault())
@@ -75,8 +87,24 @@ fun String.replacePlaceholders(streamer: String, title: String, platform: String
   return result.toString()
 }
 
+
+/**
+ * Formats an integer value to a string with a leading zero if the value is less than 10.
+ * @param value The integer value to format.
+ * @return The formatted string.
+ */
 private fun formatLeadingZero(value: Int): String = String.format("%02d", value)
 
+/**
+ * Extension function for the String class to extract the part of the string before any placeholders.
+ * @return The part of the string before any placeholders.
+ * If the string contains no placeholders, the entire string is returned.
+ * If the string contains placeholders, only the part of the string before the first placeholder is returned.
+ * If the string contains multiple placeholders, only the part of the string before the first placeholder is returned.
+ * If the string contains a placeholder, but the placeholder is not found in the string, the entire string is returned.
+ * If the string is empty, an empty string is returned.
+ *
+ */
 fun String.substringBeforePlaceholders(): String {
   if (this.isEmpty()) {
     return ""
