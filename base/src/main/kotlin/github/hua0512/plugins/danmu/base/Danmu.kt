@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -207,9 +207,9 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     // start Websocket with backoff strategy
     withIORetry(
       maxRetries = 10,
-      initialDelayMillis = 10000,
+      initialDelayMillis = 1000,
       maxDelayMillis = 60000,
-      factor = 1.5,
+      factor = 2.0,
       onError = { e, retryCount ->
         onDanmuRetry(retryCount)
         logger.error("Error connecting ws, $filePath, retry count: $retryCount", e)
