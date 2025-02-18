@@ -495,6 +495,8 @@ class StreamerDownloadService(
 
           is InsufficientDownloadSizeException -> {
             onStreamDownloadError(e)
+            // update streamer state to inspecting live
+            updateStreamerState(StreamerState.INSPECTING_LIVE)
             // hang the download until space is freed
             logger.error("{} insufficient download size, hanging...", streamer.name)
             while (true) {
