@@ -26,7 +26,7 @@ It's powered by Kotlin, [Ktor](https://ktor.io/), and [ffmpeg](https://ffmpeg.or
 
 |  Service  | Recording | Danmu |                                 Url format                                 |
 |:---------:|:---------:|:-----:|:--------------------------------------------------------------------------:|
-|  Douyin   |     ✅     |   ✅   |                  `https://www.live.douyin.com/{douyinId}`                  |
+|  Douyin   |     ✅     |   ✅   |                    `https://live.douyin.com/{douyinId}`                    |
 |   Douyu   |     ✅     |   ✅   |                       `https://www.douyu.com/{room}`                       |
 |   Huya    |     ✅     |   ✅   |                       `https://www.huya.com/{room}`                        |
 |  PandaTV  |     ✅     |   ✅   |               `https://www.pandalive.co.kr/live/play/{room}`               |
