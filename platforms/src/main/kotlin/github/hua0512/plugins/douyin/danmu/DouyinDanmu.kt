@@ -66,8 +66,7 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
   }
 
 
-  override val websocketUrl: String
-    get() = DouyinApi.randomWebSocketUrl
+  override var websocketUrl: String = DouyinApi.randomWebSocketUrl
 
   override val heartBeatDelay: Long = 15000
 
@@ -120,6 +119,8 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
   }
 
   private fun updateSignature() {
+    // update ws url
+    websocketUrl = DouyinApi.randomWebSocketUrl
     assert(requestParams[ROOM_ID_KEY] != null) { "$ROOM_ID_KEY is null" }
     // user unique id may be expired, get a new one
     userUniqueId = getValidUserId().toString()
@@ -171,6 +172,7 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     val msgList = payloadPackage.messagesListList
     // each frame may contain multiple messages
     return msgList.mapNotNull { msg ->
+      logger.trace("msg: {}", msg)
       val msgType = DouyinWebcastMessages.fromClassName(msg.method)
       when (msgType) {
         CHAT_MESSAGE -> {
@@ -206,9 +208,7 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     }
   }
 
-
   private suspend fun sendAck(session: WebSocketSession, logId: Long, internalExt: ByteString) {
-//    logger.debug("Sending ack for logId: $logId")
     val pushFrame = PushFrame.newBuilder()
       .setPayloadType("ack")
       .setLogId(logId)
@@ -216,5 +216,6 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
       .build()
     val byteArray = pushFrame.toByteArray()
     session.send(byteArray)
+    logger.trace("sent ack : {}", byteArray.decodeToString())
   }
 }

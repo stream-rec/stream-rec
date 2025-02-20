@@ -34,6 +34,8 @@ import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.media.DanmuDataWrapper.DanmuData
 import github.hua0512.data.media.DanmuDataWrapper.EndOfDanmu
 import github.hua0512.data.stream.Streamer
+import github.hua0512.plugins.danmu.base.Danmu.Companion.XML_END
+import github.hua0512.plugins.danmu.base.Danmu.Companion.XML_START
 import github.hua0512.plugins.danmu.exceptions.DownloadProcessFinishedException
 import github.hua0512.plugins.danmu.exceptions.EndDanmuException
 import github.hua0512.utils.withIORetry
@@ -205,6 +207,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     }
 
     // start Websocket with backoff strategy
+    val wsUrl = websocketUrl
     withIORetry(
       maxRetries = 10,
       initialDelayMillis = 1000,
@@ -215,17 +218,17 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         logger.error("Error connecting ws, $filePath, retry count: $retryCount", e)
       }
     ) {
-      logger.debug("Connecting to danmu server: $websocketUrl")
+      logger.debug("Connecting to danmu server: $wsUrl")
       // determine if ping is enabled
       if (enablePing) {
-        app.client.webSocket(websocketUrl, request = {
+        app.client.webSocket(wsUrl, request = {
           fillRequest()
         }) {
           pingIntervalMillis = heartBeatDelay
           processSession()
         }
       } else {
-        val urlBuilder = URLBuilder(websocketUrl)
+        val urlBuilder = URLBuilder(wsUrl)
         if (urlBuilder.protocol.isSecure()) {
           app.client.wss(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
             fillRequest()
@@ -243,7 +246,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       // check if coroutine is cancelled
       if (isActive && !hasReceivedEnd) {
         // trigger backoff strategy
-        throw IOException("$websocketUrl connection finished")
+        throw IOException("$wsUrl connection finished")
       } else if (isActive && hasReceivedEnd) {
         throw EndDanmuException()
       }
@@ -408,7 +411,7 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         while (isActive) {
           // send heart beat with delay
           send(heartBeatPack)
-          logger.trace("{} heart beat sent {}", websocketUrl, heartBeatPack)
+          logger.trace("{} heart beat sent {}", websocketUrl, heartBeatPack.decodeToString())
           delay(heartBeatDelay)
         }
       }
