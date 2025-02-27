@@ -28,13 +28,14 @@ package github.hua0512.dao
 
 import androidx.room.TypeConverter
 import github.hua0512.data.config.*
+import github.hua0512.data.config.engine.DownloadEngines
+import github.hua0512.data.config.engine.EngineConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadPlatform
 import github.hua0512.data.upload.UploadState
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
@@ -178,4 +179,25 @@ class Converters {
   fun toUploadState(value: UploadState?): Int? {
     return value?.value
   }
+
+  @TypeConverter
+  fun fromDownloadEngineConfig(value: String?): EngineConfig? {
+    return value?.let { json.decodeFromString<EngineConfig>(it) }
+  }
+
+  @TypeConverter
+  fun toDownloadEngineConfig(value: EngineConfig?): String? {
+    return value?.let { json.encodeToString(it) }
+  }
+
+  @TypeConverter
+  fun fromDownloadEngine(value: String?): DownloadEngines? {
+    return value?.let { DownloadEngines.fromString(it) }
+  }
+
+  @TypeConverter
+  fun toDownloadEngine(value: DownloadEngines?): String? {
+    return value?.engine
+  }
+
 }

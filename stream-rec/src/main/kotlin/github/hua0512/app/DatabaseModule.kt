@@ -32,8 +32,10 @@ import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.AppDatabase
 import github.hua0512.dao.Migrate11To12
+import github.hua0512.dao.Migrate12To13
 import github.hua0512.dao.Migrate3To4
 import github.hua0512.dao.config.AppConfigDao
+import github.hua0512.dao.config.EngineConfigDao
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao
@@ -44,6 +46,7 @@ import github.hua0512.dao.user.UserDao
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.utils.mainLogger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.json.Json
 import javax.inject.Singleton
 import kotlin.io.path.Path
 import kotlin.io.path.createParentDirectories
@@ -60,7 +63,7 @@ class DatabaseModule {
 
   @Provides
   @Singleton
-  fun provideRoomDatabase(): AppDatabase {
+  fun provideRoomDatabase(json: Json): AppDatabase {
     val path = Path(LocalDataSource.getDefaultPath()).also {
       it.createParentDirectories()
       mainLogger.info("Database path: ${it.pathString}")
@@ -73,7 +76,7 @@ class DatabaseModule {
     )
 
     return builder
-      .addMigrations(Migrate3To4, Migrate11To12)
+      .addMigrations(Migrate3To4, Migrate11To12, Migrate12To13(json))
       .fallbackToDestructiveMigration(false)
       .fallbackToDestructiveMigrationOnDowngrade(false)
       .setDriver(BundledSQLiteDriver())
@@ -104,4 +107,7 @@ class DatabaseModule {
 
   @Provides
   fun provideStatsDao(database: AppDatabase): StatsDao = database.getStatsDao()
+
+  @Provides
+  fun provideEngineConfigDao(database: AppDatabase): EngineConfigDao = database.getEngineConfigDao()
 }

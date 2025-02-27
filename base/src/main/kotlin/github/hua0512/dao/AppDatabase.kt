@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import github.hua0512.dao.AppDatabase.Companion.DATABASE_VERSION
 import github.hua0512.dao.config.AppConfigDao
+import github.hua0512.dao.config.EngineConfigDao
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao
@@ -40,6 +41,7 @@ import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.dao.user.UserDao
 import github.hua0512.data.config.AppConfigEntity
+import github.hua0512.data.config.engine.EngineConfigEntity
 import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stream.entity.StreamDataEntity
 import github.hua0512.data.stream.entity.StreamerEntity
@@ -57,6 +59,7 @@ import github.hua0512.data.user.UserEntity
   entities = [
     AppConfigEntity::class,
     UserEntity::class,
+    EngineConfigEntity::class,
     StatsEntity::class,
     StreamerEntity::class,
     StreamDataEntity::class,
@@ -80,10 +83,12 @@ import github.hua0512.data.user.UserEntity
 abstract class AppDatabase : RoomDatabase() {
 
   companion object {
-    const val DATABASE_VERSION = 12
+    const val DATABASE_VERSION = 13
   }
 
   abstract fun getConfigDao(): AppConfigDao
+
+  abstract fun getEngineConfigDao(): EngineConfigDao
 
   abstract fun getUserDao(): UserDao
 

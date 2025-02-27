@@ -29,6 +29,7 @@ package github.hua0512.services
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.config.engine.EngineConfig
 import github.hua0512.data.event.StreamerEvent.*
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
@@ -198,12 +199,20 @@ class StreamerDownloadService(
    */
   private val downloadState = MutableStateFlow<DownloadState>(Idle)
 
+  var listenToEngineChanges = false
 
   suspend fun init(callback: StreamerCallback) {
     setCallback(callback)
+
+    assert(streamer.engine != null) { "Engine is null" }
+
+    assert(streamer.engineConfig != null) { "Engine config is null" }
+
     val initializationResult = plugin.init(
       streamer,
       this@StreamerDownloadService.callback,
+      streamer.engine!!,
+      streamer.engineConfig!!,
       app.config.maxPartSize,
       app.config.maxPartDuration ?: 0
     )
@@ -591,7 +600,14 @@ class StreamerDownloadService(
    * Update the app config
    * @param config [AppConfig] new config
    */
-  fun updateConfig(config: AppConfig) = plugin.onConfigUpdated(config)
+  fun updateAppConfig(config: AppConfig) = plugin.onConfigUpdated(config)
+
+
+  fun updateEngineConfig(engineConfig: EngineConfig) {
+    if (!listenToEngineChanges) return
+    plugin.onEngineConfigUpdated(engineConfig)
+  }
+
 
   private suspend fun stop(exception: Exception? = null): Boolean = plugin.stopDownload(exception)
 

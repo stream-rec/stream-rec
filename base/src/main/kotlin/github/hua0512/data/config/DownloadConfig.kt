@@ -33,7 +33,6 @@ import github.hua0512.data.platform.DouyinQuality
 import github.hua0512.data.platform.DouyuQuality
 import github.hua0512.data.platform.DouyuQualitySerializer
 import github.hua0512.data.platform.HlsQuality
-import github.hua0512.plugins.download.engines.DownloadEngines
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -41,7 +40,6 @@ import kotlinx.serialization.Serializable
 sealed class DownloadConfig : DownloadConfigDTO {
 
   //  abstract override val isInherited: Boolean
-  override var engine: DownloadEngines? = null
   override var cookies: String? = null
   override var danmu: Boolean? = null
   override var maxBitRate: Int? = null
@@ -55,7 +53,6 @@ sealed class DownloadConfig : DownloadConfigDTO {
   private fun DownloadConfig.checkBasicOther(
     other: DownloadConfig,
   ): Boolean {
-    if (engine != other.engine) return false
     if (cookies != other.cookies) return false
     if (danmu != other.danmu) return false
     if (maxBitRate != other.maxBitRate) return false
@@ -77,8 +74,7 @@ sealed class DownloadConfig : DownloadConfigDTO {
   }
 
   override fun hashCode(): Int {
-    var result = engine?.hashCode() ?: 0
-    result = 31 * result + (cookies?.hashCode() ?: 0)
+    var result = (cookies?.hashCode() ?: 0)
     result = 31 * result + (danmu?.hashCode() ?: 0)
     result = 31 * result + (maxBitRate ?: 0)
     result = 31 * result + (outputFolder?.hashCode() ?: 0)

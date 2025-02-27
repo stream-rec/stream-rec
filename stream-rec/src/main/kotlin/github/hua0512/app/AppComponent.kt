@@ -31,6 +31,7 @@ import github.hua0512.dao.AppDatabase
 import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
+import github.hua0512.repo.config.EngineConfigManager
 import github.hua0512.repo.stats.SummaryStatsRepo
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
@@ -69,4 +70,6 @@ interface AppComponent {
   fun getUploadRepo(): UploadRepo
 
   fun getExtractorFactory(): IExtractorFactory
+
+  fun getEngineConfigRepository(): EngineConfigManager
 }

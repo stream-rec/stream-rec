@@ -31,6 +31,8 @@ import github.hua0512.app.App
 import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.config.engine.DownloadEngines
+import github.hua0512.data.config.engine.EngineConfig
 import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
@@ -52,6 +54,7 @@ import github.hua0512.plugins.download.ProgressBarManager
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
 import github.hua0512.plugins.download.engines.BaseDownloadEngine.Companion.PART_PREFIX
 import github.hua0512.plugins.download.engines.ffmpeg.FFmpegDownloadEngine
+import github.hua0512.plugins.download.engines.ffmpeg.StreamlinkDownloadEngine
 import github.hua0512.plugins.download.engines.kotlin.KotlinFlvDownloadEngine
 import github.hua0512.plugins.download.engines.kotlin.KotlinHlsDownloadEngine
 import github.hua0512.plugins.event.EventCenter
@@ -153,6 +156,16 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
   private var pb: ProgressBar? = null
 
+  /**
+   * Download engine type
+   */
+  private lateinit var engineType: DownloadEngines
+
+  /**
+   * Download engine configuration
+   */
+  private lateinit var engineConfig: EngineConfig
+
 
   /***
    * Initialize the downloader
@@ -164,6 +177,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   fun init(
     streamer: Streamer,
     streamerCallback: StreamerCallback? = null,
+    engineType: DownloadEngines,
+    engineConfig: EngineConfig,
     maxDownloadSize: Long = 0,
     maxDownloadTime: Long = 0,
   ): Result<Boolean, ExtractorError> {
@@ -178,15 +193,22 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     streamerCallback?.let {
       this.streamerCallback = it
     }
+    this.engineType = engineType
+    this.engineConfig = engineConfig
     this.maxSize = maxDownloadSize
     this.maxTime = maxDownloadTime
     isInitialized = true
     return Ok(true)
   }
 
-  fun oneShotInit(downloadUrl: String, downloadFormat: VideoFormat) {
+  fun oneShotInit(
+    downloadUrl: String, downloadFormat: VideoFormat, engineType: DownloadEngines,
+    engineConfig: EngineConfig,
+  ) {
     isInitialized = true
     isOneShot = true
+    this.engineType = engineType
+    this.engineConfig = engineConfig
     state.value = DownloadState.Preparing(downloadUrl, downloadFormat, downloadFormat, "")
   }
 
@@ -456,7 +478,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       }
     }
 
-    engine = DownloadEngineFactory.createEngine(downloadConfig.engine!!, format).apply {
+    engine = DownloadEngineFactory.createEngine(engineType, format).apply {
       // init engine
       init(
         url,
@@ -473,7 +495,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
       val definedArgs = getProgramArgs()
       if (definedArgs.isNotEmpty()) programArgs.addAll(definedArgs)
       // configure engine
-      configureEngine(app.config)
+      configureEngine(engineConfig)
       // listen for end of danmu event
       danmu.setOnDanmuClosedCallback { hasEndOfDanmu = true }
     }
@@ -547,10 +569,18 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   open fun onConfigUpdated(config: AppConfig) {
     this@PlatformDownloader.maxSize = config.maxPartSize
     this@PlatformDownloader.maxTime = config.maxPartDuration ?: 0
-    if (this::engine.isInitialized) {
-      engine.configureEngine(config)
-    }
   }
+
+  /**
+   * Callback triggered when the engine config is updated
+   * @param engineConfig the engine config
+   */
+  open fun onEngineConfigUpdated(engineConfig: EngineConfig) {
+    this.engineConfig = engineConfig
+    engine.configureEngine(engineConfig)
+    debug("engine config updated: {}", engineConfig)
+  }
+
 
   protected open fun onDownloadError(exception: Exception) {
 
@@ -605,21 +635,33 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     onStreamDownloaded?.invoke(streamInfo, metaInfo)
   }
 
-  private fun BaseDownloadEngine.configureEngine(config: AppConfig) {
-    when (this) {
+  private inline fun <reified T : EngineConfig> EngineConfig.getConfig(): T {
+    return this as? T ?: throw FatalDownloadErrorException("Invalid config type")
+  }
+
+  private fun BaseDownloadEngine.configureEngine(engineConfig: EngineConfig) {
+    when (this@configureEngine) {
+      is StreamlinkDownloadEngine -> {
+        val config = engineConfig.getConfig<EngineConfig.StreamlinkConfig>()
+        useSegmenter = config.useBuiltInSegmenter
+        detectErrors = config.exitDownloadOnError
+      }
+
       is FFmpegDownloadEngine -> {
-        // determine if the built-in segmenter should be used
+        val config = engineConfig.getConfig<EngineConfig.FFmpegConfig>()
         useSegmenter = config.useBuiltInSegmenter
         detectErrors = config.exitDownloadOnError
       }
 
       is KotlinFlvDownloadEngine -> {
+        val config = engineConfig.getConfig<EngineConfig.KotlinConfig>()
         enableFlvFix = config.enableFlvFix
         enableFlvDuplicateTagFiltering = config.enableFlvDuplicateTagFiltering
       }
 
       is KotlinHlsDownloadEngine -> {
-        combineTsFiles = config.combineTsFiles
+        val hlsConfig = engineConfig.getConfig<EngineConfig.KotlinConfig>()
+        combineTsFiles = hlsConfig.combineTsFiles
       }
     }
   }

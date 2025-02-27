@@ -24,31 +24,22 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
+package github.hua0512.repo.config
 
-import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.engine.DownloadEngines
+import github.hua0512.dao.config.EngineConfigDao
 import github.hua0512.data.config.engine.EngineConfig
-import github.hua0512.data.stream.StreamerState
-import github.hua0512.data.stream.StreamingPlatform
 
 /**
+ * Repository for engine config data
  * @author hua0512
- * @date : 2024/2/10 19:54
+ * @date : 2/15/2025 9:12 PM
  */
-interface StreamerDTO {
-  val name: String
-  val url: String
-  val platform: StreamingPlatform
-  val lastLiveTime: Long
-  val state: StreamerState
-  val avatar: String?
-  val streamTitle: String?
-  val downloadConfig: DownloadConfig?
-  val isTemplate: Boolean
-  val templateId: Long?
-  val startTime: String?
-  val endTime: String?
-  val engine: DownloadEngines?
-  val engineConfig: EngineConfig?
+interface EngineConfigRepo {
+
+  val dao: EngineConfigDao
+
+  suspend fun <T : EngineConfig> getEngineConfig(configId: Int, engineType: String): T
+
+  suspend fun <T : EngineConfig> updateEngineConfig(configId: Int, config: T): T
+
 }

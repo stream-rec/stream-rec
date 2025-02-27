@@ -24,31 +24,49 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
+package github.hua0512.data.config.engine
 
-import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.engine.DownloadEngines
-import github.hua0512.data.config.engine.EngineConfig
-import github.hua0512.data.stream.StreamerState
-import github.hua0512.data.stream.StreamingPlatform
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
+ * Base interface for engine-specific configurations
  * @author hua0512
- * @date : 2024/2/10 19:54
+ * @date : 2024/3/27
  */
-interface StreamerDTO {
-  val name: String
-  val url: String
-  val platform: StreamingPlatform
-  val lastLiveTime: Long
-  val state: StreamerState
-  val avatar: String?
-  val streamTitle: String?
-  val downloadConfig: DownloadConfig?
-  val isTemplate: Boolean
-  val templateId: Long?
-  val startTime: String?
-  val endTime: String?
-  val engine: DownloadEngines?
-  val engineConfig: EngineConfig?
+@Serializable
+sealed interface EngineConfig {
+
+  /**
+   * Streamlink engine specific configuration
+   */
+  @SerialName("streamlink")
+  @Serializable
+  data class StreamlinkConfig(
+    val useBuiltInSegmenter: Boolean = false,
+    val exitDownloadOnError: Boolean = false,
+  ) : EngineConfig
+
+  /**
+   * FFmpeg engine specific configuration
+   */
+  @SerialName("ffmpeg")
+  @Serializable
+  data class FFmpegConfig(
+    val useBuiltInSegmenter: Boolean = false,
+    val exitDownloadOnError: Boolean = false,
+  ) : EngineConfig
+
+  /**
+   * Kotlin engine specific configuration
+   */
+  @SerialName("kotlin")
+  @Serializable
+  data class KotlinConfig(
+    val enableFlvFix: Boolean = false,
+    val enableFlvDuplicateTagFiltering: Boolean = false,
+    val combineTsFiles: Boolean = false,
+  ) : EngineConfig
+
 }
+

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -12,8 +12,6 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -32,14 +30,14 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import github.hua0512.data.config.AppConfigEntity
 import github.hua0512.data.config.DownloadConfig
+import github.hua0512.data.config.engine.DownloadEngines
+import github.hua0512.data.config.engine.EngineConfig
 import github.hua0512.data.dto.StreamerDTO
 import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
 
 /**
  * Streamer entity
- * @author hua0512
- * @date : 2024/5/15 22:38
  */
 @Entity(
   tableName = "streamer", foreignKeys = [
@@ -80,4 +78,8 @@ data class StreamerEntity(
   override val templateId: Long = 0,
   @ColumnInfo(name = "app_config_id", index = true, defaultValue = "0")
   val appConfigId: Long = 0,
+  @ColumnInfo(name = "engine")
+  override val engine: DownloadEngines? = null,
+  @ColumnInfo(name = "engine_config")
+  override val engineConfig: EngineConfig? = null,
 ) : StreamerDTO
