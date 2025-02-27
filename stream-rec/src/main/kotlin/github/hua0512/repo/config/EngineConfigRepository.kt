@@ -54,9 +54,9 @@ class EngineConfigManager(override val dao: EngineConfigDao, val json: Json) : E
   override suspend fun <T : EngineConfig> getEngineConfig(configId: Int, engineType: String): T = withIOContext {
     val cacheKey = "$configId-$engineType"
     mutex.withLock {
-      // Check if the configuration is already cached
+      // Check if the configuration is already cached, if so, return it
       configCache[cacheKey]?.let {
-        it as T
+        return@withLock it as T
       }
 
       // If not cached, fetch from the repository
