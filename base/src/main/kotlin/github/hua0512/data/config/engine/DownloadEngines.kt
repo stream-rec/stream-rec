@@ -36,9 +36,9 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
 
-private const val KOTLIN_ENGINE = "kotlin"
-private const val FFMPEG_ENGINE = "ffmpeg"
-private const val STREAMLINK_ENGINE = "streamlink"
+internal const val KOTLIN_ENGINE = "kotlin"
+internal const val FFMPEG_ENGINE = "ffmpeg"
+internal const val STREAMLINK_ENGINE = "streamlink"
 
 /**
  * Download engines

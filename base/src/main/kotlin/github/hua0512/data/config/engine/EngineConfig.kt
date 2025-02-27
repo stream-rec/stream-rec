@@ -36,37 +36,49 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 sealed interface EngineConfig {
+  /**
+   * Get the name of the engine
+   */
+  fun getName(): String
 
   /**
    * Streamlink engine specific configuration
    */
-  @SerialName("streamlink")
+  @SerialName(STREAMLINK_ENGINE)
   @Serializable
   data class StreamlinkConfig(
     val useBuiltInSegmenter: Boolean = false,
     val exitDownloadOnError: Boolean = false,
-  ) : EngineConfig
+  ) : EngineConfig {
+    override fun getName(): String = STREAMLINK_ENGINE
+  }
 
   /**
    * FFmpeg engine specific configuration
    */
-  @SerialName("ffmpeg")
+  @SerialName(FFMPEG_ENGINE)
   @Serializable
   data class FFmpegConfig(
     val useBuiltInSegmenter: Boolean = false,
     val exitDownloadOnError: Boolean = false,
-  ) : EngineConfig
+  ) : EngineConfig {
+    override fun getName(): String = FFMPEG_ENGINE
+  }
 
   /**
    * Kotlin engine specific configuration
    */
-  @SerialName("kotlin")
+  @SerialName(KOTLIN_ENGINE)
   @Serializable
   data class KotlinConfig(
     val enableFlvFix: Boolean = false,
     val enableFlvDuplicateTagFiltering: Boolean = false,
     val combineTsFiles: Boolean = false,
-  ) : EngineConfig
+  ) : EngineConfig {
+
+    override fun getName(): String = KOTLIN_ENGINE
+
+  }
 
 }
 

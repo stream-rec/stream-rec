@@ -72,20 +72,12 @@ class EngineConfigManager(override val dao: EngineConfigDao, val json: Json) : E
   }
 
 
-  fun EngineConfig.getEngineName(): String {
-    return when (this) {
-      is EngineConfig.StreamlinkConfig -> "streamlink"
-      is EngineConfig.FFmpegConfig -> "ffmpeg"
-      is EngineConfig.KotlinConfig -> "kotlin"
-    }
-  }
-
   // Update engine configuration
   override suspend fun <T : EngineConfig> updateEngineConfig(configId: Int, config: T): T = withIOContext {
     mutex.withLock {
       // Serialize the configuration
       val configJson = json.encodeToString<EngineConfig>(config)
-      val engineName = config.getEngineName()
+      val engineName = config.getName()
       val configEntity = EngineConfigEntity(configId = configId, engineType = engineName, config = configJson)
       dao.upsert(configEntity)
 
@@ -132,7 +124,7 @@ class EngineConfigManager(override val dao: EngineConfigDao, val json: Json) : E
           // check if the config is already in the cache
           // update the cache if not, or skip if it is
           mutex.withLock {
-            val cacheKey = "$configId-${it.getEngineName()}"
+            val cacheKey = "$configId-${it.getName()}"
             // update the cache if not
             if (!configCache.containsKey(cacheKey) || configCache[cacheKey] != it) {
               configCache[cacheKey] = it
