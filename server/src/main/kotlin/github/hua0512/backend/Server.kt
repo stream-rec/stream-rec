@@ -30,6 +30,7 @@ import github.hua0512.backend.plugins.*
 import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
+import github.hua0512.repo.config.EngineConfigRepo
 import github.hua0512.repo.stats.SummaryStatsRepo
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
@@ -51,6 +52,7 @@ fun CoroutineScope.backendServer(
   statsRepo: SummaryStatsRepo,
   uploadRepo: UploadRepo,
   extractorFactory: IExtractorFactory,
+  engineConfigRepo: EngineConfigRepo,
 ): EmbeddedServer<ApplicationEngine, NettyApplicationEngine.Configuration> {
   return embeddedServer(
     Netty,
@@ -66,7 +68,8 @@ fun CoroutineScope.backendServer(
         streamDataRepo,
         statsRepo,
         uploadRepo,
-        extractorFactory
+        extractorFactory,
+        engineConfigRepo
       )
     })
 }
@@ -80,11 +83,22 @@ fun Application.module(
   statsRepo: SummaryStatsRepo,
   uploadRepo: UploadRepo,
   extractorFactory: IExtractorFactory,
+  engineConfigRepo: EngineConfigRepo,
 ) {
   configureSecurity()
   configureHTTP()
   configureMonitoring()
   configureSerialization()
   configureSockets(json)
-  configureRouting(json, userRepo, appConfigRepo, streamerRepo, streamDataRepo, statsRepo, uploadRepo, extractorFactory)
+  configureRouting(
+    json,
+    userRepo,
+    appConfigRepo,
+    streamerRepo,
+    streamDataRepo,
+    statsRepo,
+    uploadRepo,
+    extractorFactory,
+    engineConfigRepo
+  )
 }

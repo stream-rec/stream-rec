@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,9 @@
 
 package github.hua0512.plugins.download.base
 
+import github.hua0512.data.config.engine.DownloadEngines
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.plugins.download.engines.BaseDownloadEngine
-import github.hua0512.plugins.download.engines.DownloadEngines
 import github.hua0512.plugins.download.engines.ffmpeg.FFmpegDownloadEngine
 import github.hua0512.plugins.download.engines.ffmpeg.StreamlinkDownloadEngine
 import github.hua0512.plugins.download.engines.kotlin.KotlinFlvDownloadEngine

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,6 @@ import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.data.stream.StreamingPlatform.*
-import github.hua0512.plugins.download.engines.DownloadEngines
 import github.hua0512.utils.nonEmptyOrNull
 
 /**
@@ -51,7 +50,6 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
 ): T {
   val streamerConfig = this
 
-  val newEngine = templateConfig?.engine ?: streamerConfig.engine ?: DownloadEngines.fromString(appConfig.engine)
   val newCookies = templateConfig?.cookies.orEmpty()
     .ifEmpty {
       streamerConfig.cookies.orEmpty()
@@ -59,8 +57,11 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
     }
   val newDanmu = templateConfig?.danmu ?: streamerConfig.danmu ?: appConfig.danmu
   val newMaxBitRate = templateConfig?.maxBitRate ?: streamerConfig.maxBitRate
-  val newOutputFolder = templateConfig?.outputFolder?.nonEmptyOrNull() ?: streamerConfig.outputFolder?.nonEmptyOrNull() ?: appConfig.outputFolder
-  val newOutputFileName = templateConfig?.outputFileName?.nonEmptyOrNull() ?: streamerConfig.outputFileName?.nonEmptyOrNull() ?: appConfig.outputFileName
+  val newOutputFolder = templateConfig?.outputFolder?.nonEmptyOrNull() ?: streamerConfig.outputFolder?.nonEmptyOrNull()
+  ?: appConfig.outputFolder
+  val newOutputFileName =
+    templateConfig?.outputFileName?.nonEmptyOrNull() ?: streamerConfig.outputFileName?.nonEmptyOrNull()
+    ?: appConfig.outputFileName
   val newOutputFileFormat =
     templateConfig?.outputFileFormat ?: streamerConfig.outputFileFormat ?: appConfig.outputFileFormat
   val onPartedDownload = templateConfig?.onPartedDownload ?: streamerConfig.onPartedDownload
@@ -92,7 +93,8 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
     )
 
     WEIBO -> DownloadConfig.WeiboDownloadConfig(
-      sourceFormat = (streamerConfig as DownloadConfig.WeiboDownloadConfig).sourceFormat ?: appConfig.weiboConfig.sourceFormat,
+      sourceFormat = (streamerConfig as DownloadConfig.WeiboDownloadConfig).sourceFormat
+        ?: appConfig.weiboConfig.sourceFormat,
     )
 
     UNKNOWN -> throw UnsupportedOperationException("Platform not supported")
@@ -100,7 +102,6 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
 
   return platformBasedConfig.apply {
     applyCommonFields(
-      newEngine,
       newCookies,
       newDanmu,
       newMaxBitRate,
@@ -114,7 +115,6 @@ fun <T : DownloadConfig> T.fillDownloadConfig(
 }
 
 private fun DownloadConfig.applyCommonFields(
-  newEngine: DownloadEngines?,
   newCookies: String?,
   newDanmu: Boolean?,
   newMaxBitRate: Int?,
@@ -124,7 +124,6 @@ private fun DownloadConfig.applyCommonFields(
   onPartedDownload: List<Action>?,
   onStreamingFinished: List<Action>?,
 ) {
-  this.engine = newEngine
   this.cookies = newCookies
   this.danmu = newDanmu
   this.maxBitRate = newMaxBitRate

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,16 +68,6 @@ data class AppConfigEntity(
   val maxConcurrentUploads: Int = 3,
   @ColumnInfo(name = "deleteFilesAfterUpload")
   val deleteFilesAfterUpload: Boolean = false,
-  @ColumnInfo(name = "useBuiltInSegmenter")
-  val useBuiltInSegmenter: Boolean = false,
-  @ColumnInfo(name = "exitDownloadOnError", defaultValue = "false")
-  val exitDownloadOnError: Boolean = false,
-  @ColumnInfo(name = "enableFlvFix", defaultValue = "false")
-  val enableFlvFix: Boolean = false,
-  @ColumnInfo(name = "enableFlvDuplicateTagFiltering", defaultValue = "false")
-  val enableFlvDuplicateTagFiltering: Boolean = false,
-  @ColumnInfo(name = "combineTsFiles", defaultValue = "false")
-  val combineTsFiles: Boolean = false,
   @ColumnInfo(name = "huyaConfig")
   val huyaConfig: HuyaConfigGlobal = HuyaConfigGlobal(),
   @ColumnInfo(name = "douyinConfig")

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +37,7 @@ import github.hua0512.flv.FlvMetaInfoProcessor
 import github.hua0512.flv.data.other.FlvMetadataInfo
 import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.globalConfig
+import github.hua0512.repo.config.EngineConfigManager
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.utils.deleteFile
@@ -60,6 +61,7 @@ class DownloadService(
   private val actionService: ActionService,
   private val repo: StreamerRepo,
   private val streamDataRepository: StreamDataRepo,
+  private val downloadEngineConfigManager: EngineConfigManager,
 ) {
 
   companion object {
@@ -219,7 +221,8 @@ class DownloadService(
         downloadSemaphore,
         callback,
         platform,
-        PlatformDownloaderFactory
+        PlatformDownloaderFactory,
+        downloadEngineConfigManager
       )
     }
     return service
@@ -285,6 +288,8 @@ class DownloadService(
               old.startTime != new.startTime -> "start time"
               old.endTime != new.endTime -> "end time"
               old.templateStreamer?.downloadConfig != new.templateStreamer?.downloadConfig -> "template stream download config"
+              old.engine != new.engine -> "engine"
+              old.engineConfig != new.engineConfig -> "engine config"
               old.state != new.state -> when {
                 new.state == StreamerState.CANCELLED && old.state != StreamerState.CANCELLED -> "cancelled"
                 new.state == StreamerState.NOT_LIVE && old.state == StreamerState.CANCELLED -> "enabled"

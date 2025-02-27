@@ -27,6 +27,8 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
+import github.hua0512.data.config.engine.DownloadEngines
+import github.hua0512.data.config.engine.EngineConfig
 import github.hua0512.data.event.StreamerEvent.StreamerException
 import github.hua0512.data.event.StreamerEvent.StreamerRecordStop
 import github.hua0512.data.stream.Streamer
@@ -36,6 +38,7 @@ import github.hua0512.plugins.download.base.StreamerCallback
 import github.hua0512.plugins.download.fillDownloadConfig
 import github.hua0512.plugins.download.globalConfig
 import github.hua0512.plugins.event.EventCenter
+import github.hua0512.repo.config.EngineConfigManager
 import github.hua0512.services.DownloadPlatformService.StreamerState.StreamerStatus.*
 import github.hua0512.utils.RateLimiter
 import github.hua0512.utils.logger
@@ -69,6 +72,7 @@ class DownloadPlatformService(
   private val callback: StreamerCallback,
   private val platform: StreamingPlatform,
   private val downloadFactory: IPlatformDownloaderFactory,
+  private val downloadEngineConfigManager: EngineConfigManager,
 ) {
 
   companion object {
@@ -102,7 +106,7 @@ class DownloadPlatformService(
     scope.launch {
       app.appFlow.filterNotNull().collect { config ->
         // Update streamers config
-        streamerStates.values.parallelStream().forEach { it.downloader?.updateConfig(config) }
+        streamerStates.values.parallelStream().forEach { it.downloader?.updateAppConfig(config) }
 
         val globalConfig = platform.globalConfig(config)
         // Update rate limiter delay
@@ -114,6 +118,20 @@ class DownloadPlatformService(
         rateLimiter.updateMinDelay(newDelay)
         fetchDelay = newDelay
         logger.debug("({}) updated fetchDelay: {}", platform, newDelay)
+      }
+    }
+
+    scope.launch {
+      downloadEngineConfigManager.streamConfigs(app.config.id).collect { newConfig ->
+        logger.debug("({}) new engine config detected: {}", platform, newConfig)
+        streamerStates.values
+          .asSequence()
+          .filter {
+            // use downloader streamer here because it is the one that is actually used (configs populated)
+            it.downloader?.streamer?.engineConfig?.javaClass == newConfig.javaClass
+          }
+          .filter { it.downloader != null }
+          .forEach { it.downloader?.updateEngineConfig(newConfig) }
       }
     }
   }
@@ -262,13 +280,28 @@ class DownloadPlatformService(
         streamer.templateStreamer?.downloadConfig,
         app.config
       )
-      val updatedStreamer = streamer.copy(downloadConfig = newDownloadConfig)
+      var isGlobalEngineConfig = false
+
+      // Get engine from streamer or app config
+      val streamerEngine: DownloadEngines = streamer.engine ?: DownloadEngines.fromString(app.config.engine)
+      // fetch engine config
+
+      val engineConfig = streamer.engine?.let { streamer.engineConfig }
+        ?: downloadEngineConfigManager.getEngineConfig<EngineConfig>(
+          app.config.id,
+          streamerEngine.engine
+        ).also { isGlobalEngineConfig = true }
+
+      // Create new streamer with updated config
+      val updatedStreamer =
+        streamer.copy(downloadConfig = newDownloadConfig, engine = streamerEngine, engineConfig = engineConfig)
 
       var downloader: StreamerDownloadService
       stateMutex.withLock {
         val plugin = downloadFactory.createDownloader(app, updatedStreamer.platform, updatedStreamer.url)
         downloader = StreamerDownloadService(app, updatedStreamer, plugin, semaphore).apply {
           init(callback)
+          listenToEngineChanges = isGlobalEngineConfig
         }
         val streamerState = streamerStates[streamer.url]
         if (streamerState?.state == RESERVED) {
@@ -285,7 +318,7 @@ class DownloadPlatformService(
       if (e is CancellationException) {
         logger.debug("({}) download cancelled for {}", platform, streamer.url)
       } else {
-        logger.error("Failed to start download for ${streamer.name}: $e")
+        logger.error("Failed to start download for ${streamer.name}:", e)
         EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
       }
     }

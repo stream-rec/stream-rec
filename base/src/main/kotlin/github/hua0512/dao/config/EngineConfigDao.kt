@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,47 +24,28 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.download.engines
+package github.hua0512.dao.config
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import androidx.room.*
+import github.hua0512.dao.BaseDao
+import github.hua0512.data.config.engine.EngineConfigEntity
+import kotlinx.coroutines.flow.Flow
 
-private const val KOTLIN_ENGINE = "kotlin"
-private const val FFMPEG_ENGINE = "ffmpeg"
-private const val STREAMLINK_ENGINE = "streamlink"
+@Dao
+interface EngineConfigDao : BaseDao<EngineConfigEntity> {
 
-/**
- * Download engines
- * @property engine the engine name
- * @author hua0512
- * @date : 2024/10/10 21:34
- */
-@Serializable
-sealed class DownloadEngines(val engine: String) {
+  @Query("SELECT * FROM engine_config WHERE config_id = :configId AND engine_type = :engineType LIMIT 1")
+  suspend fun getEngineConfig(configId: Int, engineType: String): EngineConfigEntity?
 
-  @Serializable
-  @SerialName(KOTLIN_ENGINE)
-  public data object KOTLIN : DownloadEngines(KOTLIN_ENGINE)
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertEngineConfig(config: EngineConfigEntity)
 
-  @Serializable
-  @SerialName(FFMPEG_ENGINE)
-  public data object FFMPEG : DownloadEngines(FFMPEG_ENGINE)
+  @Delete
+  suspend fun deleteEngineConfig(config: EngineConfigEntity)
 
-  @Serializable
-  @SerialName(STREAMLINK_ENGINE)
-  public data object STREAMLINK : DownloadEngines(STREAMLINK_ENGINE)
+  @Query("DELETE FROM engine_config WHERE config_id = :configId AND engine_type = :engineType")
+  suspend fun deleteEngineConfig(configId: Int, engineType: String)
 
-
-  public companion object {
-
-    public fun fromString(engine: String): DownloadEngines {
-      return when (engine) {
-        KOTLIN_ENGINE -> KOTLIN
-        FFMPEG_ENGINE -> FFMPEG
-        STREAMLINK_ENGINE -> STREAMLINK
-        else -> throw IllegalArgumentException("Unknown engine type: $engine")
-      }
-    }
-  }
-
-}
+  @Query("SELECT * FROM engine_config WHERE config_id = :configId")
+  fun streamConfigs(configId: Int): Flow<List<EngineConfigEntity>>
+} 

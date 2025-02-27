@@ -150,6 +150,7 @@ class Application {
             appComponent.getStatsRepository(),
             appComponent.getUploadRepo(),
             appComponent.getExtractorFactory(),
+            appComponent.getEngineConfigRepository(),
           ).apply {
             start()
           }

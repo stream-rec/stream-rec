@@ -30,9 +30,9 @@ import com.github.michaelbull.result.Result
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig.TwitchDownloadConfig
+import github.hua0512.data.config.engine.DownloadEngines
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.download.base.HlsPlatformDownloader
-import github.hua0512.plugins.download.engines.DownloadEngines
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.utils.nonEmptyOrNull
 
@@ -48,17 +48,14 @@ class Twitch(
 ) : HlsPlatformDownloader<TwitchDownloadConfig>(app, danmu, extractor) {
 
 
-  init {
-    updateParams(app.config)
-  }
-
-
   override suspend fun shouldDownload(onLive: () -> Unit): Result<Boolean, ExtractorError> {
     val authToken = downloadConfig.authToken.orEmpty().ifEmpty {
       ""
 //      throw InvalidExtractionUrlException("Twitch requires an auth token to download")
     }
     extractor.authToken = authToken
+    // update extractor params
+    updateParams(app.config)
     return super.shouldDownload(onLive)
   }
 
@@ -76,7 +73,7 @@ class Twitch(
   }
 
   private fun updateParams(config: AppConfig) {
-    val engine = DownloadEngines.fromString(config.engine)
+    val engine = streamer.engine ?: DownloadEngines.fromString(config.engine)
     if (engine is DownloadEngines.FFMPEG || engine is DownloadEngines.STREAMLINK) {
       extractor.skipStreamInfo =
         app.config.twitchConfig.skipAds || app.config.twitchConfig.twitchProxyPlaylist?.nonEmptyOrNull() != null

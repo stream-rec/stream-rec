@@ -108,10 +108,12 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     val realRoomStatus = data["realLiveStatus"]?.jsonPrimitive?.content ?: "OFF"
     val liveStatus = data["liveStatus"]?.jsonPrimitive?.content ?: "OFF"
 
-    // check if the stream is a replay
-    val intro = data["liveData"]?.jsonObject?.get("introduction")?.jsonPrimitive?.content ?: ""
-    if (intro.startsWith("【回放】")) {
-      return Ok(false)
+    val liveData = data["liveData"] as? JsonObject
+    liveData?.let {
+      val intro = it["introduction"]?.jsonPrimitive?.content ?: ""
+      if (intro.startsWith("【回放】")) {
+        return Ok(false)
+      }
     }
 
     val isLive = realRoomStatus == "ON" && liveStatus == "ON"

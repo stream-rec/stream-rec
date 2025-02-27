@@ -33,6 +33,7 @@ import github.hua0512.dao.user.UserDao
 import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.repo.LocalDataSourceImpl
+import github.hua0512.repo.config.EngineConfigManager
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
@@ -83,8 +84,9 @@ class AppModule {
     actionService: ActionService,
     streamerRepository: StreamerRepo,
     streamDataRepository: StreamDataRepo,
+    engineConfigManager: EngineConfigManager,
   ): DownloadService =
-    DownloadService(app, actionService, streamerRepository, streamDataRepository)
+    DownloadService(app, actionService, streamerRepository, streamDataRepository, engineConfigManager)
 
   @Provides
   @Singleton

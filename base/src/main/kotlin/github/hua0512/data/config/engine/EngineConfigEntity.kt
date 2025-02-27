@@ -24,31 +24,31 @@
  * SOFTWARE.
  */
 
-package github.hua0512.data.dto
+package github.hua0512.data.config.engine
 
-import github.hua0512.data.config.DownloadConfig
-import github.hua0512.data.config.engine.DownloadEngines
-import github.hua0512.data.config.engine.EngineConfig
-import github.hua0512.data.stream.StreamerState
-import github.hua0512.data.stream.StreamingPlatform
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.PrimaryKey
+import github.hua0512.data.config.AppConfigEntity
 
-/**
- * @author hua0512
- * @date : 2024/2/10 19:54
- */
-interface StreamerDTO {
-  val name: String
-  val url: String
-  val platform: StreamingPlatform
-  val lastLiveTime: Long
-  val state: StreamerState
-  val avatar: String?
-  val streamTitle: String?
-  val downloadConfig: DownloadConfig?
-  val isTemplate: Boolean
-  val templateId: Long?
-  val startTime: String?
-  val endTime: String?
-  val engine: DownloadEngines?
-  val engineConfig: EngineConfig?
-}
+@Entity(
+  tableName = "engine_config",
+  foreignKeys = [
+    ForeignKey(
+      entity = AppConfigEntity::class,
+      parentColumns = ["id"],
+      childColumns = ["config_id"],
+      onDelete = ForeignKey.CASCADE
+    )
+  ]
+)
+data class EngineConfigEntity(
+  @ColumnInfo(name = "config_id")
+  val configId: Int,
+  @PrimaryKey
+  @ColumnInfo(name = "engine_type")
+  val engineType: String,
+  @ColumnInfo(name = "config")
+  val config: String, // JSON string of the specific engine config
+) 
