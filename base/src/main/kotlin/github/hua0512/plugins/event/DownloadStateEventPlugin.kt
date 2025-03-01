@@ -81,6 +81,12 @@ class DownloadStateEventPlugin(private val json: Json) : BaseEventPlugin() {
     }
   }
 
+  override fun cleanUp() {
+    // clear all active connections
+    activeConnections.clear()
+    lastUpdatesByUrl.clear()
+  }
+
   /**
    * Broadcast streamer events to all connected clients
    */
