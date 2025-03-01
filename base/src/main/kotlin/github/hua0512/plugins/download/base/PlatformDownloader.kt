@@ -177,8 +177,8 @@ abstract class PlatformDownloader<T : DownloadConfig>(
   fun init(
     streamer: Streamer,
     streamerCallback: StreamerCallback? = null,
-    engineType: DownloadEngines,
-    engineConfig: EngineConfig,
+    engineType: DownloadEngines = DownloadEngines.FFMPEG,
+    engineConfig: EngineConfig = EngineConfig.FFmpegConfig(),
     maxDownloadSize: Long = 0,
     maxDownloadTime: Long = 0,
   ): Result<Boolean, ExtractorError> {
