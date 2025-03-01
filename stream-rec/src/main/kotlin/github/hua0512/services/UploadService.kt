@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,9 +27,11 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
+import github.hua0512.data.event.Event
 import github.hua0512.data.event.UploadEvent
 import github.hua0512.data.event.UploadEvent.UploadRetriggered
 import github.hua0512.data.upload.*
+import github.hua0512.plugins.event.BaseEventPlugin
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.plugins.upload.NoopUploader
 import github.hua0512.plugins.upload.base.Upload
@@ -37,11 +39,6 @@ import github.hua0512.plugins.upload.exceptions.UploadFailedException
 import github.hua0512.plugins.upload.exceptions.UploadInvalidArgumentsException
 import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.utils.withIOContext
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.datetime.Clock
@@ -60,7 +57,7 @@ import org.slf4j.LoggerFactory
  * @author hua0512
  * @date : 2024/2/19 15:30
  */
-class UploadService(val app: App, private val uploadRepo: UploadRepo) {
+class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEventPlugin() {
 
   companion object {
     /**
@@ -79,25 +76,20 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
   private val uploadSemaphore: Semaphore by lazy { Semaphore(app.config.maxConcurrentUploads) }
 
 
-  /**
-   * Runs the upload service.
-   * This function listens to upload retriggered events and uploads the upload data.
-   */
-  suspend fun run() {
-    EventCenter.events.filterIsInstance<UploadRetriggered>()
-      .onEach { event ->
-        event.uploadData.uploadAction?.let { action ->
-          PlatformUploaderFactory.create(app, action.uploadConfig).takeIf { it !is NoopUploader }?.let { uploader ->
-            parallelUpload(listOf(event.uploadData), uploader)
-          }
-        } ?: logger.error("Upload action not found for upload data: ${event.uploadData.id}")
+  override val subscribeEvents: List<Class<out Event>> = listOf(UploadRetriggered::class.java)
+
+  override suspend fun onEvent(event: Event) {
+    event as UploadRetriggered
+    event.uploadData.uploadAction?.let { action ->
+      PlatformUploaderFactory.create(app, action.uploadConfig).takeIf { it !is NoopUploader }?.let { uploader ->
+        parallelUpload(listOf(event.uploadData), uploader)
       }
-      .catch { e ->
-        logger.error("Failed to re-upload file: ${e.message}")
-      }
-      .collect()
+    } ?: logger.error("Upload action not found for upload data: ${event.uploadData.id}")
   }
 
+  override fun cleanUp() {
+
+  }
 
   /**
    * Uploads an upload action.
@@ -130,7 +122,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) {
    */
   private suspend fun <T : UploadConfig> parallelUpload(
     files: Collection<UploadData>,
-    plugin: Upload<T>
+    plugin: Upload<T>,
   ): List<UploadResult> = withIOContext {
     files.map { uploadFile(it, plugin) }
       .onEach { uploadRepo.saveResult(it) }

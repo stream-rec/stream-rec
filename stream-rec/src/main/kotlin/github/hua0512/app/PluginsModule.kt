@@ -24,35 +24,24 @@
  * SOFTWARE.
  */
 
-package github.hua0512.plugins.event
+package github.hua0512.app
+
+import dagger.Module
+import dagger.Provides
+import github.hua0512.plugins.event.DownloadStateEventPlugin
+import kotlinx.serialization.json.Json
+import javax.inject.Singleton
 
 /**
- * Singleton class that holds all event plugins and manages their lifecycle
+ * Module that provides plugins for the application
  * @author hua0512
- * @date : 2024/3/17 22:57
+ * @date : 3/1/2025 9:54 PM
  */
-object EventPluginsHolder {
+@Module
+class PluginsModule {
 
-  private val _plugins = mutableListOf<BaseEventPlugin>()
+  @Provides
+  @Singleton
+  fun provideDownloadStateEventPlugin(json: Json): DownloadStateEventPlugin = DownloadStateEventPlugin(json)
 
-  fun registerPlugin(plugin: BaseEventPlugin) {
-    _plugins.add(plugin)
-  }
-
-  fun registerPlugins(vararg plugins: BaseEventPlugin) {
-    _plugins.addAll(plugins)
-  }
-
-  fun unregisterPlugin(plugin: BaseEventPlugin) {
-    _plugins.remove(plugin)
-  }
-
-  fun getPlugins(): List<BaseEventPlugin> {
-    return _plugins
-  }
-
-  fun clearPlugins() {
-    _plugins.forEach { it.cleanUp() }
-    _plugins.clear()
-  }
 }

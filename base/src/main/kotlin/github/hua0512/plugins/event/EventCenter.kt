@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,42 +27,192 @@
 package github.hua0512.plugins.event
 
 import github.hua0512.data.event.Event
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.CoroutineContext
 
 /**
- * Simple broadcast event center using shared flow as event bus
+ * High-throughput broadcast event center
  * @author hua0512
  * @date : 2024/3/17 20:19
  */
-object EventCenter {
+object EventCenter : CoroutineScope {
+  // Main processing scope with custom dispatcher optimized for CPU-bound work
+  override val coroutineContext: CoroutineContext =
+    Dispatchers.Default + SupervisorJob() + CoroutineName("EventCenter")
 
-  private val _events = MutableSharedFlow<Event>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+  private val eventChannel = Channel<List<Event>>(capacity = Channel.BUFFERED)
 
-  val events = _events.asSharedFlow()
+  private val subscriptions = ConcurrentHashMap<Class<out Event>, MutableList<BaseEventPlugin>>()
 
-  fun sendEvent(event: Event) = _events.tryEmit(event)
+  // Track jobs for proper cleanup
+  private var processingJob: Job? = null
 
+  // Batch collection settings
+  private const val maxBatchSize = 50  // Maximum events per batch
+  private const val batchTimeoutMs = 10L // Max wait time before flushing batch
+  private val pendingEvents = ArrayDeque<Event>(maxBatchSize)
+  private var batchJob: Job? = null
+  private val batchMutex = Mutex()
 
+  /**
+   * Start the event center
+   */
+  fun start() {
+    if (processingJob != null) return
+
+    // Build the subscription map for faster lookups
+    EventPluginsHolder.getPlugins().forEach { plugin ->
+      plugin.subscribeEvents.forEach { eventClass ->
+        subscriptions.getOrPut(eventClass) { mutableListOf() }.add(plugin)
+      }
+    }
+
+    // Start batch processing
+    batchJob = launch {
+      while (isActive) {
+        delay(batchTimeoutMs)
+        flushBatch()
+      }
+    }
+
+    processingJob = launch {
+      // Main event processing loop
+      for (eventBatch in eventChannel) {
+        for (event in eventBatch) {
+          // Direct dispatch to interested plugins
+          val interestedPlugins = subscriptions[event.javaClass] ?: continue
+
+          // Process each plugin in parallel if needed
+          if (interestedPlugins.size > 1) {
+            coroutineScope {
+              interestedPlugins.forEach { plugin ->
+                launch(Dispatchers.Default) {
+                  try {
+                    plugin.onEvent(event)
+                  } catch (e: Exception) {
+                    // Log but don't crash the event processor
+                    println("Error in plugin ${plugin::class.simpleName}: ${e.message}")
+                  }
+                }
+              }
+            }
+          } else if (interestedPlugins.size == 1) {
+            // Single plugin case - avoid launch overhead
+            try {
+              interestedPlugins[0].onEvent(event)
+            } catch (e: Exception) {
+              println("Error in plugin ${interestedPlugins[0]::class.simpleName}: ${e.message}")
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Flushes current batch if not empty
+   */
+  private suspend fun flushBatch() {
+    batchMutex.withLock {
+      if (pendingEvents.isNotEmpty()) {
+        val batch = ArrayList<Event>(pendingEvents)
+        pendingEvents.clear()
+        eventChannel.send(batch)
+      }
+    }
+  }
+
+  /**
+   * Add event to current batch and flush if batch is full
+   */
+  private suspend fun addToBatch(event: Event): Boolean {
+    return batchMutex.withLock {
+      pendingEvents.add(event)
+      if (pendingEvents.size >= maxBatchSize) {
+        val batch = ArrayList<Event>(pendingEvents)
+        pendingEvents.clear()
+        try {
+          eventChannel.send(batch)
+          true
+        } catch (e: Exception) {
+          false
+        }
+      } else {
+        true
+      }
+    }
+  }
+
+  /**
+   * Send event with suspension if channel is full
+   */
+  suspend fun sendEvent(event: Event): Boolean = addToBatch(event)
+
+  /**
+   * Try to send event without suspension
+   */
+  fun trySendEvent(event: Event): Boolean {
+    // Launch in a new coroutine to avoid blocking
+    launch {
+      addToBatch(event)
+    }
+    return true
+  }
+
+  /**
+   * Send multiple events efficiently with batch processing
+   */
   suspend fun sendEvents(events: List<Event>) {
-    events.forEach {
-      _events.emit(it)
+    if (events.isEmpty()) return
+
+    // If batch is larger than max size, send directly
+    if (events.size >= maxBatchSize) {
+      eventChannel.send(events)
+      return
+    }
+
+    // Otherwise add to existing batch
+    batchMutex.withLock {
+      // If adding these would overflow, flush first
+      if (pendingEvents.size + events.size > maxBatchSize) {
+        val batch = ArrayList<Event>(pendingEvents)
+        pendingEvents.clear()
+        eventChannel.send(batch)
+      }
+
+      // Add new events to pending batch
+      pendingEvents.addAll(events)
+
+      // Flush if we're at capacity
+      if (pendingEvents.size >= maxBatchSize) {
+        val batch = ArrayList<Event>(pendingEvents)
+        pendingEvents.clear()
+        eventChannel.send(batch)
+      }
     }
   }
 
-  suspend fun run() {
-    EventPluginsHolder.getPlugins().forEach {
-      events.filter { event -> it.subscribeEvents.contains(event::class.java) }
-        .collect { event -> it.onEvent(event) }
-    }
-  }
-
-  @OptIn(ExperimentalCoroutinesApi::class)
+  /**
+   * Clean stop with resource release
+   */
   fun stop() {
-    _events.resetReplayCache()
-    EventPluginsHolder.clearPlugins()
+    batchJob?.cancel()
+    batchJob = null
+
+    // Flush any remaining events
+    launch {
+      flushBatch()
+
+      processingJob?.cancel()
+      processingJob = null
+      eventChannel.close()
+      subscriptions.clear()
+      EventPluginsHolder.clearPlugins()
+    }
   }
 }

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,6 @@ import github.hua0512.data.upload.UploadState
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.upload.UploadRepo
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.datetime.Clock
@@ -136,14 +135,14 @@ fun Route.uploadRoute(json: Json, repo: UploadRepo) {
         }
 
         call.respond(
-          EventCenter.sendEvent(
+          EventCenter.trySendEvent(
             UploadEvent.UploadRetriggered(
               uploadData,
               uploadData.filePath,
               uploadData.uploadPlatform,
               Clock.System.now()
             )
-          ) == true
+          )
         )
       } catch (e: Exception) {
         logger.error("Failed to retrigger upload data : ${e.message}")

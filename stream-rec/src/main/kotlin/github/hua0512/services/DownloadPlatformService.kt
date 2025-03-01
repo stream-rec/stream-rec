@@ -360,7 +360,7 @@ class DownloadPlatformService(
    * @param streamer the streamer being cancelled
    * @param reason reason for cancellation
    */
-  private fun sendCancellationEvent(streamer: Streamer, reason: String) {
+  private suspend fun sendCancellationEvent(streamer: Streamer, reason: String) {
     EventCenter.sendEvent(
       StreamerRecordStop(
         streamer.name,

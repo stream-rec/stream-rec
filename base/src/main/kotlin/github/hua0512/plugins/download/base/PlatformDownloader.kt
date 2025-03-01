@@ -414,7 +414,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
           }
         }
 
-        EventCenter.sendEvent(
+        EventCenter.trySendEvent(
           DownloadEvent.DownloadStart(
             filePath = filePath,
             url = url,
@@ -427,7 +427,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
         pb?.also {
           it.stepBy(diff)
           it.extraMessage = "Bitrate: %.2f kb/s".format(bitrate)
-          EventCenter.sendEvent(
+          EventCenter.trySendEvent(
             DownloadEvent.DownloadStateUpdate(
               filePath = "",
               url = url,
@@ -623,7 +623,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     }
 
     if (processSegment(Path(info.path), danmuPath)) return
-    EventCenter.sendEvent(
+    EventCenter.trySendEvent(
       DownloadEvent.DownloadSuccess(
         filePath = info.path,
         url = "",

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,9 +39,11 @@ import ch.qos.logback.core.util.FileSize
 import github.hua0512.app.App
 import github.hua0512.app.AppComponent
 import github.hua0512.app.DaggerAppComponent
+import github.hua0512.backend.ServerConfig
 import github.hua0512.backend.backendServer
 import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
+import github.hua0512.plugins.event.EventPluginsHolder
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.utils.mainLogger
@@ -129,29 +131,32 @@ class Application {
           downloadService.run(scope)
         }
 
-        // start upload service
-        launch {
-          uploadService.run()
-        }
+        val downloadStateEventPlugin = appComponent.getDownloadStateEventPlugin()
+        EventPluginsHolder.registerPlugins(downloadStateEventPlugin, uploadService)
 
         // start a job to listen for events
         launch {
-          EventCenter.run()
+          EventCenter.start()
         }
         // start the backend server
         launch(CoroutineName("serverScope")) {
-          server = backendServer(
+          val serverConfig = ServerConfig(
+            port = 12555,
+            host = "0.0.0.0",
             parentContext = scope.coroutineContext,
             json = appComponent.getJson(),
-            appComponent.getUserRepo(),
-            appComponent.getAppConfigRepository(),
-            appComponent.getStreamerRepo(),
-            appComponent.getStreamDataRepo(),
-            appComponent.getStatsRepository(),
-            appComponent.getUploadRepo(),
-            appComponent.getExtractorFactory(),
-            appComponent.getEngineConfigRepository(),
-          ).apply {
+            userRepo = appComponent.getUserRepo(),
+            appConfigRepo = appComponent.getAppConfigRepository(),
+            streamerRepo = appComponent.getStreamerRepo(),
+            streamDataRepo = appComponent.getStreamDataRepo(),
+            statsRepo = appComponent.getStatsRepository(),
+            uploadRepo = appComponent.getUploadRepo(),
+            extractorFactory = appComponent.getExtractorFactory(),
+            engineConfigRepo = appComponent.getEngineConfigRepository(),
+            downloadStateEventPlugin = downloadStateEventPlugin,
+          )
+
+          server = backendServer(serverConfig).apply {
             start()
           }
         }

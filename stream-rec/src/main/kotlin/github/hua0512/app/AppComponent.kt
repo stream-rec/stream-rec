@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ package github.hua0512.app
 import dagger.Component
 import github.hua0512.dao.AppDatabase
 import github.hua0512.plugins.base.IExtractorFactory
+import github.hua0512.plugins.event.DownloadStateEventPlugin
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
 import github.hua0512.repo.config.EngineConfigManager
@@ -43,7 +44,7 @@ import javax.inject.Singleton
 
 @Singleton
 @Component(
-  modules = [AppModule::class, DatabaseModule::class, RepositoryModule::class]
+  modules = [AppModule::class, DatabaseModule::class, RepositoryModule::class, PluginsModule::class]
 )
 interface AppComponent {
 
@@ -72,4 +73,6 @@ interface AppComponent {
   fun getExtractorFactory(): IExtractorFactory
 
   fun getEngineConfigRepository(): EngineConfigManager
+
+  fun getDownloadStateEventPlugin(): DownloadStateEventPlugin
 }
