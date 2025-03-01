@@ -63,7 +63,7 @@ class EngineConfigManager(override val dao: EngineConfigDao, val json: Json) : E
       val configEntity = dao.getEngineConfig(configId, engineType)
 
       val config = configEntity?.let { json.decodeFromString<EngineConfig>(it.config) }
-        ?: throw NoSuchElementException("No config found for $engineType")
+        ?: createDefaultConfig(engineType)
 
       // Cache the fetched configuration
       configCache[cacheKey] = config

@@ -28,6 +28,9 @@ package github.hua0512.repo.config
 
 import github.hua0512.dao.config.EngineConfigDao
 import github.hua0512.data.config.engine.EngineConfig
+import github.hua0512.data.config.engine.FFMPEG_ENGINE
+import github.hua0512.data.config.engine.KOTLIN_ENGINE
+import github.hua0512.data.config.engine.STREAMLINK_ENGINE
 
 /**
  * Repository for engine config data
@@ -38,8 +41,38 @@ interface EngineConfigRepo {
 
   val dao: EngineConfigDao
 
-  suspend fun <T : EngineConfig> getEngineConfig(configId: Int, engineType: String): T
+  /**
+   * Fetch engine configuration by config ID and engine type
+   *
+   * @param configId The ID of the configuration to fetch
+   * @param engineType The type of engine for which to fetch the configuration
+   * @return The engine configuration for the specified ID and type
+   */
+  suspend fun <T : EngineConfig> getEngineConfig(configId: Int, engineType: String): T?
 
+  /**
+   * Update engine configuration
+   *
+   * @param configId The ID of the configuration to update
+   * @param config The new engine configuration to update
+   * @return The updated engine configuration
+   */
   suspend fun <T : EngineConfig> updateEngineConfig(configId: Int, config: T): T
+
+
+  /**
+   * Creates a default engine configuration based on the engine type
+   *
+   * @param engineType The type of engine for which to create a default configuration
+   * @return A default configuration for the specified engine type
+   */
+  fun createDefaultConfig(engineType: String): EngineConfig {
+    return when (engineType) {
+      STREAMLINK_ENGINE -> EngineConfig.StreamlinkConfig()
+      FFMPEG_ENGINE -> EngineConfig.FFmpegConfig()
+      KOTLIN_ENGINE -> EngineConfig.KotlinConfig()
+      else -> throw IllegalArgumentException("Unknown engine type: $engineType")
+    }
+  }
 
 }
