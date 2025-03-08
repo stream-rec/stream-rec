@@ -619,6 +619,15 @@ class StreamerDownloadService(
   suspend fun cancelBlocking() {
     logger.debug("{} try blocking cancel, isDownloading: {}", streamer.name, isDownloading)
     isCancelled.emit(true)
+    // wait until state is cancelled
+    val success = withTimeoutOrNull(10000) {
+      while (downloadState.value != Cancelled) {
+        delay(100)
+      }
+    }
+    if (success == null) {
+      logger.error("{} blocking cancel failed", streamer.name)
+    }
   }
 
 

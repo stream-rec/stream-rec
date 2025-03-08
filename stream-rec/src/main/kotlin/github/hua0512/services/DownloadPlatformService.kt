@@ -190,16 +190,9 @@ class DownloadPlatformService(
     } else {
       // Cancel active download and mark state as cancelled
       logger.debug("({}), {} received cancellation signal : {}", platform, streamer.url, reason)
-      streamerStates[streamer.url]?.state = CANCELLED
       downloader.cancelBlocking()
-
-      // Wait for cleanup with timeout
-      withTimeoutOrNull(10_000) {
-        while (downloader.isDownloading) {
-          delay(100)
-        }
-        streamerStates.remove(streamer.url)
-      }
+      streamerStates[streamer.url]?.state = CANCELLED
+      streamerStates.remove(streamer.url)
     }
 
     sendCancellationEvent(streamer, "Download cancelled: $reason")
