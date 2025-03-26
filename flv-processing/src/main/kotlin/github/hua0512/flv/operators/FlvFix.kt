@@ -48,6 +48,11 @@ private val logger = logger(TAG)
 private const val TOLERANCE = 1
 
 /**
+ * Log every Nth occurrence for consecutive issues
+ */
+private const val LOG_FREQUENCY = 20
+
+/**
  * Extension function to fix timestamps in a Flow of FlvData.
  *
  * This function processes FLV tags and corrects their timestamps to ensure proper sequencing.
@@ -72,6 +77,10 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
   var videoFrameInterval = ceil(1000 / frameRate).toInt()
   var soundSampleInterval = ceil(1000 / 44.1).toInt()
 
+  // Counters for logging consecutive issues
+  var consecutiveRebounds = 0
+  var consecutiveNonContinuous = 0
+
   /**
    * Resets the correction state.
    *
@@ -85,6 +94,8 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
     frameRate = 30.0
     videoFrameInterval = ceil(1000 / frameRate).toInt()
     soundSampleInterval = ceil(1000 / 44.1).toInt()
+    consecutiveRebounds = 0
+    consecutiveNonContinuous = 0
   }
 
   /**
@@ -288,11 +299,39 @@ internal fun Flow<FlvData>.fix(context: StreamerContext): Flow<FlvData> = flow {
 
     if (tag.isTsRebound()) {
       updateDelta(tag)
-      logger.warn("${context.name} Timestamp rebounded, updated delta: $delta\nlast tag: $lastTag\nlast video tag: $lastVideoTag\nlast audio tag: $lastAudioTag\ncurrent tag: $tag")
+      consecutiveRebounds++
+      consecutiveNonContinuous = 0
+
+      // Log first occurrence and every LOG_FREQUENCY occurrences
+      if (consecutiveRebounds == 1 || consecutiveRebounds % LOG_FREQUENCY == 0) {
+        logger.warn("${context.name} Timestamp rebounded ($consecutiveRebounds consecutive), updated delta: $delta\nlast tag: $lastTag\ncurrent tag: $tag")
+      }
     } else if (tag.isNoncontinuous()) {
       updateDelta(tag)
-      logger.warn("${context.name} Timestamp non continuous, updated delta: $delta\nlast tag: $lastTag\nlast video tag: $lastVideoTag\nlast audio tag: $lastAudioTag\ncurrent tag: $tag")
+      if (consecutiveRebounds > 0) {
+        logger.info("${context.name} Rebounded timestamps ended after $consecutiveRebounds consecutive occurrences")
+        consecutiveRebounds = 0
+      }
+
+      consecutiveNonContinuous++
+
+      // Log first occurrence and every LOG_FREQUENCY occurrences
+      if (consecutiveNonContinuous == 1 || consecutiveNonContinuous % LOG_FREQUENCY == 0) {
+        logger.warn("${context.name} Timestamp non continuous ($consecutiveNonContinuous consecutive), updated delta: $delta\nlast tag: $lastTag\ncurrent tag: $tag")
+      }
+    } else {
+      // If we had consecutive issues that just ended, log a summary
+      if (consecutiveRebounds > 0) {
+        logger.info("${context.name} Rebounded timestamps ended after $consecutiveRebounds consecutive occurrences")
+        consecutiveRebounds = 0
+      }
+
+      if (consecutiveNonContinuous > 0) {
+        logger.info("${context.name} Non-continuous timestamps ended after $consecutiveNonContinuous consecutive occurrences")
+        consecutiveNonContinuous = 0
+      }
     }
+    
     var correctedTag = tag.correctTs(delta)
 
     // should never happen
