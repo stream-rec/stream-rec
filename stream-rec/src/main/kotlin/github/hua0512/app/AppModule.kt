@@ -30,6 +30,9 @@ import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.config.AppConfigDao
 import github.hua0512.dao.user.UserDao
+import github.hua0512.data.event.DownloadEvent
+import github.hua0512.data.event.Event
+import github.hua0512.data.event.StreamerEvent
 import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.repo.LocalDataSourceImpl
@@ -45,6 +48,8 @@ import github.hua0512.utils.ThrowableSerializer
 import io.ktor.client.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import javax.inject.Singleton
 
 @Module
@@ -59,6 +64,16 @@ class AppModule {
     allowSpecialFloatingPointValues = true
     serializersModule = SerializersModule {
       contextual(Throwable::class, ThrowableSerializer)
+      polymorphic(Event::class) {
+        subclass(DownloadEvent.DownloadStateUpdate::class)
+        subclass(DownloadEvent.DownloadStart::class)
+        subclass(DownloadEvent.DownloadError::class)
+        subclass(DownloadEvent.DownloadSuccess::class)
+        subclass(StreamerEvent.StreamerOnline::class)
+        subclass(StreamerEvent.StreamerOffline::class)
+        subclass(StreamerEvent.StreamerRecordStop::class)
+        subclass(StreamerEvent.StreamerException::class)
+      }
     }
   }
 

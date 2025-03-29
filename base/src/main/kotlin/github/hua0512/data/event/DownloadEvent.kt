@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ package github.hua0512.data.event
 
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.StreamingPlatform
+import github.hua0512.utils.ThrowableSerializer
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
@@ -42,12 +43,14 @@ sealed class DownloadEvent : Event {
   abstract val url: String
   abstract val platform: StreamingPlatform
 
+  @Serializable
   data class DownloadStart(
     override val filePath: String,
     override val url: String,
     override val platform: StreamingPlatform,
   ) : DownloadEvent()
 
+  @Serializable
   data class DownloadSuccess(
     override val filePath: String,
     override val url: String,
@@ -67,11 +70,12 @@ sealed class DownloadEvent : Event {
     val streamerId: Long,
   ) : DownloadEvent()
 
-
+  @Serializable
   data class DownloadError(
     override val filePath: String,
     override val url: String,
     override val platform: StreamingPlatform,
+    @Serializable(with = ThrowableSerializer::class)
     val error: Throwable,
   ) : DownloadEvent()
 }

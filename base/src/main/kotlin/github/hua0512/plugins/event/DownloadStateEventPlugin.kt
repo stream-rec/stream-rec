@@ -91,7 +91,7 @@ class DownloadStateEventPlugin(private val json: Json) : BaseEventPlugin() {
    * Broadcast streamer events to all connected clients
    */
   private suspend fun broadcastStreamerEvent(event: StreamerEvent) {
-    val frameText = json.encodeToString<StreamerEvent>(event)
+    val frameText = json.encodeToString<Event>(event)
     sendToAllActiveSessions(Frame.Text(frameText))
   }
 
@@ -119,7 +119,7 @@ class DownloadStateEventPlugin(private val json: Json) : BaseEventPlugin() {
               lastUpdatesByUrl.remove(sessionId)
             } else {
               // Send update to active session
-              val frameText = json.encodeToString<DownloadStateUpdate>(event)
+              val frameText = json.encodeToString<Event>(event)
               try {
                 session.send(Frame.Text(frameText))
               } catch (e: Exception) {
