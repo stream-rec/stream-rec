@@ -47,6 +47,9 @@ import github.hua0512.plugins.download.globalConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.services.DownloadState.*
 import github.hua0512.utils.logger
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.update
+import kotlinx.atomicfu.updateAndGet
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -154,7 +157,7 @@ class StreamerDownloadService(
   /**
    * Flag to check if the download is in progress
    */
-  var isDownloading = false
+  var isDownloading = atomic(false)
 
   /**
    * Flag to check if the download is in the timer range
@@ -484,7 +487,7 @@ class StreamerDownloadService(
     // streamer is live, start downloading
     var isStreamEnd: Boolean
     return downloadSemaphore.withPermit {
-      isDownloading = true
+      isDownloading.update { true }
       isStreamEnd = false
       onStarted()
       try {
@@ -533,7 +536,7 @@ class StreamerDownloadService(
           }
         }
       } finally {
-        isDownloading = false
+        isDownloading.update { false }
       }
     }
   }
@@ -621,13 +624,15 @@ class StreamerDownloadService(
     isCancelled.emit(true)
     // wait until state is cancelled
     val success = withTimeoutOrNull(10000) {
-      while (downloadState.value != Cancelled) {
+      while (isDownloading.value) {
         delay(100)
       }
     }
     if (success == null) {
       logger.error("{} blocking cancel failed", streamer.name)
+      return
     }
+    logger.debug("{} blocking cancel success", streamer.name)
   }
 
 
@@ -696,7 +701,7 @@ class StreamerDownloadService(
       // add 10 seconds to the duration to ensure the download is stopped
       delay(if (duration <= 10000) 10000 else duration)
       inTimerRange = false
-      if (isDownloading) {
+      if (isDownloading.value) {
         val result = stop(TimerEndedDownloadException())
         logger.info("{} timer end -> {}", streamer.name, result)
       }
@@ -747,7 +752,7 @@ class StreamerDownloadService(
     awaitTimerJob?.cancel()
     stopTimerJob?.cancel()
     downloadState to Idle
-    isDownloading = false
+    isDownloading.updateAndGet { false }
     dataList.clear()
     inTimerRange = false
     callback = null
