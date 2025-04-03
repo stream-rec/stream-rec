@@ -153,15 +153,14 @@ internal fun FlvMetadataInfo.toAmfMap(): Map<String, Amf0Value> {
     "canSeekToEnd" to Amf0Value.Boolean(canSeekToEnd),
     "duration" to Amf0Value.Number(duration.toDouble()),
     "filesize" to Amf0Value.Number(fileSize.toDouble()),
-    "metadatacreator" to streamRec,
     "width" to Amf0Value.Number(width.toDouble()),
     "height" to Amf0Value.Number(height.toDouble()),
-    "keyframes" to amf0Keyframes,
     "audiosize" to Amf0Value.Number(audioSize.toDouble()),
     "audiodatarate" to Amf0Value.Number(audioDataRate.toDouble()),
     "audiocodecid" to Amf0Value.Number(audioCodecId?.value?.toDouble() ?: 0.0),
     "audiosamplerate" to Amf0Value.Number(audioSampleRate?.rate?.toDouble() ?: 0.0),
     "audiosamplesize" to Amf0Value.Number(audioSampleSize?.size?.toDouble() ?: 0.0),
+    "framerate" to Amf0Value.Number(frameRate.toDouble()),
     "videosize" to Amf0Value.Number(videoSize.toDouble()),
     "videodatarate" to Amf0Value.Number(videoDataRate.toDouble()),
     "videocodecid" to Amf0Value.Number(videoCodecId?.value?.toDouble() ?: 0.0),
@@ -169,6 +168,7 @@ internal fun FlvMetadataInfo.toAmfMap(): Map<String, Amf0Value> {
     "lasttimestamp" to Amf0Value.Number(lastTimestamp.toDouble()),
     "lastkeyframetimestamp" to Amf0Value.Number(keyframes.lastOrNull()?.timestamp?.toDouble() ?: 0.0),
     "lastkeyframelocation" to Amf0Value.Number(keyframes.lastOrNull()?.filePosition?.toDouble() ?: 0.0),
-    "recordTool" to streamRec
+    "metadatacreator" to streamRec,
+    "keyframes" to amf0Keyframes,
   )
 }
