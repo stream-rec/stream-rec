@@ -27,11 +27,12 @@
 package github.hua0512.data.dto
 
 /**
+ * Rclone configuration data transfer object
  * @author hua0512
  * @date : 2024/2/13 13:26
  */
 interface RcloneConfigDTO {
-  val rcloneOperation: String
+  val transferMode: String
   val remotePath: String
-  val args: List<String>
+  val additionalFlags: List<String>
 }

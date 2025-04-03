@@ -110,7 +110,6 @@ class Application {
       val scope = CoroutineScope(newContext)
       val appConfigRepository = appComponent.getAppConfigRepository()
       val downloadService = appComponent.getDownloadService()
-      val uploadService = appComponent.getUploadService()
 
       scope.apply {
         // await for app config to be loaded
@@ -127,11 +126,6 @@ class Application {
         // start download
         launch {
           downloadService.run(scope)
-        }
-
-        // start upload service
-        launch {
-          uploadService.run()
         }
 
         // start a job to listen for events

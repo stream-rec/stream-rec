@@ -27,12 +27,14 @@
 package github.hua0512.data.upload
 
 /**
+ * Upload platform enum class.
  * @author hua0512
  * @date : 2024/2/9 19:06
  */
 enum class UploadPlatform(val id: Int) {
   RCLONE(1),
-  NONE(0);
+  NONE(0),
+  EXTERNAL(99);
 
   companion object {
     fun fromId(id: Int): UploadPlatform? {

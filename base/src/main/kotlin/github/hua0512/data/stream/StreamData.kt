@@ -26,6 +26,7 @@
 
 package github.hua0512.data.stream
 
+import github.hua0512.data.dto.IOutputFile
 import github.hua0512.data.stream.entity.StreamDataEntity
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -36,16 +37,26 @@ data class StreamData(
   val title: String,
   val dateStart: Long? = null,
   val dateEnd: Long? = null,
-  val outputFilePath: String,
+  var outputFilePath: String,
   val danmuFilePath: String? = null,
-  val outputFileSize: Long = 0,
+  var outputFileSize: Long = 0,
   val streamerId: Long = 0,
   @Transient
   val streamer: Streamer? = null,
-) {
+) : IOutputFile {
 
-  var streamerName: String = ""
-    get() = streamer?.name ?: field
+  override var path: String = outputFilePath
+
+  override var size: Long = outputFileSize
+
+  override var streamerName: String? = streamer?.name ?: ""
+  override var streamerPlatform: String? = streamer?.platform?.name ?: ""
+
+  override var streamTitle: String? = title
+
+  override var streamDate: Long? = dateStart ?: 0
+
+  override var streamDataId: Long = id
 
   var platform: String = ""
     get() = streamer?.platform?.name ?: field

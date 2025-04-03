@@ -27,16 +27,11 @@
 package github.hua0512.repo.upload
 
 import github.hua0512.data.StreamerId
-import github.hua0512.data.UploadActionId
 import github.hua0512.data.UploadDataId
-import github.hua0512.data.upload.UploadAction
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadResult
 
 interface UploadRepo {
-
-  suspend fun getUploadAction(id: UploadActionId): UploadAction?
-  suspend fun saveAction(uploadAction: UploadAction): UploadAction
 
   suspend fun getAllUploadData(): List<UploadData>
   suspend fun getAllUploadDataPaginated(
@@ -53,6 +48,8 @@ interface UploadRepo {
 
 
   suspend fun getUploadData(uploadDataId: UploadDataId): UploadData?
+  suspend fun insertUploadData(uploadData: UploadData): UploadData
+  suspend fun findUploadDataByPath(path: String): UploadData?
   suspend fun updateUploadData(uploadData: UploadData): Boolean
   suspend fun deleteUploadData(uploadData: UploadData)
   suspend fun deleteUploadData(ids: List<UploadDataId>)

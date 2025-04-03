@@ -39,7 +39,7 @@ import java.io.File
  *
  * @return true if the current OS is windows
  */
-fun isWindows(): Boolean = System.getProperty("os.name").contains("win", true)
+fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("win", true)
 
 /**
  * Check if the current OS is unix based
@@ -47,7 +47,8 @@ fun isWindows(): Boolean = System.getProperty("os.name").contains("win", true)
  * @return true if the current OS is unix based
  */
 fun isUnix(): Boolean =
-  System.getProperty("os.name").contains("nix", true) || System.getProperty("os.name").contains("nux", true) || System.getProperty("os.name")
+  System.getProperty("os.name").contains("nix", true) || System.getProperty("os.name")
+    .contains("nux", true) || System.getProperty("os.name")
     .contains("aix", true)
 
 
@@ -58,6 +59,7 @@ fun isUnix(): Boolean =
  * @return true if it is running in a docker container else false
  *
  */
-fun isDockerized() = File("/.dockerenv").exists() || File("/.dockerinit").exists() || isUnix() && File("/proc/1/cgroup").readLines().any {
-  it.contains("docker") || it.contains("kubepods")
-}
+fun isDockerized() =
+  File("/.dockerenv").exists() || File("/.dockerinit").exists() || isUnix() && File("/proc/1/cgroup").readLines().any {
+    it.contains("docker") || it.contains("kubepods")
+  }

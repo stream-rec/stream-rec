@@ -40,7 +40,6 @@ import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.ActionService
 import github.hua0512.services.DownloadService
 import github.hua0512.services.ExtractorFactory
-import github.hua0512.services.UploadService
 import github.hua0512.utils.ThrowableSerializer
 import io.ktor.client.*
 import kotlinx.serialization.json.Json
@@ -75,7 +74,11 @@ class AppModule {
 
   @Provides
   @Singleton
-  fun provideActionService(app: App, uploadService: UploadService): ActionService = ActionService(app, uploadService)
+  fun provideActionService(
+    app: App,
+    streamDataRepo: StreamDataRepo,
+    uploadRepo: UploadRepo,
+  ): ActionService = ActionService(app, streamDataRepo, uploadRepo)
 
   @Provides
   @Singleton
@@ -87,10 +90,6 @@ class AppModule {
     engineConfigManager: EngineConfigManager,
   ): DownloadService =
     DownloadService(app, actionService, streamerRepository, streamDataRepository, engineConfigManager)
-
-  @Provides
-  @Singleton
-  fun provideUploadService(app: App, uploadRepo: UploadRepo): UploadService = UploadService(app, uploadRepo)
 
   @Provides
   fun provideLocalDataSource(appDao: AppConfigDao, userDao: UserDao): LocalDataSource =

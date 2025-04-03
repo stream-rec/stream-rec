@@ -47,6 +47,7 @@ dependencies {
   implementation(libs.com.michael.bull.kotlin.result)
   implementation(libs.org.jetbrains.kotlinx.datetime)
   implementation(libs.me.tongfei.progressbar)
+  implementation(libs.io.ktor.client.auth)
   implementation(libs.io.ktor.client.core)
   implementation(libs.io.ktor.client.okhttp)
   implementation(libs.io.ktor.client.encoding)
@@ -59,6 +60,10 @@ dependencies {
   implementation(project(":hls-processing"))
   implementation(project(":common"))
   testImplementation(libs.bundles.test.jvm)
+
+  // Testing dependencies
+  testImplementation("io.mockk:mockk:1.13.10")
+  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
 }
 
 tasks.test {

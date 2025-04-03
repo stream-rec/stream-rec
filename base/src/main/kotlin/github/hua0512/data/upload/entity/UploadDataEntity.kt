@@ -30,6 +30,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
+import github.hua0512.data.plugin.PluginConfigs
 import github.hua0512.data.stream.entity.StreamDataEntity
 import github.hua0512.data.upload.UploadState
 
@@ -46,12 +47,6 @@ import github.hua0512.data.upload.UploadState
       childColumns = ["streamDataId"],
       onDelete = ForeignKey.CASCADE,
     ),
-    ForeignKey(
-      entity = UploadActionEntity::class,
-      parentColumns = ["id"],
-      childColumns = ["uploadActionId"],
-      onDelete = ForeignKey.CASCADE,
-    ),
   ]
 )
 data class UploadDataEntity(
@@ -63,6 +58,6 @@ data class UploadDataEntity(
   val status: UploadState,
   @ColumnInfo(name = "streamDataId", index = true, defaultValue = "0")
   val streamDataId: Long,
-  @ColumnInfo(name = "uploadActionId", index = true, defaultValue = "0")
-  val uploadActionId: Long,
+  @ColumnInfo(name = "uploadConfig")
+  val uploadConfig: PluginConfigs.UploadConfig,
 )

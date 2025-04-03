@@ -26,7 +26,7 @@
 
 package github.hua0512.plugins.download
 
-import github.hua0512.data.config.Action
+import github.hua0512.data.plugin.PluginConfigs
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.dto.GlobalPlatformConfig
@@ -121,8 +121,8 @@ private fun DownloadConfig.applyCommonFields(
   newOutputFolder: String?,
   newOutputFileName: String?,
   newOutputFileFormat: VideoFormat?,
-  onPartedDownload: List<Action>?,
-  onStreamingFinished: List<Action>?,
+  onPartedDownload: List<PluginConfigs>?,
+  onStreamingFinished: List<PluginConfigs>?,
 ) {
   this.cookies = newCookies
   this.danmu = newDanmu

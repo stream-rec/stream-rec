@@ -1,0 +1,22 @@
+{
+  "type": "huya",
+  "onPartedDownload": [
+  ],
+  "onStreamingFinished": [
+    {
+      "type": "remux",
+      "enabled": true,
+      "outputFormat": "mp4",
+      "deleteOriginalFilesAfterRemux": true
+    },
+    {
+      "type": "copy",
+      "enabled": true,
+      "destinationDirectory": "D:/test/remux/{streamer}"
+    },
+    {
+      "type": "delete",
+      "enabled": true
+    }
+  ]
+}

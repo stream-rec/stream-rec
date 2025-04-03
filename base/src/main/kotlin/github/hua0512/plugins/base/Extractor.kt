@@ -259,7 +259,16 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
           StreamInfo(
             variant.uri(),
             format = VideoFormat.hls,
-            variant.video().getOrElse { "" },
+            variant.video().getOrElse { "" }.let { video ->
+              if (video == "chunked") {
+                val resolution = variant.resolution().getOrNull()?.let { "${it.height()}p" } ?: ""
+                val frameRate = variant.frameRate().getOrElse { 0.0 }
+                val frameRateString = if (frameRate > 0) "${frameRate.toInt()}" else ""
+                "$resolution$frameRateString"
+              } else {
+                video
+              }
+            },
             variant.bandwidth(),
             0,
             variant.frameRate().getOrElse { 0.0 },

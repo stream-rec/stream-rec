@@ -542,6 +542,12 @@ class StreamerDownloadService(
   private fun onSegmentDownloaded(data: StreamData, metaInfo: FlvMetadataInfo? = null) {
     dataList.add(data)
     callback?.onStreamDownloaded(streamer.id, data, metaInfo != null, metaInfo)
+    // test
+    if (dataList.size == 2) {
+      callback?.onStreamFinished(streamer.id, dataList.toList())
+      dataList.clear()
+      logger.debug("{} stream finished", streamer.name)
+    }
   }
 
   private fun onSegmentFailed(error: Throwable) {

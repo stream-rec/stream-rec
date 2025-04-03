@@ -26,7 +26,7 @@
 
 package github.hua0512.data.dto
 
-import github.hua0512.data.config.Action
+import github.hua0512.data.plugin.PluginConfigs
 import github.hua0512.data.media.VideoFormat
 
 /**
@@ -43,9 +43,9 @@ interface DownloadConfigDTO {
   val outputFileFormat: VideoFormat?
 
 
-  val onPartedDownload: List<Action>?
+  val onPartedDownload: List<PluginConfigs>?
 
 
-  val onStreamingFinished: List<Action>?
+  val onStreamingFinished: List<PluginConfigs>?
 
 }

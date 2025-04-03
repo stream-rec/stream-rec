@@ -49,9 +49,6 @@ data class UploadResult(
   val uploadData: UploadData? = null,
 ) {
 
-  val filePath
-    get() = uploadData?.filePath
-
   constructor(entity: UploadResultEntity, uploadData: UploadData? = null) : this(
     entity.id,
     entity.startTime,

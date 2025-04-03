@@ -32,7 +32,6 @@ import github.hua0512.dao.config.EngineConfigDao
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao
-import github.hua0512.dao.upload.UploadActionDao
 import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.dao.user.UserDao
@@ -72,12 +71,11 @@ class RepositoryModule {
   fun provideUploadActionRepository(
     streamerRepo: StreamerRepo,
     streamsRepo: StreamDataRepo,
-    uploadActionDao: UploadActionDao,
     uploadDataDao: UploadDataDao,
     uploadResultDao: UploadResultDao,
     statsDao: StatsDao,
   ): UploadRepo =
-    UploadActionRepository(streamerRepo, streamsRepo, uploadActionDao, uploadDataDao, uploadResultDao, statsDao)
+    UploadActionRepository(streamerRepo, streamsRepo, uploadDataDao, uploadResultDao, statsDao)
 
   @Provides
   fun provideStatsRepository(statsDao: StatsDao): SummaryStatsRepo = SummaryStatsRepoImpl(statsDao)

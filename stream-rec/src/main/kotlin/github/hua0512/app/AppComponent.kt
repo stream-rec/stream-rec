@@ -37,7 +37,6 @@ import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.DownloadService
-import github.hua0512.services.UploadService
 import kotlinx.serialization.json.Json
 import javax.inject.Singleton
 
@@ -56,8 +55,6 @@ interface AppComponent {
   fun getUserRepo(): UserRepo
 
   fun getDownloadService(): DownloadService
-
-  fun getUploadService(): UploadService
 
   fun getAppConfigRepository(): AppConfigRepo
 

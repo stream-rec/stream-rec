@@ -32,7 +32,7 @@ import androidx.room.RewriteQueriesToDropUnusedColumns
 import androidx.room.Transaction
 import github.hua0512.dao.BaseDao
 import github.hua0512.data.UploadDataId
-import github.hua0512.data.upload.UploadDataWithStreamAndConfig
+import github.hua0512.data.upload.UploadDataWithStream
 import github.hua0512.data.upload.entity.UploadDataEntity
 import github.hua0512.data.upload.entity.UploadResultEntity
 
@@ -57,7 +57,7 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
    */
   @Transaction
   @Query("SELECT * FROM UploadData")
-  suspend fun getAllWithStreamAndAction(): List<UploadDataWithStreamAndConfig>
+  suspend fun getAllWithStreamAndAction(): List<UploadDataWithStream>
 
   /**
    * Retrieves an upload data by its ID.
@@ -75,7 +75,7 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
    */
   @Transaction
   @Query("SELECT * FROM UploadData WHERE id = :id")
-  suspend fun getByIdWithStreamAndAction(id: UploadDataId): UploadDataWithStreamAndConfig?
+  suspend fun getByIdWithStreamAndAction(id: UploadDataId): UploadDataWithStream?
 
   /**
    * Retrieves all upload data by status.
@@ -123,7 +123,7 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
     streamerIds: Collection<Long>?,
     allStreamers: Boolean?,
     sortColumn: String,
-  ): List<UploadDataWithStreamAndConfig>
+  ): List<UploadDataWithStream>
 
 
   /**
@@ -164,7 +164,7 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
     streamerIds: Collection<Long>?,
     allStreamers: Boolean?,
     sortColumn: String,
-  ): List<UploadDataWithStreamAndConfig>
+  ): List<UploadDataWithStream>
 
   /**
    * Counts all upload data by filter.
@@ -183,8 +183,16 @@ interface UploadDataDao : BaseDao<UploadDataEntity> {
     AND (StreamData.title LIKE '%' || :filter || '%' OR UploadData.filePath LIKE '%' || :filter || '%')
   """
   )
-  suspend fun countAllByFilter(status: Collection<Int>?, filter: String, streamerIds: Collection<Long>, allStreamers: Boolean?): Long
+  suspend fun countAllByFilter(
+    status: Collection<Int>?,
+    filter: String,
+    streamerIds: Collection<Long>,
+    allStreamers: Boolean?,
+  ): Long
 
+
+  @Query("SELECT * FROM UploadData WHERE filePath = :path")
+  suspend fun findUploadDataByPath(path: String): UploadDataWithStream?
 
   /**
    * Retrieves all upload data with their upload results by upload data ID.

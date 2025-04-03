@@ -24,13 +24,18 @@
  * SOFTWARE.
  */
 
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package github.hua0512.data.upload
 
+import github.hua0512.data.plugin.PluginConfigs.UploadConfig
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.upload.entity.UploadDataEntity
 import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import java.io.File
 
 @Serializable
 data class UploadData(
@@ -40,16 +45,15 @@ data class UploadData(
   val status: UploadState = UploadState.NOT_STARTED,
   @Transient
   val streamData: StreamData? = null,
-  @Transient
-  val uploadAction: UploadAction? = null,
+  val config: UploadConfig = UploadConfig.RcloneConfig(),
 ) {
 
-  constructor(entity: UploadDataEntity, streamData: StreamData? = null, uploadAction: UploadAction? = null) : this(
+  constructor(entity: UploadDataEntity, streamData: StreamData? = null) : this(
     id = entity.id,
     filePath = entity.filePath,
     status = entity.status,
     streamData = streamData,
-    uploadAction = uploadAction
+    config = entity.uploadConfig
   )
 
   var streamDataId: Long = 0
@@ -70,21 +74,21 @@ data class UploadData(
   var streamStartTime: Long = 0L
     get() = streamData?.dateStart ?: field
 
-  var uploadActionId: Long = 0
-    get() = uploadAction?.id ?: field
+  var fileSize = 0L
+    get() = if (filePath == streamData?.outputFilePath) {
+      streamData.outputFileSize
+    } else {
+      File(filePath).length()
+    }
 
-  var uploadPlatform = UploadPlatform.NONE
-    get() = uploadAction?.uploadConfig?.platform ?: field
-
-  var uploadConfig: UploadConfig = UploadConfig.NoopConfig
-    get() = uploadAction?.uploadConfig ?: field
-
+  @EncodeDefault(mode = EncodeDefault.Mode.ALWAYS)
+  var uploadPlatform = config.platform ?: UploadPlatform.NONE
 
   fun toEntity(): UploadDataEntity = UploadDataEntity(
     id = id,
     filePath = filePath,
     status = status,
     streamDataId = streamDataId,
-    uploadActionId = uploadActionId
+    uploadConfig = config,
   )
 }

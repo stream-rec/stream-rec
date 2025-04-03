@@ -27,13 +27,13 @@
 package github.hua0512.dao
 
 import androidx.room.TypeConverter
+import github.hua0512.data.plugin.PluginConfigs.UploadConfig
 import github.hua0512.data.config.*
 import github.hua0512.data.config.engine.DownloadEngines
 import github.hua0512.data.config.engine.EngineConfig
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamerState
 import github.hua0512.data.stream.StreamingPlatform
-import github.hua0512.data.upload.UploadConfig
 import github.hua0512.data.upload.UploadPlatform
 import github.hua0512.data.upload.UploadState
 import kotlinx.serialization.json.Json
@@ -199,5 +199,6 @@ class Converters {
   fun toDownloadEngine(value: DownloadEngines?): String? {
     return value?.engine
   }
+
 
 }

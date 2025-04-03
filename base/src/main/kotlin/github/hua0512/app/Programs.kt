@@ -37,6 +37,7 @@ object Programs {
 
   val ffmpeg = getExecutablePath("FFMPEG_PATH", "ffmpeg")
   val ffprobe = getExecutablePath("FFPROBE_PATH", "ffprobe")
+  val rclone = getExecutablePath("RCLONE_PATH", "rclone")
   val streamLink = getExecutablePath("STREAMLINK_PATH", "streamlink")
 
   private fun getExecutablePath(envVar: String, defaultName: String): String {

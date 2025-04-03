@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,162 +27,121 @@
 package github.hua0512.services
 
 import github.hua0512.app.App
-import github.hua0512.data.config.Action
-import github.hua0512.data.config.Action.*
+import github.hua0512.data.dto.IOutputFile
+import github.hua0512.data.plugin.PluginConfigs
+import github.hua0512.data.plugin.PluginConfigs.CopyFileConfig
+import github.hua0512.data.plugin.PluginError
 import github.hua0512.data.stream.StreamData
-import github.hua0512.data.upload.UploadAction
-import github.hua0512.data.upload.UploadConfig
-import github.hua0512.data.upload.UploadData
-import github.hua0512.utils.*
-import github.hua0512.utils.process.InputSource
-import github.hua0512.utils.process.Redirect
-import kotlinx.coroutines.async
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import github.hua0512.plugins.action.PluginPipeline
+import github.hua0512.plugins.action.ProcessingPlugin
+import github.hua0512.plugins.command.SimpleShellCommandPlugin
+import github.hua0512.plugins.ffmpeg.RemuxPlugin
+import github.hua0512.plugins.file.CopyFilePlugin
+import github.hua0512.plugins.file.DeleteFilePlugin
+import github.hua0512.plugins.file.MoveFilePlugin
+import github.hua0512.plugins.upload.RcloneUploadPlugin
+import github.hua0512.repo.stream.StreamDataRepo
+import github.hua0512.repo.upload.UploadRepo
+import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.sync.Semaphore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import kotlin.io.path.*
 
 /**
- * ActionService is responsible for running actions on the stream data
+ * Service responsible for executing action pipelines
  * @author hua0512
- * @date : 2024/3/17 19:45
  */
-class ActionService(private val app: App, private val uploadService: UploadService) {
-
+class ActionService(
+  private val app: App,
+  private val streamDataRepo: StreamDataRepo,
+  private val uploadRepo: UploadRepo,
+) {
 
   companion object {
     private val logger: Logger = LoggerFactory.getLogger(ActionService::class.java)
   }
 
-  suspend fun runActions(streamDataList: List<StreamData>, actions: List<Action>) = withIOContext {
-    actions.filter {
-      it.enabled
-    }.forEach { action ->
-      try {
-        val job = async {
-          action.mapToAction(streamDataList)
-        }
-        job.await()
-      } catch (e: Exception) {
-        logger.error("$streamDataList, error while executing action $action : ${e.message}")
-        return@withIOContext
-      }
-    }
-  }
+  private lateinit var uploadSemaphore: Semaphore
 
-
-  private suspend fun Action.mapToAction(streamDataList: List<StreamData>) {
-    val dataList = streamDataList.flatMap { streamData ->
-      listOfNotNull(
-        UploadData(
-          filePath = streamData.outputFilePath,
-          streamData = streamData,
-        ),
-        streamData.danmuFilePath?.let { danmu ->
-          UploadData(
-            filePath = danmu,
-            streamData = streamData
-          )
-        }
-      )
-    }
-    if (dataList.isEmpty()) {
-      logger.error("No files to process for action $this")
-      return
+  /**
+   * Execute a list of actions on the given stream data
+   * Each action list is treated as a separate pipeline
+   * @param streamDataList The stream data to process
+   * @param pluginConfigs The list of plugin configs to execute
+   * @return List of pipeline results
+   */
+  suspend fun runActions(
+    streamDataList: List<StreamData>,
+    pluginConfigs: List<PluginConfigs>,
+  ) = withIOContext {
+    if (pluginConfigs.isEmpty()) {
+      logger.debug("No actions to execute")
+      return@withIOContext
     }
 
-    when (this) {
-      is RcloneAction -> {
-        UploadAction(
-          time = Clock.System.now().toEpochMilliseconds(),
-          files = dataList,
-          uploadConfig = UploadConfig.RcloneConfig(
-            rcloneOperation = this.rcloneOperation,
-            remotePath = this.remotePath,
-            args = this.args
-          )
-        ).let { uploadService.upload(it) }
+
+    val initialData = mutableListOf<IOutputFile>()
+    streamDataList.forEach {
+      initialData.add(it)
+      // separate the danmu file from the stream data
+      if (it.danmuFilePath != null) {
+        initialData.add(object : IOutputFile {
+          override var path: String = it.danmuFilePath!!
+          override var size: Long = File(path).length()
+          override var streamerName: String? = it.streamerName
+          override var streamerPlatform: String? = it.streamerPlatform
+          override var streamTitle: String? = it.streamTitle
+          override var streamDate: Long? = it.streamDate
+          override var streamDataId: Long = it.streamDataId
+        })
       }
+    }
+    val plugins = mutableListOf<ProcessingPlugin<*, *, *>>()
 
-      is CommandAction -> {
-        this.apply {
-          logger.info("Running command action : $this")
+    pluginConfigs.forEach {
+      when (it) {
+        is CopyFileConfig -> {
+          val copyPlugin = CopyFilePlugin(it)
+          plugins.add(copyPlugin)
+        }
 
-          val streamData = streamDataList.first()
-          val streamer = streamData.streamer ?: throw IllegalStateException("Streamer not found for stream data $streamData")
-          val downloadConfig = streamer.templateStreamer?.downloadConfig ?: streamer.downloadConfig
-          val downloadOutputFolder: File? = (downloadConfig?.outputFolder?.nonEmptyOrNull() ?: app.config.outputFolder).let {
-            val instant = Instant.fromEpochSeconds(streamData.dateStart!!)
-            val path = it.replacePlaceholders(streamer.name, streamData.title, streamer.platform.name, instant)
-            Path(path).let { path ->
-              if (!path.exists()) {
-                logger.error("Output folder $path does not exist")
-                return@let null
-              }
+        is PluginConfigs.MoveFileConfig -> {
+          val movePlugin = MoveFilePlugin(it)
+          plugins.add(movePlugin)
+        }
 
-              if (!path.isDirectory()) {
-                logger.error("Output folder $path is not a directory")
-                return@let null
-              }
-              path.toFile()
-            }
+        is PluginConfigs.DeleteFileConfig -> {
+          val deletePlugin = DeleteFilePlugin(it)
+          plugins.add(deletePlugin)
+        }
+
+        is PluginConfigs.SimpleShellCommandConfig -> {
+          plugins.add(SimpleShellCommandPlugin(it))
+        }
+
+        is PluginConfigs.UploadConfig.RcloneConfig -> {
+          if (!::uploadSemaphore.isInitialized) {
+            uploadSemaphore = Semaphore(app.config.maxConcurrentUploads)
           }
-          // files + danmu files
-          val sb = StringBuilder().apply {
-            dataList.forEach {
-              append(it.filePath).append("\n")
-            }
-          }
-          // execute the command
-          val exitCode = executeProcess(
-            this.program, *this.args.toTypedArray(),
-            stdin = InputSource.fromString(sb.toString()),
-            stdout = Redirect.CAPTURE,
-            stderr = Redirect.CAPTURE,
-            directory = downloadOutputFolder,
-            destroyForcibly = true,
-            consumer = { line ->
-              logger.info(line)
-            }
-          )
-          logger.info("Command action $this finished with exit code $exitCode")
+          plugins.add(RcloneUploadPlugin(it, uploadSemaphore, streamDataRepo, uploadRepo))
+        }
+
+        is PluginConfigs.RemuxConfig -> {
+          plugins.add(RemuxPlugin(it))
+        }
+
+        else -> {
+          logger.warn("Unsupported plugin type: ${it::class.simpleName}")
         }
       }
+    }
 
-      is MoveAction -> {
-        val dest = Path(this.destination)
-        dataList.forEach { data ->
-          val file = Path(data.filePath)
-          val destFile = dest.resolve(file.name).apply {
-            createParentDirectories()
-          }
-          file.moveTo(destFile)
-          logger.info("Moved $file to $destFile")
-        }
-      }
-
-      is RemoveAction -> {
-        dataList.forEach { data ->
-          val file = Path(data.filePath)
-          file.deleteFile()
-        }
-      }
-
-      is CopyAction -> {
-        dataList.forEach {
-          val file = Path(it.filePath)
-          val dest = Path(this.destination)
-          val destFile = dest.resolve(file.name).apply {
-            createParentDirectories()
-          }
-          file.copyTo(destFile)
-          logger.info("Copied $file to $destFile")
-        }
-      }
-
-      else -> throw UnsupportedOperationException("Invalid action: $this")
+    @Suppress("UNCHECKED_CAST")
+    val pipeline = PluginPipeline(plugins = plugins as List<ProcessingPlugin<IOutputFile, IOutputFile, PluginError>>)
+    val pipelineResult = pipeline.execute(initialData)
+    if (pipelineResult.isErr) {
+      logger.error("Pipeline execution failed: ${pipelineResult.error}")
     }
   }
 

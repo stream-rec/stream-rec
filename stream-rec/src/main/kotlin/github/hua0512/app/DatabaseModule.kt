@@ -31,15 +31,15 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import dagger.Module
 import dagger.Provides
 import github.hua0512.dao.AppDatabase
-import github.hua0512.dao.Migrate11To12
-import github.hua0512.dao.Migrate12To13
-import github.hua0512.dao.Migrate3To4
 import github.hua0512.dao.config.AppConfigDao
 import github.hua0512.dao.config.EngineConfigDao
+import github.hua0512.dao.migrations.Migrate11To12
+import github.hua0512.dao.migrations.Migrate12To13
+import github.hua0512.dao.migrations.Migrate13To14
+import github.hua0512.dao.migrations.Migrate3To4
 import github.hua0512.dao.stats.StatsDao
 import github.hua0512.dao.stream.StreamDataDao
 import github.hua0512.dao.stream.StreamerDao
-import github.hua0512.dao.upload.UploadActionDao
 import github.hua0512.dao.upload.UploadDataDao
 import github.hua0512.dao.upload.UploadResultDao
 import github.hua0512.dao.user.UserDao
@@ -76,7 +76,7 @@ class DatabaseModule {
     )
 
     return builder
-      .addMigrations(Migrate3To4, Migrate11To12, Migrate12To13(json))
+      .addMigrations(Migrate3To4, Migrate11To12, Migrate12To13(json), Migrate13To14(json))
       .fallbackToDestructiveMigration(false)
       .fallbackToDestructiveMigrationOnDowngrade(false)
       .setDriver(BundledSQLiteDriver())
@@ -95,9 +95,6 @@ class DatabaseModule {
 
   @Provides
   fun provideStreamDataDao(database: AppDatabase): StreamDataDao = database.getStreamDataDao()
-
-  @Provides
-  fun provideUploadActionDao(database: AppDatabase): UploadActionDao = database.getUploadActionDao()
 
   @Provides
   fun provideUploadDataDao(database: AppDatabase): UploadDataDao = database.getUploadDataDao()

@@ -26,6 +26,7 @@
 
 package github.hua0512.data.config
 
+import github.hua0512.data.plugin.PluginConfigs
 import github.hua0512.data.dto.DownloadConfigDTO
 import github.hua0512.data.dto.platform.*
 import github.hua0512.data.media.VideoFormat
@@ -46,8 +47,8 @@ sealed class DownloadConfig : DownloadConfigDTO {
   override var outputFolder: String? = null
   override var outputFileName: String? = null
   override var outputFileFormat: VideoFormat? = null
-  override var onPartedDownload: List<Action>? = null
-  override var onStreamingFinished: List<Action>? = null
+  override var onPartedDownload: List<PluginConfigs>? = null
+  override var onStreamingFinished: List<PluginConfigs>? = null
 
 
   private fun DownloadConfig.checkBasicOther(
