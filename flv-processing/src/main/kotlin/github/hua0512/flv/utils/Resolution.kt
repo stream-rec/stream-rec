@@ -66,7 +66,7 @@ private fun extractAVCResolution(packet: ByteArray): VideoResolution {
   val nalUnit = AVCNalUnitParser.parseNalUnit(spsNalUnit)
   val spsData = AVCSequenceParameterSetRBSPParser.parse(nalUnit.rbspBytes)
 
-  return VideoResolution(spsData.frameWidth, spsData.frameHeight)
+  return VideoResolution(spsData.width, spsData.height)
 }
 
 private fun extractHEVCResolution(packet: ByteArray): VideoResolution {

@@ -144,4 +144,17 @@ data class SequenceParameterSetData(
       val y1 = 16 * frameHeightInMbs - (cropUnitY * frameCropBottomOffset + 1)
       return y1 - y0 + 1
     }
+
+
+  val width: Int
+    get() {
+      val baseWidth = (picWidthInMbsMinus1 + 1) * 16;
+      return baseWidth - (frameCropLeftOffset + frameCropRightOffset) * 2;
+    }
+
+  val height: Int
+    get() {
+      val baseHeight = (picHeightInMapUnitsMinus1 + 1) * 16;
+      return baseHeight - (frameCropTopOffset + frameCropBottomOffset) * 2;
+    }
 }
