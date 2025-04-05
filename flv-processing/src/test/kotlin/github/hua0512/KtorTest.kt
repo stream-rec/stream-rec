@@ -33,12 +33,12 @@ import github.hua0512.flv.operators.dump
 import github.hua0512.flv.operators.process
 import github.hua0512.flv.utils.asStreamFlow
 import github.hua0512.plugins.StreamerContext
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.timeout
-import io.ktor.client.request.prepareGet
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.utils.io.ByteReadChannel
+import io.ktor.client.*
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
@@ -56,7 +56,7 @@ import kotlin.time.Duration
 class KtorTest {
 
 
-  private val streamerContext = StreamerContext("test", "")
+  private val streamerContext = StreamerContext("test", "", "")
 
   @Test
   fun testDownloadFlvFix(): Unit = runTest(timeout = Duration.INFINITE) {
