@@ -109,7 +109,6 @@ data class FlvVideoTagData(
     if (codecId != other.codecId) return false
     if (packetType != other.packetType) return false
     if (!binaryData.contentEquals(other.binaryData)) return false
-    if (resolution != other.resolution) return false
 
     return true
   }
@@ -121,7 +120,6 @@ data class FlvVideoTagData(
     result = 31 * result + codecId.hashCode()
     result = 31 * result + (packetType?.hashCode() ?: 0)
     result = 31 * result + binaryData.contentHashCode()
-    result = 31 * result + resolution.hashCode()
     return result
   }
 }

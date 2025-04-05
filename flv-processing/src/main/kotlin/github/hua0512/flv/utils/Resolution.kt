@@ -66,18 +66,13 @@ private fun extractAVCResolution(packet: ByteArray): VideoResolution {
   val nalUnit = AVCNalUnitParser.parseNalUnit(spsNalUnit)
   val spsData = AVCSequenceParameterSetRBSPParser.parse(nalUnit.rbspBytes)
 
-  return VideoResolution(spsData.frameWidth, spsData.frameHeight)
+  return VideoResolution(spsData.width, spsData.height)
 }
 
 private fun extractHEVCResolution(packet: ByteArray): VideoResolution {
   val record = HEVCSequenceHeaderParser.parse(packet)
-
-  // Get first VPS, SPS, and PPS NAL units
-  val vps = record.parameterSets.find { it.type == 32 /* VPS */ }?.nalUnits?.firstOrNull()
   val sps = record.parameterSets.find { it.type == 33 /* SPS */ }?.nalUnits?.firstOrNull()
     ?: throw FlvDataErrorException("No SPS found in HEVC sequence header")
-  val pps = record.parameterSets.find { it.type == 34 /* PPS */ }?.nalUnits?.firstOrNull()
-    ?: throw FlvDataErrorException("No PPS found in HEVC sequence header")
 
   // Parse SPS NAL unit to get resolution
   val spsNalUnit = HEVCNalParser.parseNalUnit(sps)

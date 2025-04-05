@@ -55,9 +55,7 @@ fun Flow<FlvData>.process(
     .filter { !it.isEndOfSequence() }
     .correct(context)
     .fix(context)
-//    .concat(context)
     .limit(fileSizeLimit, durationLimit, context)
-    .extractJoinPoints(context = context)
     .injectMetadata(context)
     .discardSubsequentScript(context)
     .removeDuplicates(context, enable = duplicateTagFiltering)
