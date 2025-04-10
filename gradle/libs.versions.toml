@@ -9,7 +9,7 @@ logback = "1.5.18"
 dagger = "2.56.1"
 protobuf = "4.30.2"
 androidx-room = "2.7.0"
-androidx-sqlite = "2.5.0-rc03"
+androidx-sqlite = "2.5.0"
 
 [libraries]
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "androidx-room" }
