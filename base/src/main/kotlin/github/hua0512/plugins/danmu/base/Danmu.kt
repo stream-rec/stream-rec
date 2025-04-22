@@ -82,6 +82,21 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
     private const val XML_END = "</i>"
 
     private const val BUFFER_SIZE = 20
+
+    /**
+     * Regex to match invalid XML characters
+     *
+     * This regex matches:
+     * 1. Orphaned UTF-16 surrogate pairs:
+     *    - High surrogates (U+D800 to U+DBFF) not followed by low surrogates
+     *    - Low surrogates (U+DC00 to U+DFFF) not preceded by high surrogates
+     * 2. Control characters and other Unicode code points not allowed in XML 1.0:
+     *    - C0 controls (U+0000 to U+0008, U+000B, U+000C, U+000E to U+001F)
+     *    - C1 controls (U+007F to U+009F)
+     *    - Byte Order Mark (U+FEFF), Unicode non-characters (U+FFFE, U+FFFF)
+     */
+    private val invalidXMLChars =
+      Regex("(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFEFF\uFFFE\uFFFF]")
   }
 
   /**
@@ -230,15 +245,23 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
       } else {
         val urlBuilder = URLBuilder(wsUrl)
         if (urlBuilder.protocol.isSecure()) {
-          app.client.wss(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
-            fillRequest()
-          }) {
+          app.client.wss(
+            host = urlBuilder.host,
+            port = urlBuilder.port,
+            path = urlBuilder.encodedPath,
+            request = {
+              fillRequest()
+            }) {
             processSession()
           }
         } else {
-          app.client.ws(host = urlBuilder.host, port = urlBuilder.port, path = urlBuilder.encodedPath, request = {
-            fillRequest()
-          }) {
+          app.client.ws(
+            host = urlBuilder.host,
+            port = urlBuilder.port,
+            path = urlBuilder.encodedPath,
+            request = {
+              fillRequest()
+            }) {
             processSession()
           }
         }
@@ -374,8 +397,8 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
         val danmu = data.danmu as DanmuData
         val time = data.clientTime
         val color = if (danmu.color == -1) "16777215" else danmu.color
-        val content = danmu.content.replaceToXmlFriendly()
-        val sender = danmu.sender.replaceToXmlFriendly()
+        val content = danmu.content.sanitizeToXmlString()
+        val sender = danmu.sender.sanitizeToXmlString()
         // append tab
         append("\t")
         // append danmu content
@@ -389,17 +412,11 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
   }
 
   /**
-   * Replaces special characters in the given string with their XML-friendly counterparts.
-   * @receiver String the string to be replaced
-   * @return String the XML-friendly string
+   * Removes invalid characters from the given string.
+   * @receiver String the string to be cleaned
+   * @return String the cleaned string
    */
-  private fun String.replaceToXmlFriendly(): String = this.replace("&", "&amp;")
-    .replace("<", "&lt;")
-    .replace(">", "&gt;")
-    .replace("\"", "&quot;")
-    .replace("'", "&apos;")
-    .replace("\n", "&#10;")
-    .replace("\r", "&#13;")
+  private fun String.sanitizeToXmlString() = this.replace(invalidXMLChars, "")
 
   /**
    * Launches a coroutine to send heartbeats on the given WebSocket session.
