@@ -83,7 +83,15 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
 
     internal val HYSDK_UA: String
       get() {
-        val currentTs = Clock.System.now().epochSeconds
+        val validTs = 20000308
+        // Current ts epoch: 1745829015
+        // We compute the timestamp from the current time by taking the last 8 digits of the epoch seconds
+        // So we get a timestamp like 45829015
+        // Its known that HUYA shipped a version number valid from 20000308 (idk if this is a version number or a timestamp)
+        // For ts which is less than validTs, we compute it by adding 20000308 to the epoch seconds divided by 100
+        val currentTs: Int = Clock.System.now().epochSeconds.toString().takeLast(8).toIntOrNull()
+          ?.takeIf { it > validTs }
+          ?: (validTs + (Clock.System.now().epochSeconds / 100).toInt())
         return "HYSDK(Windows, $currentTs)"
       }
 
