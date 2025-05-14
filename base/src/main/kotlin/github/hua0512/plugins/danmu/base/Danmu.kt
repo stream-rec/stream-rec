@@ -416,7 +416,21 @@ abstract class Danmu(val app: App, val enablePing: Boolean = false) {
    * @receiver String the string to be cleaned
    * @return String the cleaned string
    */
-  private fun String.sanitizeToXmlString() = this.replace(invalidXMLChars, "")
+  private fun String.sanitizeToXmlString(): String {
+    val cleaned = this.replace(invalidXMLChars, "")
+    return buildString {
+      for (char in cleaned) {
+        when (char) {
+          '&' -> append("&amp;")
+          '<' -> append("&lt;")
+          '>' -> append("&gt;")
+          '"' -> append("&quot;")
+          '\'' -> append("&apos;")
+          else -> append(char)
+        }
+      }
+    }
+  }
 
   /**
    * Launches a coroutine to send heartbeats on the given WebSocket session.
