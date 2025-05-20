@@ -26,33 +26,25 @@
 
 package github.hua0512.plugins.event
 
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
+
 /**
- * Singleton class that holds all event plugins and manages their lifecycle
- * @author hua0512
- * @date : 2024/3/17 22:57
+ * Configuration parameters for the EventBus.
+ *
+ * @property replayCacheSize Replay cache size for the main event SharedFlow. Default is 0.
+ * @property extraBufferCapacity Extra buffer capacity for the main event SharedFlow. Default is 64.
+ * @property onBufferOverflow Action to take when the event SharedFlow buffer overflows. Default is [BufferOverflow.SUSPEND].
+ * @property dispatcher Coroutine dispatcher for the InternalEventBus processing. Default is [Dispatchers.Default].
+ * @property pluginExecutorDispatcher Coroutine dispatcher for the PluginExecutor. Default is [Dispatchers.Default].
+ * @property logEventsWithNoSubscribers Whether to log a warning when an event is emitted but has no subscribers. Default is true.
  */
-object EventPluginsHolder {
-
-  private val _plugins = mutableListOf<BaseEventPlugin>()
-
-  fun registerPlugin(plugin: BaseEventPlugin) {
-    _plugins.add(plugin)
-  }
-
-  fun registerPlugins(vararg plugins: BaseEventPlugin) {
-    _plugins.addAll(plugins)
-  }
-
-  fun unregisterPlugin(plugin: BaseEventPlugin) {
-    _plugins.remove(plugin)
-  }
-
-  fun getPlugins(): List<BaseEventPlugin> {
-    return _plugins
-  }
-
-  fun clearPlugins() {
-    _plugins.forEach { it.cleanUp() }
-    _plugins.clear()
-  }
-}
+data class EventBusConfiguration(
+  val replayCacheSize: Int = 0,
+  val extraBufferCapacity: Int = 64,
+  val onBufferOverflow: BufferOverflow = BufferOverflow.SUSPEND,
+  val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+  val pluginExecutorDispatcher: CoroutineDispatcher = Dispatchers.IO,
+  val logEventsWithNoSubscribers: Boolean = true
+)

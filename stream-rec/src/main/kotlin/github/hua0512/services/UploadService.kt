@@ -76,7 +76,9 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
   private val uploadSemaphore: Semaphore by lazy { Semaphore(app.config.maxConcurrentUploads) }
 
 
-  override val subscribeEvents: List<Class<out Event>> = listOf(UploadRetriggered::class.java)
+  init {
+    EventCenter.subscribe(UploadRetriggered::class, this)
+  }
 
   override suspend fun onEvent(event: Event) {
     event as UploadRetriggered
@@ -88,7 +90,6 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
   }
 
   override fun cleanUp() {
-
   }
 
   /**
@@ -97,11 +98,11 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
    *
    * @param uploadAction The upload action to upload.
    */
-  suspend fun upload(uploadAction: UploadAction) {
-    val saved = withIOContext { uploadRepo.saveAction(uploadAction) }
+  suspend fun upload(uploadAction: UploadAction) = withIOContext {
+    val saved = uploadRepo.saveAction(uploadAction)
 
     PlatformUploaderFactory.create(app, uploadAction.uploadConfig).takeIf { it !is NoopUploader }?.let { uploader ->
-      val results = withIOContext { parallelUpload(saved.files, uploader) }
+      val results = parallelUpload(saved.files, uploader)
       logger.debug("Upload results: {}", results)
 
       // Throw exception for first failure if any

@@ -30,6 +30,7 @@ import github.hua0512.data.event.DownloadEvent.DownloadStateUpdate
 import github.hua0512.data.event.Event
 import github.hua0512.data.event.StreamerEvent
 import io.ktor.websocket.*
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,10 +44,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class DownloadStateEventPlugin(private val json: Json) : BaseEventPlugin() {
 
-  override val subscribeEvents = listOf(
-    DownloadStateUpdate::class.java,
-    StreamerEvent::class.java
-  )
+  init {
+    EventCenter.subscribe(DownloadStateUpdate::class, this)
+    EventCenter.subscribe(StreamerEvent::class, this)
+  }
 
   // WebSocket Session management
   private val activeConnections = ConcurrentHashMap<String, WebSocketSession>()
@@ -83,6 +84,13 @@ class DownloadStateEventPlugin(private val json: Json) : BaseEventPlugin() {
 
   override fun cleanUp() {
     // clear all active connections
+    activeConnections.forEach { (_, session) ->
+      try {
+        session.cancel()
+      } catch (e: Exception) {
+        // Ignore close exceptions
+      }
+    }
     activeConnections.clear()
     lastUpdatesByUrl.clear()
   }

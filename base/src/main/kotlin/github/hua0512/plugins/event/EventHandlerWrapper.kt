@@ -27,15 +27,16 @@
 package github.hua0512.plugins.event
 
 import github.hua0512.data.event.Event
+import kotlin.reflect.KClass
 
 /**
- * Base class for event plugins that handle events of a specific type
- * @author hua0512
- * @date : 2024/3/17 22:28
+ * Wraps a [BaseEventPlugin] and the specific [Event] type it subscribed to.
+ * This aids in precise unsubscription and targeted execution of event handlers.
+ *
+ * @property plugin The event plugin instance.
+ * @property subscribedEventType The KClass of the event type this plugin is subscribed to with this wrapper.
  */
-abstract class BaseEventPlugin {
-
-  abstract suspend fun onEvent(event: Event)
-
-  abstract fun cleanUp()
-}
+data class EventHandlerWrapper(
+  val plugin: BaseEventPlugin,
+  val subscribedEventType: KClass<out Event>
+)

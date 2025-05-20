@@ -43,7 +43,6 @@ import github.hua0512.backend.ServerConfig
 import github.hua0512.backend.backendServer
 import github.hua0512.data.config.AppConfig
 import github.hua0512.plugins.event.EventCenter
-import github.hua0512.plugins.event.EventPluginsHolder
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.utils.mainLogger
@@ -110,6 +109,10 @@ class Application {
       val newContext =
         coroutineContext.newCoroutineContext(Dispatchers.Default + SupervisorJob() + CoroutineName("mainJobScope"))
       val scope = CoroutineScope(newContext)
+
+      // Start EventCenter
+      EventCenter.start()
+
       val appConfigRepository = appComponent.getAppConfigRepository()
       val downloadService = appComponent.getDownloadService()
       val uploadService = appComponent.getUploadService()
@@ -132,12 +135,7 @@ class Application {
         }
 
         val downloadStateEventPlugin = appComponent.getDownloadStateEventPlugin()
-        EventPluginsHolder.registerPlugins(downloadStateEventPlugin, uploadService)
 
-        // start a job to listen for events
-        launch {
-          EventCenter.start()
-        }
         // start the backend server
         launch(CoroutineName("serverScope")) {
           val serverConfig = ServerConfig(
