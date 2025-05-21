@@ -42,8 +42,8 @@ import kotlinx.coroutines.channels.BufferOverflow
  */
 data class EventBusConfiguration(
   val replayCacheSize: Int = 0,
-  val extraBufferCapacity: Int = 64,
-  val onBufferOverflow: BufferOverflow = BufferOverflow.SUSPEND,
+  val extraBufferCapacity: Int = 256,
+  val onBufferOverflow: BufferOverflow = BufferOverflow.DROP_OLDEST,
   val dispatcher: CoroutineDispatcher = Dispatchers.Default,
   val pluginExecutorDispatcher: CoroutineDispatcher = Dispatchers.IO,
   val logEventsWithNoSubscribers: Boolean = true
