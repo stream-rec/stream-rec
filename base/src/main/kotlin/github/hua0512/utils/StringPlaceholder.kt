@@ -84,7 +84,7 @@ fun String.replacePlaceholders(streamer: String, title: String, platform: String
       index = result.indexOf(placeholder, index + value.length)
     }
   }
-  return result.toString().formatToFileNameFriendly()
+  return result.toString()
 }
 
 
