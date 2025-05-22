@@ -36,10 +36,30 @@ import java.util.*
 
 /**
  * Format the file name to a friendly file name
+ * Replaces characters that are not allowed in file names with an underscore.
+ *
+ * Replaces the following characters with an underscore:
+ * - / (forward slash)
+ * - \ (backslash)
+ * - \n (newline)
+ * - \r (carriage return)
+ * - \t (tab)
+ * - \u0000 (null character)
+ * - \u000c (form feed)
+ * - ` (backtick)
+ * - ? (question mark)
+ * - * (asterisk)
+ * - < (less than)
+ * - > (greater than)
+ * - | (pipe)
+ * - " (double quote)
+ * - ' (single quote)
+ *
+ *
  * @receiver the file name to be formatted
  * @return a formatted file name
  */
-fun String.formatToFileNameFriendly(): String = replace(Regex("[/\n\r\t\u0000\u000c`?*\\\\<>|\":]"), "_")
+fun String.formatToFileNameFriendly(): String = replace(Regex("[/\n\r\t\u0000\u000c`?*\\\\<>|\":']"), "_")
 
 
 /**
