@@ -36,9 +36,9 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.lindstrom.m3u8.model.MasterPlaylist
-import io.lindstrom.m3u8.parser.MasterPlaylistParser
+import io.lindstrom.m3u8.model.MultivariantPlaylist
 import io.lindstrom.m3u8.parser.MediaPlaylistParser
+import io.lindstrom.m3u8.parser.MultivariantPlaylistParser
 import io.lindstrom.m3u8.parser.ParsingMode
 import kotlinx.serialization.json.Json
 import org.slf4j.Logger
@@ -243,7 +243,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
     val streams = mutableListOf<StreamInfo>()
     val parsingMode = ParsingMode.LENIENT
     val mediaParser = if (isMasterPlaylist(playlistString)) {
-      MasterPlaylistParser(parsingMode)
+      MultivariantPlaylistParser(parsingMode)
     } else {
       MediaPlaylistParser(parsingMode)
     }
@@ -251,7 +251,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
     val parseResult = runCatching {
       mediaParser.readPlaylist(playlistString)
     }.map { playlist ->
-      if (playlist is MasterPlaylist) {
+      if (playlist is MultivariantPlaylist) {
         val variants = playlist.variants()
         val variantStreams = variants.map { variant ->
           val extraMap = variant.resolution().getOrNull()?.let { mapOf("resolution" to "${it.height()}x${it.width()}") }

@@ -54,7 +54,7 @@ io-ktor-server-tests-jvm = { module = "io.ktor:ktor-server-tests-jvm", version.r
 
 io-kotest-kotest-runner-junit5 = "io.kotest:kotest-runner-junit5:6.0.0.M4"
 
-io-lindstrom-m3u8-parser = "io.lindstrom:m3u8-parser:0.28"
+io-lindstrom-m3u8-parser = "io.lindstrom:m3u8-parser:0.30"
 
 ch-qos-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 org-jetbrains-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
