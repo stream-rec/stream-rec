@@ -67,9 +67,11 @@ class Twitch(
       add("--twitch-disable-ads")
     }
     // configure streamlink-ttvlol options
-    config.twitchProxyPlaylist?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist=$it") }
+    config.twitchProxyPlaylist?.nonEmptyOrNull()?.let {
+      add("--twitch-proxy-playlist=$it")
+      if (config.twitchProxyPlaylistFallback) add("--twitch-proxy-playlist-fallback")
+    }
     config.twitchProxyPlaylistExclude?.nonEmptyOrNull()?.let { add("--twitch-proxy-playlist-exclude=$it") }
-    if (config.twitchProxyPlaylistFallback) add("--twitch-proxy-playlist-fallback")
   }
 
   private fun updateParams(config: AppConfig) {
