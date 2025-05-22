@@ -34,10 +34,10 @@ import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.lindstrom.m3u8.model.MasterPlaylist
 import io.lindstrom.m3u8.model.MediaPlaylist
-import io.lindstrom.m3u8.parser.MasterPlaylistParser
+import io.lindstrom.m3u8.model.MultivariantPlaylist
 import io.lindstrom.m3u8.parser.MediaPlaylistParser
+import io.lindstrom.m3u8.parser.MultivariantPlaylistParser
 import io.lindstrom.m3u8.parser.ParsingMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -84,7 +84,7 @@ class PlayListFetcher(val client: HttpClient, override var context: StreamerCont
 
   private fun isMasterPlaylist(content: String) = content.contains("#EXT-X-STREAM-INF")
 
-  private fun MasterPlaylist.getBestQualityVariant(): String {
+  private fun MultivariantPlaylist.getBestQualityVariant(): String {
     val variants = variants()
     if (variants.isEmpty()) {
       throw IllegalStateException("No variants found in master playlist")
@@ -112,14 +112,14 @@ class PlayListFetcher(val client: HttpClient, override var context: StreamerCont
         // check if its master playlist
         val mediaParser = if (isMasterPlaylist(playlistString)) {
           isMaster = true
-          MasterPlaylistParser(parsingMode)
+          MultivariantPlaylistParser(parsingMode)
         } else {
           MediaPlaylistParser(parsingMode)
         }
         val playlist = mediaParser.readPlaylist(playlistString)
 
         if (isMaster) {
-          url = (playlist as MasterPlaylist).getBestQualityVariant()
+          url = (playlist as MultivariantPlaylist).getBestQualityVariant()
           debug("Using variant: $url")
           val mediaPlaylistFlow = consume(url)
           emitAll(mediaPlaylistFlow)
