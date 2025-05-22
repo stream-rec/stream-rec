@@ -18,12 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ amd64, arm64 ]
+        platform: [ amd64, arm64, alpine ]
         include:
           - platform: amd64
             runner: ubuntu-latest
           - platform: arm64
             runner: ubuntu-24.04-arm
+          - platform: alpine
+            runner: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +36,12 @@ jobs:
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Apply Alpine patch
+        if: matrix.platform == 'alpine'
+        run: |
+          git apply ci/build(dockerfile)__use_alpines_image.patch
+          echo "Applied Alpine patch to Dockerfile"
 
       - name: Docker meta
         id: meta
@@ -46,6 +54,7 @@ jobs:
             suffix=
           tags: |
             type=raw,value=latest,priority=700,enable={{is_default_branch}}
+            type=raw,value=main-alpine,priority=700,enable={{is_default_branch && matrix.platform == 'alpine'}}
             type=ref,enable=true,priority=600,prefix=,suffix=,event=branch
             type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
             type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
@@ -63,9 +72,18 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
-          platforms: ${{ matrix.platform }}
+          platforms: ${{ matrix.platform == 'alpine' && 'linux/amd64,linux/arm64' || matrix.platform }}
+          # For alpine, we build for both amd64 and arm64, but tag it as main-alpine.
+          # For regular amd64/arm64, we build for that specific platform.
+          # The manifest merge job will handle creating multi-arch images for 'latest' and other tags.
+          # The 'main-alpine' tag will be specific to the patched Dockerfile.
+          # We need to ensure the 'main-alpine' tag is only applied to the alpine build.
+          # The docker/metadata-action handles the tagging correctly based on the 'enable' condition.
+          # The build-push-action will use the tags from metadata.
           labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
           context: .
+          file: ./Dockerfile # Explicitly state Dockerfile, though it's default
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -110,6 +128,7 @@ jobs:
             suffix=
           tags: |
             type=raw,value=latest,priority=700,enable={{is_default_branch}}
+            # main-alpine tag is handled by the build job itself, not during merge for multi-arch manifest of 'latest'
             type=ref,enable=true,priority=600,prefix=,suffix=,event=branch
             type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
             type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
