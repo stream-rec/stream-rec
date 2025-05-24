@@ -88,7 +88,7 @@ fun Route.userRoute(json: Json, userRepo: UserRepo) {
         }
 
 
-        val validTo = Clock.System.now().plus(7.toDuration(DurationUnit.DAYS))
+        val validTo = Clock.System.now().plus(9999.toDuration(DurationUnit.DAYS))
         val token = JWT.create()
           .withAudience(jwtAudience)
           .withIssuer(jwtDomain)
