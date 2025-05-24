@@ -52,7 +52,7 @@ interface LocalDataSource {
 
 
     fun getDefaultPath(): String {
-      return "/root/download/db/stream-rec.db"
+      return "/root/downloads/db/stream-rec.db"
     }
 
     fun getJwtSecret(): String {
