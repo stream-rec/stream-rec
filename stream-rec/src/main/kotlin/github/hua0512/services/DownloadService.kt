@@ -85,11 +85,14 @@ class DownloadService(
    * Starts the download service.
    */
   suspend fun run(downloadScope: CoroutineScope) {
+    // 1. 初始化下载信号量
     downloadSemaphore = Semaphore(app.config.maxConcurrentDownloads)
+    logger.info("${downloadSemaphore} 初始化信号量" )
     this.scope = downloadScope
+    // 2. 创建回调处理器
     callback = object : StreamerCallback {
-
       override suspend fun onStateChanged(
+        // 更新主播状态到数据库
         id: Long,
         newState: StreamerState,
         onSuccessful: () -> Unit,
@@ -191,11 +194,13 @@ class DownloadService(
         }
       }
     }
-
+// 3. 获取所有活跃主播
     val streamers = withIOContext {
       repo.getStreamersActive()
     }
+    logger.info("Found {} active streamers", streamers.size)
     this.streamers = streamers
+    // 4. 按平台分组启动监控
     streamers.groupBy { it.platform }.forEach {
       val service = getOrInitPlatformService(it.key)
       it.value.forEach { streamer ->

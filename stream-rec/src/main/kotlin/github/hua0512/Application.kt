@@ -78,14 +78,16 @@ class Application {
       System.setProperty(DEBUG_PROPERTY_NAME, DEBUG_PROPERTY_VALUE_ON)
 
       runBlocking(CoroutineName("main")) {
+        // 2. 创建依赖注入组件
         val appComponent: AppComponent = DaggerAppComponent.create()
-
+// 3. 获取App实例
         val app = appComponent.getAppConfig()
-
+        // 4. 初始化各个组件
         val jobScope = initComponents(appComponent, app)
 
         // start the app
         // add shutdown hook
+        // 5. 注册关闭钩子
         Runtime.getRuntime().addShutdownHook(Thread {
           mainLogger.info("Stream-rec shutting down...")
           server?.stop(1000, 1000)
@@ -97,10 +99,11 @@ class Application {
           server = null
         })
         // wait for the job to finish
+        // 6. 等待主任务完成
         jobScope.coroutineContext[Job]?.join()
       }
     }
-
+  //  各个组件初始化
     @OptIn(InternalCoroutinesApi::class)
     private suspend inline fun initComponents(
       appComponent: AppComponent,
@@ -108,19 +111,23 @@ class Application {
     ): CoroutineScope {
       val newContext =
         coroutineContext.newCoroutineContext(Dispatchers.Default + SupervisorJob() + CoroutineName("mainJobScope"))
+    // 1. 创建主协程作用域
       val scope = CoroutineScope(newContext)
 
       // Start EventCenter
+    // 2. 启动事件中心
       EventCenter.start()
-
+      // 3. 获取各种服务实例
       val appConfigRepository = appComponent.getAppConfigRepository()
       val downloadService = appComponent.getDownloadService()
       val uploadService = appComponent.getUploadService()
 
       scope.apply {
         // await for app config to be loaded
+        // 4. 初始化应用配置
         initAppConfig(appConfigRepository, app)
         // launch a job to listen for app config changes
+        // 5. 监听配置变化
         launch {
           appConfigRepository.streamAppConfig()
             .flowOn(Dispatchers.IO)
@@ -130,6 +137,7 @@ class Application {
             }
         }
         // start download
+        // 6. 启动下载服务 ← 核心服务启动
         launch {
           downloadService.run(scope)
         }
@@ -137,6 +145,7 @@ class Application {
         val downloadStateEventPlugin = appComponent.getDownloadStateEventPlugin()
 
         // start the backend server
+        // 7. 启动后端服务器 (Web API)
         launch(CoroutineName("serverScope")) {
           val serverConfig = ServerConfig(
             port = 12555,
