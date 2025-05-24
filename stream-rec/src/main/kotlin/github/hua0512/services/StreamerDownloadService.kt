@@ -205,6 +205,7 @@ class StreamerDownloadService(
   var listenToEngineChanges = false
 
   suspend fun init(callback: StreamerCallback) {
+    logger.info("StreamerDownloadService 开始初始化")
     setCallback(callback)
 
     assert(streamer.engine != null) { "Engine is null" }

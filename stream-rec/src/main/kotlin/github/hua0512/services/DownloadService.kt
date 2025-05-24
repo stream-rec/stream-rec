@@ -209,6 +209,7 @@ class DownloadService(
         }else{
           logger.info("{} 添加到下载队列成功\n",streamer.id)
         }
+        delay(10000) // 延迟1秒，可以根据需要调整
       }
     }
     // listen to streamer changes
@@ -218,6 +219,7 @@ class DownloadService(
 
   private fun getOrInitPlatformService(platform: StreamingPlatform): DownloadPlatformService {
     val fetchDelay = (platform.globalConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
+    logger.info("getOrInitPlatformService fetchDelay{} ",fetchDelay.inWholeMilliseconds)
     val service = taskJobs.computeIfAbsent(platform) {
       logger.info("{} 平台初始化", platform)
       logger.info("{} initializing...", platform)
