@@ -372,6 +372,7 @@ class StreamerDownloadService(
             }
 
             if (!inTimerRange || !isStreamerLive()) {
+              logger.info("处理下线状态")
               handleOfflineStatus()
             } else {
               val duration = calculateDuration(streamer.endTime ?: "")

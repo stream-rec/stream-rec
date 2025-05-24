@@ -200,8 +200,6 @@ class DownloadService(
     }
     logger.info("Found {} active streamers", streamers.size)
     this.streamers = streamers
-    // 4. 按平台分组启动监控
-    logger.info("按平台分组启动监控{}",  streamers.groupBy { it.platform })
     streamers.groupBy { it.platform }.forEach {
       val service = getOrInitPlatformService(it.key)
       it.value.forEach { streamer ->
@@ -209,7 +207,7 @@ class DownloadService(
         if (!result) {
           logger.error("Failed to start download job for {}", streamer)
         }else{
-          logger.info("添加到下载队列成功{}",streamer)
+          logger.info("{} 添加到下载队列成功\n",streamer.id)
         }
       }
     }
@@ -221,6 +219,7 @@ class DownloadService(
   private fun getOrInitPlatformService(platform: StreamingPlatform): DownloadPlatformService {
     val fetchDelay = (platform.globalConfig(app.config).fetchDelay ?: 0).toDuration(DurationUnit.SECONDS)
     val service = taskJobs.computeIfAbsent(platform) {
+      logger.info("{} 平台初始化", platform)
       logger.info("{} initializing...", platform)
       DownloadPlatformService(
         app,
@@ -233,6 +232,7 @@ class DownloadService(
         downloadEngineConfigManager
       )
     }
+    logger.info("{} 平台初始化完成", platform)
     return service
   }
 
