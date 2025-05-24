@@ -201,6 +201,7 @@ class DownloadService(
     logger.info("Found {} active streamers", streamers.size)
     this.streamers = streamers
     // 4. 按平台分组启动监控
+    logger.info("按平台分组启动监控{}",  streamers.groupBy { it.platform })
     streamers.groupBy { it.platform }.forEach {
       val service = getOrInitPlatformService(it.key)
       it.value.forEach { streamer ->
