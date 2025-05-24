@@ -207,6 +207,8 @@ class DownloadService(
         val result = service.addStreamer(streamer)
         if (!result) {
           logger.error("Failed to start download job for {}", streamer)
+        }else{
+          logger.info("添加到下载队列成功{}",streamer)
         }
       }
     }
