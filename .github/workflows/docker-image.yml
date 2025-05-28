@@ -54,7 +54,7 @@ jobs:
             suffix=
           tags: |
             type=raw,value=latest,priority=700,enable={{is_default_branch}}
-            type=raw,value=main-alpine,priority=700,enable={{and is_default_branch (eq matrix.platform 'alpine')}}
+            type=raw,value=main-alpine,priority=700,enable={{and is_default_branch (match "^alpine$" matrix.platform)}}
             type=ref,enable=true,priority=600,prefix=,suffix=,event=branch
             type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
             type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
