@@ -26,129 +26,208 @@
 
 package github.hua0512.utils
 
+import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.update
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlin.math.max
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.nanoseconds
 
 /**
- * A token bucket rate limiter implementation
- * More accurate and efficient than simple time-based limiting
+ * Internal state for the RateLimiter, managed atomically.
+ */
+private data class RateLimiterState(
+  val tokens: Double,
+  val lastRefillNanos: Long,
+  val lastAcquireCompletionNanos: Long,
+)
+
+/**
+ * A token bucket rate limiter implementation, designed for high concurrency and performance
+ * by using atomic operations instead of mutexes.
+ * It supports a maximum burst size and a minimum delay between acquisitions.
  */
 class RateLimiter(
-  private val permitsPerSecond: Long,
-  private var _minDelayMs: Long,
-  private val maxBurst: Int = 1,
+  permitsPerSecond: Long,
+  initialMinDelayMs: Long,
+  maxBurst: Int = 1,
 ) {
-  private val bucketSize = maxBurst.coerceAtLeast(1)
-  private val refillInterval = (1000.0 / permitsPerSecond).milliseconds
+  init {
+    require(permitsPerSecond >= 0) { "permitsPerSecond must be non-negative" }
+    require(initialMinDelayMs >= 0) { "initialMinDelayMs must be non-negative" }
+    require(maxBurst >= 0) { "maxBurst must be non-negative, will be coerced to at least 1 for bucket size" }
+  }
 
-  private val lastRefillTime = atomic(System.nanoTime())
-  private val availableTokens = atomic(bucketSize.toDouble())
-  private val mutex = Mutex()
+  private val bucketSize: Double = maxBurst.coerceAtLeast(1).toDouble()
+  private val refillIntervalNanos: Double = if (permitsPerSecond > 0) {
+    1_000_000_000.0 / permitsPerSecond
+  } else {
+    Double.POSITIVE_INFINITY // No refill if rate is 0
+  }
 
-  private var isFirstRequest = atomic(true)
+  private val _minDelayMsInternal = atomic(initialMinDelayMs)
 
-  /**
-   * Minimum delay between permits in milliseconds
-   * Can be updated dynamically
-   */
-  var minDelayMs: Long
-    get() = _minDelayMs
-    private set(value) {
-      _minDelayMs = value
-    }
+  private val state: AtomicRef<RateLimiterState>
 
-  /**
-   * Update the minimum delay between permits
-   * @param value new minimum delay in milliseconds
-   */
-  suspend fun updateMinDelay(value: Long) = mutex.withLock {
-    _minDelayMs = value
-    isFirstRequest.update { true }
+  init {
+    val initialTimeNanos = System.nanoTime()
+    // Ensure the first acquire is not blocked by minDelay if minDelay is set
+    val effectiveInitialMinDelayNanos = initialMinDelayMs * 1_000_000L
+    state = atomic(
+      RateLimiterState(
+        tokens = bucketSize,
+        lastRefillNanos = initialTimeNanos,
+        lastAcquireCompletionNanos = initialTimeNanos - effectiveInitialMinDelayNanos
+      )
+    )
   }
 
   /**
-   * Acquires a permit from the rate limiter, suspending if necessary
-   * @return the delay applied, if any
+   * Current minimum delay between permits in milliseconds.
    */
-  suspend fun acquire(): Duration = mutex.withLock {
-    // Fast path for 0 minDelayMs
-    if (_minDelayMs == 0L) {
-      availableTokens.value -= 1.0
-      return 0.milliseconds
+  val minDelayMs: Long
+    get() = _minDelayMsInternal.value
+
+  /**
+   * Updates the minimum delay between permits.
+   * @param newMinDelayMs New minimum delay in milliseconds. Must be non-negative.
+   */
+  fun updateMinDelay(newMinDelayMs: Long) {
+    require(newMinDelayMs >= 0) { "newMinDelayMs must be non-negative" }
+    if (newMinDelayMs == _minDelayMsInternal.value) {
+      return // No change, no need to update
     }
-
-    // Fast path for first request
-    if (isFirstRequest.compareAndSet(expect = true, update = false)) {
-      availableTokens.value -= 1.0
-      return 0.milliseconds
-    }
-
-    val now = System.nanoTime()
-    val timeSinceLastRefill = (now - lastRefillTime.value).nanoseconds
-
-    // Always calculate the minimum required delay
-    val minRequired = minDelayMs.milliseconds
-
-    // If minimum delay hasn't elapsed, wait
-    if (timeSinceLastRefill < minRequired) {
-      val waitTime = minRequired - timeSinceLastRefill
-      delay(waitTime)
-      return waitTime
-    }
-
-    // Normal token bucket logic
-    if (timeSinceLastRefill >= refillInterval) {
-      val newTokens = (timeSinceLastRefill / refillInterval).toDouble()
-      val currentTokens = availableTokens.value
-      val updatedTokens = (currentTokens + newTokens).coerceAtMost(bucketSize.toDouble())
-
-      availableTokens.value = updatedTokens
-      lastRefillTime.value = now
-    }
-
-    val requiredDelay = if (availableTokens.value >= 1.0) {
-      availableTokens.value -= 1.0
-      0.milliseconds
-    } else {
-      val timeToNextToken = refillInterval * (1.0 - availableTokens.value)
-      timeToNextToken.coerceAtLeast(minRequired)
-    }
-
-    if (requiredDelay > 0.milliseconds) {
-      delay(requiredDelay)
-    }
-
-    requiredDelay
+    _minDelayMsInternal.value = newMinDelayMs
   }
 
   /**
-   * Try to acquire a permit without waiting
-   * @return true if permit was acquired, false if would need to wait
+   * Acquires a permit from the rate limiter, suspending if necessary.
+   * This function is thread-safe and designed for high concurrency.
+   * @return The duration for which the caller was delayed, if any.
    */
-  suspend fun tryAcquire(): Boolean = mutex.withLock {
-    val now = System.nanoTime()
-    val timeSinceLastRefill = (now - lastRefillTime.value).nanoseconds
+  suspend fun acquire(): Duration {
+    while (true) {
+      val acquireStartTimeNanos = System.nanoTime()
+      val currentMinDelaySettingMs = _minDelayMsInternal.value // Read once per loop iteration
 
-    if (timeSinceLastRefill >= refillInterval) {
-      val newTokens = (timeSinceLastRefill / refillInterval).toDouble()
-      val currentTokens = availableTokens.value
-      val updatedTokens = (currentTokens + newTokens).coerceAtMost(bucketSize.toDouble())
+      val currentState = state.value
+      val currentTokens = currentState.tokens
+      val currentLastRefillNanos = currentState.lastRefillNanos
+      val currentLastAcquireCompletionNanos = currentState.lastAcquireCompletionNanos
 
-      availableTokens.value = updatedTokens
-      lastRefillTime.value = now
+      // 1. Calculate wait time due to minDelayMs constraint
+      var waitDueToMinDelayNanos = 0L
+      if (currentMinDelaySettingMs > 0L) {
+        val minDelayNanos = currentMinDelaySettingMs * 1_000_000L
+        val earliestNextAcquireTime = currentLastAcquireCompletionNanos + minDelayNanos
+        if (acquireStartTimeNanos < earliestNextAcquireTime) {
+          waitDueToMinDelayNanos = earliestNextAcquireTime - acquireStartTimeNanos
+        }
+      }
+
+      // Effective time for token calculation is after potential minDelay wait
+      val effectiveTimeForTokens = acquireStartTimeNanos + waitDueToMinDelayNanos
+
+      // 2. Refill tokens based on elapsed time
+      val timeSinceLastRefill = effectiveTimeForTokens - currentLastRefillNanos
+      var newTokensFromRefill = 0.0
+      var nextLastRefillTimeNanos = currentLastRefillNanos
+      if (timeSinceLastRefill > 0) { // Ensure time has progressed
+        newTokensFromRefill = timeSinceLastRefill / refillIntervalNanos
+        nextLastRefillTimeNanos = effectiveTimeForTokens // Refill up to this point
+      }
+      val tokensAfterRefill = (currentTokens + newTokensFromRefill).coerceAtMost(bucketSize)
+
+      // 3. Calculate wait time due to token availability
+      var waitDueToTokensNanos = 0L
+      var finalTokensInBucket: Double
+      if (tokensAfterRefill >= 1.0) {
+        finalTokensInBucket = tokensAfterRefill - 1.0
+      } else {
+        val tokensNeeded = 1.0 - tokensAfterRefill
+        waitDueToTokensNanos = (tokensNeeded * refillIntervalNanos).toLong()
+        finalTokensInBucket = 0.0 // After waiting, we've consumed the conceptual token
+      }
+
+      val totalWaitNanos = max(waitDueToMinDelayNanos, waitDueToTokensNanos)
+
+      // 4. If waiting is needed, suspend execution
+      if (totalWaitNanos > 0) {
+        delay(totalWaitNanos.nanoseconds)
+      }
+
+      // 5. Attempt to atomically update the state
+      // The acquire completion time is the time *after* any delay
+      val actualAcquireCompletionTimeNanos = acquireStartTimeNanos + totalWaitNanos
+      // Note: if delay occurred, System.nanoTime() now would be later.
+      // Using `acquireStartTimeNanos + totalWaitNanos` as the logical completion time for state update.
+
+      val newProposedState = RateLimiterState(
+        tokens = finalTokensInBucket,
+        lastRefillNanos = nextLastRefillTimeNanos, // Reflects refill up to effectiveTimeForTokens
+        lastAcquireCompletionNanos = actualAcquireCompletionTimeNanos
+      )
+
+      if (state.compareAndSet(currentState, newProposedState)) {
+        return totalWaitNanos.nanoseconds // Return the calculated delay
+      }
+      // CAS failed, another thread updated the state. Loop again.
     }
+  }
 
-    if (availableTokens.value >= 1.0) {
-      availableTokens.value -= 1.0
-      true
-    } else {
-      false
+  /**
+   * Tries to acquire a permit without waiting.
+   * This function is thread-safe and non-blocking in its decision logic.
+   * @return `true` if a permit was acquired immediately, `false` otherwise.
+   */
+  fun tryAcquire(): Boolean {
+    while (true) {
+      val evaluationTimeNanos = System.nanoTime()
+      val currentMinDelaySettingMs = _minDelayMsInternal.value
+
+      val currentState = state.value
+      val currentTokens = currentState.tokens
+      val currentLastRefillNanos = currentState.lastRefillNanos
+      val currentLastAcquireCompletionNanos = currentState.lastAcquireCompletionNanos
+
+      // 1. Check minDelayMs constraint
+      if (currentMinDelaySettingMs > 0L) {
+        val minDelayNanos = currentMinDelaySettingMs * 1_000_000L
+        val earliestNextAcquireTime = currentLastAcquireCompletionNanos + minDelayNanos
+        if (evaluationTimeNanos < earliestNextAcquireTime) {
+          return false // Would need to wait due to minDelay
+        }
+      }
+
+      // 2. Refill tokens (effective time is now, as no minDelay wait is considered for tryAcquire pass/fail)
+      val effectiveTimeForTokens = evaluationTimeNanos
+      val timeSinceLastRefill = effectiveTimeForTokens - currentLastRefillNanos
+      var newTokensFromRefill = 0.0
+      var nextLastRefillTimeNanos = currentLastRefillNanos
+      if (timeSinceLastRefill > 0) {
+        newTokensFromRefill = timeSinceLastRefill / refillIntervalNanos
+        nextLastRefillTimeNanos = effectiveTimeForTokens
+      }
+      val tokensAfterRefill = (currentTokens + newTokensFromRefill).coerceAtMost(bucketSize)
+
+      // 3. Check token availability
+      if (tokensAfterRefill < 1.0) {
+        return false // Would need to wait for tokens
+      }
+
+      // If we reach here, a permit can be acquired immediately.
+      val finalTokensInBucket = tokensAfterRefill - 1.0
+      // Acquired at evaluationTimeNanos
+      val newProposedState = RateLimiterState(
+        tokens = finalTokensInBucket,
+        lastRefillNanos = nextLastRefillTimeNanos,
+        lastAcquireCompletionNanos = evaluationTimeNanos
+      )
+
+      if (state.compareAndSet(currentState, newProposedState)) {
+        return true // Successfully acquired
+      }
+      // CAS failed, another thread updated the state. Loop to re-evaluate and retry CAS.
     }
   }
 }

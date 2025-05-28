@@ -41,7 +41,7 @@ import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
 import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.services.ActionService
-import github.hua0512.services.DownloadService
+import github.hua0512.services.download.DownloadOrchestrator // Changed
 import github.hua0512.services.ExtractorFactory
 import github.hua0512.services.UploadService
 import github.hua0512.utils.ThrowableSerializer
@@ -94,14 +94,20 @@ class AppModule {
 
   @Provides
   @Singleton
-  fun provideDownloadService(
+  fun provideDownloadOrchestrator(
     app: App,
-    actionService: ActionService,
     streamerRepository: StreamerRepo,
     streamDataRepository: StreamDataRepo,
     engineConfigManager: EngineConfigManager,
-  ): DownloadService =
-    DownloadService(app, actionService, streamerRepository, streamDataRepository, engineConfigManager)
+    actionService: ActionService,
+  ): DownloadOrchestrator =
+    DownloadOrchestrator(
+      app,
+      streamerRepository,
+      streamDataRepository,
+      engineConfigManager,
+      actionService
+    )
 
   @Provides
   @Singleton

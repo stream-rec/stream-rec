@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.services
+package github.hua0512.services.download
 
 import github.hua0512.app.App
 import github.hua0512.data.stream.StreamingPlatform

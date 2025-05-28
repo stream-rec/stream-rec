@@ -24,11 +24,14 @@
  * SOFTWARE.
  */
 
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package github.hua0512.data.upload
 
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.upload.entity.UploadDataEntity
 import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 

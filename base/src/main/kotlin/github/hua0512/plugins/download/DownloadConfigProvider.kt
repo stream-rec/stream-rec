@@ -147,5 +147,5 @@ fun StreamingPlatform.globalConfig(config: AppConfig): GlobalPlatformConfig = wh
   TWITCH -> config.twitchConfig
   PANDATV -> config.pandaTvConfig
   WEIBO -> config.weiboConfig
-  else -> throw UnsupportedOperationException("Platform not supported")
+  else -> throw UnsupportedOperationException("Platform: $this not supported")
 }

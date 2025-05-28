@@ -39,6 +39,7 @@ import kotlin.io.path.name
  * @property filePath The path of the file to watch.
  * @constructor Creates a new FileWatcherService with the specified file path.
  */
+@Deprecated("Not used anymore")
 class FileWatcherService(private val filePath: String) {
 
   /**

@@ -27,6 +27,7 @@
 package github.hua0512.backend
 
 import github.hua0512.backend.plugins.*
+import github.hua0512.plugins.IOrchestrator
 import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.plugins.event.DownloadStateEventPlugin
 import github.hua0512.repo.AppConfigRepo
@@ -58,14 +59,16 @@ data class ServerConfig(
   val extractorFactory: IExtractorFactory,
   val engineConfigRepo: EngineConfigRepo,
   val downloadStateEventPlugin: DownloadStateEventPlugin,
+  val orchestrator: IOrchestrator
 )
 
-fun CoroutineScope.backendServer(config: ServerConfig): EmbeddedServer<ApplicationEngine, NettyApplicationEngine.Configuration> = embeddedServer(
-  Netty,
-  port = config.port,
-  host = config.host,
-  parentCoroutineContext = config.parentContext,
-  module = { module(config) })
+fun CoroutineScope.backendServer(config: ServerConfig): EmbeddedServer<ApplicationEngine, NettyApplicationEngine.Configuration> =
+  embeddedServer(
+    Netty,
+    port = config.port,
+    host = config.host,
+    parentCoroutineContext = config.parentContext,
+    module = { module(config) })
 
 
 fun Application.module(serverConfig: ServerConfig) {
@@ -74,15 +77,19 @@ fun Application.module(serverConfig: ServerConfig) {
   configureMonitoring()
   configureSerialization()
   configureSockets(serverConfig.downloadStateEventPlugin)
-  configureRouting(
-    serverConfig.json,
-    serverConfig.userRepo,
-    serverConfig.appConfigRepo,
-    serverConfig.streamerRepo,
-    serverConfig.streamDataRepo,
-    serverConfig.statsRepo,
-    serverConfig.uploadRepo,
-    serverConfig.extractorFactory,
-    serverConfig.engineConfigRepo
-  )
+  with(serverConfig) {
+    configureRouting(
+      json,
+      userRepo,
+      appConfigRepo,
+      streamerRepo,
+      streamDataRepo,
+      statsRepo,
+      uploadRepo,
+      extractorFactory,
+      engineConfigRepo,
+      orchestrator
+    )
+  }
+
 }

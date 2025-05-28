@@ -39,17 +39,79 @@ import github.hua0512.flv.data.other.FlvMetadataInfo
  */
 interface StreamerCallback {
 
-  suspend fun onStateChanged(id: Long, newState: StreamerState, onSuccessful: () -> Unit)
+  /**
+   * Called when the state of a streamer changes.
+   * @param streamerId The ID of the streamer.
+   * @param streamerUrl The URL of the streamer.
+   * @param newState The new state of the streamer.
+   * @param message Optional message associated with the state change.
+   * @param onSuccessful Callback to be invoked on successful state change handling.
+   */
+  suspend fun onStateChanged(
+    streamerId: Long,
+    streamerUrl: String,
+    newState: StreamerState,
+    message: String?,
+    onSuccessful: () -> Unit
+  )
 
-  suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit)
+  /**
+   * Called when the last live time of a streamer changes.
+   * @param streamerId The ID of the streamer.
+   * @param streamerUrl The URL of the streamer.
+   * @param newLiveTime The new live time in milliseconds.
+   * @param onSuccessful Callback to be invoked on successful live time change handling.
+   */
+  suspend fun onLastLiveTimeChanged(streamerId: Long, streamerUrl: String, newLiveTime: Long, onSuccessful: () -> Unit)
 
-  suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit)
+  /**
+   * Called when the description of a streamer changes.
+   * @param streamerId The ID of the streamer.
+   * @param streamerUrl The URL of the streamer.
+   * @param description The new description of the streamer.
+   * @param onSuccessful Callback to be invoked on successful description change handling.
+   */
+  suspend fun onDescriptionChanged(streamerId: Long, streamerUrl: String, description: String, onSuccessful: () -> Unit)
 
-  suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit)
+  /**
+   * Called when the avatar of a streamer changes.
+   * @param streamerId The ID of the streamer.
+   * @param streamerUrl The URL of the streamer.
+   * @param avatar The new avatar URL.
+   * @param onSuccessful Callback to be invoked on successful avatar change handling.
+   */
+  suspend fun onAvatarChanged(streamerId: Long, streamerUrl: String, avatar: String, onSuccessful: () -> Unit)
 
-  fun onStreamDownloaded(id: Long, stream: StreamData, shouldInjectMetaInfo: Boolean = false, metaInfo: FlvMetadataInfo? = null)
+  /**
+   * Called when a stream is downloaded successfully.
+   * @param streamerId The ID of the streamer.
+   * @param streamerUrl The URL of the streamer.
+   * @param streamData The data of the downloaded stream.
+   * @param shouldInjectMetaInfo Whether to inject metadata info into the stream.
+   * @param metaInfo Optional metadata info to be injected into the stream.
+   */
+  fun onStreamDownloaded(
+    streamerId: Long,
+    streamerUrl: String,
+    streamData: StreamData,
+    shouldInjectMetaInfo: Boolean = false,
+    metaInfo: FlvMetadataInfo? = null
+  )
 
-  fun onStreamDownloadFailed(id: Long, stream: StreamData, e: Exception)
+  /**
+   * Called when a stream download fails.
+   * @param streamerId The ID of the streamer.
+   * @param streamerUrl The URL of the streamer.
+   * @param stream The stream data that failed to download.
+   * @param exception The exception that occurred during the download.
+   */
+  fun onStreamDownloadFailed(streamerId: Long, streamerUrl: String, stream: StreamData?, exception: Exception)
 
-  fun onStreamFinished(id: Long, streams: List<StreamData>)
+  /**
+   * Called when a stream is terminated.
+   * @param streamerId The ID of the streamer.
+   * @param streamerUrl The URL of the streamer.
+   * @param streams The list of streams that have been downloaded.
+   */
+  fun onStreamFinished(streamerId: Long, streamerUrl: String, streams: List<StreamData>)
 }

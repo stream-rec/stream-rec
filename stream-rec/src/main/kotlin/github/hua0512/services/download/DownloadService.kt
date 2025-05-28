@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.services
+package github.hua0512.services.download
 
 import androidx.sqlite.SQLiteException
 import github.hua0512.app.App
@@ -40,6 +40,7 @@ import github.hua0512.plugins.download.globalConfig
 import github.hua0512.repo.config.EngineConfigManager
 import github.hua0512.repo.stream.StreamDataRepo
 import github.hua0512.repo.stream.StreamerRepo
+import github.hua0512.services.ActionService
 import github.hua0512.utils.deleteFile
 import github.hua0512.utils.withIOContext
 import github.hua0512.utils.withRetry
@@ -56,6 +57,7 @@ import kotlin.io.path.fileSize
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
+@Deprecated("Use DownloadOrchestrator instead")
 class DownloadService(
   private val app: App,
   private val actionService: ActionService,
@@ -91,8 +93,10 @@ class DownloadService(
 
       override suspend fun onStateChanged(
         id: Long,
+        streamerUrl: String,
         newState: StreamerState,
-        onSuccessful: () -> Unit,
+        message: String?,
+        onSuccessful: () -> Unit
       ) = withIOContext(CoroutineName("${id}StateJob")) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
         if (streamer.state == newState) {
@@ -105,7 +109,12 @@ class DownloadService(
           onSuccessful()
       }
 
-      override suspend fun onLastLiveTimeChanged(id: Long, newLiveTime: Long, onSuccessful: () -> Unit) = withIOContext(
+      override suspend fun onLastLiveTimeChanged(
+        id: Long,
+        streamerUrl: String,
+        newLiveTime: Long,
+        onSuccessful: () -> Unit
+      ) = withIOContext(
         CoroutineName("${id}LastLiveTimeJob")
       ) {
         val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
@@ -117,7 +126,12 @@ class DownloadService(
       }
 
 
-      override suspend fun onDescriptionChanged(id: Long, description: String, onSuccessful: () -> Unit) =
+      override suspend fun onDescriptionChanged(
+        id: Long,
+        streamerUrl: String,
+        description: String,
+        onSuccessful: () -> Unit
+      ) =
         withIOContext(CoroutineName("${id}DescriptionChangedJob")) {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
           if (streamer.streamTitle == description) return@withIOContext
@@ -127,7 +141,7 @@ class DownloadService(
             onSuccessful()
         }
 
-      override suspend fun onAvatarChanged(id: Long, avatar: String, onSuccessful: () -> Unit) =
+      override suspend fun onAvatarChanged(id: Long, streamerUrl: String, avatar: String, onSuccessful: () -> Unit) =
         withIOContext(CoroutineName("${id}AvatarChangedJob")) {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@withIOContext
           if (streamer.avatar == avatar) return@withIOContext
@@ -138,14 +152,15 @@ class DownloadService(
         }
 
       override fun onStreamDownloaded(
-        id: Long,
-        stream: StreamData,
+        streamerId: Long,
+        streamerUrl: String,
+        streamData: StreamData,
         shouldInjectMetaInfo: Boolean,
-        metaInfo: FlvMetadataInfo?,
+        metaInfo: FlvMetadataInfo?
       ) {
-        var stream = stream
-        scope.launch(CoroutineName("${id}StreamDownloadedJob") + Dispatchers.IO) {
-          val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
+        var stream = streamData
+        scope.launch(CoroutineName("${streamerId}StreamDownloadedJob") + Dispatchers.IO) {
+          val streamer = repo.getStreamerById(StreamerId(streamerId)) ?: return@launch
           if (shouldInjectMetaInfo) {
             if (metaInfo != null) {
               val status = FlvMetaInfoProcessor.process(stream.outputFilePath, metaInfo, true)
@@ -176,11 +191,11 @@ class DownloadService(
         }
       }
 
-      override fun onStreamDownloadFailed(id: Long, stream: StreamData, e: Exception) {
+      override fun onStreamDownloadFailed(id: Long, streamerUrl: String, stream: StreamData?, e: Exception) {
 
       }
 
-      override fun onStreamFinished(id: Long, streams: List<StreamData>) {
+      override fun onStreamFinished(id: Long, streamerUrl: String, streams: List<StreamData>) {
         scope.launch(Dispatchers.IO + CoroutineName("${id}StreamFinishedJob")) {
           val streamer = repo.getStreamerById(StreamerId(id)) ?: return@launch
           if (streamer.state != StreamerState.NOT_LIVE && streamer.state != StreamerState.CANCELLED) {

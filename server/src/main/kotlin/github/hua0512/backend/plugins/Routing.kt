@@ -2,6 +2,7 @@ package github.hua0512.backend.plugins
 
 import filesRoute
 import github.hua0512.backend.routes.*
+import github.hua0512.plugins.IOrchestrator
 import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.UserRepo
@@ -29,6 +30,7 @@ fun Application.configureRouting(
   uploadRepo: UploadRepo,
   extractorFactory: IExtractorFactory,
   engineConfigRepo: EngineConfigRepo,
+  orchestrator: IOrchestrator,
 ) {
   install(AutoHeadResponse)
 
@@ -47,7 +49,7 @@ fun Application.configureRouting(
         serverRoute()
         configRoute(appConfigRepo)
         statsRoute(statsRepo)
-        streamerRoute(streamerRepo)
+        streamerRoute(streamerRepo, orchestrator)
         streamsRoute(json, streamDataRepo)
         uploadRoute(json, uploadRepo)
         filesRoute(streamDataRepo)

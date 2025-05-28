@@ -24,7 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.services
+package github.hua0512.services.download
 
 import github.hua0512.app.App
 import github.hua0512.data.config.engine.DownloadEngines
@@ -39,7 +39,6 @@ import github.hua0512.plugins.download.fillDownloadConfig
 import github.hua0512.plugins.download.globalConfig
 import github.hua0512.plugins.event.EventCenter
 import github.hua0512.repo.config.EngineConfigManager
-import github.hua0512.services.DownloadPlatformService.StreamerState.StreamerStatus.*
 import github.hua0512.utils.RateLimiter
 import github.hua0512.utils.logger
 import kotlinx.coroutines.*
@@ -64,6 +63,7 @@ import kotlin.time.toDuration
  * @param semaphore Semaphore to limit the number of concurrent downloads
  * @param fetchDelay Delay between adding streamers
  */
+@Deprecated("Remove in future versions")
 class DownloadPlatformService(
   val app: App,
   private val scope: CoroutineScope,
@@ -143,12 +143,12 @@ class DownloadPlatformService(
    */
   suspend fun addStreamer(streamer: Streamer): Boolean = stateMutex.withLock {
     val currentState = streamerStates[streamer.url]
-    if (currentState != null && currentState.state != CANCELLED) {
+    if (currentState != null && currentState.state != StreamerState.StreamerStatus.CANCELLED) {
       logger.debug("({}) streamer {} already exists in state: {}", platform, streamer.url, currentState.state)
       return false
     }
 
-    streamerStates[streamer.url] = StreamerState(streamer, PENDING)
+    streamerStates[streamer.url] = StreamerState(streamer, StreamerState.StreamerStatus.PENDING)
     streamerChannel.send(streamer)
     logger.debug("({}) added to channel: {}", platform, streamer.url)
     true
@@ -171,7 +171,7 @@ class DownloadPlatformService(
 
     // Remove from pending if exists
     val currentState = streamerStates[streamer.url]
-    if (currentState?.state == PENDING) {
+    if (currentState?.state == StreamerState.StreamerStatus.PENDING) {
       logger.debug("({}) removed pending streamer: {}", platform, streamer.url)
       sendCancellationEvent(currentState.streamer, "Download cancelled while pending: $reason")
       streamerStates.remove(streamer.url)
@@ -191,7 +191,7 @@ class DownloadPlatformService(
       // Cancel active download and mark state as cancelled
       logger.debug("({}), {} received cancellation signal : {}", platform, streamer.url, reason)
       downloader.cancelBlocking()
-      streamerStates[streamer.url]?.state = CANCELLED
+      streamerStates[streamer.url]?.state = StreamerState.StreamerStatus.CANCELLED
       streamerStates.remove(streamer.url)
     }
 
@@ -214,7 +214,7 @@ class DownloadPlatformService(
 
         stateMutex.withLock {
           val state = streamerStates[streamer.url]
-          if (state?.state != PENDING) {
+          if (state?.state != StreamerState.StreamerStatus.PENDING) {
             return@onEach
           }
           startDownloadJob(streamer)
@@ -245,14 +245,14 @@ class DownloadPlatformService(
     // Take state snapshot before starting download
     val state = stateMutex.withLock {
       val currentState = streamerStates[streamer.url] ?: return
-      if (currentState.state != PENDING) {
+      if (currentState.state != StreamerState.StreamerStatus.PENDING) {
         logger.debug(
           "({}) streamer {} is in invalid state: {}",
           platform, streamer.url, currentState.state
         )
         return
       }
-      currentState.state = RESERVED
+      currentState.state = StreamerState.StreamerStatus.RESERVED
       logger.debug("({}) streamer {} reserved for download", platform, streamer.url)
       currentState
     }
@@ -297,9 +297,9 @@ class DownloadPlatformService(
           listenToEngineChanges = isGlobalEngineConfig
         }
         val streamerState = streamerStates[streamer.url]
-        if (streamerState?.state == RESERVED) {
+        if (streamerState?.state == StreamerState.StreamerStatus.RESERVED) {
           streamerState.downloader = downloader
-          streamerState.state = DOWNLOADING
+          streamerState.state = StreamerState.StreamerStatus.DOWNLOADING
           logger.debug("({}) streamer {} starting download", platform, streamer.url)
         } else {
           logger.debug("({}) streamer {} is no longer reserved", platform, streamer.url)
@@ -328,11 +328,11 @@ class DownloadPlatformService(
       streamerStates.values.map { state ->
         async {
           when (state.state) {
-            PENDING -> {
+            StreamerState.StreamerStatus.PENDING -> {
               sendCancellationEvent(state.streamer, "Service shutdown while pending")
             }
 
-            DOWNLOADING -> {
+            StreamerState.StreamerStatus.DOWNLOADING -> {
               state.downloader?.cancelBlocking()
               sendCancellationEvent(state.streamer, "Service shutdown")
             }

@@ -751,6 +751,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     // path should be a dir
     var path = path
     if (!Files.isDirectory(path)) {
+      logger.debug("path : {} is not a directory, checking parent", path)
       path = path.parent
     }
     val fileStore = Files.getFileStore(path)
@@ -813,12 +814,12 @@ abstract class PlatformDownloader<T : DownloadConfig>(
    */
   private suspend fun updateStreamerInfo(mediaInfo: MediaInfo, streamer: Streamer) {
     if (mediaInfo.artistImageUrl.isNotEmpty() && mediaInfo.artistImageUrl != streamer.avatar) {
-      streamerCallback?.onAvatarChanged(streamer.id, mediaInfo.artistImageUrl) {
+      streamerCallback?.onAvatarChanged(streamer.id, streamer.url, mediaInfo.artistImageUrl) {
         streamer.avatar = mediaInfo.artistImageUrl
       }
     }
     if (mediaInfo.title.isNotEmpty() && mediaInfo.title != streamer.streamTitle) {
-      streamerCallback?.onDescriptionChanged(streamer.id, mediaInfo.title) {
+      streamerCallback?.onDescriptionChanged(streamer.id, streamer.url, mediaInfo.title) {
         streamer.streamTitle = mediaInfo.title
       }
     }

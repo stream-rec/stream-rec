@@ -28,8 +28,10 @@ package github.hua0512.backend.routes
 
 import github.hua0512.backend.logger
 import github.hua0512.data.StreamerId
+import github.hua0512.data.event.OrchestratorEvent
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.StreamerState
+import github.hua0512.plugins.IOrchestrator
 import github.hua0512.repo.stream.StreamerRepo
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -43,7 +45,7 @@ import kotlinx.serialization.json.put
  * @author hua0512
  * @date : 2024/3/4 13:00
  */
-fun Route.streamerRoute(repo: StreamerRepo) {
+fun Route.streamerRoute(repo: StreamerRepo, orchestrator: IOrchestrator) {
   route("/streamers") {
     get {
       val filter = call.request.queryParameters["filter"] ?: "all"
@@ -125,6 +127,8 @@ fun Route.streamerRoute(repo: StreamerRepo) {
           return@post
         }
         val saved = repo.save(streamer)
+        // orchestrate to add the streamer
+        orchestrator.onEvent(OrchestratorEvent.StreamerAdded(saved))
         call.respond(saved)
       } catch (e: Exception) {
         logger.error("Error saving stream", e)
@@ -149,6 +153,10 @@ fun Route.streamerRoute(repo: StreamerRepo) {
           val newStreamer = streamer.copy(state = newState)
           val status = repo.update(newStreamer)
           if (!status) return@put call.respond(HttpStatusCode.InternalServerError, "Error updating stream state")
+
+          // orchestrate to update the streamer state
+          orchestrator.onEvent(OrchestratorEvent.StreamerUpdated(newStreamer))
+
           call.respond(HttpStatusCode.OK, buildJsonObject {
             put("msg", "Stream state updated")
             put("code", 200)
@@ -158,7 +166,7 @@ fun Route.streamerRoute(repo: StreamerRepo) {
           call.respond(HttpStatusCode.InternalServerError, "Error updating stream state: ${e.message}")
         }
       } else {
-        var streamer: Streamer = try {
+        val streamer: Streamer = try {
           call.receive<Streamer>().also { logger.debug("Received stream : {}", it) }
         } catch (e: Exception) {
           logger.error("Error receiving stream", e)
@@ -193,6 +201,8 @@ fun Route.streamerRoute(repo: StreamerRepo) {
 
         try {
           repo.update(streamer)
+          // orchestrate to update the streamer
+          orchestrator.onEvent(OrchestratorEvent.StreamerUpdated(streamer))
           call.respond(streamer)
         } catch (e: Exception) {
           logger.error("Error updating stream", e)
@@ -221,6 +231,8 @@ fun Route.streamerRoute(repo: StreamerRepo) {
           }
         }
         repo.delete(streamer)
+        // orchestrate to delete the streamer
+        orchestrator.onEvent(OrchestratorEvent.StreamerRemoved(streamer))
       } catch (e: Exception) {
         logger.error("Error deleting stream", e)
         call.respond(HttpStatusCode.InternalServerError, "Error deleting stream: ${e.message}")

@@ -89,7 +89,9 @@ class Application {
         Runtime.getRuntime().addShutdownHook(Thread {
           mainLogger.info("Stream-rec shutting down...")
           server?.stop(1000, 1000)
-          Thread.sleep(1000)
+          // Call orchestrator shutdown before cancelling the scope
+          appComponent.getDownloadOrchestrator().shutdown()
+          Thread.sleep(1000) // Give orchestrator time to shutdown agents
           jobScope.cancel()
           app.releaseAll()
           appComponent.getDatabase().close()
@@ -114,7 +116,7 @@ class Application {
       EventCenter.start()
 
       val appConfigRepository = appComponent.getAppConfigRepository()
-      val downloadService = appComponent.getDownloadService()
+      val downloadOrchestrator = appComponent.getDownloadOrchestrator()
       val uploadService = appComponent.getUploadService()
 
       scope.apply {
@@ -129,9 +131,9 @@ class Application {
               // TODO : find a way to update download semaphore dynamically
             }
         }
-        // start download
+        // start download orchestrator
         launch {
-          downloadService.run(scope)
+          downloadOrchestrator.run(scope)
         }
 
         val downloadStateEventPlugin = appComponent.getDownloadStateEventPlugin()
@@ -139,8 +141,6 @@ class Application {
         // start the backend server
         launch(CoroutineName("serverScope")) {
           val serverConfig = ServerConfig(
-            port = 12555,
-            host = "0.0.0.0",
             parentContext = scope.coroutineContext,
             json = appComponent.getJson(),
             userRepo = appComponent.getUserRepo(),
@@ -152,6 +152,7 @@ class Application {
             extractorFactory = appComponent.getExtractorFactory(),
             engineConfigRepo = appComponent.getEngineConfigRepository(),
             downloadStateEventPlugin = downloadStateEventPlugin,
+            orchestrator = downloadOrchestrator
           )
 
           server = backendServer(serverConfig).apply {
