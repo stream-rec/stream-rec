@@ -46,6 +46,7 @@ jobs:
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
+        if: matrix.platform != 'alpine'
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           flavor: |
@@ -54,7 +55,22 @@ jobs:
             suffix=
           tags: |
             type=raw,value=latest,priority=700,enable={{is_default_branch}}
-            type=raw,value=main-alpine,priority=700,enable={{and is_default_branch (match "^alpine$" matrix.platform)}}
+            type=ref,enable=true,priority=600,prefix=,suffix=,event=branch
+            type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
+            type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
+
+      - name: Docker meta for Alpine
+        id: meta
+        if: matrix.platform == 'alpine'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}-main-alpine
+          flavor: |
+            latest=auto
+            prefix=
+            suffix=
+          tags: |
+            type=raw,value=main-alpine,priority=700,prefix=,suffix=
             type=ref,enable=true,priority=600,prefix=,suffix=,event=branch
             type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
             type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
