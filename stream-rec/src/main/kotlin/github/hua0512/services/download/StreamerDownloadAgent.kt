@@ -301,8 +301,12 @@ class StreamerDownloadAgent(
     _agentState to AgentState.Polling
   }
 
-  private fun handlePollingState() {
+  private suspend fun handlePollingState() {
     if (!isInScheduledTimeRange()) {
+      updateStreamerState(
+        StreamerState.OUT_OF_SCHEDULE,
+        "Streamer is not in scheduled time range, will poll"
+      )
       val nextScheduleTime = getNextScheduledStartTimeEpochMillis()
       if (nextScheduleTime != null) {
         _agentState to AgentState.Scheduled(nextScheduleTime)
