@@ -543,6 +543,7 @@ class StreamerDownloadService(
 
 
   private fun onSegmentDownloaded(data: StreamData, metaInfo: FlvMetadataInfo? = null) {
+    logger.debug("{} segment downloaded: {}", streamer.name, data)
     dataList.add(data)
     callback?.onStreamDownloaded(streamer.id, data, metaInfo != null, metaInfo)
   }

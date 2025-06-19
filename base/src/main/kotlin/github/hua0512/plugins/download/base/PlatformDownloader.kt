@@ -623,6 +623,9 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     }
 
     if (processSegment(Path(info.path), danmuPath)) return
+
+    onStreamDownloaded?.invoke(streamInfo, metaInfo)
+
     EventCenter.trySendEvent(
       DownloadEvent.DownloadSuccess(
         filePath = info.path,
@@ -632,7 +635,6 @@ abstract class PlatformDownloader<T : DownloadConfig>(
         time = Instant.fromEpochSeconds(info.updatedAt)
       )
     )
-    onStreamDownloaded?.invoke(streamInfo, metaInfo)
   }
 
   private inline fun <reified T : EngineConfig> EngineConfig.getConfig(): T {
