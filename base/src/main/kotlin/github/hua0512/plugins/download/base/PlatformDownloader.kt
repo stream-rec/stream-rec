@@ -40,6 +40,7 @@ import github.hua0512.data.stream.FileInfo
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.data.stream.Streamer
+import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.download.exceptions.DownloadFilePresentException
 import github.hua0512.download.exceptions.FatalDownloadErrorException
 import github.hua0512.download.exceptions.InsufficientDownloadSizeException
@@ -355,6 +356,13 @@ abstract class PlatformDownloader<T : DownloadConfig>(
 
     val headers = buildMap {
       putAll(COMMON_HEADERS)
+      /***
+       * Issue https://github.com/streamlink/streamlink/issues/6574
+       */
+      if (streamer.platform == StreamingPlatform.TWITCH) {
+        // remove twitch ua
+        remove(HttpHeaders.UserAgent)
+      }
       putAll(getPlatformHeaders())
     }
 
