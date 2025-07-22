@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,6 @@ import github.hua0512.data.StreamDataId
 import github.hua0512.data.StreamerId
 import github.hua0512.repo.stream.StreamDataRepo
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
@@ -92,8 +91,9 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
 
     delete("{id}") {
       val id = call.parameters["id"]?.toLongOrNull() ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid id")
+      val deleteLocal = call.request.queryParameters["delete_local"]?.toBoolean() ?: false
       try {
-        streamsRepo.delete(StreamDataId(id))
+        streamsRepo.delete(StreamDataId(id), deleteLocal)
       } catch (e: Exception) {
         e.printStackTrace()
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete stream data")
@@ -104,12 +104,13 @@ fun Route.streamsRoute(json: Json, streamsRepo: StreamDataRepo) {
 
     delete("/batch") {
       val ids = call.request.queryParameters["ids"]?.split(",")?.mapNotNull { it.toLongOrNull() }
+      val deleteLocal = call.request.queryParameters["delete_local"]?.toBoolean() ?: false
       if (ids.isNullOrEmpty()) {
         call.respond(HttpStatusCode.BadRequest, "Invalid ids")
         return@delete
       }
       try {
-        streamsRepo.delete(ids.map { StreamDataId(it) })
+        streamsRepo.delete(ids.map { StreamDataId(it) }, deleteLocal)
       } catch (e: Exception) {
         e.printStackTrace()
         call.respond(HttpStatusCode.InternalServerError, "Failed to delete stream data")
