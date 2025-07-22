@@ -113,5 +113,6 @@ class AppModule {
 
   @Provides
   @Singleton
-  fun provideExtractorFactory(client: HttpClient, json: Json): IExtractorFactory = ExtractorFactory(client, json)
+  fun provideExtractorFactory(app: App, client: HttpClient, json: Json): IExtractorFactory =
+    ExtractorFactory(app, client, json)
 }

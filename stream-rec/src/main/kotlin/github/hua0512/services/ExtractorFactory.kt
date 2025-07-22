@@ -26,6 +26,7 @@
 
 package github.hua0512.services
 
+import github.hua0512.app.App
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.IExtractorFactory
 import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
@@ -42,7 +43,7 @@ import kotlinx.serialization.json.Json
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
-class ExtractorFactory(val client: HttpClient, val json: Json) : IExtractorFactory {
+class ExtractorFactory(val app: App, val client: HttpClient, val json: Json) : IExtractorFactory {
 
 
   val extractors = mapOf<String, KClass<*>>(
@@ -70,9 +71,21 @@ class ExtractorFactory(val client: HttpClient, val json: Json) : IExtractorFacto
 
     // TODO: Should migrate to use Ksp to generate the code instead of reflection, I hate it so much
 
-    return extractor.primaryConstructor?.let {
-      return it.call(client, json, url) as Extractor
+    val extractorInstance = extractor.primaryConstructor?.let {
+      it.call(client, json, url) as Extractor
     }
+    return extractorInstance?.populateExtractorParams()
+  }
+
+  /**
+   * Populates the extractor parameters based on the app configuration.
+   */
+  private fun Extractor.populateExtractorParams(): Extractor {
+    if (this is TwitchExtractor) {
+      // populate twitch extractor params
+      this.authToken = app.config.twitchConfig.authToken
+    }
+    return this
   }
 
 

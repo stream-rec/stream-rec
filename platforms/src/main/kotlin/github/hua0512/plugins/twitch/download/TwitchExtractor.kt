@@ -33,6 +33,7 @@ import github.hua0512.data.platform.HlsQuality
 import github.hua0512.data.stream.StreamInfo
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.ExtractorError
+import github.hua0512.utils.generateRandomString
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -58,7 +59,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
   override val regexPattern: Regex = URL_REGEX.toRegex()
 
   internal var id: String = ""
-  internal var authToken: String = ""
+  var authToken: String = ""
 
   private lateinit var bodyJson: JsonObject
 
@@ -66,6 +67,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
   init {
     platformHeaders[CLIENT_ID_HEADER] = CLIENT_ID
     platformHeaders[HttpHeaders.Referrer] = BASE_URL
+    platformHeaders[DEVICE_ID_HEADER] = generateRandomString(16, noUpperLetters = true)
   }
 
   override fun match(): Result<String, ExtractorError> = super.match().andThen {

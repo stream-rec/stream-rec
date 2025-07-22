@@ -39,6 +39,7 @@ import kotlinx.serialization.json.*
 private const val POST_URL = "https://gql.twitch.tv/gql"
 internal const val CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 internal const val CLIENT_ID_HEADER = "Client-Id"
+internal const val DEVICE_ID_HEADER = "device-id"
 
 internal suspend fun twitchPostQPL(
   client: HttpClient,

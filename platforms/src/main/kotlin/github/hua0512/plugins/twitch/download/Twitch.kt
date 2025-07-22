@@ -66,6 +66,11 @@ class Twitch(
       // add skip ads to streamlink args
       add("--twitch-disable-ads")
     }
+    // set twitch auth token if available,
+    // this should not be needed as currently we are passing the entire headers map to streamlink
+    if (extractor.authToken.isNotEmpty()) {
+      add("--twitch-api-header=Authorization=OAuth ${extractor.authToken}")
+    }
     // configure streamlink-ttvlol options
     config.twitchProxyPlaylist?.nonEmptyOrNull()?.let {
       add("--twitch-proxy-playlist=$it")
