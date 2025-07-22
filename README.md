@@ -29,7 +29,7 @@ It's powered by Kotlin, [Ktor](https://ktor.io/), and [ffmpeg](https://ffmpeg.or
 |  Douyin   |     ✅     |   ✅   |                    `https://live.douyin.com/{douyinId}`                    |
 |   Douyu   |     ✅     |   ✅   |                       `https://www.douyu.com/{room}`                       |
 |   Huya    |     ✅     |   ✅   |                       `https://www.huya.com/{room}`                        |
-|  PandaTV  |     ✅     |   ✅   |               `https://www.pandalive.co.kr/live/play/{room}`               |
+|  PandaTV  |     ✅     |   ✅   |                 `https://www.pandalive.co.kr/play/{room}`                  |
 |  Twitch   |     ✅     |   ✅   |                       `https://www.twitch.tv/{room}`                       |
 |   Weibo   |     ✅     |   ❌   | `https://weibo.com/u/{uid}` or  `https://weibo.com/l/wblive/p/show/{room}` |     
 | AfreecaTv |     ❌     |   ❌   |                                                                            |

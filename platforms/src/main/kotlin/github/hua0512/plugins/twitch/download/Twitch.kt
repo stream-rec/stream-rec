@@ -81,11 +81,14 @@ class Twitch(
 
   private fun updateParams(config: AppConfig) {
     val engine = streamer.engine ?: DownloadEngines.fromString(config.engine)
-    if (engine is DownloadEngines.FFMPEG || engine is DownloadEngines.STREAMLINK) {
-      extractor.skipStreamInfo =
-        app.config.twitchConfig.skipAds || app.config.twitchConfig.twitchProxyPlaylist?.nonEmptyOrNull() != null
-    } else {
-      extractor.skipStreamInfo = false
+    when (engine) {
+      DownloadEngines.STREAMLINK ->
+        // always skip extractor stream info when using streamlink
+        extractor.skipStreamInfo = true
+      // for other engines, we need extractor to provide stream info
+      else -> {
+        extractor.skipStreamInfo = false
+      }
     }
   }
 

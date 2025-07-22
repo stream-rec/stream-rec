@@ -56,14 +56,14 @@ abstract class HlsPlatformDownloader<T : DownloadConfig>(
     val userPreferredQuality = config.quality ?: HlsQuality.Source
     // source quality should be the first one
     if (userPreferredQuality == HlsQuality.Source) {
-      return Ok(streams.first())
+      return getBestAvailableStream(streams)
     } else if (userPreferredQuality == HlsQuality.Audio) {
       val audioStream = streams.firstOrNull { it.quality.contains("audio") }
       if (audioStream != null) {
         return Ok(audioStream)
       }
       warn("No audio stream found, using the best available")
-      return Ok(streams.first())
+      return getBestAvailableStream(streams)
     }
     // resolution quality
     val preferredResolution = userPreferredQuality.value.removeSuffix("p").toInt()
@@ -95,6 +95,17 @@ abstract class HlsPlatformDownloader<T : DownloadConfig>(
     debug("selected stream: {}", filteredStream)
     return Ok(filteredStream)
 
+  }
+
+
+  private fun getBestAvailableStream(streams: List<StreamInfo>): Result<StreamInfo, ExtractorError> {
+    val sourceStream = streams.find { it.quality == "source" }
+    return if (sourceStream != null) {
+      debug("Using source quality stream: {}", sourceStream)
+      Ok(sourceStream)
+    } else {
+      Ok(streams.maxBy { it.bitrate })
+    }
   }
 
 }
