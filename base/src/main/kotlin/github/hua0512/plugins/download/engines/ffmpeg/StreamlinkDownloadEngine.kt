@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,15 +28,9 @@ package github.hua0512.plugins.download.engines.ffmpeg
 
 import github.hua0512.app.Programs.ffmpeg
 import github.hua0512.app.Programs.streamLink
-import github.hua0512.utils.debug
-import github.hua0512.utils.error
-import github.hua0512.utils.executeProcess
-import github.hua0512.utils.info
-import github.hua0512.utils.isWindows
-import github.hua0512.utils.nonEmptyOrNull
+import github.hua0512.utils.*
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
-import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -192,8 +186,8 @@ class StreamlinkDownloadEngine(override val logger: Logger = StreamlinkDownloadE
     if (programArgs.contains("--twitch-disable-ads") || programArgs.firstOrNull { it.startsWith("--twitch-proxy-playlist") } != null) {
       return
     }
-    require(downloadUrl!!.contains("m3u8")) {
-      "Streamlink download engine only supports HLS streams"
-    }
+//    require(downloadUrl!!.contains("m3u8")) {
+//      "Streamlink download engine only supports HLS streams"
+//    }
   }
 }
