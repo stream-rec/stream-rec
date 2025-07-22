@@ -37,9 +37,6 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
-import kotlin.collections.firstNotNullOfOrNull
-import kotlin.collections.firstOrNull
-import kotlin.collections.set
 
 /**
  * Pandalive live stream extractor.
@@ -50,7 +47,7 @@ class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) :
 
   companion object {
     internal const val URL = "https://www.pandalive.co.kr"
-    internal const val URL_REGEX = """https?://(?:www\.)?pandalive\.co\.kr/live/play/([^/]+)"""
+    internal const val URL_REGEX = """https?://(?:www\.)?pandalive\.co\.kr/play/([^/]+)"""
     private const val ID_REGEX = """routePath:\s*["'](\\u002F|/)live(\\u002F|/)play(\\u002F|/)(.+?)["']"""
     private const val LIVE_API = "https://api.pandalive.co.kr/v1/live/play"
   }
