@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +35,12 @@ import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.Streamer
 import github.hua0512.data.stream.entity.StreamDataEntity
 import github.hua0512.repo.stream.StreamDataRepo
+import github.hua0512.utils.deleteFile
 import github.hua0512.utils.getTodayStart
 import github.hua0512.utils.withIOContext
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlin.io.path.Path
 
 /**
  * Stream data repository
@@ -46,7 +50,7 @@ import github.hua0512.utils.withIOContext
 class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDao) :
   StreamDataRepo {
   override suspend fun getStreamDataById(streamDataId: StreamDataId): StreamData? {
-    return github.hua0512.utils.withIOContext {
+    return withIOContext {
       dao.getWithStreamerById(streamDataId.value)?.let {
         StreamData(it.streamData, Streamer(it.streamer))
       }
@@ -67,7 +71,7 @@ class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDa
     sortColumn: String?,
     sortOrder: String?,
   ): List<StreamData> {
-    return github.hua0512.utils.withIOContext {
+    return withIOContext {
       val order = sortOrder ?: "DESC"
 
       if (order != "ASC" && order != "DESC") {
@@ -128,15 +132,32 @@ class StreamDataRepository(val dao: StreamDataDao, private val statsDao: StatsDa
     }
   }
 
-  override suspend fun delete(id: StreamDataId) = github.hua0512.utils.withIOContext {
-    val streamData = StreamDataEntity(id = id.value, "", outputFilePath = "")
-    dao.delete(streamData) == 1
+  override suspend fun delete(id: StreamDataId, deleteLocal: Boolean) = withIOContext {
+    if (deleteLocal) {
+      val existingData = getStreamDataById(id) ?: throw IllegalArgumentException("StreamData with id $id not found")
+      Path(existingData.outputFilePath).deleteFile()
+      existingData.danmuFilePath?.let { danmuPath ->
+        Path(danmuPath).deleteFile()
+      }
+    }
+    dao.delete(StreamDataEntity(id = id.value, "", outputFilePath = "")) == 1
   }
 
-  override suspend fun delete(ids: List<StreamDataId>): Boolean {
-    return github.hua0512.utils.withIOContext {
-      val streamData = ids.map { StreamDataEntity(id = it.value, "", outputFilePath = "") }
-      dao.delete(streamData) == ids.size
+  override suspend fun delete(ids: List<StreamDataId>, deleteLocal: Boolean): Boolean = withIOContext {
+    if (deleteLocal) {
+      val entities = ids.map { getStreamDataById(it) ?: throw IllegalArgumentException("StreamData with id $it not found") }
+      coroutineScope {
+        entities.map { entity ->
+          launch {
+            Path(entity.outputFilePath).deleteFile()
+            entity.danmuFilePath?.let { path ->
+              Path(path).deleteFile()
+            }
+          }
+        }.forEach { it.join() }
+      }
     }
+    val entitiesToDelete = ids.map { StreamDataEntity(it.value, "", outputFilePath = "") }
+    dao.delete(entitiesToDelete) == ids.size
   }
 }
