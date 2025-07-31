@@ -42,7 +42,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
-import kotlin.collections.set
 
 
 internal class FallbackToDouyinMobileException : UnsupportedOperationException("Douyin pc api failed!")
@@ -89,11 +88,8 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
         requestTimeoutMillis = 15000
       }
       fillWebRid(webRid)
-      // find msToken from cookies
-      val msToken = parseCookies(cookies)["msToken"]
-      if (msToken != null) {
-        parameter("msToken", msToken)
-      }
+      // 2025-07-31: a_bogus value is not checked by the server, but it is required to be present
+      parameter("a_bogus", "0")
     }
 
     if (result.isErr) {

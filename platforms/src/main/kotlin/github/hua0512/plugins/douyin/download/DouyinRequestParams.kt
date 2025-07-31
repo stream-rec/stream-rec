@@ -76,7 +76,7 @@ internal class DouyinRequestParams {
       "browser_language" to "zh-CN",
       "browser_platform" to "Win32",
       "browser_name" to "Mozilla",
-      "browser_version" to COMMON_USER_AGENT.removePrefix("Mozilla/").trim(),
+      "browser_version" to COMMON_USER_AGENT.substringAfter("Chrome/").substringBefore(" "),
       AID_KEY to AID_VALUE,
       "live_id" to "1",
       "enter_from" to "web_live"
