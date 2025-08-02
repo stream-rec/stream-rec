@@ -330,9 +330,14 @@ class StreamerDownloadService(
           }
 
           Preparing -> {
-            val recordStartTime = streamer.startTime
-//            val recordEndTime = streamer.endTime
-            val delay = calculateDelay(recordStartTime ?: "")
+            val recordStartTime = streamer.startTime ?: ""
+            val recordEndTime = streamer.endTime ?: ""
+            // get if delay is needed before downloading
+            val delay = calculateDelay(recordStartTime, recordEndTime)
+
+            if (delay > 0) {
+              updateStreamerState(StreamerState.OUT_OF_SCHEDULE)
+            }
 
             if (recentErrors >= ERROR_THRESHOLD) {
               logger.error(
@@ -368,10 +373,23 @@ class StreamerDownloadService(
           is CheckingDownload -> {
             if (isCancelled.value) return@onEach
             inTimerRange = isInTimerRange(streamer.startTime ?: "", streamer.endTime ?: "").also { result ->
+              logger.trace(
+                "{} in timer range: {}, start: {}, end: {}",
+                streamer.name,
+                result,
+                streamer.startTime ?: "N/A",
+                streamer.endTime ?: "N/A"
+              )
               if (!result) updateStreamerState(StreamerState.OUT_OF_SCHEDULE)
             }
 
-            if (!inTimerRange || !isStreamerLive()) {
+            if (!inTimerRange) {
+              logger.trace("{} is out of timer range, skipping download", streamer.name)
+              downloadState to Preparing
+              return@onEach
+            }
+
+            if (!isStreamerLive()) {
               handleOfflineStatus()
             } else {
               val duration = calculateDuration(streamer.endTime ?: "")
@@ -471,7 +489,7 @@ class StreamerDownloadService(
         })
 
       // break the loop if error occurred or download is cancelled
-      if (shouldEnd || isCancelled.value) break
+      if (!inTimerRange || shouldEnd || isCancelled.value) break
 
       delay(platformRetryDelay)
     }
@@ -655,17 +673,32 @@ class StreamerDownloadService(
     val jStartTime = definedStartTime.toJavaLocalDateTime(currentTime)
     val jEndTime = definedStopTime.toJavaLocalDateTime(currentTime)
     return if (jStartTime.isAfter(jEndTime)) {
-      currentTime.isAfter(jStartTime) || currentTime.isBefore(jEndTime)
-    } else
-      jStartTime.isBefore(currentTime) && jEndTime.isAfter(currentTime)
+      !currentTime.isBefore(jStartTime) || !currentTime.isAfter(jEndTime)
+    } else {
+      !jStartTime.isAfter(currentTime) && !jEndTime.isBefore(currentTime)
+    }
   }
 
-  private fun calculateDelay(startTime: String): Long {
+  private fun calculateDelay(startTime: String, endTime: String): Long {
     if (startTime.isEmpty()) {
       return 0
     }
     val currentLocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
-    val jStartTime = startTime.toJavaLocalDateTime(currentLocalDateTime)
+    var jStartTime = startTime.toJavaLocalDateTime(currentLocalDateTime)
+    val jEndTime = if (endTime.isNotEmpty()) endTime.toJavaLocalDateTime(currentLocalDateTime) else null
+
+    // If start time is before current time, check if we should use next day
+    if (jStartTime.isBefore(currentLocalDateTime)) {
+      // If end time exists and start > end (spans midnight), and current time is before end time,
+      // then we're in the next day cycle, so start time should be today
+      if (jEndTime != null && startTime.toJavaLocalDateTime().isAfter(jEndTime) && currentLocalDateTime.isBefore(jEndTime)) {
+        // Keep start time as is (today)
+      } else {
+        // Move start time to next day
+        jStartTime = jStartTime.plusDays(1)
+      }
+    }
+
     val delay = java.time.Duration.between(currentLocalDateTime, jStartTime).toMillis().let {
       if (it < 0 || inTimerRange) 0 else it
     }
@@ -679,24 +712,30 @@ class StreamerDownloadService(
     }
     val currentLocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
 
-    // if the end time is 00:00:00, then the stream ends the next day
-    val jEndTime = if (endTime == "00:00:00") {
-      currentLocalDateTime.plusDays(1)
-    } else {
-      endTime.toJavaLocalDateTime(currentLocalDateTime)
+    var jEndTime = endTime.toJavaLocalDateTime(currentLocalDateTime)
+
+    // if the end time is before the current time, assume it's for the next day
+    if (jEndTime.isBefore(currentLocalDateTime)) {
+      jEndTime = jEndTime.plusDays(1)
     }
+
     // calculate the duration in milliseconds
-    val duration = java.time.Duration.between(currentLocalDateTime, jEndTime).toMillis().let {
-      // add 10 seconds to the duration to ensure the download is stopped
-      if (it <= 60) it + 10000 else it
+    val duration = java.time.Duration.between(currentLocalDateTime, jEndTime).toMillis()
+
+    // Add a 10-second buffer if the duration is very short.
+    // This ensures the download does not stop immediately after starting.
+    return if (duration <= 60000) {
+      duration + 10000
+    } else {
+      duration
     }
-    return duration
   }
 
   private fun CoroutineScope.launchStopTask(duration: Long) {
     logger.debug("{} stopping download after {} ms", streamer.name, duration)
     if (stopTimerJob?.isActive == true) {
       stopTimerJob!!.cancel()
+      stopTimerJob = null
     }
     stopTimerJob = launch {
       // add 10 seconds to the duration to ensure the download is stopped
