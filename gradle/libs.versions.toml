@@ -52,7 +52,7 @@ io-ktor-server-websockets-jvm = { module = "io.ktor:ktor-server-websockets-jvm",
 io-ktor-server-netty-jvm = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
 io-ktor-server-tests-jvm = { module = "io.ktor:ktor-server-tests-jvm", version.ref = "ktor-test" }
 
-io-kotest-kotest-runner-junit5 = "io.kotest:kotest-runner-junit5:6.0.0.M8"
+io-kotest-kotest-runner-junit5 = "io.kotest:kotest-runner-junit5:6.0.0.M10"
 
 io-lindstrom-m3u8-parser = "io.lindstrom:m3u8-parser:0.30"
 
