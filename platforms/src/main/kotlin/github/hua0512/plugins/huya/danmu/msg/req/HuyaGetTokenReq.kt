@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ data class HuyaGetTokenReq(
   var url: String = "",
   var cdnType: String,
   var streamName: String,
-  var presenterUid: Int = 0,
+  var presenterUid: Long = 0,
 ) : TarsStructBase() {
 
   override fun writeTo(os: TarsOutputStream) {

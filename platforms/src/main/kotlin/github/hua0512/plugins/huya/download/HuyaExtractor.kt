@@ -446,7 +446,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         "tReq", HuyaGetTokenReq(
           cdnType = cdn,
           streamName = streamName,
-          presenterUid = presenterUid.toInt(),
+          presenterUid = presenterUid,
         )
       )
     }
