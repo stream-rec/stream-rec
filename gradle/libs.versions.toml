@@ -7,7 +7,7 @@ kotlin-atomicfu = "0.29.0"
 kotlin-coroutines = "1.10.2"
 logback = "1.5.18"
 dagger = "2.57"
-protobuf = "4.31.1"
+protobuf = "4.32.0"
 androidx-room = "2.7.2"
 androidx-sqlite = "2.5.2"
 
