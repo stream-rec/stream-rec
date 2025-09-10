@@ -44,7 +44,7 @@ import github.hua0512.utils.info
  *
  * @property app The [App] instance.
  * @property danmu The [DouyinDanmu] instance.
- * @property extractor The [DouyinCombinedApiExtractor] instance.
+ * @property extractor The [DouyinStrevExtractor] instance.
  */
 class Douyin(
   app: App,

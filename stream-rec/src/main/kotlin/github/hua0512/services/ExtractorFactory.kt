@@ -29,7 +29,7 @@ package github.hua0512.services
 import github.hua0512.app.App
 import github.hua0512.plugins.base.Extractor
 import github.hua0512.plugins.base.IExtractorFactory
-import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
+import github.hua0512.plugins.douyin.download.DouyinStrevExtractor
 import github.hua0512.plugins.douyu.download.DouyuExtractor
 import github.hua0512.plugins.huya.download.HuyaExtractor
 import github.hua0512.plugins.huya.download.HuyaExtractorV2
@@ -47,7 +47,7 @@ class ExtractorFactory(val app: App, val client: HttpClient, val json: Json) : I
 
 
   val extractors = mapOf<String, KClass<*>>(
-    "live.douyin.com" to DouyinCombinedApiExtractor::class,
+    "live.douyin.com" to DouyinStrevExtractor::class,
     "www.douyu.com" to DouyuExtractor::class,
     "www.huya.com" to HuyaExtractor::class,
     "www.pandalive.co" to PandaTvExtractor::class,
