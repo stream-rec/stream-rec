@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,9 +24,7 @@
  * SOFTWARE.
  */
 
-package github.hua0512.app
-
-import github.hua0512.utils.isWindows
+package github.hua0512.utils
 
 /**
  * Paths to the required programs
@@ -38,6 +36,7 @@ object Programs {
   val ffmpeg = getExecutablePath("FFMPEG_PATH", "ffmpeg")
   val ffprobe = getExecutablePath("FFPROBE_PATH", "ffprobe")
   val streamLink = getExecutablePath("STREAMLINK_PATH", "streamlink")
+  val strev = getExecutablePath("STREV_PATH", "strev")
 
   private fun getExecutablePath(envVar: String, defaultName: String): String {
     val path = System.getenv(envVar) ?: defaultName
