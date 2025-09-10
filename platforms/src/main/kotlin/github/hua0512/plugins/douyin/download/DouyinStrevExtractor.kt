@@ -51,7 +51,7 @@ class DouyinStrevExtractor(http: HttpClient, json: Json, override val url: Strin
     val result = super.isLive()
     if (result.isOk) {
       // extract id_str from extras
-      idStr = cachedMediaInfo?.streams?.first()?.extras?.get("id_str") ?: ""
+      idStr = cachedMediaInfo?.streams?.firstOrNull()?.extras?.get("id_str") ?: ""
     }
     return result
   }
