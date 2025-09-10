@@ -29,7 +29,9 @@ package github.hua0512.plugins.douyin.download
 import com.github.michaelbull.result.Result
 import github.hua0512.plugins.StrevExtractor
 import github.hua0512.plugins.base.ExtractorError
+import github.hua0512.plugins.douyin.download.DouyinApis.Companion.LIVE_DOUYIN_URL
 import io.ktor.client.*
+import io.ktor.http.*
 import kotlinx.serialization.json.Json
 
 /**
@@ -40,6 +42,10 @@ import kotlinx.serialization.json.Json
 class DouyinStrevExtractor(http: HttpClient, json: Json, override val url: String) : StrevExtractor(http, json, url) {
 
   internal var idStr = ""
+
+  init {
+    platformHeaders[HttpHeaders.Referrer] = LIVE_DOUYIN_URL
+  }
 
   override suspend fun isLive(): Result<Boolean, ExtractorError> {
     val result = super.isLive()
