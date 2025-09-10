@@ -67,7 +67,10 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
   }
 
   override suspend fun extract(): Result<MediaInfo, ExtractorError> {
-    return extractMediaInfo()
+    return extractMediaInfo().also {
+      // clear cache after extraction to avoid stale data
+      cachedMediaInfo = null
+    }
   }
 
   private suspend fun extractMediaInfo(): Result<MediaInfo, ExtractorError> {
