@@ -188,7 +188,7 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
       }
     }
 
-    logger.debug("Populated platform headers: $platformHeaders")
+    logger.trace("Populated platform headers: {}", platformHeaders)
   }
 
   private fun parseStreamInfo(streamObj: JsonObject): StreamInfo? {
