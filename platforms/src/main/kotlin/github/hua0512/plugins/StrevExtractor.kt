@@ -60,27 +60,22 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
       if (mediaResult.isErr) {
         return Err(mediaResult.error)
       }
-      val isLive = mediaResult.value.live
-      if (!isLive) {
-        cachedMediaInfo = null // clear cache if not live
-      }
-      Ok(isLive)
+      Ok(mediaResult.value.live)
     } catch (e: Exception) {
       Err(ExtractorError.InvalidResponse("Failed to check live status: ${e.message}"))
     }
   }
 
   override suspend fun extract(): Result<MediaInfo, ExtractorError> {
-    return extractMediaInfo().also {
-      // clear cache after extraction to avoid stale data
-      cachedMediaInfo = null
+    // cached media info is updated here
+    val result = isLive()
+    if (result.isErr) {
+      return Err(result.error)
     }
+    return Ok(cachedMediaInfo!!)
   }
 
   private suspend fun extractMediaInfo(): Result<MediaInfo, ExtractorError> {
-    // Return cached result if available
-    cachedMediaInfo?.let { return Ok(it) }
-
     return try {
       withContext(Dispatchers.IO) {
         // Execute strev command with proper stream handling
@@ -161,6 +156,7 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
         Ok(mediaInfo)
       }
     } catch (e: Exception) {
+      cachedMediaInfo = null
       Err(ExtractorError.InvalidResponse("Process execution failed: ${e.message}"))
     }
   }
