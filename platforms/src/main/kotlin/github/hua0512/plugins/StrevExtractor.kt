@@ -60,7 +60,11 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
       if (mediaResult.isErr) {
         return Err(mediaResult.error)
       }
-      Ok(mediaResult.value.live)
+      val isLive = mediaResult.value.live
+      if (!isLive) {
+        cachedMediaInfo = null // clear cache if not live
+      }
+      Ok(isLive)
     } catch (e: Exception) {
       Err(ExtractorError.InvalidResponse("Failed to check live status: ${e.message}"))
     }
