@@ -114,7 +114,8 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
         val siteUrl = mediaObject["site_url"]?.jsonPrimitive?.content ?: url
 
         // Extract extras (headers) and populate platform headers
-        val extras = mediaObject["extras"]?.jsonObject?.mapValues { (_, value) ->
+        val extrasValue = mediaObject["extras"]
+        val extras = (extrasValue as? JsonObject)?.mapValues { (_, value) ->
           value.jsonPrimitive.content
         } ?: emptyMap()
 
