@@ -49,7 +49,7 @@ import github.hua0512.utils.info
 class Douyin(
   app: App,
   override val danmu: DouyinDanmu,
-  override val extractor: DouyinCombinedApiExtractor,
+  override val extractor: DouyinStrevExtractor,
 ) :
   PlatformDownloader<DouyinDownloadConfig>(app, danmu, extractor) {
 

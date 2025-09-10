@@ -39,6 +39,7 @@ import kotlinx.serialization.json.*
  * Douyin live stream extractor
  * @author hua0512
  * @date : 2024/10/24 12:10
+ * @deprecated use [github.hua0512.plugins.StrevExtractor] instead
  */
 class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url: String) :
   DouyinExtractor(http, json, url) {

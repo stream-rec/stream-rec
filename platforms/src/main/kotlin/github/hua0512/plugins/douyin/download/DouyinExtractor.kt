@@ -51,6 +51,7 @@ internal class FallbackToDouyinMobileException : UnsupportedOperationException("
  * Douyin live stream extractor
  * @author hua0512
  * @date : 2024/3/16 13:10
+ * @deprecated use [github.hua0512.plugins.StrevExtractor] instead
  */
 open class DouyinExtractor(http: HttpClient, json: Json, override val url: String) : Extractor(http, json) {
 
@@ -89,6 +90,7 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
       }
       fillWebRid(webRid)
       // 2025-07-31: a_bogus value is not checked by the server, but it is required to be present
+      // 2025-09-10 NO LONGER VALID
       parameter("a_bogus", "0")
     }
 

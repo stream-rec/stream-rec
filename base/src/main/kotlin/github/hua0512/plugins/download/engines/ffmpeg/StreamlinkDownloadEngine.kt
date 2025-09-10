@@ -26,9 +26,9 @@
 
 package github.hua0512.plugins.download.engines.ffmpeg
 
-import github.hua0512.app.Programs.ffmpeg
-import github.hua0512.app.Programs.streamLink
 import github.hua0512.utils.*
+import github.hua0512.utils.Programs.ffmpeg
+import github.hua0512.utils.Programs.streamLink
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import kotlinx.coroutines.Dispatchers

@@ -3,7 +3,7 @@
  *
  * Stream-rec  https://github.com/hua0512/stream-rec
  *
- * Copyright (c) 2024 hua0512 (https://github.com/hua0512)
+ * Copyright (c) 2025 hua0512 (https://github.com/hua0512)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.plugins.danmu.base.NoDanmu
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
 import github.hua0512.plugins.douyin.download.Douyin
-import github.hua0512.plugins.douyin.download.DouyinCombinedApiExtractor
+import github.hua0512.plugins.douyin.download.DouyinStrevExtractor
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.douyu.download.Douyu
 import github.hua0512.plugins.douyu.download.DouyuExtractor
@@ -70,7 +70,7 @@ object PlatformDownloaderFactory : IPlatformDownloaderFactory {
       Huya(app, HuyaDanmu(app), extractor)
     }
 
-    StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app), DouyinCombinedApiExtractor(app.client, app.json, url))
+    StreamingPlatform.DOUYIN -> Douyin(app, DouyinDanmu(app), DouyinStrevExtractor(app.client, app.json, url))
     StreamingPlatform.DOUYU -> Douyu(app, DouyuDanmu(app), DouyuExtractor(app.client, app.json, url))
     StreamingPlatform.TWITCH -> Twitch(app, TwitchDanmu(app), TwitchExtractor(app.client, app.json, url))
     StreamingPlatform.PANDATV -> PandaTv(app, PandaTvDanmu(app), PandaTvExtractor(app.client, app.json, url))
