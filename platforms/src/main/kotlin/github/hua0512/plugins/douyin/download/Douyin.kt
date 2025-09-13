@@ -69,7 +69,7 @@ class Douyin(
     val config = downloadConfig
     val selectedQuality = (config.quality?.value ?: app.config.douyinConfig.quality.value).ifEmpty { DouyinQuality.origin.value }
 
-    val selectedQualityStreams = streams.filter { it.extras["sdkKey"] == selectedQuality }.ifEmpty { streams }
+    val selectedQualityStreams = streams.filter { it.extras["sdk_key"] == selectedQuality }.ifEmpty { streams }
 
     val userSelectedSourceFormat = (config.sourceFormat ?: app.config.douyinConfig.sourceFormat) ?: VideoFormat.flv
 
