@@ -88,7 +88,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
          * UA string from the latest Huya Windows app
          * THIS UA IS VALID ONLY FOR WUP REQUESTS
          */
-        return "HYSDK(Windows, 30000002)_APP(pc_exe&7010100&official)_SDK(trans&2.27.0.5317)"
+        return "HYSDK(Windows, 30000002)_APP(pc_exe&7020004&official)_SDK(trans&2.28.0.5380)"
       }
 
     internal val requestHeaders = arrayOf(
