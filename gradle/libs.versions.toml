@@ -8,7 +8,7 @@ kotlin-coroutines = "1.10.2"
 logback = "1.5.20"
 dagger = "2.57.1"
 protobuf = "4.32.0"
-androidx-room = "2.7.2"
+androidx-room = "2.8.2"
 androidx-sqlite = "2.6.0"
 
 [libraries]
