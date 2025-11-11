@@ -27,6 +27,7 @@
 package twitch
 
 import BaseTest
+import com.github.michaelbull.result.get
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.twitch.danmu.TwitchDanmu
 import github.hua0512.plugins.twitch.download.TwitchExtractor
@@ -43,8 +44,10 @@ class TwitchTest : BaseTest<TwitchExtractor>({
 
   test("isLive") {
     val result = extractor.extract()
+    println("isLive: ${result}")
     result.isOk shouldBeEqual true
-    val mediaInfo = result.value
+    val mediaInfo = result.get()
+    mediaInfo.shouldNotBeNull()
     println(pprint(mediaInfo))
   }
 
@@ -57,7 +60,8 @@ class TwitchTest : BaseTest<TwitchExtractor>({
     val extract = extractor.match()
     extract.shouldNotBeNull()
     extract.isOk shouldBeEqual true
-    extract.value shouldBeEqual "aspaszin"
+    extract.get().shouldNotBeNull()
+    extract.get()!! shouldBeEqual "aspaszin"
   }
 
   test("danmu") {

@@ -37,8 +37,7 @@ import github.hua0512.utils.*
 import github.hua0512.utils.process.InputSource
 import github.hua0512.utils.process.Redirect
 import kotlinx.coroutines.async
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -96,7 +95,7 @@ class ActionService(private val app: App, private val uploadService: UploadServi
     when (this) {
       is RcloneAction -> {
         UploadAction(
-          time = Clock.System.now().toEpochMilliseconds(),
+          time = kotlin.time.Clock.System.now().toEpochMilliseconds(),
           files = dataList,
           uploadConfig = UploadConfig.RcloneConfig(
             rcloneOperation = this.rcloneOperation,
@@ -182,7 +181,6 @@ class ActionService(private val app: App, private val uploadService: UploadServi
         }
       }
 
-      else -> throw UnsupportedOperationException("Invalid action: $this")
     }
   }
 

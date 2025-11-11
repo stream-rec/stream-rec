@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.datetime.Clock
 import java.net.SocketTimeoutException
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -60,7 +59,7 @@ class KotlinHlsDownloadEngine : KotlinDownloadEngine<HlsSegment>() {
   internal var combineTsFiles = false
 
   override val pathProvider: (Int) -> String = { index: Int ->
-    val time = Clock.System.now()
+    val time = kotlin.time.Clock.System.now()
     lastDownloadedTime = time.epochSeconds
     downloadFilePath.replacePlaceholders(context.name, context.title, context.platform, time).run {
       // use parent folder for m3u8 with combining files disabled

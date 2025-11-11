@@ -24,7 +24,6 @@
  * SOFTWARE.
  */
 
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
@@ -69,7 +68,8 @@ class TimerTest {
   fun testCurrentTime() {
     val definedStartTime = "00:00:00"
     val definedStopTime = "23:15:00"
-    val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
+    val currentTime =
+      kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
     val (startHour, startMin, startSec) = definedStartTime.split(":").map { it.toInt() }
     val (endHour, endMin, endSec) = definedStopTime.split(":").map { it.toInt() }
     var jStartTime = currentTime.withHour(startHour).withMinute(startMin).withSecond(startSec)

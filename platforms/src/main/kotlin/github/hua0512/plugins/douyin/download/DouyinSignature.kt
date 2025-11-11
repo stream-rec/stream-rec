@@ -110,7 +110,7 @@ private val signatureJS by lazy {
   }
 
   // final JS
-  jsDom + loadResult.value
+  jsDom + loadResult.get()!!
 }
 
 /**

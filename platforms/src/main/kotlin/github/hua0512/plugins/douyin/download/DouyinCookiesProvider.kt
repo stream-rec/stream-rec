@@ -29,6 +29,9 @@ package github.hua0512.plugins.douyin.download
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.asErr
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
 import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.douyin.download.DouyinRequestParams.Companion.AID_KEY
@@ -99,10 +102,10 @@ internal suspend fun populateDouyinCookieMissedParams(cookies: String, client: H
     getOrPut(TT_WID_COOKIE) {
       val ttwidResult = getDouyinTTwid(client)
       if (ttwidResult.isErr) {
-        logger.error("TTwid response error: ${ttwidResult.error}")
+        logger.error("TTwid response error: ${ttwidResult.getError()}")
         return PROVIDED_TTWID
       } else {
-        ttwidResult.value
+        ttwidResult.get()!!
       }
     }
     getOrPut(ODIN_TT_COOKIE) { generateOdinTT() }
@@ -154,14 +157,14 @@ private suspend fun getDouyinTTwid(client: HttpClient): Result<String, Extractor
       ?: Err(ExtractorError.InvalidResponse("Failed to get ttwid"))
   }
 
-  if (apiResult.isErr) return apiResult
+  if (apiResult.isErr) return apiResult.asErr()
 
-  val successful = ttWid.compareAndSet(null, apiResult.value)
+  val successful = ttWid.compareAndSet(null, apiResult.get()!!)
   if (successful) {
-    logger.info("$TT_WID_COOKIE(web): ${apiResult.value}")
+    logger.info("$TT_WID_COOKIE(web): ${apiResult.get()!!}")
   }
   // Return the current value of TT_WID, which may be set by another thread
-  return Ok(ttWid.value ?: apiResult.value)
+  return Ok(ttWid.value ?: apiResult.get()!!)
 }
 
 private fun generateUserId() = Random.nextLong(720_000_000_000_000_0000L, 740_000_000_000_000_0000L)

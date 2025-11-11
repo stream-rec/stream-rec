@@ -30,9 +30,11 @@ import github.hua0512.dao.stats.StatsDao
 import github.hua0512.data.stats.Stats
 import github.hua0512.data.stats.StatsEntity
 import github.hua0512.data.stats.SummaryStats
-import kotlinx.datetime.Instant
+import kotlinx.datetime.Month
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 
 /**
@@ -76,7 +78,7 @@ class SummaryStatsRepoImpl(private val statsDao: StatsDao) : SummaryStatsRepo {
 
   private fun List<StatsEntity>.groupByMonthAndYear() = groupBy {
     val dateTime = Instant.fromEpochSeconds(it.timeStamp).toLocalDateTime(TimeZone.currentSystemDefault()).date
-    dateTime.year to dateTime.monthNumber
+    dateTime.year to dateTime.month.number
   }
 
   private fun Map<Pair<Int, Int>, List<StatsEntity>>.mergeStatsWithinMonth() = flatMap {

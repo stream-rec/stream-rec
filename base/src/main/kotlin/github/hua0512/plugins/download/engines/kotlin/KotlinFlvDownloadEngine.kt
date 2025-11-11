@@ -46,7 +46,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
-import kotlinx.datetime.Clock
 import java.nio.file.Path
 import java.util.concurrent.CancellationException
 import kotlin.io.path.*
@@ -68,7 +67,7 @@ class KotlinFlvDownloadEngine : KotlinDownloadEngine<FlvData>() {
 
 
   override val pathProvider: (Int) -> String = { _ ->
-    val time = Clock.System.now()
+    val time = kotlin.time.Clock.System.now()
     lastDownloadedTime = time.epochSeconds
     downloadFilePath.replacePlaceholders(context.name, context.title, context.platform, time).let {
       val path = Path(it).apply {

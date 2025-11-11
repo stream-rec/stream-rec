@@ -69,7 +69,7 @@ internal suspend fun twitchPostQPL(
     return apiResult.asErr()
   }
 
-  val response = apiResult.value
+  val response = apiResult.get()!!
   val body = response.bodyAsText()
   // check if data is an array or object
   val jsonResult = runCatching {

@@ -44,7 +44,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.Clock
 import org.junit.jupiter.api.Test
 import kotlin.time.Duration
 
@@ -82,7 +81,7 @@ class KtorTest {
     }
 
     val metaInfoProvider = FlvMetaInfoProvider()
-    val pathProvider = { index: Int -> "F:/test/testSample_${index}_${Clock.System.now().toEpochMilliseconds()}.flv" }
+    val pathProvider = { index: Int -> "F:/test/testSample_${index}_${kotlin.time.Clock.System.now().toEpochMilliseconds()}.flv" }
     val limitsProvider = { 0L to 3600.0f }
     client.use {
       downloadFlow

@@ -36,7 +36,6 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
@@ -85,7 +84,7 @@ internal suspend fun HttpClient.getDouyuH5Enc(json: Json, body: String, rid: Str
 
     if (result.isErr) return result.asErr()
 
-    val json = json.parseToJsonElement(result.value.bodyAsText())
+    val json = json.parseToJsonElement(result.get()!!.bodyAsText())
 
     val error = json.jsonObject["error"]?.jsonPrimitive?.intOrNull ?: return Err(ExtractorError.InvalidResponse("Failed to get douyu h5 enc"))
     if (error != 0) {
@@ -167,7 +166,7 @@ internal fun ub98484234(jsEnc: String, rid: String) = runCatching {
   jsEngine.eval(jsBuilder.toString())
 
   val did = getRandomUuidHex()
-  val tt = (Clock.System.now().epochSeconds).toString()
+  val tt = (kotlin.time.Clock.System.now().epochSeconds).toString()
 
   // eval function
   val result = jsEngine.eval("ub98484234('$rid', '$did', '$tt')") as Map<String, Any>

@@ -52,7 +52,6 @@ object PlatformUploaderFactory {
   fun create(app: App, config: UploadConfig) = when (config) {
     is RcloneConfig -> RcloneUploader(app, config)
     is NoopConfig -> NoopUploader(app)
-    else -> throw IllegalArgumentException("Invalid config: $config")
   }
 
 }

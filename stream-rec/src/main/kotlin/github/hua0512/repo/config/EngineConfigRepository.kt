@@ -56,6 +56,7 @@ class EngineConfigManager(override val dao: EngineConfigDao, val json: Json) : E
     mutex.withLock {
       // Check if the configuration is already cached, if so, return it
       configCache[cacheKey]?.let {
+        @Suppress("UNCHECKED_CAST")
         return@withLock it as T
       }
 
@@ -67,6 +68,7 @@ class EngineConfigManager(override val dao: EngineConfigDao, val json: Json) : E
 
       // Cache the fetched configuration
       configCache[cacheKey] = config
+      @Suppress("UNCHECKED_CAST")
       config as T
     }
   }

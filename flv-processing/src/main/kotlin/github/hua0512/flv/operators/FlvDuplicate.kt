@@ -347,7 +347,6 @@ private class DuplicatePatternDetector {
     FlvTagHeaderType.Audio -> 'A'
     FlvTagHeaderType.Video -> 'V'
     FlvTagHeaderType.ScriptData -> 'S'
-    else -> 'U'
   }
 
   private fun getSizeCategory(size: Int): Char = when {

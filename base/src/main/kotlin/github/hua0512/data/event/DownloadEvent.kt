@@ -29,8 +29,8 @@ package github.hua0512.data.event
 import github.hua0512.data.stream.StreamData
 import github.hua0512.data.stream.StreamingPlatform
 import github.hua0512.utils.ThrowableSerializer
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 /**
  * @author hua0512

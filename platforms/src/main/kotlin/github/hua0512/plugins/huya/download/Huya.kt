@@ -29,6 +29,7 @@ package github.hua0512.plugins.huya.download
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.get
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig.HuyaDownloadConfig
@@ -106,7 +107,7 @@ class Huya(
           if (computeResult.isErr) {
             return@run emptyList()
           }
-          computeResult.value.also {
+          computeResult.get()!!.also {
             info("best available cdn stream list: {}", it)
           }
         }

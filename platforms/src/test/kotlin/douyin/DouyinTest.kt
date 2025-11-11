@@ -27,6 +27,7 @@
 package douyin
 
 import BaseTest
+import com.github.michaelbull.result.get
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyin.danmu.DouyinDanmu
@@ -52,7 +53,7 @@ class DouyinTest : BaseTest<DouyinStrevExtractor>({
     val info = extractor.extract()
     println(info)
     info.isOk shouldBeEqual true
-    val mediaInfo = info.value
+    val mediaInfo = info.get()
     mediaInfo.shouldNotBeNull()
     println(pprint(mediaInfo))
   }

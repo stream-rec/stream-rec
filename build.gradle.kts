@@ -25,7 +25,7 @@
  */
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2
 
 plugins {
   alias(libs.plugins.kotlin.jvm)
@@ -33,19 +33,23 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
 }
 
-
-kotlin {
-  compilerOptions {
-    freeCompilerArgs.addAll(
-      "-Xno-call-assertions",
-      "-Xno-param-assertions",
-      "-Xno-receiver-assertions",
-      "-opt-in=kotlin.RequiresOptIn",
-      "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
-      "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
-    )
-    progressiveMode = true
-    apiVersion.set(KOTLIN_2_0)
-    jvmTarget.set(JvmTarget.JVM_21)
+allprojects {
+  plugins.withType<org.jetbrains.kotlin.gradle.plugin.KotlinBasePlugin> {
+    configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+      compilerOptions {
+        freeCompilerArgs.addAll(
+          "-Xno-call-assertions",
+          "-Xno-param-assertions",
+          "-Xno-receiver-assertions",
+          "-opt-in=kotlin.RequiresOptIn",
+          "-opt-in=kotlin.time.ExperimentalTime",
+          "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
+          "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        )
+        progressiveMode = true
+        apiVersion.set(KOTLIN_2_2)
+        jvmTarget.set(JvmTarget.JVM_21)
+      }
+    }
   }
 }

@@ -84,7 +84,7 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
       return result.asErr()
     }
 
-    val response = result.value
+    val response = result.get()!!
 
     runCatching { json.parseToJsonElement(response.bodyAsText()).jsonObject }
       .mapError { ExtractorError.InvalidResponse(it.message ?: "") }
@@ -127,7 +127,7 @@ class HuyaExtractorV2(override val http: HttpClient, override val json: Json, ov
     val liveResult = isLive()
 
     if (liveResult.isErr) return liveResult.asErr()
-    val isLive = liveResult.value
+    val isLive = liveResult.get()!!
 
     val data = dataJson["data"]?.jsonObject!!
     val profileInfo = data.jsonObject["profileInfo"]?.jsonObject

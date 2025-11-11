@@ -51,6 +51,8 @@ package huya/*
  */
 
 import BaseTest
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.base.ExtractorError
 import github.hua0512.plugins.huya.danmu.HuyaDanmu
@@ -86,22 +88,25 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
   }
 
   test("pcRegex") {
-    extractor.match().value shouldBeEqual "660000"
+    extractor.match().get().shouldNotBeNull()
+    extractor.match().get()!! shouldBeEqual "660000"
   }
 
   test("pcLive") {
     val result = extractor.extract()
     println(result)
     result.isOk shouldBeEqual true
-    val json = app.json.encodeToString(result.value)
+    result.get().shouldNotBeNull()
+    val json = app.json.encodeToString(result.get()!!)
     // write result to resources file
     val file = File("src/test/resources/huya_pc_live.json")
     file.writeText(json)
 
-    val mediaInfo = result.value
+    val mediaInfo = result.get()
+    result.get().shouldNotBeNull()
     println(pprint(mediaInfo))
 
-    if (!mediaInfo.live) return@test
+    if (!mediaInfo!!.live) return@test
 
     // select first stream
     val stream = mediaInfo.streams.first()
@@ -111,7 +116,7 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
     println(trueResult)
 
     trueResult.isOk shouldBeEqual true
-    val streamInfo = trueResult.value
+    val streamInfo = trueResult.get()!!
     println(pprint(streamInfo))
   }
 
@@ -120,7 +125,7 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
     val result = extractor.extract()
     println(result)
     result.isOk shouldBeEqual true
-    val mediaInfo = result.value
+    val mediaInfo = result.get()!!
     println(pprint(mediaInfo))
 
     if (!mediaInfo.live) return@test
@@ -133,7 +138,7 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
     println(trueResult)
 
     trueResult.isOk shouldBeEqual true
-    val streamInfo = trueResult.value
+    val streamInfo = trueResult.get()!!
     println(pprint(streamInfo))
   }
 
@@ -143,14 +148,14 @@ class HuyaExtractorTest : BaseTest<HuyaExtractor>({
     }
     val result = extractor.extract()
     result.isErr shouldBeEqual true
-    result.error shouldBeEqual ExtractorError.StreamerNotFound
+    result.getError()!! shouldBeEqual ExtractorError.StreamerNotFound
   }
 
   test("streamerNotFoundMbApi") {
     val extractor = getMobileExtractor(testUrl + "123").also { v -> v.prepare() }
     val result = extractor.extract()
     result.isErr shouldBeEqual true
-    result.error shouldBeEqual ExtractorError.StreamerNotFound
+    result.getError()!! shouldBeEqual ExtractorError.StreamerNotFound
   }
 
   test("danmu") {

@@ -36,8 +36,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.websocket.*
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Douyu danmu client implementation
@@ -174,7 +173,7 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
             color = (decoded["col"] as? String)?.toInt()?.convertToColorInt() ?: -1,
             content = decoded["txt"] as String,
             fontSize = 0,
-            serverTime = Clock.System.now().toEpochMilliseconds(),
+            serverTime = kotlin.time.Clock.System.now().toEpochMilliseconds(),
           )
         } else {
           // decode danmu using regex
@@ -185,7 +184,7 @@ open class DouyuDanmu(app: App) : Danmu(app, enablePing = false) {
             color = decodedString.substringAfter("col=").substringBefore(",").ifEmpty { "0" }.toInt().convertToColorInt(),
             content = decodedString.substringAfter("txt=").substringBefore(","),
             fontSize = 0,
-            serverTime = Clock.System.now().toEpochMilliseconds(),
+            serverTime = kotlin.time.Clock.System.now().toEpochMilliseconds(),
           )
         }
         danmus.add(danmu)

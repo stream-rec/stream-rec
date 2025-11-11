@@ -48,7 +48,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.DurationUnit
@@ -312,7 +311,8 @@ class DownloadPlatformService(
         logger.debug("({}) download cancelled for {}", platform, streamer.url)
       } else {
         logger.error("Failed to start download for ${streamer.name}:", e)
-        EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
+        EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform,
+          kotlin.time.Clock.System.now(), e))
       }
     }
   }
@@ -359,7 +359,7 @@ class DownloadPlatformService(
         streamer.name,
         streamer.url,
         streamer.platform,
-        Clock.System.now(),
+        kotlin.time.Clock.System.now(),
         reason = CancellationException(reason)
       )
     )

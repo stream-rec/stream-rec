@@ -30,7 +30,7 @@ import github.hua0512.app.App
 import github.hua0512.data.media.DanmuDataWrapper
 import github.hua0512.data.stream.Streamer
 import io.ktor.websocket.WebSocketSession
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * No danmu implementation

@@ -26,7 +26,7 @@
 
 package github.hua0512.data.media
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * This is a sealed class that represents a wrapper for Danmu data.

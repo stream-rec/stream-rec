@@ -26,6 +26,9 @@
 
 package github.hua0512.services
 
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
+import com.github.michaelbull.result.getOr
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
@@ -56,7 +59,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
@@ -220,14 +222,14 @@ class StreamerDownloadService(
       app.config.maxPartDuration ?: 0
     )
     if (initializationResult.isErr) {
-      val error = initializationResult.error
+      val error = initializationResult.getError()
       logger.error("{} initialization error: {}", streamer.name, error)
       EventCenter.sendEvent(
         StreamerException(
           streamer.name,
           streamer.url,
           streamer.platform,
-          Clock.System.now(),
+          kotlin.time.Clock.System.now(),
           IllegalStateException("Initialization error: $error")
         )
       )
@@ -360,13 +362,13 @@ class StreamerDownloadService(
               awaitTimerJob = scope.launch {
                 logger.info("{} waiting for {}", streamer.name, delay.toDuration(DurationUnit.MILLISECONDS))
                 delay(delay)
-                downloadState to CheckingDownload(Clock.System.now().epochSeconds)
+                downloadState to CheckingDownload(kotlin.time.Clock.System.now().epochSeconds)
               }
               // wait for the timer job to finish
               awaitTimerJob!!.join()
               awaitTimerJob = null
             } else {
-              downloadState to CheckingDownload(Clock.System.now().epochSeconds)
+              downloadState to CheckingDownload(kotlin.time.Clock.System.now().epochSeconds)
             }
           }
 
@@ -428,7 +430,7 @@ class StreamerDownloadService(
         streamer.name,
         streamer.url,
         streamer.platform,
-        Clock.System.now(),
+        kotlin.time.Clock.System.now(),
         dataList.toList()
       )
     )
@@ -451,10 +453,10 @@ class StreamerDownloadService(
    */
   private suspend fun isStreamerLive(): Boolean {
     val result = plugin.shouldDownload()
-    if (result.isOk) return result.value
+    if (result.isOk) return result.getOr(false)
 
     // result is error
-    val state = when (result.error) {
+    val state = when (result.getError()) {
       is ExtractorError.StreamerBanned, is ExtractorError.StreamerNotFound -> StreamerState.NOT_FOUND
       is ExtractorError.InitializationError, ExtractorError.InvalidExtractionUrl -> StreamerState.FATAL_ERROR
       else -> StreamerState.NOT_LIVE
@@ -519,7 +521,8 @@ class StreamerDownloadService(
         }
         logger.debug("{} download finished", streamer.name)
       } catch (e: Exception) {
-        EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform, Clock.System.now(), e))
+        EventCenter.sendEvent(StreamerException(streamer.name, streamer.url, streamer.platform,
+          kotlin.time.Clock.System.now(), e))
 
         when (e) {
 
@@ -574,7 +577,7 @@ class StreamerDownloadService(
 
 
   private suspend fun updateLastLiveTime() {
-    val now = Clock.System.now()
+    val now = kotlin.time.Clock.System.now()
     callback?.onLastLiveTimeChanged(streamer.id, now.epochSeconds) {
       streamer.lastLiveTime = now.epochSeconds
     }
@@ -669,7 +672,8 @@ class StreamerDownloadService(
     if (definedStartTime.isEmpty() || definedStopTime.isEmpty()) {
       return true
     }
-    val currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
+    val currentTime =
+      kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
     val jStartTime = definedStartTime.toJavaLocalDateTime(currentTime)
     val jEndTime = definedStopTime.toJavaLocalDateTime(currentTime)
     return if (jStartTime.isAfter(jEndTime)) {
@@ -683,7 +687,8 @@ class StreamerDownloadService(
     if (startTime.isEmpty()) {
       return 0
     }
-    val currentLocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
+    val currentLocalDateTime =
+      kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
     var jStartTime = startTime.toJavaLocalDateTime(currentLocalDateTime)
     val jEndTime = if (endTime.isNotEmpty()) endTime.toJavaLocalDateTime(currentLocalDateTime) else null
 
@@ -710,7 +715,8 @@ class StreamerDownloadService(
     if (endTime.isEmpty()) {
       return 0
     }
-    val currentLocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
+    val currentLocalDateTime =
+      kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).toJavaLocalDateTime()
 
     var jEndTime = endTime.toJavaLocalDateTime(currentLocalDateTime)
 
@@ -758,7 +764,7 @@ class StreamerDownloadService(
             streamer.url,
             streamer.platform,
             streamer.streamTitle ?: "",
-            Clock.System.now()
+            kotlin.time.Clock.System.now()
           )
         )
       }
@@ -769,7 +775,7 @@ class StreamerDownloadService(
   }
 
   private fun checkRecentErrors() {
-    val now = Clock.System.now()
+    val now = kotlin.time.Clock.System.now()
 
     // check if the error occurred recently
     if (abs(now.epochSeconds - lastErrorTime) < MIN_ERROR_THRESHOLD) {

@@ -27,11 +27,13 @@
 package pandatv
 
 import BaseTest
+import com.github.michaelbull.result.get
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.pandatv.danmu.PandaTvDanmu
 import github.hua0512.plugins.pandatv.download.PandaTvExtractor
 import io.exoquery.kmp.pprint
 import io.kotest.matchers.equals.shouldBeEqual
+import io.kotest.matchers.nulls.shouldNotBeNull
 
 /**
  * @author hua0512
@@ -42,7 +44,8 @@ class PandaTvTest : BaseTest<PandaTvExtractor>({
   test("isLive") {
     val result = extractor.extract()
     result.isOk shouldBeEqual true
-    val mediaInfo = result.value
+    val mediaInfo = result.get()
+    mediaInfo.shouldNotBeNull()
     println(pprint(mediaInfo))
   }
 

@@ -99,7 +99,7 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
     }
 
     // response is successful
-    val response = result.value
+    val response = result.get()!!
     val textBody = response.bodyAsText()
 
     val dataInfo = json.parseToJsonElement(textBody).jsonObject["data"]?.jsonObject
@@ -163,9 +163,9 @@ open class DouyinExtractor(http: HttpClient, json: Json, override val url: Strin
     val owner = liveData["owner"]
     val nickname = owner?.jsonObject?.get("nickname")?.jsonPrimitive?.content ?: ""
 
-    val mediaInfo = MediaInfo(LIVE_DOUYIN_URL, title, nickname, "", "", isLive.value)
+    val mediaInfo = MediaInfo(LIVE_DOUYIN_URL, title, nickname, "", "", isLive.get()!!)
     // if not live, return basic media info
-    if (!isLive.value) return Ok(mediaInfo)
+    if (!isLive.get()!!) return Ok(mediaInfo)
 
     // avatar is not available when not live
     val avatar =
