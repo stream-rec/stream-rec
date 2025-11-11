@@ -65,7 +65,7 @@ com-google-protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite
 com-google-protobuf-protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
 com-google-protobuf-protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
 
-com-michael-bull-kotlin-result = "com.michael-bull.kotlin-result:kotlin-result:2.0.1"
+com-michael-bull-kotlin-result = "com.michael-bull.kotlin-result:kotlin-result:2.1.0"
 
 me-tongfei-progressbar = "me.tongfei:progressbar:0.10.1"
 
