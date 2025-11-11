@@ -27,6 +27,7 @@
 package douyu
 
 import BaseTest
+import com.github.michaelbull.result.get
 import github.hua0512.data.stream.Streamer
 import github.hua0512.plugins.douyu.danmu.DouyuDanmu
 import github.hua0512.plugins.douyu.download.DouyuExtractor
@@ -50,7 +51,7 @@ class DouyuTest : BaseTest<DouyuExtractor>({
     val result = extractor.extract()
 
     result.isOk shouldBeEqual true
-    val mediaInfo = result.value
+    val mediaInfo = result.get()
     mediaInfo.shouldNotBeNull()
     println(pprint(mediaInfo))
   }
@@ -78,7 +79,7 @@ class DouyuTest : BaseTest<DouyuExtractor>({
   test("danmu") {
     val result = extractor.extract()
     result.isOk shouldBeEqual true
-    val mediaInfo = result.value
+    val mediaInfo = result.get()
     mediaInfo.shouldNotBeNull()
     val danmu = DouyuDanmu(app).apply {
       rid = extractor.rid

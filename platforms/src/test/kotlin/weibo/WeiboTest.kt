@@ -27,9 +27,11 @@
 package weibo
 
 import BaseTest
+import com.github.michaelbull.result.get
 import github.hua0512.plugins.weibo.download.WeiboExtractor
 import io.exoquery.kmp.pprint
 import io.kotest.matchers.equals.shouldBeEqual
+import io.kotest.matchers.nulls.shouldNotBeNull
 
 /**
  * Weibo platform test
@@ -41,7 +43,8 @@ class WeiboTest : BaseTest<WeiboExtractor>({
   test("isLive") {
     val result = extractor.extract()
     result.isOk shouldBeEqual true
-    val mediaInfo = result.value
+    val mediaInfo = result.get()
+    mediaInfo.shouldNotBeNull()
     println(pprint(mediaInfo))
   }
 
@@ -50,7 +53,8 @@ class WeiboTest : BaseTest<WeiboExtractor>({
     extractor.prepare()
     val result = extractor.extract()
     result.isOk shouldBeEqual true
-    val mediaInfo = result.value
+    val mediaInfo = result.get()
+    mediaInfo.shouldNotBeNull()
     println(pprint(mediaInfo))
   }
 
@@ -67,7 +71,7 @@ class WeiboTest : BaseTest<WeiboExtractor>({
 
 }) {
 
-  override val testUrl: String = "https://weibo.com/u/6034381748?is_hot=1#1573944545407"
+  override val testUrl: String = "https://weibo.com/u/6124785491"
 
   override fun createExtractor(url: String) = WeiboExtractor(app.client, app.json, url)
 }

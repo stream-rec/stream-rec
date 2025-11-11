@@ -27,6 +27,7 @@
 package huya
 
 import BaseDownloaderTest
+import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.unwrap
 import github.hua0512.data.config.DownloadConfig
 import github.hua0512.data.media.MediaInfo
@@ -197,7 +198,7 @@ class HuyaDownloaderTest : BaseDownloaderTest<HuyaExtractor, DownloadConfig.Huya
 
     val filterResult = downloader.applyFilters(streams)
     filterResult.isErr shouldBe true
-    filterResult.error shouldBe ExtractorError.NoStreamsFound
+    filterResult.getError() shouldBe ExtractorError.NoStreamsFound
   }
 
 }) {
