@@ -145,7 +145,7 @@ class PandaTvExtractor(http: HttpClient, json: Json, override val url: String) :
     val parseResult = parseHlsPlaylist(hlsText)
 
     if (parseResult.isErr) return parseResult.asErr()
-    mediaInfo = mediaInfo.copy(title = title, artist = artist, coverUrl = thumbUrl, artistImageUrl = userImg, streams = parseResult.value)
+    mediaInfo = mediaInfo.copy(title = title, artist = artist, coverUrl = thumbUrl, artistImageUrl = userImg, streams = parseResult.get()!!)
     return Ok(mediaInfo)
   }
 }

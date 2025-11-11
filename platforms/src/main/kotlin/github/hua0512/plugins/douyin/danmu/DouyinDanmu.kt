@@ -27,6 +27,8 @@
 package github.hua0512.plugins.douyin.danmu
 
 
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
 import com.google.protobuf.ByteString
 import douyin.Dy
 import douyin.Dy.PushFrame
@@ -128,10 +130,10 @@ open class DouyinDanmu(app: App) : Danmu(app, enablePing = false) {
     // update signature
     val signatureResult = getSignature(requestParams[ROOM_ID_KEY]!!, userUniqueId!!)
     if (signatureResult.isErr) {
-      logger.error("{} Failed to get douyin signature: {}", idStr, signatureResult.error)
+      logger.error("{} Failed to get douyin signature: {}", idStr, signatureResult.getError())
       return
     }
-    requestParams[SIGNATURE_KEY] = signatureResult.value
+    requestParams[SIGNATURE_KEY] = signatureResult.get()!!
   }
 
   override fun oneHello(): ByteArray {

@@ -53,7 +53,7 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
     var isLive = super.isLive()
 
     // return error if not a fallback error
-    if (isLive.isErr && isLive.error !is ExtractorError.FallbackError) {
+    if (isLive.isErr && isLive.getError() !is ExtractorError.FallbackError) {
       return isLive
     } else if (isLive.isOk) {
       return isLive
@@ -86,7 +86,7 @@ class DouyinCombinedApiExtractor(http: HttpClient, json: Json, override val url:
 
     if (result.isErr) return result.asErr()
 
-    val response = result.value
+    val response = result.get() ?: return Err(ExtractorError.InvalidResponse("Empty response from mobile api"))
 
     return result.andThen {
       liveData = response.body<JsonElement>()

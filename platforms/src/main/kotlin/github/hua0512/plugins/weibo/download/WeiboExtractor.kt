@@ -159,7 +159,7 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
     }
 
     if (result.isErr) return result.asErr()
-    val response = result.value
+    val response = result.get()!!
 
 
     val json = response.body<JsonElement>()
@@ -174,7 +174,7 @@ class WeiboExtractor(override val http: HttpClient, override val json: Json, ove
     val liveResult = isLive()
     if (liveResult.isErr) return liveResult.asErr()
 
-    val isLive = liveResult.value
+    val isLive = liveResult.get()!!
 
     var mediaInfo = MediaInfo(url, title, artist, coverUrl, avatarUrl, live = isLive)
 

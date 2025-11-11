@@ -144,9 +144,9 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
         requestTimeoutMillis = 15000
       }
     }
-    if (apiResult.isErr) return apiResult.asOk()
+    if (apiResult.isErr) return apiResult.asErr()
 
-    val response = apiResult.value
+    val response = apiResult.get()!!
 
     htmlResponseBody = response.bodyAsText().apply {
       val uid = UID_REGEX.toRegex().find(this)?.groupValues?.get(1)?.toLongOrNull()
@@ -179,7 +179,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       return Ok(false)
     }
 
-    return stateRegex.find(matchResult.value.groupValues[1])?.groupValues?.get(1).toResultOr {
+    return stateRegex.find(matchResult.get()!!.groupValues[1])?.groupValues?.get(1).toResultOr {
       ExtractorError.InvalidResponse("state not found")
     }.andThen {
       Ok(it == "ON")
@@ -215,7 +215,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       logger.debug("failed to extract screenshot from $url")
     }
 
-    val live = liveResult.value
+    val live = liveResult.get()!!
     val mediaInfo = MediaInfo(
       site = BASE_URL,
       title = streamTitle,
@@ -247,7 +247,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       return parseStreamJsonResult.asErr()
     }
 
-    val streamJson = parseStreamJsonResult.value
+    val streamJson = parseStreamJsonResult.get()!!
 
     val vMultiStreamInfo =
       streamJson["vMultiStreamInfo"] ?: return Err(ExtractorError.InvalidResponse("vMultiStreamInfo is null"))
@@ -270,7 +270,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       return gameStreamInfoListResult.asErr()
     }
 
-    val gameStreamInfoList = gameStreamInfoListResult.value
+    val gameStreamInfoList = gameStreamInfoListResult.get()!!
 
     // default bitrate
     val defaultBitrate = gameLiveInfo["bitRate"]?.jsonPrimitive?.int ?: 0
@@ -460,7 +460,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
       return reqResult.asErr()
     }
 
-    val req = reqResult.value
+    val req = reqResult.get()!!
     val wupBody = req.bodyAsBytes()
     // parse response to HuyaGetTokenResp
     val respWup = HuyaWup().apply {
@@ -531,7 +531,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     if (result.isErr) {
       return result.asErr()
     }
-    val response = result.value
+    val response = result.get()!!
 
     val body = response.bodyAsText()
     val jsonResult = runCatching {
@@ -544,7 +544,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
     if (jsonResult.isErr) {
       return jsonResult.asErr()
     }
-    val json = jsonResult.value
+    val json = jsonResult.get()!!
 
     val returnCode = json["returnCode"]?.jsonPrimitive?.int ?: 0
     return Ok(returnCode == 0)

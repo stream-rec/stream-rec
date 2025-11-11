@@ -26,6 +26,9 @@
 
 package github.hua0512.services
 
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
+import com.github.michaelbull.result.getOr
 import github.hua0512.app.App
 import github.hua0512.data.config.AppConfig
 import github.hua0512.data.config.DownloadConfig
@@ -219,7 +222,7 @@ class StreamerDownloadService(
       app.config.maxPartDuration ?: 0
     )
     if (initializationResult.isErr) {
-      val error = initializationResult.error
+      val error = initializationResult.getError()
       logger.error("{} initialization error: {}", streamer.name, error)
       EventCenter.sendEvent(
         StreamerException(
@@ -450,10 +453,10 @@ class StreamerDownloadService(
    */
   private suspend fun isStreamerLive(): Boolean {
     val result = plugin.shouldDownload()
-    if (result.isOk) return result.value
+    if (result.isOk) return result.getOr(false)
 
     // result is error
-    val state = when (result.error) {
+    val state = when (result.getError()) {
       is ExtractorError.StreamerBanned, is ExtractorError.StreamerNotFound -> StreamerState.NOT_FOUND
       is ExtractorError.InitializationError, ExtractorError.InvalidExtractionUrl -> StreamerState.FATAL_ERROR
       else -> StreamerState.NOT_LIVE

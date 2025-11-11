@@ -26,9 +26,7 @@
 
 package github.hua0512.plugins
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.*
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
 import github.hua0512.data.stream.StreamInfo
@@ -58,9 +56,9 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
     return try {
       val mediaResult = extractMediaInfo()
       if (mediaResult.isErr) {
-        return Err(mediaResult.error)
+        return mediaResult.asErr()
       }
-      Ok(mediaResult.value.live)
+      Ok(mediaResult.get()?.live ?: false)
     } catch (e: Exception) {
       Err(ExtractorError.InvalidResponse("Failed to check live status: ${e.message}"))
     }
@@ -70,7 +68,7 @@ open class StrevExtractor(http: HttpClient, json: Json, override val url: String
     // cached media info is updated here
     val result = isLive()
     if (result.isErr) {
-      return Err(result.error)
+      return result.asErr()
     }
     return Ok(cachedMediaInfo!!)
   }

@@ -84,7 +84,7 @@ internal suspend fun HttpClient.getDouyuH5Enc(json: Json, body: String, rid: Str
 
     if (result.isErr) return result.asErr()
 
-    val json = json.parseToJsonElement(result.value.bodyAsText())
+    val json = json.parseToJsonElement(result.get()!!.bodyAsText())
 
     val error = json.jsonObject["error"]?.jsonPrimitive?.intOrNull ?: return Err(ExtractorError.InvalidResponse("Failed to get douyu h5 enc"))
     if (error != 0) {

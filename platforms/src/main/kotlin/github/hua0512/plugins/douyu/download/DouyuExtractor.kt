@@ -101,7 +101,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
     if (result.isErr) return result.asErr()
 
-    val response = result.value
+    val response = result.get()!!
 
     htmlText = response.bodyAsText()
     logger.trace("{}", htmlText)
@@ -136,9 +136,9 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
     var cover = ""
 
 
-    val mediaInfo = MediaInfo(DOUYU_URL, title, artist, cover, avatar, live = isLive.value)
+    val mediaInfo = MediaInfo(DOUYU_URL, title, artist, cover, avatar, live = isLive.get()!!)
 
-    if (!isLive.value) return Ok(mediaInfo)
+    if (!isLive.get()!!) return Ok(mediaInfo)
 
     val roomApiResult = getResponse("https://open.douyucdn.cn/api/RoomApi/room/$rid") {
       contentType(ContentType.Application.Json)
@@ -146,7 +146,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
     if (roomApiResult.isErr) return roomApiResult.asErr()
 
-    val roomApiResponse = roomApiResult.value
+    val roomApiResponse = roomApiResult.get()!!
 
     val jsonText = roomApiResponse.body<JsonElement>()
     logger.debug("{}", jsonText)
@@ -168,7 +168,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
     if (jsEncResult.isErr) return jsEncResult.asErr()
 
-    val jsEnc = jsEncResult.value
+    val jsEnc = jsEncResult.get()!!
     logger.trace("jsEnc: $jsEnc")
     val paramsResult = withContext(Dispatchers.Default) { ub98484234(jsEnc, rid) }
 
@@ -176,14 +176,14 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
 
     val streams = mutableListOf<StreamInfo>()
 
-    val paramsMap = paramsResult.value
+    val paramsMap = paramsResult.get()!!
 
     val streamInfoResult = getStreamInfo(selectedCdn = selectedCdn, encMap = paramsMap)
     if (streamInfoResult.isErr) {
       return streamInfoResult.asErr()
     }
 
-    val (streamInfo, rates) = streamInfoResult.value
+    val (streamInfo, rates) = streamInfoResult.get()!!
     streams.add(streamInfo)
 
     // get the rest of the stream info
@@ -192,10 +192,10 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       val rateJson = rates[i].jsonObject
       val rateInfoResult = getRateInfo(rateJson)
 
-      val rateInfo = rateInfoResult.value
+      val rateInfo = rateInfoResult.get()!!
 
       if (rateInfoResult.isErr) {
-        logger.error("cdn: $selectedCdn failed to get rate info of rate: ${rates[i]}: {}", rateInfoResult.error)
+        logger.error("cdn: $selectedCdn failed to get rate info of rate: ${rates[i]}: {}", rateInfoResult.getError())
         continue
       }
       val streamInfoRateResult =
@@ -203,11 +203,11 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       if (streamInfoRateResult.isErr) {
         logger.error(
           "cdn: $selectedCdn failed to get stream info for rate: ${rateInfo["rate"]}: {}",
-          streamInfoRateResult.error
+          streamInfoRateResult.getError()
         )
         continue
       }
-      val stream = streamInfoRateResult.value.first
+      val stream = streamInfoRateResult.get()!!.first
       streams.add(stream)
     }
     logger.trace("$url streams: {}", pprint(streams))
@@ -251,14 +251,14 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       return result.asErr()
     }
 
-    val liveDataResponse = result.value
+    val liveDataResponse = result.get()!!
 
     val liveDataJsonResult = runCatching { json.parseToJsonElement(liveDataResponse.bodyAsText()) }
       .mapError { ExtractorError.InvalidResponse("live data parse failed for cdn: $selectedCdn, rate: $selectedRate") }
 
     if (liveDataJsonResult.isErr) return liveDataJsonResult.asErr()
 
-    val liveDataJson = liveDataJsonResult.value
+    val liveDataJson = liveDataJsonResult.get()!!
     logger.debug("{}", liveDataJson)
     val error = liveDataJson.jsonObject["error"]?.jsonPrimitive?.intOrNull ?: -1
 
@@ -295,7 +295,7 @@ open class DouyuExtractor(override val http: HttpClient, override val json: Json
       getRateInfo(multiRates!!.find { it.jsonObject["rate"]!!.jsonPrimitive.int == rate }!!.jsonObject)
     if (qualityRateInfo.isErr) return qualityRateInfo.asErr()
 
-    val qualityName = qualityRateInfo.value
+    val qualityName = qualityRateInfo.get()!!
 
     return Ok(
       StreamInfo(
