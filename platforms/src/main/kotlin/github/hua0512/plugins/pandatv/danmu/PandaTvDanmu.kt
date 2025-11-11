@@ -34,7 +34,7 @@ import github.hua0512.plugins.danmu.base.Danmu
 import github.hua0512.plugins.pandatv.download.PandaTvExtractor
 import io.ktor.http.*
 import io.ktor.websocket.*
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 

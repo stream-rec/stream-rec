@@ -41,7 +41,6 @@ import github.hua0512.repo.upload.UploadRepo
 import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -183,7 +182,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
 
   private suspend fun updateUploadSuccess(file: UploadData) {
     uploadRepo.updateUploadData(file.copy(status = UploadState.UPLOADED))
-    EventCenter.sendEvent(UploadEvent.UploadSuccess(file.filePath, file.uploadPlatform, Clock.System.now()))
+    EventCenter.sendEvent(UploadEvent.UploadSuccess(file.filePath, file.uploadPlatform, kotlin.time.Clock.System.now()))
   }
 
   private suspend fun handleUploadFailure(file: UploadData, error: Exception): UploadData {
@@ -191,7 +190,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
       UploadEvent.UploadFailure(
         file.filePath,
         file.uploadPlatform,
-        Clock.System.now(),
+        kotlin.time.Clock.System.now(),
         error
       )
     )
@@ -202,7 +201,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
 
   private fun handleUploadError(file: UploadData, error: Exception): UploadResult {
     return UploadResult(
-      startTime = Clock.System.now().epochSeconds,
+      startTime = kotlin.time.Clock.System.now().epochSeconds,
       isSuccess = false,
       message = error.message ?: "Unknown error",
       uploadDataId = file.id,
@@ -211,7 +210,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
   }
 
   private suspend fun notifyUploadStart(file: UploadData) {
-    EventCenter.sendEvent(UploadEvent.UploadStart(file.filePath, file.uploadPlatform, Clock.System.now()))
+    EventCenter.sendEvent(UploadEvent.UploadStart(file.filePath, file.uploadPlatform, kotlin.time.Clock.System.now()))
   }
 
   private suspend fun notifyUploadRetry(file: UploadData, attempt: Int) {
@@ -219,7 +218,7 @@ class UploadService(val app: App, private val uploadRepo: UploadRepo) : BaseEven
       UploadEvent.UploadRetry(
         file.filePath,
         file.uploadPlatform,
-        Clock.System.now(),
+        kotlin.time.Clock.System.now(),
         attempt
       )
     )

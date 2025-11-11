@@ -37,7 +37,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.Clock
 import kotlinx.io.asSource
 import kotlinx.io.buffered
 import org.junit.Test
@@ -61,7 +60,7 @@ class FixFlvTest {
     val metaInfoProvider = FlvMetaInfoProvider()
     val pathProvider = { index: Int ->
       "D:/test/fix/${file.nameWithoutExtension}_fix_${index}_${
-        Clock.System.now().toEpochMilliseconds()
+        kotlin.time.Clock.System.now().toEpochMilliseconds()
       }.flv"
     }
     val limitsProvider = { 0L to 0.0f }

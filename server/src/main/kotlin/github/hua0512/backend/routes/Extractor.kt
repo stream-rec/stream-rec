@@ -26,6 +26,8 @@
 
 package github.hua0512.backend.routes
 
+import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
 import github.hua0512.backend.logger
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.stream.StreamInfo
@@ -71,7 +73,7 @@ fun Route.extractorRoutes(factory: IExtractorFactory, json: Json) {
       val initResult = extractor.prepare()
       if (initResult.isErr) {
         return@get call.respond(HttpStatusCode.OK, buildJsonObject {
-          put("msg", "Failed to initialize extractor, ${initResult.error}")
+          put("msg", "Failed to initialize extractor, ${initResult.getError()}")
           put("code", 500)
         })
       }
@@ -79,12 +81,15 @@ fun Route.extractorRoutes(factory: IExtractorFactory, json: Json) {
       val extractResult = extractor.extract()
       if (extractResult.isErr) {
         return@get call.respond(HttpStatusCode.OK, buildJsonObject {
-          put("msg", "Failed to extract data, ${extractResult.error}")
+          put("msg", "Failed to extract data, ${extractResult.getError()}")
           put("code", 500)
         })
       }
 
-      val mediaInfo = extractResult.value
+      val mediaInfo = extractResult.get() ?: return@get call.respond(HttpStatusCode.OK, buildJsonObject {
+        put("msg", "No media info found")
+        put("code", 404)
+      })
 
       return@get call.respond(HttpStatusCode.OK, buildJsonObject {
         put("msg", "success")
@@ -122,17 +127,18 @@ fun Route.extractorRoutes(factory: IExtractorFactory, json: Json) {
         })
       }
 
-      val extractor = factory.getExtractorFromUrl(url, emptyMap()) ?: return@post call.respond(HttpStatusCode.OK, buildJsonObject {
-        put("msg", "No extractor found for the given url")
-        put("code", 404)
-      }.also {
-        logger.error("true url extractor not found: $it")
-      })
+      val extractor =
+        factory.getExtractorFromUrl(url, emptyMap()) ?: return@post call.respond(HttpStatusCode.OK, buildJsonObject {
+          put("msg", "No extractor found for the given url")
+          put("code", 404)
+        }.also {
+          logger.error("true url extractor not found: $it")
+        })
 
       val initResult = extractor.prepare()
       if (initResult.isErr) {
         return@post call.respond(HttpStatusCode.OK, buildJsonObject {
-          put("msg", "Failed to initialize extractor, ${initResult.error}")
+          put("msg", "Failed to initialize extractor, ${initResult.getError()}")
           put("code", 500)
         })
       }
@@ -141,7 +147,7 @@ fun Route.extractorRoutes(factory: IExtractorFactory, json: Json) {
 
       if (trueUrl.isErr) {
         return@post call.respond(HttpStatusCode.OK, buildJsonObject {
-          put("msg", "Failed to get true url, ${trueUrl.error}")
+          put("msg", "Failed to get true url, ${trueUrl.getError()}")
           put("code", 500)
         })
       }
@@ -149,7 +155,7 @@ fun Route.extractorRoutes(factory: IExtractorFactory, json: Json) {
       return@post call.respond(HttpStatusCode.OK, buildJsonObject {
         put("msg", "success")
         put("code", 200)
-        put("data", json.encodeToJsonElement(StreamInfo.serializer(), trueUrl.value))
+        put("data", json.encodeToJsonElement(StreamInfo.serializer(), trueUrl.get()!!))
         put("headers", json.encodeToString(extractor.getRequestHeaders()))
       }.also {
         logger.debug("true url : {}", it)

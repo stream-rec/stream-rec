@@ -24,7 +24,6 @@
  * SOFTWARE.
  */
 
-@file:OptIn(ExperimentalTime::class)
 
 package github.hua0512.utils
 
@@ -35,7 +34,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
 /**
  * @author hua0512

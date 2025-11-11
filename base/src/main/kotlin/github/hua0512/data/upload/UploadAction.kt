@@ -27,9 +27,9 @@
 package github.hua0512.data.upload
 
 import github.hua0512.data.upload.entity.UploadActionEntity
-import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.time.Clock
 
 /**
  * Upload action data class.

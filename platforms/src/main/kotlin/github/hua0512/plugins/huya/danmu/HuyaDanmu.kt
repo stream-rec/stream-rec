@@ -44,8 +44,7 @@ import github.hua0512.plugins.huya.danmu.msg.req.HuyaUserInfo
 import github.hua0512.plugins.huya.danmu.msg.req.HuyaWSRegisterGroupReq
 import github.hua0512.plugins.huya.danmu.msg.req.HuyaWup
 import io.ktor.websocket.*
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toLocalDateTime
@@ -97,7 +96,7 @@ class HuyaDanmu(app: App) : Danmu(app, enablePing = false) {
   override suspend fun sendHello(session: WebSocketSession) {
     // format date to yyMMddHHmm
     // this is used as version number
-    val date = Clock.System.now().toLocalDateTime(TimeZone.of("Asia/Shanghai"))
+    val date = kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.of("Asia/Shanghai"))
       .toJavaLocalDateTime()
       .format(DateTimeFormatter.ofPattern("yyMMddHHmm"))
 
@@ -192,7 +191,7 @@ class HuyaDanmu(app: App) : Danmu(app, enablePing = false) {
           val content = msgNotice.sContent
           // FUCK, huya danmu has no time attribute!
           // this is inaccurate
-          val time = if (huyaSocketCommand.lTime == 0L) Clock.System.now().toEpochMilliseconds() else huyaSocketCommand.lTime
+          val time = if (huyaSocketCommand.lTime == 0L) kotlin.time.Clock.System.now().toEpochMilliseconds() else huyaSocketCommand.lTime
           // huya danmu contains only one danmu
           return listOf(
             DanmuData(

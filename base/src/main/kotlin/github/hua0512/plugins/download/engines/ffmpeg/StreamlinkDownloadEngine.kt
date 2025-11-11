@@ -34,10 +34,10 @@ import github.hua0512.utils.process.Redirect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.io.path.Path
+import kotlin.time.Clock
 
 /**
  * A download engine that uses streamlink and pipe the output to ffmpeg for downloading streams

@@ -26,7 +26,7 @@
 
 package github.hua0512.data.event
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * UserEvent is a sealed class that represents events related to users.

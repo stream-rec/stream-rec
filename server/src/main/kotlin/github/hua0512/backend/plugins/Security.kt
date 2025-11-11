@@ -8,7 +8,6 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
-import kotlinx.datetime.Clock
 
 
 const val jwtAudience = "stream-rec"
@@ -30,7 +29,7 @@ fun Application.configureSecurity() {
       validate { credential ->
         if (credential.payload.audience.contains(jwtAudience)) {
           // check date
-          if (credential.payload.expiresAt.time < Clock.System.now().toEpochMilliseconds()) {
+          if (credential.payload.expiresAt.time < kotlin.time.Clock.System.now().toEpochMilliseconds()) {
             return@validate null
           }
           // check user

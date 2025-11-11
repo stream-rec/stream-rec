@@ -26,10 +26,10 @@
 
 package github.hua0512.utils
 
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 // Constants for placeholders
 private const val STREAMER_PLACEHOLDER = "{streamer}"

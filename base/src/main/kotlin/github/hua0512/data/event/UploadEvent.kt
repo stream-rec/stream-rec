@@ -28,7 +28,7 @@ package github.hua0512.data.event
 
 import github.hua0512.data.upload.UploadData
 import github.hua0512.data.upload.UploadPlatform
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * @author hua0512

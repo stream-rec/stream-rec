@@ -65,7 +65,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.supervisorScope
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import me.tongfei.progressbar.ProgressBar
 import org.slf4j.Logger
 import java.io.File
@@ -248,7 +248,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     if (extractorResult.isErr) {
       val result = extractorResult.analyzeError()
       // propagate the error
-      if (result.isErr || !result.value) return result
+      if (result.isErr || !result.get()!!) return result
       // there is no possible `true` value if error occurred
       return Ok(false)
     }
@@ -266,7 +266,7 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     if (filterResult.isErr) {
       filterResult = filterResult.analyzeError()
       if (filterResult.isErr) return filterResult
-      if (!filterResult.value) {
+      if (!filterResult.get()!!) {
         return Ok(false)
       }
     }
@@ -802,13 +802,13 @@ abstract class PlatformDownloader<T : DownloadConfig>(
     if (filterResult.isErr) return filterResult.asErr()
 
     // get true URL
-    val streamInfoResult = extractor.getTrueUrl(filterResult.value)
+    val streamInfoResult = extractor.getTrueUrl(filterResult.get()!!)
 
     if (streamInfoResult.isErr) {
       return streamInfoResult.asErr()
     }
 
-    val streamInfo = streamInfoResult.value
+    val streamInfo = streamInfoResult.get()!!
 
     state.value =
       DownloadState.Preparing(streamInfo.url, streamInfo.format, downloadConfig.outputFileFormat, mediaInfo.title)

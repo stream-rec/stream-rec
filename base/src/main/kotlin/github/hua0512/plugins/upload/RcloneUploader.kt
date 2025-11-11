@@ -38,9 +38,9 @@ import github.hua0512.utils.logger
 import github.hua0512.utils.nonEmptyOrNull
 import github.hua0512.utils.process.Redirect
 import github.hua0512.utils.replacePlaceholders
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.slf4j.Logger
+import kotlin.time.Clock
 
 class RcloneUploader(app: App, override val config: RcloneConfig) : Upload<RcloneConfig>(app, config) {
 

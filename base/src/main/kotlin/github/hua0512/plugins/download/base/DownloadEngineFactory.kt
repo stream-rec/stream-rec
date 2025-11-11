@@ -58,7 +58,6 @@ class DownloadEngineFactory {
 
         DownloadEngines.FFMPEG -> FFmpegDownloadEngine()
         DownloadEngines.STREAMLINK -> StreamlinkDownloadEngine()
-        else -> throw IllegalArgumentException("Unknown engine type: $engineType")
       }
     }
   }

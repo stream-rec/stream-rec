@@ -45,8 +45,7 @@ import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.EOFException
@@ -57,6 +56,7 @@ import java.net.SocketException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.time.Clock
 
 /**
  * Danmu (Bullet screen comments) downloader base class

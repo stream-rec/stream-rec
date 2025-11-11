@@ -46,8 +46,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.json.*
 import kotlin.random.Random
 
@@ -296,7 +295,7 @@ open class HuyaExtractor(override val http: HttpClient, override val json: Json,
   ): MutableList<StreamInfo> {
     // build stream info
     val streams = mutableListOf<StreamInfo>()
-    val time = Clock.System.now()
+    val time = kotlin.time.Clock.System.now()
 
     withContext(Dispatchers.Default) {
       gameStreamInfoList.forEach { streamInfo ->

@@ -36,12 +36,12 @@ import github.hua0512.utils.Programs.ffprobe
 import github.hua0512.utils.process.Redirect
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import org.slf4j.Logger
 import java.io.OutputStream
 import java.nio.file.Path
 import kotlin.io.path.*
+import kotlin.time.Clock
 
 /**
  * FFmpegDownloadEngine is a download engine that uses ffmpeg to download the stream.

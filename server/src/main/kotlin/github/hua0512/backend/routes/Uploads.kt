@@ -36,7 +36,6 @@ import github.hua0512.repo.upload.UploadRepo
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
@@ -140,7 +139,7 @@ fun Route.uploadRoute(json: Json, repo: UploadRepo) {
               uploadData,
               uploadData.filePath,
               uploadData.uploadPlatform,
-              Clock.System.now()
+              kotlin.time.Clock.System.now()
             )
           )
         )

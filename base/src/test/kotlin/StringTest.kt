@@ -28,7 +28,7 @@ import github.hua0512.utils.replacePlaceholders
 import github.hua0512.utils.substringBeforePlaceholders
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.equals.shouldBeEqual
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /*
  * MIT License

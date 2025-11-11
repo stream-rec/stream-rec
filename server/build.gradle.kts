@@ -37,12 +37,9 @@ dependencies {
 }
 
 private fun execAndCapture(vararg command: String): String {
-  val output = ByteArrayOutputStream()
-  project.exec {
-    commandLine = command.toList()
-    standardOutput = output
-  }
-  return output.toString().trim()
+  return providers.exec {
+    commandLine(command.toList())
+  }.standardOutput.asText.get().trim()
 }
 
 tasks.register("getGitVersion") {
@@ -72,10 +69,11 @@ tasks.processResources {
   dependsOn("getGitVersion")
   filesMatching("server.properties") {
     println("Replacing placeholders in server.properties")
-    expand(
-      "gitVersion" to project.extra["gitVersion"],
-      "gitCommitHash" to project.extra["gitCommitHash"],
-      "gitCommitCount" to project.extra["gitCommitCount"],
+    val props = mapOf(
+      "gitVersion" to (project.extra["gitVersion"] as String),
+      "gitCommitHash" to (project.extra["gitCommitHash"] as String),
+      "gitCommitCount" to (project.extra["gitCommitCount"] as Any),
     )
+    expand(props)
   }
 }

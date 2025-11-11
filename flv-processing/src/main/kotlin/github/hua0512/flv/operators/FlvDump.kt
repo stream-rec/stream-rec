@@ -24,8 +24,6 @@
  * SOFTWARE.
  */
 
-@file:OptIn(ExperimentalTime::class)
-
 package github.hua0512.flv.operators
 
 import github.hua0512.download.DownloadPathProvider
@@ -46,7 +44,6 @@ import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.io.path.outputStream
 import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 
 
 private const val TAG = "FlvDumperCenter"
@@ -58,7 +55,10 @@ private val logger = logger(TAG)
  * @author hua0512
  * @date : 2024/9/9 2:15
  */
-fun Flow<FlvData>.dump(pathProvider: DownloadPathProvider, onStreamDumped: OnDownloaded = { _, _, _, _ -> }): Flow<FlvData> = flow {
+fun Flow<FlvData>.dump(
+  pathProvider: DownloadPathProvider,
+  onStreamDumped: OnDownloaded = { _, _, _, _ -> }
+): Flow<FlvData> = flow {
 
   var writer: FlvWriter? = null
   var lastPath: String? = null
