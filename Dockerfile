@@ -1,4 +1,4 @@
-FROM gradle:8.8-jdk21-alpine AS builder
+FROM gradle:9.2.0-jdk21-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN gradle stream-rec:build -x test
