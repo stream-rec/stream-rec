@@ -27,6 +27,7 @@
 package github.hua0512.plugins.base
 
 import com.github.michaelbull.result.*
+import com.github.michaelbull.result.annotation.UnsafeResultValueAccess
 import github.hua0512.app.COMMON_HEADERS
 import github.hua0512.data.media.MediaInfo
 import github.hua0512.data.media.VideoFormat
@@ -123,7 +124,7 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
     if (matchResult.isErr) {
       return Err(ExtractorError.InvalidExtractionUrl)
     }
-    return Ok(matchResult.value)
+    return Ok(matchResult.get()!!)
   }
 
   /**
@@ -248,13 +249,15 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
       MediaPlaylistParser(parsingMode)
     }
 
-    val parseResult = runCatching {
+    return runCatching {
       mediaParser.readPlaylist(playlistString)
-    }.map { playlist ->
+    }.mapError {
+      ExtractorError.InvalidResponse("Failed to parse playlist")
+    }.andThen { playlist ->
       if (playlist is MultivariantPlaylist) {
         val variants = playlist.variants()
         val variantStreams = variants.map { variant ->
-          val extraMap = variant.resolution().getOrNull()?.let { mapOf("resolution" to "${it.height()}x${it.width()}") }
+          val extraMap = variant.resolution().getOrNull()?.let { mapOf("resolution" to "${it.width()}x${it.height()}") }
             ?: emptyMap()
           StreamInfo(
             variant.uri(),
@@ -272,17 +275,10 @@ abstract class Extractor(protected open val http: HttpClient, protected open val
           )
         }
         streams.addAll(variantStreams)
+        Ok(streams.toList())
       } else {
-        return Err(ExtractorError.InvalidResponse("Media playlist returned instead of master playlist"))
+        Err(ExtractorError.InvalidResponse("Media playlist returned instead of master playlist"))
       }
-    }.mapError {
-      ExtractorError.InvalidResponse("Failed to parse playlist")
     }
-
-    if (parseResult.isErr) {
-      return parseResult.asErr()
-    }
-
-    return Ok(streams.toList())
   }
 }
