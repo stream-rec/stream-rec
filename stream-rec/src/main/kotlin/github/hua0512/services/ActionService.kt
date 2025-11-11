@@ -181,7 +181,6 @@ class ActionService(private val app: App, private val uploadService: UploadServi
         }
       }
 
-      else -> throw UnsupportedOperationException("Invalid action: $this")
     }
   }
 
