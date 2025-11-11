@@ -85,7 +85,7 @@ class TwitchExtractor(http: HttpClient, json: Json, override val url: String) : 
     val queries = arrayOf(
       buildPersistedQueryRequest(
         "ChannelShell",
-        "c3ea5a669ec074a58df5c11ce3c27093fa38534c94286dc14b68a25d5adcbf55",
+        "fea4573a7bf2644f5b3f2cbbdcbee0d17312e48d2e55f080589d053aad353f11",
         buildJsonObject {
           put("login", id)
         }
