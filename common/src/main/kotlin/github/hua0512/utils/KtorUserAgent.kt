@@ -30,11 +30,12 @@ import github.hua0512.download.DownloadProgressUpdater
 import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
 import kotlinx.io.readByteArray
 import java.io.File
 import java.io.OutputStream
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /**
  * Writes the contents of a ByteReadChannel to a file.
@@ -45,6 +46,7 @@ import kotlin.math.roundToInt
  * @author hua0512
  * @date : 2024/9/18 22:06
  */
+@OptIn(ExperimentalTime::class)
 suspend fun ByteReadChannel.writeToFile(
   file: File,
   sizedUpdater: DownloadProgressUpdater = { _, _, _ -> },

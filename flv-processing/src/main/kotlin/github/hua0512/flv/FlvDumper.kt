@@ -75,7 +75,6 @@ internal class FlvDumper(val sink: Sink) : AutoCloseable {
       is AudioData -> tag.data.dump()
       is VideoData -> tag.data.dump()
       is ScriptData -> tag.data.dump()
-      else -> throw FlvDataErrorException("Unsupported tag data: ${tag.data}")
     }
     sink.flush()
   }

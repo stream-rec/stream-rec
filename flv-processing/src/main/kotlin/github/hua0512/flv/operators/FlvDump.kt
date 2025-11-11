@@ -24,6 +24,8 @@
  * SOFTWARE.
  */
 
+@file:OptIn(ExperimentalTime::class)
+
 package github.hua0512.flv.operators
 
 import github.hua0512.download.DownloadPathProvider
@@ -38,12 +40,13 @@ import github.hua0512.utils.withIOContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
-import kotlinx.datetime.Clock
 import kotlinx.io.asSink
 import kotlinx.io.buffered
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.io.path.outputStream
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 
 private const val TAG = "FlvDumperCenter"

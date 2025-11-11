@@ -242,7 +242,6 @@ internal class FlvParser(private val source: Source) : AutoCloseable {
       Audio -> header.dataSize - AUDIO_TAG_HEADER_SIZE
       Video -> header.dataSize - VIDEO_TAG_HEADER_SIZE
       ScriptData -> header.dataSize
-      else -> throw FlvDataErrorException("Unsupported flv tag type: ${header.tagType}")
     }
 
     // require tag body size
@@ -272,7 +271,6 @@ internal class FlvParser(private val source: Source) : AutoCloseable {
         FlvTag(++tagNum, header.copy(dataSize = data.first.size), data.first, data.second)
       }
 
-      else -> throw FlvDataErrorException("Unsupported flv tag type: ${header.tagType}")
     }
   }
 

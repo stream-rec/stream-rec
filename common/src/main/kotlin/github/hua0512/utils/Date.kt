@@ -24,15 +24,18 @@
  * SOFTWARE.
  */
 
+@file:OptIn(ExperimentalTime::class)
+
 package github.hua0512.utils
 
-import kotlinx.datetime.Clock
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.todayIn
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /**
  * @author hua0512
@@ -49,7 +52,7 @@ fun toLocalDateTime(time: Long, pattern: String? = null): String {
   }
 }
 
-fun getNow(): kotlinx.datetime.Instant {
+fun getNow(): kotlin.time.Instant {
   return Clock.System.now()
 }
 
