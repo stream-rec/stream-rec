@@ -8,13 +8,13 @@ WORKDIR /app
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
 
 # Install dependencies
-RUN yum update -y && \
-    yum install -y unzip tar python3 python3-pip which xz tzdata findutils && \
-    pip3 install streamlink && \
+RUN dnf update -y && \
+    dnf install -y unzip tar python3.12 python3.12-pip which xz tzdata findutils && \
+    pip3.12 install streamlink && \
     # install streamlink-ttvlol
     INSTALL_DIR="/root/.local/share/streamlink/plugins"; mkdir -p "$INSTALL_DIR"; curl -L -o "$INSTALL_DIR/twitch.py" 'https://github.com/2bc4/streamlink-ttvlol/releases/latest/download/twitch.py' && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
 # Install ffmpeg with architecture check
 RUN ARCH=$(uname -m) && \
@@ -45,9 +45,9 @@ RUN ARCH=$(uname -m) && \
 # Install strev with architecture check
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-      URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.3/strev-linux-amd64"; \
+      URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.4/strev-linux-amd64"; \
     elif [ "$ARCH" = "aarch64" ]; then \
-      URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.3/strev-linux-arm64"; \
+      URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.4/strev-linux-arm64"; \
     fi && \
     curl -L $URL -o strev && \
     mv strev /usr/local/bin/ && \
