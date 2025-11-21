@@ -1,60 +1,54 @@
 FROM gradle:9.2.0-jdk21-alpine AS builder
 WORKDIR /app
 COPY . .
-RUN gradle stream-rec:build -x test
 
-FROM amazoncorretto:21-al2023-headless
+# Build the application
+RUN gradle stream-rec:build -x test --no-daemon
+
+FROM debian:stable-slim
 WORKDIR /app
+
+# Set timezone (can be overridden at runtime)
+ENV TZ=Europe/Paris
+
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-venv \
+        tzdata \
+        curl \
+        ca-certificates \
+        default-jdk-headless \
+        rclone \
+        ffmpeg && \
+    # Create virtual environment for Python packages
+    python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir streamlink && \
+    # Install streamlink twitch plugin
+    mkdir -p /root/.local/share/streamlink/plugins && \
+    curl -L -o /root/.local/share/streamlink/plugins/twitch.py \
+        'https://github.com/2bc4/streamlink-ttvlol/releases/latest/download/twitch.py' && \
+    # Install strev with architecture check
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then \
+        URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.5/strev-linux-amd64"; \
+    elif [ "$ARCH" = "aarch64" ]; then \
+        URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.5/strev-linux-arm64"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    curl -L $URL -o /usr/local/bin/strev && \
+    chmod +x /usr/local/bin/strev && \
+    # Clean up to reduce image size
+    apt-get clean && \
+    rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/* /var/log/* /usr/share/man /usr/share/doc
+
+# Activate virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy jar from builder
 COPY --from=builder /app/stream-rec/build/libs/stream-rec.jar app.jar
-
-# Install dependencies
-RUN dnf update -y && \
-    dnf install -y unzip tar python3.12 python3.12-pip which xz tzdata findutils && \
-    pip3.12 install streamlink && \
-    # install streamlink-ttvlol
-    INSTALL_DIR="/root/.local/share/streamlink/plugins"; mkdir -p "$INSTALL_DIR"; curl -L -o "$INSTALL_DIR/twitch.py" 'https://github.com/2bc4/streamlink-ttvlol/releases/latest/download/twitch.py' && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
-
-# Install ffmpeg with architecture check
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-      URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-      URL="https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linuxarm64-gpl.tar.xz"; \
-    fi && \
-    curl -L $URL | tar -xJ && \
-    mv ffmpeg-*-linux*/bin/{ffmpeg,ffprobe,ffplay} /usr/local/bin/ && \
-    chmod +x /usr/local/bin/{ffmpeg,ffprobe,ffplay} && \
-    rm -rf ffmpeg-*
-
-# Install rclone with architecture check
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-      URL="https://downloads.rclone.org/rclone-current-linux-amd64.zip"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-      URL="https://downloads.rclone.org/rclone-current-linux-arm64.zip"; \
-    fi && \
-    curl -L $URL -o rclone.zip && \
-    unzip rclone.zip && \
-    mv rclone-*-linux*/rclone /usr/bin/ && \
-    chown root:root /usr/bin/rclone && \
-    chmod 755 /usr/bin/rclone && \
-    rm -rf rclone.zip rclone-*
-
-# Install strev with architecture check
-RUN ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ]; then \
-      URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.4/strev-linux-amd64"; \
-    elif [ "$ARCH" = "aarch64" ]; then \
-      URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.4/strev-linux-arm64"; \
-    fi && \
-    curl -L $URL -o strev && \
-    mv strev /usr/local/bin/ && \
-    chmod +x /usr/local/bin/strev
-
-# Set timezone
-ENV TZ=\${TZ:-Europe/Paris}
 
 EXPOSE 12555
 
