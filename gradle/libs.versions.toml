@@ -1,7 +1,7 @@
 [versions]
 ktor = "3.3.2"
 ktor-test = "2.3.13"
-ksp = "2.3.2"
+ksp = "2.3.3"
 kotlin = "2.2.21"
 kotlin-atomicfu = "0.29.0"
 kotlin-coroutines = "1.10.2"
