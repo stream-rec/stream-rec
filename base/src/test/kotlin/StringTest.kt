@@ -61,7 +61,7 @@ class StringTest : FunSpec({
   test("testPlaceholderReplace") {
     val streamer = "雪乃荔荔枝"
     val title = "新人第一天开播"
-    val platform = "bilibili"
+    val platform = "huya"
     val time = 1708461712L
     val instant = Instant.fromEpochSeconds(time)
 
@@ -75,7 +75,7 @@ class StringTest : FunSpec({
   test("testPlaceholderReplaceWithoutTime") {
     val streamer = "雪乃荔荔枝"
     val title = "新人第一天开播"
-    val platform = "bilibili"
+    val platform = "huya"
 
     val fileFormat = "{streamer} - {title} - {platform}"
 
