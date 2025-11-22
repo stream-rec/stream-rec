@@ -10,6 +10,7 @@ WORKDIR /app
 
 # Set timezone (can be overridden at runtime)
 ENV TZ=Europe/Paris
+ENV LANG=C.UTF-8
 
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
