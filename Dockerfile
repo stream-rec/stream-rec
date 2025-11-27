@@ -33,9 +33,9 @@ RUN apt-get update -y && \
     # Install strev with architecture check
     ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
-        URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.5/strev-linux-amd64"; \
+        URL="https://github.com/hua0512/rust-srec/releases/latest/download/strev-linux-amd64"; \
     elif [ "$ARCH" = "aarch64" ]; then \
-        URL="https://github.com/hua0512/rust-srec/releases/download/v0.3.5/strev-linux-arm64"; \
+        URL="https://github.com/hua0512/rust-srec/releases/latest/download/strev-linux-arm64"; \
     else \
         echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
