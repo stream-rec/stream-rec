@@ -58,6 +58,7 @@ data class AppConfig(
   val twitchConfig: TwitchConfigGlobal = TwitchConfigGlobal(),
   val pandaTvConfig: PandaTvConfigGlobal = PandaTvConfigGlobal(),
   val weiboConfig: WeiboConfigGlobal = WeiboConfigGlobal(),
+  val tlsVerification: Boolean = true,
 ) {
 
   constructor(entity: AppConfigEntity) : this(
@@ -82,6 +83,7 @@ data class AppConfig(
     entity.twitchConfig,
     entity.pandaTvConfig,
     entity.weiboConfig,
+    entity.tlsVerification,
   )
 
 
@@ -107,5 +109,6 @@ data class AppConfig(
     twitchConfig,
     pandaTvConfig,
     weiboConfig,
+    tlsVerification,
   )
 }

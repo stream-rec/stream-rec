@@ -34,6 +34,7 @@ import github.hua0512.data.event.DownloadEvent
 import github.hua0512.data.event.Event
 import github.hua0512.data.event.StreamerEvent
 import github.hua0512.plugins.base.IExtractorFactory
+import github.hua0512.repo.AppConfigRepo
 import github.hua0512.repo.LocalDataSource
 import github.hua0512.repo.LocalDataSourceImpl
 import github.hua0512.repo.config.EngineConfigManager
@@ -82,7 +83,10 @@ class AppModule {
 
   @Provides
   @Singleton
-  fun provideHttpClient(json: Json, clientFactory: IHttpClientFactory): HttpClient = clientFactory.getClient(json)
+  fun provideHttpClient(json: Json, clientFactory: IHttpClientFactory, appConfigRepository: AppConfigRepo): HttpClient {
+    val config = kotlinx.coroutines.runBlocking { appConfigRepository.getAppConfig() }
+    return clientFactory.getClient(json, tlsVerification = config.tlsVerification)
+  }
 
   @Provides
   @Singleton

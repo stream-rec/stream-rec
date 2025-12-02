@@ -50,12 +50,12 @@ import kotlin.time.toDuration
 
 interface IHttpClientFactory {
 
-  fun getClient(json: Json, installTimeout: Boolean = true, installWebSockets: Boolean = true): HttpClient
+  fun getClient(json: Json, installTimeout: Boolean = true, installWebSockets: Boolean = true, tlsVerification: Boolean = true): HttpClient
 }
 
 class HttpClientFactory : IHttpClientFactory {
 
-  override fun getClient(json: Json, installTimeout: Boolean, installWebSockets: Boolean): HttpClient = HttpClient(OkHttp) {
+  override fun getClient(json: Json, installTimeout: Boolean, installWebSockets: Boolean, tlsVerification: Boolean): HttpClient = HttpClient(OkHttp) {
     engine {
       pipelining = true
       setProxy()
@@ -68,6 +68,14 @@ class HttpClientFactory : IHttpClientFactory {
           connectTimeout(15, TimeUnit.SECONDS)
           writeTimeout(20, TimeUnit.SECONDS)
           readTimeout(60, TimeUnit.SECONDS)
+        }
+
+        if (!tlsVerification) {
+          sslSocketFactory(
+            github.hua0512.utils.InsecureTrustManager.createSSLSocketFactory(),
+            github.hua0512.utils.InsecureTrustManager.trustAllCertificates
+          )
+          hostnameVerifier(github.hua0512.utils.InsecureTrustManager.trustAllHostnameVerifier)
         }
       }
     }

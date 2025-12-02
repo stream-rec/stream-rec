@@ -77,13 +77,14 @@ import github.hua0512.data.user.UserEntity
     AutoMigration(from = 8, to = 9),
     AutoMigration(from = 9, to = 10),
     AutoMigration(from = 10, to = 11),
+    AutoMigration(from = 13, to = 14),
   ]
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
   companion object {
-    const val DATABASE_VERSION = 13
+    const val DATABASE_VERSION = 14
   }
 
   abstract fun getConfigDao(): AppConfigDao

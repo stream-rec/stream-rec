@@ -28,6 +28,7 @@ package github.hua0512.utils
 
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
@@ -70,8 +71,8 @@ fun String.replacePlaceholders(streamer: String, title: String, platform: String
       TITLE_PLACEHOLDER -> title
       PLATFORM_PLACEHOLDER -> platform
       "%Y" -> localDateTime?.year?.toString()
-      "%m" -> localDateTime?.monthNumber?.let { formatLeadingZero(it) }
-      "%d" -> localDateTime?.dayOfMonth?.let { formatLeadingZero(it) }
+      "%m" -> localDateTime?.month?.number?.let { formatLeadingZero(it) }
+      "%d" -> localDateTime?.day?.let { formatLeadingZero(it) }
       "%H" -> localDateTime?.hour?.let { formatLeadingZero(it) }
       "%M" -> localDateTime?.minute?.let { formatLeadingZero(it) }
       "%S" -> localDateTime?.second?.let { formatLeadingZero(it) }
